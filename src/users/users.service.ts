@@ -1,29 +1,36 @@
 import {
+  BadGatewayException,
   BadRequestException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
-import { User } from 'src/users/shared/schemas/user.schema';
+import { User, UserDocument } from 'src/users/shared/schemas/user.schema';
 import { CreateUserDto } from './shared/dto/create-user.dto';
-import slugify from 'slugify';
 import { UpdateUserDto } from './shared/dto/update-user.dto';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
-
-type file = Express.Multer.File;
+import { BaseService } from 'src/shared/utils/service/base.service';
+import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
+import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
 
 @Injectable()
-export class UsersService {
+export class UsersService extends BaseService<UserDocument> {
   constructor(
-    @InjectModel(User.name) private userModel: Model<User>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
     private readonly fileUploadService: FileUploadService,
-    private readonly i18n: CustomI18nService,
-  ) {}
+    protected readonly i18n: CustomI18nService,
+  ) {
+    super(userModel, i18n);
+  }
 
-  async createUser(CreateUserDto: CreateUserDto, file: file): Promise<any> {
+  async createUser(
+    CreateUserDto: CreateUserDto,
+    file: MulterFile,
+  ): Promise<any> {
     const { email } = CreateUserDto;
     //1) check if email  already exists
     const isExists = await this.userModel.exists({
@@ -65,13 +72,13 @@ export class UsersService {
 
     return {
       status: 'success',
-      message: this.i18n.translate('success.LOGIN_SUCCESS'),
+      message: this.i18n.translate('success.updated_SUCCESS'),
       data: userWithTokens,
     };
   }
-  async getUsers(): Promise<any> {
-    const users = await this.userModel.find({}, { __v: 0, slug: 0 });
-    return { status: 'success', length: users.length, data: users };
+  async getUsers(query: QueryString): Promise<any> {
+    console.log(query);
+    return await this.findAll('users', query);
   }
 
   // createMany(file: file) {
@@ -83,26 +90,30 @@ export class UsersService {
   // }
 
   async findOne(id: string) {
-    const user = await this.userModel.findById(id).select('-__v');
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    return user;
+    return await this.findById(id);
   }
 
-  async update_user(id: string, UpdateUserDto: UpdateUserDto, file: file) {
+  async update_user(
+    id: string,
+    UpdateUserDto: UpdateUserDto,
+    file: MulterFile,
+  ) {
     //1) check  user if found
     const user = await this.userModel.findById(id).select('_id avatar');
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
     }
     //2) check if email already exists
     if (UpdateUserDto.email) {
       const isExists = await this.userModel
-        .findOne({ email: UpdateUserDto.email })
-        .select('email');
+        .exists({
+          email: UpdateUserDto.email,
+        })
+        .lean();
       if (isExists) {
-        throw new BadRequestException('Email already exists');
+        throw new BadRequestException(
+          this.i18n.translate('exception.EMAIL_EXISTS'),
+        );
       }
     }
 
@@ -118,36 +129,44 @@ export class UsersService {
       // 4) update user avatar
       UpdateUserDto.avatar = avatarPath;
     }
-    // if name is changed update slug
-    if (UpdateUserDto.name && UpdateUserDto.name !== user.name) {
-      UpdateUserDto.slug = slugify(UpdateUserDto.name, { lower: true });
-    }
-    // 4) update user in the database
+    // 5) update user in the database
     const updatedUser = await this.userModel
       .findByIdAndUpdate(
         { _id: user._id },
         { $set: UpdateUserDto },
-        { upsert: true },
+        { new: true, runValidators: true, upsert: true },
       )
       .select('-__v');
-    return updatedUser;
+    return {
+      status: 'success',
+      message: this.i18n.translate('success.updated_SUCCESS'),
+      data: updatedUser,
+    };
   }
 
   async delete_user(id: string): Promise<void> {
     // 1) check  user if found
-    const user = await this.userModel.findById(id).select('_id avatar');
+    const user = await this.userModel.findById(id).select('_id avatar role');
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
+    }
+    if (user.role === 'admin') {
+      throw new UnauthorizedException(
+        this.i18n.translate('exception.UNAUTHORIZED'),
+      );
     }
     // 2) delete  user from the database
     await this.userModel.deleteOne({ _id: user._id });
     //3) delete avatar file from disk
-    const path = `.${user.avatar}`;
     if (user.avatar) {
+      const path = `.${user.avatar}`;
       try {
         await this.fileUploadService.deleteFile(path);
       } catch (error) {
         console.error(`Error deleting file ${path}:`, error);
+        throw new BadGatewayException(
+          this.i18n.translate('exception.PROFILE_UPDATE_OLD-IMAGE'),
+        );
       }
     }
     return;

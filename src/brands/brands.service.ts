@@ -5,8 +5,7 @@ import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.se
 import { Brand } from './schemas/brand.schema';
 import { Model } from 'mongoose';
 import { I18nContext } from 'nestjs-i18n';
-
-type file = Express.Multer.File;
+import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
 
 @Injectable()
 export class BrandsService {
@@ -20,7 +19,10 @@ export class BrandsService {
       I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
     return lang;
   }
-  async create(createBrandDto: CreateBrandDto, file: file): Promise<Brand> {
+  async create(
+    createBrandDto: CreateBrandDto,
+    file: MulterFile,
+  ): Promise<Brand> {
     // const brand = await this.brandModel.create(createBrandDto);
     //2) file upload service (save image in disk storage)
     let filePath = `/${process.env.UPLOADS_FOLDER}/brands/image.png`;

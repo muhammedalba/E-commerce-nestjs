@@ -2,13 +2,14 @@ import {
   Controller,
   Get,
   Post,
-  Patch,
   Param,
   Delete,
   UseInterceptors,
   UploadedFile,
   Body,
   UseGuards,
+  Put,
+  Query,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -21,6 +22,8 @@ import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { roles } from 'src/auth/shared/enums/role.enum';
 import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 import { Roles } from 'src/auth/shared/decorators/rolesdecorator';
+import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
+import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
 
 //  * rote: http://localhost:4000/api/v1/users
 //  * privet
@@ -40,7 +43,7 @@ export class UsersController {
     @Body()
     CreateUserDto: CreateUserDto,
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
-    file: Express.Multer.File,
+    file: MulterFile,
   ) {
     return this.usersService.createUser(CreateUserDto, file);
   }
@@ -52,8 +55,8 @@ export class UsersController {
    * returns An array of user objects.
    */
   @Get()
-  getUsers() {
-    return this.usersService.getUsers();
+  async getUsers(@Query() query: QueryString): Promise<any> {
+    return await this.usersService.getUsers(query);
   }
   // @Post()
   // @UseInterceptors(FileInterceptor('file'))
@@ -74,7 +77,7 @@ export class UsersController {
   // }
 
   /**
-   * rote: http://localhost:4000/api/v1/users
+   * rote: /api/v1/users
    * privet
    * Retrieves a user by their unique identifier.
    * @param IdParamDto - An object containing the user's ID.
@@ -88,11 +91,11 @@ export class UsersController {
    * rote: http://localhost:4000/api/v1/users/:id
    * privet
    */
-  @Patch(':id')
+  @Put(':id')
   @UseInterceptors(FileInterceptor('avatar'))
   update_user(
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
-    file: Express.Multer.File,
+    file: MulterFile,
     @Param()
     IdParamDto: IdParamDto,
     @Body()

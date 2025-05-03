@@ -16,11 +16,10 @@ import { UpdateUserDto } from 'src/users/shared/dto/update-user.dto';
 import { RefreshTokenDto } from '../Dto/refresh-Token.Dto';
 import { JwtService } from '@nestjs/jwt';
 import { CookieService } from './cookie.service';
-
 import { Request, Response } from 'express';
 import { tokenService } from 'src/auth/shared/services/token.service';
+import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
 
-type file = Express.Multer.File;
 interface DecodedToken {
   user_id: string;
   email: string;
@@ -70,7 +69,7 @@ export class userProfileService {
   async updateMe(
     userId: { user: { user_id: string } },
     updateUserDto: UpdateUserDto,
-    file: file,
+    file: MulterFile,
   ): Promise<any> {
     const { user_id } = userId.user;
 

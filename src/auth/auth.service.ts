@@ -23,8 +23,8 @@ import { userProfileService } from './shared/services/user-profile.service';
 import { tokenService } from 'src/auth/shared/services/token.service';
 import { googleService } from './oauth2/services/google.service';
 import { facebookService } from './oauth2/services/facebook.service';
+import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
 
-type file = Express.Multer.File;
 @Injectable()
 export class AuthService {
   constructor(
@@ -44,7 +44,7 @@ export class AuthService {
   // --- register user --- //
   async register(
     createUserDto: CreateUserDto,
-    file: file,
+    file: MulterFile,
     res: Response,
   ): Promise<any> {
     const { email } = createUserDto;
@@ -175,7 +175,7 @@ export class AuthService {
       });
       // remove cookies
       this.cookieService.clearCookies(res);
-      return { message: this.i18n.translate('exception.LOGOUT_SUCCESS') };
+      return { message: this.i18n.translate('success.LOGOUT_SUCCESS') };
     } catch {
       throw new BadRequestException(
         this.i18n.translate('exception.ERROR_LOGOUT'),
@@ -190,7 +190,7 @@ export class AuthService {
   async updateMe(
     userId: { user: { user_id: string } },
     updateUserDto: UpdateUserDto,
-    file: file,
+    file: MulterFile,
   ): Promise<any> {
     return await this.userProfileService.updateMe(userId, updateUserDto, file);
   }

@@ -14,6 +14,7 @@ import { CreateBrandDto } from './dto/create-brand.dto';
 import { UpdateBrandDto } from './dto/update-brand.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { createParseFilePipe } from 'src/shared/files/files-validation-factory';
+import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
 
 @Controller('brands')
 export class BrandsController {
@@ -24,7 +25,7 @@ export class BrandsController {
   create(
     @Body() createBrandDto: CreateBrandDto,
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
-    file: Express.Multer.File,
+    file: MulterFile,
   ) {
     return this.brandsService.create(createBrandDto, file);
   }

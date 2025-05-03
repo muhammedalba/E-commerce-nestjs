@@ -3,10 +3,11 @@ import { extname } from 'path';
 import * as fs from 'fs';
 import * as sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
+import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
 @Injectable()
 export class FileUploadService {
   async saveFileToDisk(
-    file: Express.Multer.File,
+    file: MulterFile,
     destinationPath: string,
   ): Promise<string> {
     // 1) check file if it not exists
@@ -58,7 +59,7 @@ export class FileUploadService {
     }
   }
   async updateFile(
-    file: Express.Multer.File,
+    file: MulterFile,
     destinationPath: string,
     oldImagePath: string,
   ) {

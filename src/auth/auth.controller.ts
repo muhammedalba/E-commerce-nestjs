@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Req,
   Res,
   UploadedFile,
@@ -23,6 +24,7 @@ import { UpdateUserDto } from 'src/users/shared/dto/update-user.dto';
 import { Request, Response } from 'express';
 import { GoogleAuthGuard } from './oauth2/guards/GoogleAuthGuard';
 import { FacebookAuthGuard } from './oauth2/guards/facebook-auth.guard';
+import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
 
 @Controller('auth')
 export class AuthController {
@@ -110,7 +112,7 @@ export class AuthController {
     @Body() createUserDto: CreateUserDto,
     @Res({ passthrough: true }) res: Response,
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
-    file: Express.Multer.File,
+    file: MulterFile,
   ): Promise<any> {
     // Implement registration logic
     return await this.authService.register(createUserDto, file, res);
@@ -161,7 +163,7 @@ export class AuthController {
    * public: /api/v1/auth/verify-code
    * method: POST
    */
-  @Post('reset-password')
+  @Put('reset-password')
   async resetPassword(
     @Body() LoginUserDto: LoginUserDto,
     @Res({ passthrough: true }) res: Response,
@@ -180,14 +182,14 @@ export class AuthController {
    * public: /api/v1/auth/updateMe
    * method: POST
    */
-  @Post('updateMe')
+  @Put('updateMe')
   @UseGuards(AuthGuard)
   @UseInterceptors(FileInterceptor('avatar'))
   async updateMe(
     @Req() request: { user: { user_id: string } },
     @Body() UpdateUserDto: UpdateUserDto,
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
-    file: Express.Multer.File,
+    file: MulterFile,
   ): Promise<any> {
     return await this.authService.updateMe(request, UpdateUserDto, file);
   }
@@ -195,7 +197,7 @@ export class AuthController {
    * public: /api/v1/auth/changeMyPassword
    * method: POST
    */
-  @Post('changeMyPassword')
+  @Put('changeMyPassword')
   @UseGuards(AuthGuard)
   async changeMyPassword(
     @Req() request: { user: { user_id: string } },
