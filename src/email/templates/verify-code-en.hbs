@@ -1,0 +1,57 @@
+<html lang='en' dir='ltr'>
+  <head>
+    <meta charset='UTF-8' />
+    <title>verification code </title>
+    <style>
+      body {
+        font-family: 'Tahoma', sans-serif;
+        background-color: #f4f4f4;
+        padding: 30px;
+        color: #333;
+      }
+      .container {
+        max-width: 500px;
+        margin: auto;
+        background: #ffffff;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .code {
+        font-size: 25px;
+        font-weight: bold;
+        color: #0050b3;
+        letter-spacing: 4px;
+        text-align: center;
+        margin: 1rem 0;
+      }
+      .wrang {
+        font-size: 14px;
+        color: red;
+        text-align: center;
+        display: block;
+        margin:5px;
+      }
+      .footer {
+        font-size: 12px;
+        color: #777;
+        margin-top: 30px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class='container'>
+      <h2>hello {{name}}!</h2>
+      <p>Thank you for using our platform. To confirm your email address, please use the following verification code:</p>
+
+      <div class='code'>{{code}}</div>
+
+      <span class='wrang'>   The code is valid for 5 minutes. </span>
+      <p>If you do not request this code, you can ignore this email.
+      <div class='footer'>
+        This email was sent automatically. Do not reply to it.
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,10 @@
+{
+      "updated_SUCCESS": "Updated successfully",
+      "LOGOUT_SUCCESS": "Logged out successfully",
+      "updated_REFRESH_SUCCESS": "Token refreshed successfully",
+      "LOGIN_SUCCESS": "Logged in successfully",
+      "RESET_CODE_SENDED": "Reset code has been sent to your email",
+      "RESET_CODE_VALID": "Code verified successfully",
+      "SUCCESS_RESET_PASSWORD": "Password reset successfully"
+    }
+    

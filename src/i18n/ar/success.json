@@ -1,0 +1,9 @@
+{
+      "updated_SUCCESS": "تم تحديث  بنجاح  ",
+      "LOGOUT_SUCCESS": "تم تسجيل الخروج بنجاح  ",
+      "updated_REFRESH_SUCCESS": "تم تحديث الرمز بنجاح  ",
+      "LOGIN_SUCCESS": "تم تسجيل الدخول بنجاح  ",
+      "RESET_CODE_SENDED": "تم إرسال رمز إعادة التعيين إلى بريدك الإلكتروني",
+      "RESET_CODE_VALID": "تم التحقق من الرمز بنجاح",
+      "SUCCESS_RESET_PASSWORD": "تم إعادة تعيين كلمة المرور بنجاح"
+}
