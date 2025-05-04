@@ -1,4 +1,3 @@
-// src/shared/utils/api-features.ts
 import { Query } from 'mongoose';
 import { QueryString } from './interfaces/queryInterface';
 
@@ -17,9 +16,48 @@ export class ApiFeatures<T> {
     const excludedFields = ['page', 'limit', 'fields', 'sort', 'keywords'];
     excludedFields.forEach((field) => delete queryObj[field]);
 
-    let queryStr = JSON.stringify(queryObj);
-    queryStr = queryStr.replace(/\b(gte|lte|lt|gt)\b/g, (match) => `$${match}`);
-    this.mongooseQuery = this.mongooseQuery.find(JSON.parse(queryStr));
+    const allowedFilters = [
+      'status',
+      'category',
+      'price',
+      'rating',
+      'brand',
+      'email',
+    ];
+    const mongoQuery: Record<string, any> = {};
+
+    // أولوية للفلترة بشرط [lt],[gte], إلخ
+    for (const key in queryObj) {
+      const match = key.match(/^(\w+)\[(gte|lte|lt|gt|in|ne|nin)\]$/); // دعم in, ne, nin
+      if (match) {
+        const field = match[1];
+        const operator = match[2];
+
+        if (!allowedFilters.includes(field)) continue;
+
+        if (!mongoQuery[field] || typeof mongoQuery[field] !== 'object') {
+          mongoQuery[field] = {};
+        }
+
+        const value = queryObj[key];
+        if (operator === 'in' || operator === 'nin') {
+          mongoQuery[field][`$${operator}`] = value.split(',');
+        } else {
+          const num = Number(value);
+          if (!isNaN(num)) {
+            mongoQuery[field][`$${operator}`] = num;
+          }
+        }
+      }
+    }
+
+    // الفلاتر المباشرة (مثل ?brand=Apple)
+    for (const key in queryObj) {
+      if (allowedFilters.includes(key) && !(key in mongoQuery)) {
+        mongoQuery[key] = queryObj[key];
+      }
+    }
+    this.mongooseQuery = this.mongooseQuery.find(mongoQuery);
     return this;
   }
 

@@ -55,8 +55,8 @@ export class UsersController {
    * returns An array of user objects.
    */
   @Get()
-  async getUsers(@Query() query: QueryString): Promise<any> {
-    return await this.usersService.getUsers(query);
+  async getUsers(@Query() QueryDto: QueryString): Promise<any> {
+    return await this.usersService.getUsers(QueryDto);
   }
   // @Post()
   // @UseInterceptors(FileInterceptor('file'))

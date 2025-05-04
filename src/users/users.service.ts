@@ -76,9 +76,8 @@ export class UsersService extends BaseService<UserDocument> {
       data: userWithTokens,
     };
   }
-  async getUsers(query: QueryString): Promise<any> {
-    console.log(query);
-    return await this.findAll('users', query);
+  async getUsers(QueryDto: QueryString): Promise<any> {
+    return await this.findAll('users', QueryDto);
   }
 
   // createMany(file: file) {

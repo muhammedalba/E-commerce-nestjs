@@ -3,7 +3,6 @@ import { Model } from 'mongoose';
 import { CustomI18nService } from '../i18n/costum-i18n-service';
 import { ApiFeatures } from '../ApiFeatures';
 import { QueryString } from '../interfaces/queryInterface';
-
 export class BaseService<T> {
   constructor(
     protected readonly model: Model<T>,
@@ -14,10 +13,10 @@ export class BaseService<T> {
     return await this.model.create(doc);
   }
 
-  async findAll(modelName: string, queryParams: QueryString) {
+  async findAll(modelName: string, QueryDto: QueryString) {
     const total = await this.model.countDocuments();
 
-    const features = new ApiFeatures(this.model.find(), queryParams)
+    const features = new ApiFeatures(this.model.find(), QueryDto)
       .filter()
       .search(modelName)
       .sort()
