@@ -85,7 +85,7 @@ export class UsersController {
    */
   @Get(':id')
   findOne(@Param() IdParamDto: IdParamDto) {
-    return this.usersService.findOne(IdParamDto.id);
+    return this.usersService.findOne(IdParamDto);
   }
   /*
    * rote: http://localhost:4000/api/v1/users/:id
@@ -101,14 +101,14 @@ export class UsersController {
     @Body()
     UpdateUserDto: UpdateUserDto,
   ) {
-    return this.usersService.update_user(IdParamDto.id, UpdateUserDto, file);
+    return this.usersService.update_user(IdParamDto, UpdateUserDto, file);
   }
   /*
    * rote: http://localhost:4000/api/v1/users:id
    * privet
    */
   @Delete(':id')
-  delete_user(@Param() IdParamDto: IdParamDto) {
-    return this.usersService.delete_user(IdParamDto.id);
+  delete_user(@Param() idParamDto: IdParamDto) {
+    return this.usersService.delete_user(idParamDto);
   }
 }

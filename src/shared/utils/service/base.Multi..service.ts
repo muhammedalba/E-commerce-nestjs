@@ -69,12 +69,16 @@ export class BaseMultiService<T> {
     }
 
     const toJSONLocalizedOnly = this.model.schema.methods
-      .toJSONLocalizedOnly as (new_brand: T, lang: string) => T;
-    const localize_brand = toJSONLocalizedOnly(newDoc, this.getCurrentLang());
+      ?.toJSONLocalizedOnly as ((data: T, lang: string) => T) | undefined;
+
+    const localizedDoc =
+      typeof toJSONLocalizedOnly === 'function'
+        ? toJSONLocalizedOnly(newDoc as T, this.getCurrentLang())
+        : newDoc;
     return {
       status: 'success',
       message: this.i18n.translate('success.created_SUCCESS'),
-      data: localize_brand,
+      data: localizedDoc,
     };
   }
   async findAllDoc(
@@ -99,13 +103,18 @@ export class BaseMultiService<T> {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }
     const toJSONLocalizedOnly = this.model.schema.methods
-      .toJSONLocalizedOnly as (data: T[], lang: string) => T[];
-    const localize_brand = toJSONLocalizedOnly(data, this.getCurrentLang());
+      ?.toJSONLocalizedOnly as ((data: T, lang: string) => T) | undefined;
+
+    const localizedDoc =
+      typeof toJSONLocalizedOnly === 'function'
+        ? toJSONLocalizedOnly(data as T, this.getCurrentLang())
+        : data;
+
     return {
       status: 'success',
       results: data.length,
       pagination: features.getPagination(),
-      data: localize_brand,
+      data: localizedDoc as T[],
     };
   }
 
@@ -122,12 +131,16 @@ export class BaseMultiService<T> {
     }
 
     const toJSONLocalizedOnly = this.model.schema.methods
-      .toJSONLocalizedOnly as (data: T, lang: string) => T[];
-    const localize_brand = toJSONLocalizedOnly(doc as T, this.getCurrentLang());
+      ?.toJSONLocalizedOnly as ((data: T, lang: string) => T) | undefined;
+
+    const localizedDoc =
+      typeof toJSONLocalizedOnly === 'function'
+        ? toJSONLocalizedOnly(doc as T, this.getCurrentLang())
+        : doc;
     return {
       status: 'success',
       message: this.i18n.translate('success.found_SUCCESS'),
-      data: localize_brand,
+      data: localizedDoc,
     };
   }
 

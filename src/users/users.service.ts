@@ -9,6 +9,7 @@ import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import { BaseService } from 'src/shared/utils/service/base.service';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
+import { IdParamDto } from './shared/dto/id-param.dto';
 
 @Injectable()
 export class UsersService extends BaseService<UserDocument> {
@@ -41,12 +42,12 @@ export class UsersService extends BaseService<UserDocument> {
   //   return filesPath;
   // }
 
-  async findOne(id: string) {
-    return await this.findOneDoc(id, '-__v');
+  async findOne(idParamDto: IdParamDto) {
+    return await this.findOneDoc(idParamDto, '-__v');
   }
 
   async update_user(
-    id: string,
+    idParamDto: IdParamDto,
     UpdateUserDto: UpdateUserDto,
     file: MulterFile,
   ): Promise<any> {
@@ -91,7 +92,7 @@ export class UsersService extends BaseService<UserDocument> {
     // .select('-__v');
     const selectedFields = '_id avatar email';
     return await this.updateOneDoc(
-      id,
+      idParamDto,
       UpdateUserDto,
       file,
       'users',
@@ -99,7 +100,7 @@ export class UsersService extends BaseService<UserDocument> {
     );
   }
 
-  async delete_user(id: string): Promise<void> {
-    return await this.deleteOneDoc(id);
+  async delete_user(idParamDto: IdParamDto): Promise<void> {
+    return await this.deleteOneDoc(idParamDto, 'avatar');
   }
 }

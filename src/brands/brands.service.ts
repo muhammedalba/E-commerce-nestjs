@@ -10,10 +10,12 @@ import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
-import { BaseMultiService } from 'src/shared/utils/service/base.Multi..service';
+// import { BaseMultiService } from 'src/shared/utils/service/base.Multi..service';
+import { UpdateBrandDto } from './dto/update-brand.dto';
+import { BaseService } from 'src/shared/utils/service/base.service';
 
 @Injectable()
-export class BrandsService extends BaseMultiService<BrandDocument> {
+export class BrandsService extends BaseService<BrandDocument> {
   constructor(
     @InjectModel(Brand.name) private brandModel: Model<BrandDocument>,
     protected readonly fileUploadService: FileUploadService,
@@ -47,6 +49,7 @@ export class BrandsService extends BaseMultiService<BrandDocument> {
     // );
     return await this.createOneDoc(createBrandDto, file, 'brands', {
       fileFieldName: 'image',
+      checkEmail: false,
     });
   }
 
@@ -69,7 +72,20 @@ export class BrandsService extends BaseMultiService<BrandDocument> {
   async findOne(idParamDto: IdParamDto) {
     return await this.findOneDoc(idParamDto, '-__v');
   }
-
+  async updateBrand(
+    idParamDto: IdParamDto,
+    updateBrandDto: UpdateBrandDto,
+    file: MulterFile,
+  ): Promise<any> {
+    const selectedFields = '_id image';
+    return await this.updateOneDoc(
+      idParamDto,
+      updateBrandDto,
+      file,
+      'brands',
+      selectedFields,
+    );
+  }
   async deleteOne(idParamDto: IdParamDto) {
     return await this.deleteOneDoc(idParamDto, 'image');
   }

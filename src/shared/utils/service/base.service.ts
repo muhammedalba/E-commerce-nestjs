@@ -10,8 +10,8 @@ import { ApiFeatures } from '../ApiFeatures';
 import { QueryString } from '../interfaces/queryInterface';
 import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
 import { MulterFile } from '../interfaces/fileInterface';
-import { UpdateUserDto } from 'src/users/shared/dto/update-user.dto';
 import { I18nContext } from 'nestjs-i18n';
+import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
 //
 interface FileSchema {
   avatar?: string;
@@ -39,7 +39,7 @@ export class BaseService<T> {
       fileFieldName?: string;
     },
   ): Promise<{ status: string; message: string; data: T }> {
-    const checkEmail = options?.checkEmail ?? true;
+    const checkEmail = options?.checkEmail ?? false;
     const fileFieldName = options?.fileFieldName ?? 'avatar';
     // 1) check if email already exists
     if (checkEmail && CreateDataDto.email) {
@@ -77,9 +77,17 @@ export class BaseService<T> {
     if (filePath) {
       newDoc[fileFieldName] = `${process.env.BASE_URL}${filePath}`;
     }
+
+    const toJSONLocalizedOnly = this.model.schema.methods
+      ?.toJSONLocalizedOnly as ((data: T, lang: string) => T) | undefined;
+
+    const localizedDoc =
+      typeof toJSONLocalizedOnly === 'function'
+        ? toJSONLocalizedOnly(newDoc as T, this.getCurrentLang())
+        : newDoc.toObject();
     // 5) clean up response
     const newDocFilter = {
-      ...newDoc.toObject(),
+      ...localizedDoc,
       password: undefined,
       __v: undefined,
     };
@@ -110,19 +118,29 @@ export class BaseService<T> {
     if (!data) {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }
+    const toJSONLocalizedOnly = this.model.schema.methods
+      ?.toJSONLocalizedOnly as ((data: T, lang: string) => T) | undefined;
+
+    const localizedDoc =
+      typeof toJSONLocalizedOnly === 'function'
+        ? toJSONLocalizedOnly(data as T, this.getCurrentLang())
+        : data;
     return {
       status: 'success',
       results: data.length,
       pagination: features.getPagination(),
-      data,
+      data: localizedDoc as T[],
     };
   }
 
   async findOneDoc(
-    id: string,
+    idParamDto: IdParamDto,
     selected: string,
   ): Promise<{ status: string; message: string; data: T }> {
-    const doc = await this.model.findById(id).select(selected).lean();
+    const doc = await this.model
+      .findById(idParamDto.id)
+      .select(selected)
+      .exec();
     if (!doc) {
       throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
     }
@@ -136,13 +154,18 @@ export class BaseService<T> {
     return {
       status: 'success',
       message: this.i18n.translate('success.found_SUCCESS'),
-      data: localizedDoc as T,
+      data: localizedDoc,
     };
   }
 
   async updateOneDoc(
-    id: string,
-    UpdateDataDto: UpdateUserDto,
+    idParamDto: IdParamDto,
+    UpdateDataDto: {
+      email?: string;
+      avatar?: string;
+      image?: string;
+      [key: string]: any;
+    },
     file: MulterFile,
     modelName: string,
     selectedFields: string,
@@ -153,8 +176,9 @@ export class BaseService<T> {
   }> {
     //1) check  doc if found
     const doc =
-      ((await this.model.findById(id).select(selectedFields)) as FileSchema) ||
-      null;
+      ((await this.model
+        .findById(idParamDto.id)
+        .select(selectedFields)) as FileSchema) || null;
     if (!doc) {
       throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
     }
@@ -175,13 +199,13 @@ export class BaseService<T> {
 
     // 3) update doc ( avatar image ) if new file is provided
     if (file) {
-      const avatarPath = await this.fileUploadService.updateFile(
+      const filePath = await this.fileUploadService.updateFile(
         file,
         modelName,
         doc,
       );
       // 4) update user avatar
-      UpdateDataDto.avatar = avatarPath;
+      UpdateDataDto.avatar = filePath;
     }
     // 5) update doc in the database
     const updatedData = await this.model
@@ -191,25 +215,42 @@ export class BaseService<T> {
         { new: true, runValidators: true },
       )
       .select('-__v');
+    const toJSONLocalizedOnly = this.model.schema.methods
+      ?.toJSONLocalizedOnly as ((data: T, lang: string) => T) | undefined;
+
+    const localizedDoc =
+      typeof toJSONLocalizedOnly === 'function'
+        ? toJSONLocalizedOnly(updatedData as T, this.getCurrentLang())
+        : updatedData;
     return {
       status: 'success',
       message: this.i18n.translate('success.updated_SUCCESS'),
-      data: updatedData,
+      data: localizedDoc,
     };
   }
-  async deleteOneDoc(id: string): Promise<void> {
+  async deleteOneDoc(idParamDto: IdParamDto, selected: string): Promise<void> {
     // 1) check  document if found
     const doc = (await this.model
-      .findById(id)
-      .select('avatar image')) as FileSchema | null;
+      .findById(idParamDto.id)
+      .select(selected)) as FileSchema | null;
     if (!doc) {
       throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
     }
     //3) delete  file from disk
-    if (doc && doc.avatar) {
-      const path = `.${doc.avatar}`;
+
+    let path: string | null;
+    if (doc && (doc.avatar || doc.image)) {
+      if (doc.avatar) {
+        path = `.${doc.avatar}`;
+      } else if (doc.image) {
+        path = `.${doc.image}`;
+      } else {
+        path = null;
+      }
       try {
-        await this.fileUploadService.deleteFile(path);
+        if (path) {
+          await this.fileUploadService.deleteFile(path);
+        }
       } catch (error) {
         console.error(`Error deleting file ${path}:`, error);
         throw new BadGatewayException(

@@ -67,18 +67,26 @@ export class FileUploadService {
     const destinationPath = `./${process.env.UPLOADS_FOLDER}/${modelName}`;
     // 2) check if file exists
     let old_File_Path: string | null;
-    if (doc && doc.avatar) {
-      old_File_Path = `.${doc.avatar}`;
-    } else if (doc.image) {
-      old_File_Path = `.${doc.image}`;
+    if (doc) {
+      if (modelName === 'users') {
+        old_File_Path = `.${doc.avatar}`;
+      } else if (modelName === 'brands') {
+        old_File_Path = `.${doc.image}`;
+      } else {
+        old_File_Path = null;
+      }
     } else {
       old_File_Path = null;
     }
 
     try {
-      const file_path = await this.saveFileToDisk(file, destinationPath);
+      const file_path = await this.saveFileToDisk(file, modelName);
+      console.log('old_File_Path 1 ', old_File_Path);
       // Check if file exists before trying to update it.
-      if (old_File_Path && fs.existsSync(old_File_Path)) {
+      if (old_File_Path) {
+        console.log('old_File_Path 2', old_File_Path);
+        console.log('old_File_Path 3', fs.existsSync(old_File_Path));
+
         await this.deleteFile(old_File_Path);
       }
       return file_path;

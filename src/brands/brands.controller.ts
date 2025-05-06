@@ -3,12 +3,12 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
   Delete,
   UseInterceptors,
   UploadedFile,
   Query,
+  Put,
 } from '@nestjs/common';
 import { BrandsService } from './brands.service';
 import { CreateBrandDto } from './dto/create-brand.dto';
@@ -43,9 +43,19 @@ export class BrandsController {
     return await this.brandsService.findOne(idParamDto);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateBrandDto: UpdateBrandDto) {
-    return `this.brandsService.update(+${id}, {updateBrandDto});`;
+  @Put(':id')
+  @UseInterceptors(FileInterceptor('image'))
+  async updateBrand(
+    @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
+    file: MulterFile,
+    @Param() idParamDto: IdParamDto,
+    @Body() updateBrandDto: UpdateBrandDto,
+  ): Promise<any> {
+    return await this.brandsService.updateBrand(
+      idParamDto,
+      updateBrandDto,
+      file,
+    );
   }
 
   @Delete(':id')
