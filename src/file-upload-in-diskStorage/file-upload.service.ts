@@ -4,18 +4,22 @@ import * as fs from 'fs';
 import * as sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
+
+interface FileSchema {
+  avatar?: string;
+  image?: string;
+}
 @Injectable()
 export class FileUploadService {
-  async saveFileToDisk(
-    file: MulterFile,
-    destinationPath: string,
-  ): Promise<string> {
+  async saveFileToDisk(file: MulterFile, modelName: string): Promise<string> {
     // 1) check file if it not exists
     if (!file?.buffer) {
       return '';
     }
     // 2) if exists
     try {
+      // 1) add path to the file
+      const destinationPath = `./${process.env.UPLOADS_FOLDER}/${modelName}`;
       // 1) generate a unique filename
       const timestamp = Date.now();
       const ext = extname(file.originalname);
@@ -58,16 +62,24 @@ export class FileUploadService {
       throw new InternalServerErrorException('Failed to save files to disk');
     }
   }
-  async updateFile(
-    file: MulterFile,
-    destinationPath: string,
-    oldImagePath: string,
-  ) {
+  async updateFile(file: MulterFile, modelName: string, doc: FileSchema) {
+    // 1) add path to the file
+    const destinationPath = `./${process.env.UPLOADS_FOLDER}/${modelName}`;
+    // 2) check if file exists
+    let old_File_Path: string | null;
+    if (doc && doc.avatar) {
+      old_File_Path = `.${doc.avatar}`;
+    } else if (doc.image) {
+      old_File_Path = `.${doc.image}`;
+    } else {
+      old_File_Path = null;
+    }
+
     try {
       const file_path = await this.saveFileToDisk(file, destinationPath);
       // Check if file exists before trying to update it.
-      if (fs.existsSync(oldImagePath)) {
-        await this.deleteFile(oldImagePath);
+      if (old_File_Path && fs.existsSync(old_File_Path)) {
+        await this.deleteFile(old_File_Path);
       }
       return file_path;
     } catch (error) {

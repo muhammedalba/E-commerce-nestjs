@@ -1,11 +1,4 @@
-import {
-  BadGatewayException,
-  BadRequestException,
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
@@ -21,63 +14,23 @@ import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
 export class UsersService extends BaseService<UserDocument> {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    private readonly fileUploadService: FileUploadService,
+    protected readonly fileUploadService: FileUploadService,
     protected readonly i18n: CustomI18nService,
   ) {
-    super(userModel, i18n);
+    super(userModel, i18n, fileUploadService);
   }
 
   async createUser(
     CreateUserDto: CreateUserDto,
     file: MulterFile,
   ): Promise<any> {
-    const { email } = CreateUserDto;
-    //1) check if email  already exists
-    const isExists = await this.userModel.exists({
-      email: email,
+    return await this.createOneDoc(CreateUserDto, file, 'users', {
+      checkEmail: true,
+      fileFieldName: 'avatar',
     });
-    if (isExists) {
-      throw new BadRequestException(
-        this.i18n.translate('exception.EMAIL_EXISTS'),
-      );
-    }
-    //2) file upload service (save image in disk storage)
-    let filePath = `/${process.env.UPLOADS_FOLDER}/users/avatar.png`;
-    if (file) {
-      try {
-        filePath = await this.fileUploadService.saveFileToDisk(
-          file,
-          `./${process.env.UPLOADS_FOLDER}/users`,
-        );
-      } catch (error) {
-        console.error('File upload failed: ERROR_FILE_UPLOAD', error);
-        throw new InternalServerErrorException(
-          this.i18n.translate('exception.ERROR_FILE_UPLOAD'),
-        );
-      }
-    }
-
-    //3) save user to db with avatar path
-    CreateUserDto.avatar = filePath;
-    const newUser = await this.userModel.create(CreateUserDto);
-    // 4) update avatar url
-    newUser.avatar = `${process.env.BASE_URL}${filePath}`;
-
-    // handel response
-    const userWithTokens = {
-      ...newUser.toObject(),
-      password: undefined,
-      __v: undefined,
-    };
-
-    return {
-      status: 'success',
-      message: this.i18n.translate('success.updated_SUCCESS'),
-      data: userWithTokens,
-    };
   }
-  async getUsers(QueryDto: QueryString): Promise<any> {
-    return await this.findAll('users', QueryDto);
+  async getUsers(QueryString: QueryString): Promise<any> {
+    return await this.findAllDoc('users', QueryString);
   }
 
   // createMany(file: file) {
@@ -89,85 +42,64 @@ export class UsersService extends BaseService<UserDocument> {
   // }
 
   async findOne(id: string) {
-    return await this.findById(id);
+    return await this.findOneDoc(id, '-__v');
   }
 
   async update_user(
     id: string,
     UpdateUserDto: UpdateUserDto,
     file: MulterFile,
-  ) {
-    //1) check  user if found
-    const user = await this.userModel.findById(id).select('_id avatar');
-    if (!user) {
-      throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
-    }
-    //2) check if email already exists
-    if (UpdateUserDto.email) {
-      const isExists = await this.userModel
-        .exists({
-          email: UpdateUserDto.email,
-        })
-        .lean();
-      if (isExists) {
-        throw new BadRequestException(
-          this.i18n.translate('exception.EMAIL_EXISTS'),
-        );
-      }
-    }
+  ): Promise<any> {
+    // //1) check  user if found
+    // const user = await this.userModel.findById(id).select('_id avatar');
+    // if (!user) {
+    //   throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
+    // }
+    // //2) check if email already exists
+    // if (UpdateUserDto.email) {
+    //   const isExists = await this.userModel
+    //     .exists({
+    //       email: UpdateUserDto.email,
+    //     })
+    //     .lean();
+    //   if (isExists) {
+    //     throw new BadRequestException(
+    //       this.i18n.translate('exception.EMAIL_EXISTS'),
+    //     );
+    //   }
+    // }
 
-    // 3) update user avatar if new file is provided
-    if (file) {
-      const destinationPath = `./${process.env.UPLOADS_FOLDER}/users`;
-      const oldAvatarPath = `.${user.avatar}`;
-      const avatarPath = await this.fileUploadService.updateFile(
-        file,
-        destinationPath,
-        oldAvatarPath,
-      );
-      // 4) update user avatar
-      UpdateUserDto.avatar = avatarPath;
-    }
-    // 5) update user in the database
-    const updatedUser = await this.userModel
-      .findByIdAndUpdate(
-        { _id: user._id },
-        { $set: UpdateUserDto },
-        { new: true, runValidators: true, upsert: true },
-      )
-      .select('-__v');
-    return {
-      status: 'success',
-      message: this.i18n.translate('success.updated_SUCCESS'),
-      data: updatedUser,
-    };
+    // // 3) update user avatar if new file is provided
+    // if (file) {
+    //   const destinationPath = `./${process.env.UPLOADS_FOLDER}/users`;
+    //   const oldAvatarPath = `.${user.avatar}`;
+    //   const avatarPath = await this.fileUploadService.updateFile(
+    //     file,
+    //     destinationPath,
+    //     oldAvatarPath,
+    //   );
+    //   // 4) update user avatar
+    //   UpdateUserDto.avatar = avatarPath;
+    // }
+    // // 5) update user in the database
+    // const updatedUser = await this.userModel
+    //   .findByIdAndUpdate(
+    //     { _id: user._id },
+    //     { $set: UpdateUserDto },
+    //     { new: true, runValidators: true, upsert: true },
+    //   )
+    // .select('-__v');
+    const selectedFields = '_id avatar email';
+    return await this.updateOneDoc(
+      id,
+      UpdateUserDto,
+      file,
+      'users',
+      selectedFields,
+    );
   }
 
   async delete_user(id: string): Promise<void> {
-    // 1) check  user if found
-    const user = await this.userModel.findById(id).select('_id avatar role');
-    if (!user) {
-      throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
-    }
-    if (user.role === 'admin') {
-      throw new UnauthorizedException(
-        this.i18n.translate('exception.UNAUTHORIZED'),
-      );
-    }
-    // 2) delete  user from the database
-    await this.userModel.deleteOne({ _id: user._id });
-    //3) delete avatar file from disk
-    if (user.avatar) {
-      const path = `.${user.avatar}`;
-      try {
-        await this.fileUploadService.deleteFile(path);
-      } catch (error) {
-        console.error(`Error deleting file ${path}:`, error);
-        throw new BadGatewayException(
-          this.i18n.translate('exception.PROFILE_UPDATE_OLD-IMAGE'),
-        );
-      }
-    }
-    return;
+    return await this.deleteOneDoc(id);
   }
 }

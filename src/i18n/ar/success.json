@@ -1,4 +1,6 @@
 {
+      "found_SUCCESS": "تم العثور على البيانات بنجاح  ",
+      "created_SUCCESS": "تم الإنشاء بنجاح  ",
       "updated_SUCCESS": "تم تحديث  بنجاح  ",
       "LOGOUT_SUCCESS": "تم تسجيل الخروج بنجاح  ",
       "updated_REFRESH_SUCCESS": "تم تحديث الرمز بنجاح  ",

@@ -12,6 +12,7 @@ import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.se
 import { MulterFile } from '../interfaces/fileInterface';
 import { UpdateUserDto } from 'src/users/shared/dto/update-user.dto';
 import { I18nContext } from 'nestjs-i18n';
+import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
 //
 interface FileSchema {
   avatar?: string;
@@ -19,7 +20,7 @@ interface FileSchema {
   email?: string;
   _id: string;
 }
-export class BaseService<T> {
+export class BaseMultiService<T> {
   constructor(
     protected readonly model: Model<T>,
     protected readonly i18n: CustomI18nService,
@@ -30,28 +31,17 @@ export class BaseService<T> {
       I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
     return lang;
   }
+
   async createOneDoc(
-    CreateDataDto: { email?: string; avatar?: string; [key: string]: any },
+    CreateDataDto: { image?: string; [key: string]: any },
     file: MulterFile,
     modelName: string,
     options?: {
-      checkEmail?: boolean;
       fileFieldName?: string;
     },
   ): Promise<{ status: string; message: string; data: T }> {
-    const checkEmail = options?.checkEmail ?? true;
-    const fileFieldName = options?.fileFieldName ?? 'avatar';
-    // 1) check if email already exists
-    if (checkEmail && CreateDataDto.email) {
-      const isExists = await this.model
-        .exists({ email: CreateDataDto.email })
-        .lean();
-      if (isExists) {
-        throw new BadRequestException(
-          this.i18n.translate('exception.EMAIL_EXISTS'),
-        );
-      }
-    }
+    // const brand = await this.brandModel.create(createBrandDto);
+    const fileFieldName = options?.fileFieldName ?? 'image';
     // 2) handle file upload
     let filePath: string | undefined;
     // Set default file path based on model name( /uploads/users/avatar.png)
@@ -77,16 +67,14 @@ export class BaseService<T> {
     if (filePath) {
       newDoc[fileFieldName] = `${process.env.BASE_URL}${filePath}`;
     }
-    // 5) clean up response
-    const newDocFilter = {
-      ...newDoc.toObject(),
-      password: undefined,
-      __v: undefined,
-    };
+
+    const toJSONLocalizedOnly = this.model.schema.methods
+      .toJSONLocalizedOnly as (new_brand: T, lang: string) => T;
+    const localize_brand = toJSONLocalizedOnly(newDoc, this.getCurrentLang());
     return {
       status: 'success',
       message: this.i18n.translate('success.created_SUCCESS'),
-      data: newDocFilter,
+      data: localize_brand,
     };
   }
   async findAllDoc(
@@ -110,33 +98,36 @@ export class BaseService<T> {
     if (!data) {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }
+    const toJSONLocalizedOnly = this.model.schema.methods
+      .toJSONLocalizedOnly as (data: T[], lang: string) => T[];
+    const localize_brand = toJSONLocalizedOnly(data, this.getCurrentLang());
     return {
       status: 'success',
       results: data.length,
       pagination: features.getPagination(),
-      data,
+      data: localize_brand,
     };
   }
 
   async findOneDoc(
-    id: string,
+    idParamDto: IdParamDto,
     selected: string,
-  ): Promise<{ status: string; message: string; data: T }> {
-    const doc = await this.model.findById(id).select(selected).lean();
+  ): Promise<{ status: string; message: string; data: any }> {
+    const doc = await this.model
+      .findById(idParamDto.id)
+      .select(selected)
+      .exec();
     if (!doc) {
       throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
     }
-    const toJSONLocalizedOnly = this.model.schema.methods
-      ?.toJSONLocalizedOnly as ((data: T, lang: string) => T) | undefined;
 
-    const localizedDoc =
-      typeof toJSONLocalizedOnly === 'function'
-        ? toJSONLocalizedOnly(doc as T, this.getCurrentLang())
-        : doc;
+    const toJSONLocalizedOnly = this.model.schema.methods
+      .toJSONLocalizedOnly as (data: T, lang: string) => T[];
+    const localize_brand = toJSONLocalizedOnly(doc as T, this.getCurrentLang());
     return {
       status: 'success',
       message: this.i18n.translate('success.found_SUCCESS'),
-      data: localizedDoc as T,
+      data: localize_brand,
     };
   }
 
@@ -197,17 +188,19 @@ export class BaseService<T> {
       data: updatedData,
     };
   }
-  async deleteOneDoc(id: string): Promise<void> {
+  async deleteOneDoc(idParamDto: IdParamDto, selected: string): Promise<void> {
     // 1) check  document if found
     const doc = (await this.model
-      .findById(id)
-      .select('avatar image')) as FileSchema | null;
+      .findById(idParamDto.id)
+      .select(selected)) as FileSchema | null;
     if (!doc) {
       throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
     }
     //3) delete  file from disk
-    if (doc && doc.avatar) {
-      const path = `.${doc.avatar}`;
+    let path: string | null;
+    if (doc && (doc.avatar || doc.image)) {
+      path = `.${doc.avatar}`;
+      path = `.${doc.image}`;
       try {
         await this.fileUploadService.deleteFile(path);
       } catch (error) {

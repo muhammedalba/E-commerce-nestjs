@@ -62,25 +62,39 @@ export class ApiFeatures<T> {
   }
 
   sort() {
-    // sort(price => 1=>9 || -price => 9=>1)
-    if (this.queryString.sort) {
-      console.log(this.queryString.sort, 'sort');
+    const sortParam = this.queryString.sort;
 
-      // price,-sold =>[price -sold ]
-
-      const sortBy = this.queryString.sort.split(',').join(' ');
-      console.log(sortBy, 'sote by');
-
-      this.mongooseQuery = this.mongooseQuery.sort(sortBy);
+    if (sortParam) {
+      // split by comma and filter out empty fields
+      const sortBy = sortParam
+        .split(',')
+        .map((field) => field.trim())
+        .filter((field) => field !== '')
+        .join(' '); // Mongoose expects space-separated fields
+      console.log(sortBy, 'sortBy');
+      if (sortBy) {
+        this.mongooseQuery = this.mongooseQuery.sort(sortBy);
+      } else {
+        // fallback default sort
+        this.mongooseQuery = this.mongooseQuery.sort('-createdAt');
+      }
     } else {
+      // default sorting if no sort param is provided
       this.mongooseQuery = this.mongooseQuery.sort('-createdAt');
     }
+
     return this;
   }
 
   limitFields() {
     if (this.queryString.fields) {
-      const fields = this.queryString.fields.split(',').join(' ');
+      console.log(this.queryString.fields);
+
+      const fields = this.queryString.fields
+        .split(',')
+        .map((field) => field.trim())
+        .filter((field) => field !== '')
+        .join('');
       this.mongooseQuery = this.mongooseQuery.select(fields);
     } else {
       this.mongooseQuery = this.mongooseQuery.select('-__v');
@@ -90,7 +104,7 @@ export class ApiFeatures<T> {
 
   search(modelName: string) {
     if (this.queryString.keywords) {
-      const keyword = this.queryString.keywords;
+      const keyword = this.queryString.keywords.trim();
       let query: object;
 
       switch (modelName) {
@@ -105,7 +119,7 @@ export class ApiFeatures<T> {
         case 'users':
           query = {
             $or: [
-              { firstname: { $regex: keyword, $options: 'i' } },
+              { name: { $regex: keyword, $options: 'i' } },
               { email: { $regex: keyword, $options: 'i' } },
             ],
           };

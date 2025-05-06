@@ -62,10 +62,7 @@ export class AuthService {
     let filePath = `/${process.env.UPLOADS_FOLDER}/users/avatar.png`;
     if (file) {
       try {
-        filePath = await this.fileUploadService.saveFileToDisk(
-          file,
-          `./${process.env.UPLOADS_FOLDER}/users`,
-        );
+        filePath = await this.fileUploadService.saveFileToDisk(file, 'users');
       } catch (error) {
         console.error('File upload failed:', error);
         throw new InternalServerErrorException(

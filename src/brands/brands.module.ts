@@ -5,6 +5,7 @@ import { FileUploadDiskStorageModule } from 'src/file-upload-in-diskStorage/file
 import { MongooseModule } from '@nestjs/mongoose';
 import { Brand, BrandSchema } from './schemas/brand.schema';
 import * as mongooseI18n from 'mongoose-i18n-localize';
+import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 
 @Module({
   imports: [
@@ -30,6 +31,6 @@ import * as mongooseI18n from 'mongoose-i18n-localize';
     ]),
   ],
   controllers: [BrandsController],
-  providers: [BrandsService],
+  providers: [BrandsService, CustomI18nService],
 })
 export class BrandsModule {}

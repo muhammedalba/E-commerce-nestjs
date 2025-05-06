@@ -8,6 +8,7 @@ import {
   Delete,
   UseInterceptors,
   UploadedFile,
+  Query,
 } from '@nestjs/common';
 import { BrandsService } from './brands.service';
 import { CreateBrandDto } from './dto/create-brand.dto';
@@ -15,6 +16,8 @@ import { UpdateBrandDto } from './dto/update-brand.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { createParseFilePipe } from 'src/shared/files/files-validation-factory';
 import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
+import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
+import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
 
 @Controller('brands')
 export class BrandsController {
@@ -31,13 +34,13 @@ export class BrandsController {
   }
 
   @Get()
-  findAll() {
-    return this.brandsService.findAll();
+  async findAll(@Query() queryString: QueryString) {
+    return await this.brandsService.findAll(queryString);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.brandsService.findOne(id);
+  async findOne(@Param() idParamDto: IdParamDto) {
+    return await this.brandsService.findOne(idParamDto);
   }
 
   @Patch(':id')
@@ -46,7 +49,7 @@ export class BrandsController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.brandsService.remove(+id);
+  async remove(@Param() idParamDto: IdParamDto) {
+    return await this.brandsService.deleteOne(idParamDto);
   }
 }

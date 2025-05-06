@@ -74,7 +74,10 @@ export class userProfileService {
     const { user_id } = userId.user;
 
     //1) check if user exists
-    const user = await this.userModel.findById(user_id).select('avatar');
+    const user = await this.userModel
+      .findById(user_id)
+      .select('avatar email')
+      .lean();
     if (!user) {
       throw new BadRequestException(
         this.i18n.translate('exception.USER_NOT_FOUND'),
@@ -95,12 +98,10 @@ export class userProfileService {
 
     // 3) update user avatar if new file is provided
     if (file) {
-      const destinationPath = `./${process.env.UPLOADS_FOLDER}/users`;
-      const oldAvatarPath = user.avatar ? `.${user.avatar}` : '';
       const avatarPath = await this.fileUploadService.updateFile(
         file,
-        destinationPath,
-        oldAvatarPath,
+        'users',
+        user,
       );
       // 4) update user avatar
       updateUserDto.avatar = avatarPath;
