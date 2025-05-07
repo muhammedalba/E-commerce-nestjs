@@ -55,7 +55,6 @@ export class FileUploadService {
       const filePaths = await Promise.all(
         files.map((file) => this.saveFileToDisk(file, destinationPath)),
       );
-      console.log(`All files saved successfully to ${destinationPath}`);
       return filePaths;
     } catch (error) {
       console.error('Error saving files to disk:', error);
@@ -81,12 +80,9 @@ export class FileUploadService {
 
     try {
       const file_path = await this.saveFileToDisk(file, modelName);
-      console.log('old_File_Path 1 ', old_File_Path);
+
       // Check if file exists before trying to update it.
       if (old_File_Path) {
-        console.log('old_File_Path 2', old_File_Path);
-        console.log('old_File_Path 3', fs.existsSync(old_File_Path));
-
         await this.deleteFile(old_File_Path);
       }
       return file_path;
@@ -103,9 +99,8 @@ export class FileUploadService {
     // delete avatar file from disk, but not if it's the default avatar image path.
     if (default_avatar_image !== Path) {
       // Check if file exists before trying to delete it.
-      // if (fs.existsSync(Path)) {
       try {
-        await fs.promises.access(Path); // يتحقق من وجود الملف
+        await fs.promises.access(Path);
         await fs.promises.unlink(Path);
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {

@@ -58,7 +58,7 @@ export class BaseService<T> {
     filePath =
       modelName === 'users'
         ? `/${process.env.UPLOADS_FOLDER}/${modelName}/avatar.png`
-        : '';
+        : `/${process.env.UPLOADS_FOLDER}/${modelName}/default.png`;
     if (file) {
       try {
         filePath = await this.fileUploadService.saveFileToDisk(file, modelName);
@@ -137,10 +137,16 @@ export class BaseService<T> {
     idParamDto: IdParamDto,
     selected: string,
   ): Promise<{ status: string; message: string; data: T }> {
-    const doc = await this.model
-      .findById(idParamDto.id)
-      .select(selected)
-      .exec();
+    // 1) check if id is valid ObjectId or slug
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto.id);
+    // 1) check  doc if found
+    const doc = isObjectId
+      ? await this.model.findById(idParamDto.id).select(selected).exec()
+      : await this.model
+          .findOne({ slug: idParamDto.id })
+          .select(selected)
+          .exec();
+
     if (!doc) {
       throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
     }
@@ -169,21 +175,28 @@ export class BaseService<T> {
     file: MulterFile,
     modelName: string,
     selectedFields: string,
+    options?: {
+      checkEmail?: boolean;
+      fileFieldName?: string;
+    },
   ): Promise<{
     status: string;
     message: string;
     data: any;
   }> {
+    const checkEmail = options?.checkEmail ?? false;
+    const fileFieldName = options?.fileFieldName ?? 'avatar';
     //1) check  doc if found
-    const doc =
-      ((await this.model
-        .findById(idParamDto.id)
-        .select(selectedFields)) as FileSchema) || null;
+    const doc = (await this.model
+      .findById(idParamDto.id)
+      .select(selectedFields)
+      .exec()) as FileSchema;
+
     if (!doc) {
       throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
     }
     //2) check if email already exists
-    if (UpdateDataDto.email && UpdateDataDto.email !== doc.email) {
+    if (checkEmail && UpdateDataDto.email) {
       const isExists = await this.model
         .exists({
           email: UpdateDataDto.email,
@@ -196,25 +209,39 @@ export class BaseService<T> {
         );
       }
     }
-
+    // 2) handle file upload
+    let filePath: string | undefined;
+    filePath =
+      modelName === 'users'
+        ? `/${process.env.UPLOADS_FOLDER}/${modelName}/avatar.png`
+        : `/${process.env.UPLOADS_FOLDER}/${modelName}/default.png`;
     // 3) update doc ( avatar image ) if new file is provided
     if (file) {
-      const filePath = await this.fileUploadService.updateFile(
-        file,
-        modelName,
-        doc,
-      );
-      // 4) update user avatar
-      UpdateDataDto.avatar = filePath;
+      try {
+        filePath = await this.fileUploadService.updateFile(
+          file,
+          modelName,
+          doc,
+        );
+        // 4) update user avatar
+        UpdateDataDto[fileFieldName] = filePath;
+      } catch (error) {
+        console.error('File upload failed:', error);
+        throw new InternalServerErrorException(
+          this.i18n.translate('exception.ERROR_FILE_UPLOAD'),
+        );
+      }
     }
     // 5) update doc in the database
-    const updatedData = await this.model
-      .findByIdAndUpdate(
-        { _id: doc._id },
-        { $set: UpdateDataDto },
-        { new: true, runValidators: true },
-      )
-      .select('-__v');
+    const updatedData = await this.model.findByIdAndUpdate(
+      { _id: doc._id },
+      { $set: UpdateDataDto },
+      { new: true, runValidators: true },
+    );
+    // 4) optionally add full URL to avatar or image
+    if (filePath && updatedData) {
+      updatedData[fileFieldName] = `${process.env.BASE_URL}${filePath}`;
+    }
     const toJSONLocalizedOnly = this.model.schema.methods
       ?.toJSONLocalizedOnly as ((data: T, lang: string) => T) | undefined;
 
@@ -238,19 +265,17 @@ export class BaseService<T> {
     }
     //3) delete  file from disk
 
-    let path: string | null;
     if (doc && (doc.avatar || doc.image)) {
+      let path: string;
       if (doc.avatar) {
         path = `.${doc.avatar}`;
       } else if (doc.image) {
         path = `.${doc.image}`;
       } else {
-        path = null;
+        path = '';
       }
       try {
-        if (path) {
-          await this.fileUploadService.deleteFile(path);
-        }
+        await this.fileUploadService.deleteFile(path);
       } catch (error) {
         console.error(`Error deleting file ${path}:`, error);
         throw new BadGatewayException(

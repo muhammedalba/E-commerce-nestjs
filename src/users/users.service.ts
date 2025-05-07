@@ -97,6 +97,10 @@ export class UsersService extends BaseService<UserDocument> {
       file,
       'users',
       selectedFields,
+      {
+        checkEmail: true,
+        fileFieldName: 'avatar',
+      },
     );
   }
 
