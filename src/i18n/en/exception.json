@@ -1,4 +1,4 @@
-{
+{ "NAME_EXISTS": "Name is already in use",
   "EMAIL_EXISTS": "Email is already in use",
   "NOT_LOGGED": "You must be logged in first",
   "NOT_AUTHORIZED": "You do not have permission to access this",

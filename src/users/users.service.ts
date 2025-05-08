@@ -26,8 +26,9 @@ export class UsersService extends BaseService<UserDocument> {
     file: MulterFile,
   ): Promise<any> {
     return await this.createOneDoc(CreateUserDto, file, 'users', {
-      checkEmail: true,
       fileFieldName: 'avatar',
+      checkField: 'email',
+      fieldValue: CreateUserDto.email,
     });
   }
   async getUsers(QueryString: QueryString): Promise<any> {
@@ -98,7 +99,8 @@ export class UsersService extends BaseService<UserDocument> {
       'users',
       selectedFields,
       {
-        checkEmail: true,
+        checkField: 'email',
+        fieldValue: UpdateUserDto.email,
         fileFieldName: 'avatar',
       },
     );

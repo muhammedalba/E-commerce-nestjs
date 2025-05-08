@@ -25,76 +25,118 @@ export class BaseService<T> {
     protected readonly i18n: CustomI18nService,
     protected readonly fileUploadService: FileUploadService,
   ) {}
+  // This method is used to get the current language from the request context
   private getCurrentLang(): string {
     const lang =
       I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
     return lang;
   }
+  // This method is used to get the default file path based on the model name '/uploads/users/avatar.png'
+  private getDefaultFilePath = (modelName: string): string =>
+    `/${process.env.UPLOADS_FOLDER}/${modelName}/${modelName === 'users' ? 'avatar.png' : 'default.png'}`;
+
+  // This method is used to check if the email is already taken
+  private async isFieldTaken(
+    field: string,
+    value: string,
+    excludeId?: string,
+  ): Promise<boolean> {
+    const query: Record<string, any> = { [field]: value };
+    if (excludeId) query._id = { $ne: excludeId };
+    const result = await this.model.exists(query);
+    return !!result;
+  }
+
+  // This method is used to get the current language
+  private t(key: string): string {
+    return this.i18n.translate(key);
+  }
+  // This method is used to localize the document
+  private localize(data: T | T[]): T | T[] {
+    const toJSONLocalizedOnly = this.model.schema.methods
+      ?.toJSONLocalizedOnly as ((data: T | T[], lang: string) => T) | undefined;
+
+    const localizedDoc =
+      typeof toJSONLocalizedOnly === 'function'
+        ? toJSONLocalizedOnly(data as T, this.getCurrentLang())
+        : data;
+    return localizedDoc;
+  }
+  // This method is used to handle the file upload
+  private async handleFileUpload(
+    file: MulterFile,
+    modelName: string,
+    doc?: FileSchema,
+  ): Promise<string> {
+    // Return default file path if no file is provided
+    if (!file) {
+      return this.getDefaultFilePath(modelName);
+    }
+
+    try {
+      // If a document is provided, update the file; otherwise, save a new file
+      return doc
+        ? ((await this.fileUploadService.updateFile(file, modelName, doc)) ??
+            this.getDefaultFilePath(modelName))
+        : await this.fileUploadService.saveFileToDisk(file, modelName);
+    } catch (error) {
+      console.error('File upload failed:', error);
+      throw new InternalServerErrorException(
+        this.t('exception.ERROR_FILE_UPLOAD'),
+      );
+    }
+  }
+
   async createOneDoc(
-    CreateDataDto: { email?: string; avatar?: string; [key: string]: any },
+    CreateDataDto: { [key: string]: any },
     file: MulterFile,
     modelName: string,
     options?: {
-      checkEmail?: boolean;
       fileFieldName?: string;
+      checkField?: string;
+      fieldValue?: string;
     },
   ): Promise<{ status: string; message: string; data: T }> {
-    const checkEmail = options?.checkEmail ?? false;
-    const fileFieldName = options?.fileFieldName ?? 'avatar';
-    // 1) check if email already exists
-    if (checkEmail && CreateDataDto.email) {
-      const isExists = await this.model
-        .exists({ email: CreateDataDto.email })
-        .lean();
-      if (isExists) {
-        throw new BadRequestException(
-          this.i18n.translate('exception.EMAIL_EXISTS'),
-        );
-      }
+    const { fileFieldName = 'avatar', checkField, fieldValue } = options || {};
+    if (
+      checkField &&
+      fieldValue &&
+      (await this.isFieldTaken(checkField, fieldValue))
+    ) {
+      const exceptionKey =
+        modelName === 'users'
+          ? 'exception.EMAIL_EXISTS'
+          : 'exception.NAME_EXISTS';
+      throw new BadRequestException(this.t(exceptionKey));
     }
     // 2) handle file upload
-    let filePath: string | undefined;
-    // Set default file path based on model name( /uploads/users/avatar.png)
-    filePath =
-      modelName === 'users'
-        ? `/${process.env.UPLOADS_FOLDER}/${modelName}/avatar.png`
-        : `/${process.env.UPLOADS_FOLDER}/${modelName}/default.png`;
-    if (file) {
-      try {
-        filePath = await this.fileUploadService.saveFileToDisk(file, modelName);
-        // set file path in CreateDataDto
-        CreateDataDto[fileFieldName] = filePath;
-      } catch (error) {
-        console.error('File upload failed:', error);
-        throw new InternalServerErrorException(
-          this.i18n.translate('exception.ERROR_FILE_UPLOAD'),
-        );
-      }
-    }
+    const filePath = await this.handleFileUpload(file, modelName);
+    CreateDataDto[fileFieldName] = filePath;
     // 3) create document in database
     const newDoc = await this.model.create(CreateDataDto);
     // 4) optionally add full URL to avatar or image
     if (filePath) {
       newDoc[fileFieldName] = `${process.env.BASE_URL}${filePath}`;
     }
-
-    const toJSONLocalizedOnly = this.model.schema.methods
-      ?.toJSONLocalizedOnly as ((data: T, lang: string) => T) | undefined;
-
-    const localizedDoc =
-      typeof toJSONLocalizedOnly === 'function'
-        ? toJSONLocalizedOnly(newDoc as T, this.getCurrentLang())
-        : newDoc.toObject();
+    let newDocFilter: T | T[];
     // 5) clean up response
-    const newDocFilter = {
-      ...localizedDoc,
-      password: undefined,
-      __v: undefined,
-    };
+    if (modelName === 'users') {
+      newDocFilter = {
+        ...newDoc.toObject(),
+        password: undefined,
+        __v: undefined,
+      } as T;
+    } else {
+      newDocFilter = newDoc as T;
+    }
+
+    // 6) localize the document
+    const localizedDoc = this.localize(newDocFilter);
+
     return {
       status: 'success',
-      message: this.i18n.translate('success.created_SUCCESS'),
-      data: newDocFilter,
+      message: this.t('success.created_SUCCESS'),
+      data: localizedDoc as T,
     };
   }
   async findAllDoc(
@@ -116,15 +158,9 @@ export class BaseService<T> {
 
     const data = await features.getQuery();
     if (!data) {
-      throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
+      throw new BadRequestException(this.t('exception.NOT_FOUND'));
     }
-    const toJSONLocalizedOnly = this.model.schema.methods
-      ?.toJSONLocalizedOnly as ((data: T, lang: string) => T) | undefined;
-
-    const localizedDoc =
-      typeof toJSONLocalizedOnly === 'function'
-        ? toJSONLocalizedOnly(data as T, this.getCurrentLang())
-        : data;
+    const localizedDoc = this.localize(data);
     return {
       status: 'success',
       results: data.length,
@@ -148,19 +184,13 @@ export class BaseService<T> {
           .exec();
 
     if (!doc) {
-      throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
+      throw new NotFoundException(this.t('exception.NOT_FOUND'));
     }
-    const toJSONLocalizedOnly = this.model.schema.methods
-      ?.toJSONLocalizedOnly as ((data: T, lang: string) => T) | undefined;
-
-    const localizedDoc =
-      typeof toJSONLocalizedOnly === 'function'
-        ? toJSONLocalizedOnly(doc as T, this.getCurrentLang())
-        : doc;
+    const localizedDoc = this.localize(doc);
     return {
       status: 'success',
-      message: this.i18n.translate('success.found_SUCCESS'),
-      data: localizedDoc,
+      message: this.t('success.found_SUCCESS'),
+      data: Array.isArray(localizedDoc) ? localizedDoc[0] : localizedDoc,
     };
   }
 
@@ -168,24 +198,22 @@ export class BaseService<T> {
     idParamDto: IdParamDto,
     UpdateDataDto: {
       email?: string;
-      avatar?: string;
-      image?: string;
       [key: string]: any;
     },
     file: MulterFile,
     modelName: string,
     selectedFields: string,
     options?: {
-      checkEmail?: boolean;
       fileFieldName?: string;
+      fieldValue?: string;
+      checkField?: string;
     },
   ): Promise<{
     status: string;
     message: string;
     data: any;
   }> {
-    const checkEmail = options?.checkEmail ?? false;
-    const fileFieldName = options?.fileFieldName ?? 'avatar';
+    const { fileFieldName = 'avatar', checkField, fieldValue } = options || {};
     //1) check  doc if found
     const doc = (await this.model
       .findById(idParamDto.id)
@@ -193,44 +221,28 @@ export class BaseService<T> {
       .exec()) as FileSchema;
 
     if (!doc) {
-      throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
+      throw new NotFoundException(this.t('exception.NOT_FOUND'));
     }
     //2) check if email already exists
-    if (checkEmail && UpdateDataDto.email) {
-      const isExists = await this.model
-        .exists({
-          email: UpdateDataDto.email,
-          _id: { $ne: doc._id },
-        })
-        .lean();
-      if (isExists) {
-        throw new BadRequestException(
-          this.i18n.translate('exception.EMAIL_EXISTS'),
-        );
-      }
+    if (
+      checkField &&
+      fieldValue &&
+      (await this.isFieldTaken(checkField, fieldValue, doc._id.toString()))
+    ) {
+      const exceptionKey =
+        modelName === 'users'
+          ? 'exception.EMAIL_EXISTS'
+          : 'exception.NAME_EXISTS';
+      throw new BadRequestException(this.t(exceptionKey));
     }
-    // 2) handle file upload
-    let filePath: string | undefined;
-    filePath =
-      modelName === 'users'
-        ? `/${process.env.UPLOADS_FOLDER}/${modelName}/avatar.png`
-        : `/${process.env.UPLOADS_FOLDER}/${modelName}/default.png`;
+
     // 3) update doc ( avatar image ) if new file is provided
+    let filePath: string | undefined;
     if (file) {
-      try {
-        filePath = await this.fileUploadService.updateFile(
-          file,
-          modelName,
-          doc,
-        );
-        // 4) update user avatar
-        UpdateDataDto[fileFieldName] = filePath;
-      } catch (error) {
-        console.error('File upload failed:', error);
-        throw new InternalServerErrorException(
-          this.i18n.translate('exception.ERROR_FILE_UPLOAD'),
-        );
-      }
+      // 2) handle file upload
+      filePath = await this.handleFileUpload(file, modelName, doc);
+
+      UpdateDataDto[fileFieldName] = filePath;
     }
     // 5) update doc in the database
     const updatedData = await this.model.findByIdAndUpdate(
@@ -242,16 +254,10 @@ export class BaseService<T> {
     if (filePath && updatedData) {
       updatedData[fileFieldName] = `${process.env.BASE_URL}${filePath}`;
     }
-    const toJSONLocalizedOnly = this.model.schema.methods
-      ?.toJSONLocalizedOnly as ((data: T, lang: string) => T) | undefined;
-
-    const localizedDoc =
-      typeof toJSONLocalizedOnly === 'function'
-        ? toJSONLocalizedOnly(updatedData as T, this.getCurrentLang())
-        : updatedData;
+    const localizedDoc = updatedData ? this.localize(updatedData) : null;
     return {
       status: 'success',
-      message: this.i18n.translate('success.updated_SUCCESS'),
+      message: this.t('success.updated_SUCCESS'),
       data: localizedDoc,
     };
   }
@@ -261,25 +267,17 @@ export class BaseService<T> {
       .findById(idParamDto.id)
       .select(selected)) as FileSchema | null;
     if (!doc) {
-      throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
+      throw new NotFoundException(this.t('exception.NOT_FOUND'));
     }
     //3) delete  file from disk
-
-    if (doc && (doc.avatar || doc.image)) {
-      let path: string;
-      if (doc.avatar) {
-        path = `.${doc.avatar}`;
-      } else if (doc.image) {
-        path = `.${doc.image}`;
-      } else {
-        path = '';
-      }
+    if (doc.avatar || doc.image) {
+      const path = doc.avatar ? `.${doc.avatar}` : `.${doc.image}`;
       try {
         await this.fileUploadService.deleteFile(path);
       } catch (error) {
         console.error(`Error deleting file ${path}:`, error);
         throw new BadGatewayException(
-          this.i18n.translate('exception.PROFILE_UPDATE_OLD-IMAGE'),
+          this.t('exception.PROFILE_UPDATE_OLD-IMAGE'),
         );
       }
     }

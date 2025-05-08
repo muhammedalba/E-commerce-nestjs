@@ -23,7 +23,8 @@ export class BrandsService extends BaseService<BrandDocument> {
   async create(createBrandDto: CreateBrandDto, file: MulterFile): Promise<any> {
     return await this.createOneDoc(createBrandDto, file, 'brands', {
       fileFieldName: 'image',
-      checkEmail: false,
+      checkField: 'name.en',
+      fieldValue: createBrandDto.name.en,
     });
   }
   async findAll(queryString: QueryString): Promise<{
@@ -50,7 +51,11 @@ export class BrandsService extends BaseService<BrandDocument> {
       file,
       'brands',
       selectedFields,
-      { checkEmail: false, fileFieldName: 'image' },
+      {
+        checkField: 'name.en',
+        fieldValue: updateBrandDto.name?.en,
+        fileFieldName: 'image',
+      },
     );
   }
   async deleteOne(idParamDto: IdParamDto) {
