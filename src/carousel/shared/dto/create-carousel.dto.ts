@@ -1,20 +1,21 @@
+// carouselImage;
 import { Type } from 'class-transformer';
 import {
   IsString,
-  IsOptional,
   IsDefined,
   ValidateNested,
+  IsOptional,
 } from 'class-validator';
 import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
 
-export class CreateBrandDto {
+export class CreateCarouselDto {
   @IsDefined()
   @Type(() => FieldLocalizeDto)
   //   validaate opject in opject
   @ValidateNested()
-  name!: FieldLocalizeDto;
+  description!: FieldLocalizeDto;
 
   @IsOptional()
   @IsString({ message: 'validation.IS_String' })
-  image?: string;
+  image!: string;
 }

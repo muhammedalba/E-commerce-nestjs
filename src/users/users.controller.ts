@@ -42,7 +42,7 @@ export class UsersController {
   createUser(
     @Body()
     CreateUserDto: CreateUserDto,
-    @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
+    @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], false))
     file: MulterFile,
   ) {
     return this.usersService.createUser(CreateUserDto, file);

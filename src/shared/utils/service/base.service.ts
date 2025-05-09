@@ -160,6 +160,7 @@ export class BaseService<T> {
     if (!data) {
       throw new BadRequestException(this.t('exception.NOT_FOUND'));
     }
+
     const localizedDoc = this.localize(data);
     return {
       status: 'success',

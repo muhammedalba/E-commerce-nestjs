@@ -3,7 +3,6 @@ import { Model } from 'mongoose';
 
 export async function generateUniqueSlug(
   name: string,
-
   model: Model<any>,
   counter = 0,
 ): Promise<string> {

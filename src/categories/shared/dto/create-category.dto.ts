@@ -7,10 +7,10 @@ import {
 } from 'class-validator';
 import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
 
-export class CreateBrandDto {
+export class CreateCategoryDto {
   @IsDefined()
   @Type(() => FieldLocalizeDto)
-  //   validaate opject in opject
+  //   validate object in object
   @ValidateNested()
   name!: FieldLocalizeDto;
 

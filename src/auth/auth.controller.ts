@@ -111,7 +111,7 @@ export class AuthController {
   async register(
     @Body() createUserDto: CreateUserDto,
     @Res({ passthrough: true }) res: Response,
-    @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
+    @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], false))
     file: MulterFile,
   ): Promise<any> {
     // Implement registration logic

@@ -9,6 +9,8 @@ import { MongooseConfig } from './config/db/mongoose.config';
 import { I18nConfig } from './config/i18n/i18n.config';
 import { StaticConfig } from './config/static.config';
 import { JwtConfig } from './config/jwt/jwt.config';
+import { CategoriesModule } from './categories/categories.module';
+import { CarouselModule } from './carousel/carousel.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -23,6 +25,8 @@ import { JwtConfig } from './config/jwt/jwt.config';
     AuthModule,
     UsersModule,
     BrandsModule,
+    CategoriesModule,
+    CarouselModule,
   ],
   controllers: [AppController],
   providers: [AppService],

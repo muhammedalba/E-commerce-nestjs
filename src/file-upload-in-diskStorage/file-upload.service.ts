@@ -69,10 +69,8 @@ export class FileUploadService {
     if (doc) {
       if (modelName === 'users') {
         old_File_Path = `.${doc.avatar}`;
-      } else if (modelName === 'brands') {
-        old_File_Path = `.${doc.image}`;
       } else {
-        old_File_Path = null;
+        old_File_Path = `.${doc.image}`;
       }
     } else {
       old_File_Path = null;

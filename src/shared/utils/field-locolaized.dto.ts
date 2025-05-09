@@ -1,9 +1,12 @@
 import { Transform, TransformFnParams } from 'class-transformer';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsString, Length } from 'class-validator';
 
 export class FieldLocalizeDto {
   @IsNotEmpty({ message: 'validation.NOT_EMPTY' })
   @IsString({ message: 'validation.NOT_EMPTY' })
+  @Length(3, 32, {
+    message: 'validation.LANG_CODE_LENGTH',
+  })
   @Transform(({ value }: TransformFnParams) => {
     return typeof value === 'string' ? value.trim() : String(value).trim();
   })
@@ -12,6 +15,9 @@ export class FieldLocalizeDto {
   @IsNotEmpty({ message: 'validation.NOT_EMPTY' })
   @Transform(({ value }: TransformFnParams) => {
     return typeof value === 'string' ? value.trim() : String(value).trim();
+  })
+  @Length(3, 32, {
+    message: 'validation.LANG_CODE_LENGTH',
   })
   en!: string;
 }

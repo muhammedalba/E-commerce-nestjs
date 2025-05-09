@@ -1,4 +1,5 @@
 {
+  "LANG_CODE_LENGTH": "{property} must be between 2 and 32",
   "NOT_EMPTY": "{property} cannot be empty",
   "IS_String": "{property} most by IS_String  ",
   "INVALID_EMAIL": "email is invalid",
