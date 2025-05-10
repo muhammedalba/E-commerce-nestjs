@@ -17,5 +17,11 @@ export class CreateCarouselDto {
 
   @IsOptional()
   @IsString({ message: 'validation.IS_String' })
-  image!: string;
+  carouselSm!: string;
+  @IsOptional()
+  @IsString({ message: 'validation.IS_String' })
+  carouselMd!: string;
+  @IsOptional()
+  @IsString({ message: 'validation.IS_String' })
+  carouselLg!: string;
 }

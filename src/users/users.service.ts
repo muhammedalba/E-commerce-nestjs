@@ -35,13 +35,13 @@ export class UsersService extends BaseService<UserDocument> {
     return await this.findAllDoc('users', QueryString);
   }
 
-  // createMany(file: file) {
-  //   const filesPath = this.fileUploadService.saveFilesToDisk(
-  //     file,
-  //     './uploads/users',
-  //   );
-  //   return filesPath;
-  // }
+  async createMany(file: any) {
+    const filesPath = await this.fileUploadService.saveFilesToDisk(
+      file,
+      './users',
+    );
+    return filesPath;
+  }
 
   async findOne(idParamDto: IdParamDto) {
     return await this.findOneDoc(idParamDto, '-__v');

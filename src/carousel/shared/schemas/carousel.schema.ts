@@ -21,26 +21,34 @@ export class Carousel {
     default: 'default.png',
     trim: true,
   })
-  image?: string;
+  carouselSm?: string;
+  @Prop({
+    required: true,
+    type: 'string',
+    default: 'default.png',
+    trim: true,
+  })
+  carouselMd?: string;
+  @Prop({
+    required: true,
+    type: 'string',
+    default: 'default.png',
+    trim: true,
+  })
+  carouselLg?: string;
 }
 export type CarouselDocument = HydratedDocument<Carousel>;
 export const CarouselSchema = SchemaFactory.createForClass(Carousel);
 
 //update , findOne and findAll
 CarouselSchema.post('init', function (doc: HydratedDocument<Carousel>) {
-  const hasTranslatedName =
-    doc &&
-    doc.description &&
-    typeof doc.description === 'object' &&
-    Object.values(doc.description).some(
-      (value) => typeof value === 'string' && value.trim() !== '',
-    );
-
-  if (
-    hasTranslatedName &&
-    doc.image &&
-    !doc.image.startsWith(process.env.BASE_URL ?? 'http')
-  ) {
-    doc.image = `${process.env.BASE_URL}${doc.image}`;
+  const baseUrl = process.env.BASE_URL ?? '';
+  if (doc && doc.carouselLg) {
+    ['carouselMd', 'carouselSm', 'carouselLg'].forEach((key) => {
+      const path = doc[key as keyof Carousel];
+      if (typeof path === 'string' && !path.startsWith(baseUrl)) {
+        doc[key as keyof Carousel] = `${baseUrl}${path}`;
+      }
+    });
   }
 });

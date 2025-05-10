@@ -13,6 +13,6 @@ import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
   ],
   controllers: [UsersController],
   providers: [UsersService, CustomI18nService],
-  exports: [UsersService],
+  exports: [UsersService, MongooseModule],
 })
 export class UsersModule {}

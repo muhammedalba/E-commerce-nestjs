@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { CreateCarouselDto } from './shared/dto/create-carousel.dto';
 import { UpdateCarouselDto } from './shared/dto/update-carousel.dto';
 import { BaseService } from 'src/shared/utils/service/base.service';
@@ -20,13 +24,58 @@ export class CarouselService extends BaseService<CarouselDocument> {
   ) {
     super(CarouselModel, i18n, fileUploadService);
   }
-  async create(
+
+  async createCarousel(
     createCarouselDto: CreateCarouselDto,
-    file: MulterFile,
-  ): Promise<any> {
-    return await this.createOneDoc(createCarouselDto, file, 'carousel', {
-      fileFieldName: 'image',
-    });
+    files: {
+      carouselSm: MulterFile;
+      carouselMd: MulterFile;
+      carouselLg: MulterFile;
+    },
+  ) {
+    //1) check if the files is not empty
+    const requiredKeys = ['carouselSm', 'carouselMd', 'carouselLg'] as const;
+
+    for (const key of requiredKeys) {
+      if (!files[key] || !files[key][0]) {
+        throw new BadRequestException(`Image ${key} is required.`);
+      }
+    }
+
+    try {
+      //2) save files to disk
+      const savedPaths = await Promise.all(
+        requiredKeys.map((key) =>
+          this.fileUploadService.saveFileToDisk(
+            files[key][0] as MulterFile,
+            'carousel',
+          ),
+        ),
+      );
+
+      // 3) add the saved paths to the DTO
+      [
+        createCarouselDto.carouselSm,
+        createCarouselDto.carouselMd,
+        createCarouselDto.carouselLg,
+      ] = savedPaths;
+
+      //5) create the document in the database
+      const newDoc = await this.CarouselModel.create(createCarouselDto);
+      //6) add the base URL to the image paths
+      const baseUrl = process.env.BASE_URL || '';
+      newDoc.carouselSm = `${baseUrl}${createCarouselDto.carouselSm}`;
+      newDoc.carouselMd = `${baseUrl}${createCarouselDto.carouselMd}`;
+      newDoc.carouselLg = `${baseUrl}${createCarouselDto.carouselLg}`;
+
+      //7) return the localized document
+      return this.localize(newDoc);
+    } catch (error) {
+      console.error('Error saving carousel:', error);
+      throw new InternalServerErrorException(
+        this.i18n.translate('exception.ERROR_SAVE'),
+      );
+    }
   }
 
   async findAll(queryString: QueryString): Promise<{
@@ -35,7 +84,7 @@ export class CarouselService extends BaseService<CarouselDocument> {
     pagination: any;
     data: Carousel[];
   }> {
-    return await this.findAllDoc('brands', queryString);
+    return await this.findAllDoc('carousel', queryString);
   }
 
   async findOne(idParamDto: IdParamDto) {
@@ -45,21 +94,102 @@ export class CarouselService extends BaseService<CarouselDocument> {
   async updateOne(
     idParamDto: IdParamDto,
     updateCarouselDto: UpdateCarouselDto,
-    file: MulterFile,
+    files: {
+      carouselSm?: MulterFile;
+      carouselMd?: MulterFile;
+      carouselLg?: MulterFile;
+    },
   ): Promise<any> {
-    const selectedFields = 'image';
-    return await this.updateOneDoc(
-      idParamDto,
-      updateCarouselDto,
-      file,
-      'carousel',
-      selectedFields,
-      {
-        fileFieldName: 'image',
-      },
+    const { id } = idParamDto;
+
+    // 1) check if the document exists
+    const carousel = await this.CarouselModel.findById(id).select(
+      'carouselMd carouselLg carouselSm',
     );
+    if (!carousel) {
+      throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
+    }
+
+    const imageFields: (keyof typeof files)[] = [
+      'carouselSm',
+      'carouselMd',
+      'carouselLg',
+    ];
+
+    try {
+      for (const key of imageFields) {
+        const file = (files[key]?.[0] as MulterFile) ?? null;
+        if (file) {
+          // save the new file to disk
+          const newPath = await this.fileUploadService.saveFileToDisk(
+            file,
+            'carousel',
+          );
+
+          // delete the old file from disk
+          const oldPath = carousel[key];
+          if (oldPath) {
+            await this.fileUploadService.deleteFile(`.${oldPath}`);
+          }
+
+          // update the DTO with the new path
+          updateCarouselDto[key] = newPath;
+        } else {
+          // if no new file is provided, keep the old path
+          updateCarouselDto[key] = carousel[key];
+        }
+      }
+    } catch (error) {
+      console.error('Error processing carousel images:', error);
+      throw new InternalServerErrorException(
+        this.i18n.translate('exception.ERROR_SAVE'),
+      );
+    }
+
+    // update the document in the database
+    const updatedDoc = await this.CarouselModel.findByIdAndUpdate(
+      { _id: id },
+      { $set: updateCarouselDto },
+      { new: true, runValidators: true },
+    );
+
+    return {
+      status: 'success',
+      message: this.i18n.translate('success.updated_SUCCESS'),
+      data: updatedDoc ? this.localize(updatedDoc) : [],
+    };
   }
-  async remove(idParamDto: IdParamDto) {
-    return await this.deleteOneDoc(idParamDto, 'image');
+
+  async remove(idParamDto: IdParamDto): Promise<void> {
+    const { id } = idParamDto;
+    // 1) check if the document exists
+    const carousel = await this.CarouselModel.findById(id).select(
+      'carouselMd carouselLg carouselSm',
+    );
+
+    if (!carousel) {
+      throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
+    }
+
+    // 2) get the image paths
+    const imagePaths = ['carouselSm', 'carouselMd', 'carouselLg']
+      .map((key) => carousel[key as keyof typeof carousel] as string)
+      .filter((path): path is string => typeof path === 'string');
+
+    // 3 ) delete the images from disk
+    try {
+      await Promise.all(
+        imagePaths.map((path) => this.fileUploadService.deleteFile(`.${path}`)),
+      );
+    } catch (error) {
+      console.error('Error deleting carousel images:', error);
+      throw new InternalServerErrorException(
+        this.i18n.translate('exception.ERROR_SAVE'),
+      );
+    }
+
+    // 4) delete the document from the database
+    await this.CarouselModel.findByIdAndDelete(id);
+    return;
   }
 }

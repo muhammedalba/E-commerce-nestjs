@@ -15,8 +15,9 @@ import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
 //
 interface FileSchema {
   avatar?: string;
-  image?: string;
   email?: string;
+  image?: string;
+  carouselImage?: string;
   _id: string;
 }
 export class BaseService<T> {
@@ -52,7 +53,7 @@ export class BaseService<T> {
     return this.i18n.translate(key);
   }
   // This method is used to localize the document
-  private localize(data: T | T[]): T | T[] {
+  localize(data: T | T[]): T | T[] {
     const toJSONLocalizedOnly = this.model.schema.methods
       ?.toJSONLocalizedOnly as ((data: T | T[], lang: string) => T) | undefined;
 
@@ -271,8 +272,10 @@ export class BaseService<T> {
       throw new NotFoundException(this.t('exception.NOT_FOUND'));
     }
     //3) delete  file from disk
-    if (doc.avatar || doc.image) {
-      const path = doc.avatar ? `.${doc.avatar}` : `.${doc.image}`;
+
+    const imagePath = doc.avatar || doc.image || doc.carouselImage;
+    if (imagePath) {
+      const path = `.${imagePath}`;
       try {
         await this.fileUploadService.deleteFile(path);
       } catch (error) {

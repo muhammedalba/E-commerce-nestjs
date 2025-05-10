@@ -58,14 +58,6 @@ export class UsersController {
   async getUsers(@Query() QueryDto: QueryString): Promise<any> {
     return await this.usersService.getUsers(QueryDto);
   }
-  // @Post()
-  // @UseInterceptors(FileInterceptor('file'))
-  // create(
-  //   @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
-  //   file: Express.Multer.File,
-  // ): any {
-  //   return this.usersService.create(file);
-  // }
 
   // @Post('/users')
   // @UseInterceptors(FilesInterceptor('file', MaxFileCount.PRODUCTS_IMAGES))

@@ -8,6 +8,9 @@ import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
 interface FileSchema {
   avatar?: string;
   image?: string;
+  carouselSm?: string;
+  carouselMd?: string;
+  carouselLg?: string;
 }
 @Injectable()
 export class FileUploadService {
@@ -16,6 +19,7 @@ export class FileUploadService {
     if (!file?.buffer) {
       return '';
     }
+
     // 2) if exists
     try {
       // 1) add path to the file
@@ -29,11 +33,8 @@ export class FileUploadService {
       // const outputPath = `${destinationPath}/${filename}`;
       //2) Check if the destination directory exists, and create it if not.
       await fs.promises.mkdir(destinationPath, { recursive: true });
-      //3) save image file in the destination directory
-      await sharp(file.buffer)
-        .resize(800, 400, { fit: 'inside', withoutEnlargement: true })
-        .webp({ quality: 70 })
-        .toFile(outputPath);
+      //3) resize the image and save it to disk
+      await this.processAndSaveImage(file, outputPath);
       // await writeFile(outputPath, file.buffer);
       const file_path = outputPath.startsWith('.')
         ? outputPath.slice(1)
@@ -48,9 +49,10 @@ export class FileUploadService {
     files: Express.Multer.File[],
     destinationPath: string,
   ): Promise<string[]> {
-    // if (!files.length) {
-    //   return [];
-    // }
+    if (!files.length) {
+      return [];
+    }
+
     try {
       const filePaths = await Promise.all(
         files.map((file) => this.saveFileToDisk(file, destinationPath)),
@@ -66,19 +68,21 @@ export class FileUploadService {
     const destinationPath = `./${process.env.UPLOADS_FOLDER}/${modelName}`;
     // 2) check if file exists
     let old_File_Path: string | null;
-    if (doc) {
-      if (modelName === 'users') {
-        old_File_Path = `.${doc.avatar}`;
-      } else {
-        old_File_Path = `.${doc.image}`;
-      }
+    const imagePath =
+      doc.avatar ||
+      doc.image ||
+      doc.carouselSm ||
+      doc.carouselMd ||
+      doc.carouselLg;
+
+    if (doc && imagePath) {
+      old_File_Path = `.${imagePath}`;
     } else {
       old_File_Path = null;
     }
 
     try {
       const file_path = await this.saveFileToDisk(file, modelName);
-
       // Check if file exists before trying to update it.
       if (old_File_Path) {
         await this.deleteFile(old_File_Path);
@@ -106,6 +110,53 @@ export class FileUploadService {
         }
         // }
       }
+    }
+  }
+
+  //
+  async processAndSaveImage(file: Express.Multer.File, outputPath: string) {
+    let width = 500;
+    let height = 500;
+
+    switch (file.fieldname) {
+      case 'image':
+        width = 600;
+        height = 600;
+        break;
+      case 'avatar':
+        width = 200;
+        height = 200;
+        break;
+      case 'carouselSm':
+        width = 480;
+        height = 240;
+        break;
+      case 'carouselMd':
+        width = 800;
+        height = 400;
+        break;
+      case 'carouselLg':
+        width = 1200;
+        height = 600;
+        break;
+    }
+
+    try {
+      await sharp(file.buffer)
+        .resize({
+          width,
+          height,
+          fit: 'inside',
+          withoutEnlargement: true,
+        })
+        .toFormat('webp')
+        .webp({ quality: 80 })
+        .toFile(outputPath);
+
+      return outputPath;
+    } catch (error) {
+      console.error('❌ Error resizing image:', error);
+      throw new InternalServerErrorException('Failed to resize image');
     }
   }
 }

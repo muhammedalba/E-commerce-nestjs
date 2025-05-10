@@ -8,32 +8,60 @@ import {
   Delete,
   Query,
   UseInterceptors,
-  UploadedFile,
+  UploadedFiles,
+  UseGuards,
 } from '@nestjs/common';
 import { CarouselService } from './carousel.service';
 import { CreateCarouselDto } from './shared/dto/create-carousel.dto';
 import { UpdateCarouselDto } from './shared/dto/update-carousel.dto';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { createParseFilePipe } from 'src/shared/files/files-validation-factory';
+
 import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
+import { ParseFileFieldsPipe } from 'src/shared/files/ParseFileFieldsPipe';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { Roles } from 'src/auth/shared/decorators/rolesdecorator';
+import { roles } from 'src/auth/shared/enums/role.enum';
+import { RoleGuard } from 'src/auth/shared/guards/role.guard';
+import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 
 @Controller('carousel')
+@Roles(roles.ADMIN)
+@UseGuards(RoleGuard)
+@UseGuards(AuthGuard)
 export class CarouselController {
   constructor(private readonly carouselService: CarouselService) {}
 
+  static readonly imageSize = [
+    { name: 'carouselSm', maxCount: 1 },
+    { name: 'carouselMd', maxCount: 1 },
+    { name: 'carouselLg', maxCount: 1 },
+  ];
   @Post()
-  @UseInterceptors(FileInterceptor('image'))
+  @UseInterceptors(FileFieldsInterceptor(CarouselController.imageSize))
   async create(
     @Body()
     createCarouselDto: CreateCarouselDto,
-    @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], true))
-    file: MulterFile,
-  ): Promise<any> {
-    return await this.carouselService.create(createCarouselDto, file);
+    @UploadedFiles(
+      new ParseFileFieldsPipe(
+        '1MB',
+        ['png', 'jpeg', 'webp'],
+        [
+          { name: 'carouselLg', required: true },
+          { name: 'carouselMd', required: true },
+          { name: 'carouselSm', required: true },
+        ],
+      ),
+    )
+    files: {
+      carouselLg: MulterFile;
+      carouselMd: MulterFile;
+      carouselSm: MulterFile;
+    },
+  ) {
+    return await this.carouselService.createCarousel(createCarouselDto, files);
   }
-
+  @Roles(roles.USER, roles.ADMIN, roles.MANAGER)
   @Get()
   async findAll(@Query() queryString: QueryString) {
     return await this.carouselService.findAll(queryString);
@@ -45,17 +73,33 @@ export class CarouselController {
   }
 
   @Patch(':id')
-  @UseInterceptors(FileInterceptor('image'))
+  @UseInterceptors(FileFieldsInterceptor(CarouselController.imageSize))
   async update(
-    @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
-    file: MulterFile,
+    // @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
+    // file: MulterFile,
+    @UploadedFiles(
+      new ParseFileFieldsPipe(
+        '1MB',
+        ['png', 'jpeg', 'webp'],
+        [
+          { name: 'carouselLg', required: false },
+          { name: 'carouselMd', required: false },
+          { name: 'carouselSm', required: false },
+        ],
+      ),
+    )
+    files: {
+      carouselLg?: MulterFile;
+      carouselMd?: MulterFile;
+      carouselSm?: MulterFile;
+    },
     @Param() idParamDto: IdParamDto,
     @Body() updateCarouselDto: UpdateCarouselDto,
   ): Promise<any> {
     return await this.carouselService.updateOne(
       idParamDto,
       updateCarouselDto,
-      file,
+      files,
     );
   }
 
