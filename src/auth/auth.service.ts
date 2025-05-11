@@ -6,7 +6,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CreateUserDto, UserRole } from 'src/users/shared/dto/create-user.dto';
-import { User } from 'src/users/shared/schemas/user.schema';
+
 import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
 import * as bcrypt from 'bcrypt';
 import { RefreshToken } from './shared/schema/refresh-token.schema';
@@ -24,6 +24,7 @@ import { tokenService } from 'src/auth/shared/services/token.service';
 import { googleService } from './oauth2/services/google.service';
 import { facebookService } from './oauth2/services/facebook.service';
 import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
+import { User } from './shared/schema/user.schema';
 
 @Injectable()
 export class AuthService {

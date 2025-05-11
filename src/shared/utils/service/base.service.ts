@@ -90,7 +90,7 @@ export class BaseService<T> {
 
   async createOneDoc(
     CreateDataDto: { [key: string]: any },
-    file: MulterFile,
+    file: MulterFile | undefined,
     modelName: string,
     options?: {
       fileFieldName?: string;
@@ -111,8 +111,10 @@ export class BaseService<T> {
       throw new BadRequestException(this.t(exceptionKey));
     }
     // 2) handle file upload
+
     const filePath = await this.handleFileUpload(file, modelName);
     CreateDataDto[fileFieldName] = filePath;
+
     // 3) create document in database
     const newDoc = await this.model.create(CreateDataDto);
     // 4) optionally add full URL to avatar or image

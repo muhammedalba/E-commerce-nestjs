@@ -9,6 +9,7 @@ import {
   UploadedFile,
   UseInterceptors,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { CreateCategoryDto } from './shared/dto/create-category.dto';
 import { UpdateCategoryDto } from './shared/dto/update-category.dto';
@@ -18,7 +19,13 @@ import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
 import { CategoriesService } from './categories.service';
+import { Roles } from 'src/auth/shared/decorators/rolesdecorator';
+import { roles } from 'src/auth/shared/enums/role.enum';
+import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
+import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 @Controller('categories')
+@Roles(roles.ADMIN)
+@UseGuards(AuthGuard, RoleGuard)
 export class CategoriesController {
   constructor(private readonly categoryService: CategoriesService) {}
 
@@ -33,6 +40,7 @@ export class CategoriesController {
   }
 
   @Get()
+  @Roles(roles.ADMIN, roles.MANAGER, roles.USER)
   async findAll(@Query() queryString: QueryString) {
     return await this.categoryService.findAll(queryString);
   }

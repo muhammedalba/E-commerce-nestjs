@@ -11,10 +11,9 @@ import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
-import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
-
+type file = Express.Multer.File;
 @Injectable()
 export class CarouselService extends BaseService<CarouselDocument> {
   constructor(
@@ -28,9 +27,9 @@ export class CarouselService extends BaseService<CarouselDocument> {
   async createCarousel(
     createCarouselDto: CreateCarouselDto,
     files: {
-      carouselSm: MulterFile;
-      carouselMd: MulterFile;
-      carouselLg: MulterFile;
+      carouselSm: file;
+      carouselMd: file;
+      carouselLg: file;
     },
   ) {
     //1) check if the files is not empty
@@ -47,7 +46,7 @@ export class CarouselService extends BaseService<CarouselDocument> {
       const savedPaths = await Promise.all(
         requiredKeys.map((key) =>
           this.fileUploadService.saveFileToDisk(
-            files[key][0] as MulterFile,
+            files[key][0] as file,
             'carousel',
           ),
         ),
@@ -95,9 +94,9 @@ export class CarouselService extends BaseService<CarouselDocument> {
     idParamDto: IdParamDto,
     updateCarouselDto: UpdateCarouselDto,
     files: {
-      carouselSm?: MulterFile;
-      carouselMd?: MulterFile;
-      carouselLg?: MulterFile;
+      carouselSm?: file;
+      carouselMd?: file;
+      carouselLg?: file;
     },
   ): Promise<any> {
     const { id } = idParamDto;
@@ -118,7 +117,7 @@ export class CarouselService extends BaseService<CarouselDocument> {
 
     try {
       for (const key of imageFields) {
-        const file = (files[key]?.[0] as MulterFile) ?? null;
+        const file = (files[key]?.[0] as file) ?? null;
         if (file) {
           // save the new file to disk
           const newPath = await this.fileUploadService.saveFileToDisk(

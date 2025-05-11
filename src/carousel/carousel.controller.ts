@@ -27,8 +27,7 @@ import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 
 @Controller('carousel')
 @Roles(roles.ADMIN)
-@UseGuards(RoleGuard)
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RoleGuard)
 export class CarouselController {
   constructor(private readonly carouselService: CarouselService) {}
 
@@ -54,15 +53,15 @@ export class CarouselController {
       ),
     )
     files: {
-      carouselLg: MulterFile;
-      carouselMd: MulterFile;
-      carouselSm: MulterFile;
+      carouselLg: Express.Multer.File;
+      carouselMd: Express.Multer.File;
+      carouselSm: Express.Multer.File;
     },
   ) {
     return await this.carouselService.createCarousel(createCarouselDto, files);
   }
-  @Roles(roles.USER, roles.ADMIN, roles.MANAGER)
   @Get()
+  @Roles(roles.USER, roles.ADMIN, roles.MANAGER)
   async findAll(@Query() queryString: QueryString) {
     return await this.carouselService.findAll(queryString);
   }
@@ -75,8 +74,6 @@ export class CarouselController {
   @Patch(':id')
   @UseInterceptors(FileFieldsInterceptor(CarouselController.imageSize))
   async update(
-    // @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
-    // file: MulterFile,
     @UploadedFiles(
       new ParseFileFieldsPipe(
         '1MB',

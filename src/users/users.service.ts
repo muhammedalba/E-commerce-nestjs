@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
-import { User, UserDocument } from 'src/users/shared/schemas/user.schema';
 import { CreateUserDto } from './shared/dto/create-user.dto';
 import { UpdateUserDto } from './shared/dto/update-user.dto';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
@@ -10,6 +9,7 @@ import { BaseService } from 'src/shared/utils/service/base.service';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
 import { IdParamDto } from './shared/dto/id-param.dto';
+import { User, UserDocument } from 'src/auth/shared/schema/user.schema';
 
 @Injectable()
 export class UsersService extends BaseService<UserDocument> {
@@ -35,13 +35,13 @@ export class UsersService extends BaseService<UserDocument> {
     return await this.findAllDoc('users', QueryString);
   }
 
-  async createMany(file: any) {
-    const filesPath = await this.fileUploadService.saveFilesToDisk(
-      file,
-      './users',
-    );
-    return filesPath;
-  }
+  // async createMany(file: any) {
+  //   const filesPath = await this.fileUploadService.saveFilesToDisk(
+  //     file,
+  //     './users',
+  //   );
+  //   return filesPath;
+  // }
 
   async findOne(idParamDto: IdParamDto) {
     return await this.findOneDoc(idParamDto, '-__v');

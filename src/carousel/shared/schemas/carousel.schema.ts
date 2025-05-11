@@ -42,8 +42,16 @@ export const CarouselSchema = SchemaFactory.createForClass(Carousel);
 
 //update , findOne and findAll
 CarouselSchema.post('init', function (doc: HydratedDocument<Carousel>) {
+  const hasTranslatedDescription =
+    doc?.description &&
+    typeof doc.description === 'object' &&
+    Object.values(doc.description).some(
+      (value) => typeof value === 'string' && value.trim() !== '',
+    );
+
   const baseUrl = process.env.BASE_URL ?? '';
-  if (doc && doc.carouselLg) {
+
+  if (hasTranslatedDescription) {
     ['carouselMd', 'carouselSm', 'carouselLg'].forEach((key) => {
       const path = doc[key as keyof Carousel];
       if (typeof path === 'string' && !path.startsWith(baseUrl)) {

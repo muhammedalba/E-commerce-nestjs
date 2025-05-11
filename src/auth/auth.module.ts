@@ -3,7 +3,6 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { FileUploadDiskStorageModule } from 'src/file-upload-in-diskStorage/file-upload.module';
 import { MongooseModule } from '@nestjs/mongoose';
-import { User, UserSchema } from 'src/users/shared/schemas/user.schema';
 import {
   RefreshToken,
   refreshTokenSchema,
@@ -20,6 +19,7 @@ import { googleService } from './oauth2/services/google.service';
 import { FacebookStrategy } from './oauth2/strategy/facebook.strategy';
 import { FacebookAuthGuard } from './oauth2/guards/facebook-auth.guard';
 import { facebookService } from './oauth2/services/facebook.service';
+import { User, UserSchema } from './shared/schema/user.schema';
 
 @Module({
   imports: [
@@ -32,7 +32,10 @@ import { facebookService } from './oauth2/services/facebook.service';
     PassportModule,
   ],
 
-  exports: [AuthService],
+  exports: [
+    AuthService,
+    MongooseModule, // 👈 هذا مهم لتصدير UserModel
+  ],
   controllers: [AuthController],
   providers: [
     AuthService,

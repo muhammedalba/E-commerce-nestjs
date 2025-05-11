@@ -3,10 +3,10 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as crypto from 'crypto';
 import { Response } from 'express';
-import { User } from 'src/users/shared/schemas/user.schema';
 import { tokenService } from 'src/auth/shared/services/token.service';
 import { CookieService } from 'src/auth/shared/services/cookie.service';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
+import { User } from 'src/auth/shared/schema/user.schema';
 
 @Injectable()
 export class facebookService {

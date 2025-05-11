@@ -9,12 +9,12 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Request } from 'express';
 import { Model } from 'mongoose';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
-import { User } from 'src/users/shared/schemas/user.schema';
+import { User } from '../schema/user.schema';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
-    @InjectModel(User.name) private userModel: Model<User>,
+    @InjectModel(User.name) private AuthModule: Model<User>,
     private readonly i18n: CustomI18nService,
     private jwtService: JwtService,
   ) {}
@@ -46,8 +46,7 @@ export class AuthGuard implements CanActivate {
 
     const tokenIssuedAt = payload.iat;
     //) get the user from the database
-    const user = await this.userModel
-      .findById(payload.user_id)
+    const user = await this.AuthModule.findById(payload.user_id)
       .select('passwordChangeAt')
       .lean();
     if (!user) {

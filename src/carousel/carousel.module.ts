@@ -6,7 +6,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Carousel, CarouselSchema } from './shared/schemas/carousel.schema';
 import * as mongooseI18n from 'mongoose-i18n-localize';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
-import { UsersModule } from 'src/users/users.module';
+import { AuthModule } from 'src/auth/auth.module';
 @Module({
   imports: [
     FileUploadDiskStorageModule,
@@ -28,7 +28,7 @@ import { UsersModule } from 'src/users/users.module';
         },
       },
     ]),
-    UsersModule,
+    AuthModule,
   ],
   controllers: [CarouselController],
   providers: [CarouselService, CustomI18nService],

@@ -6,7 +6,6 @@ import {
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
-import { User } from 'src/users/shared/schemas/user.schema';
 
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 
@@ -19,6 +18,7 @@ import { CookieService } from './cookie.service';
 import { Request, Response } from 'express';
 import { tokenService } from 'src/auth/shared/services/token.service';
 import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
+import { User } from '../schema/user.schema';
 
 interface DecodedToken {
   user_id: string;

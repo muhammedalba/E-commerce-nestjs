@@ -29,8 +29,7 @@ import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
 //  * privet
 @Controller('users')
 @Roles(roles.ADMIN)
-@UseGuards(RoleGuard)
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RoleGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
   /*

@@ -9,6 +9,7 @@ import {
   UploadedFile,
   Query,
   Patch,
+  UseGuards,
 } from '@nestjs/common';
 import { BrandsService } from './brands.service';
 import { CreateBrandDto } from './dto/create-brand.dto';
@@ -18,8 +19,14 @@ import { createParseFilePipe } from 'src/shared/files/files-validation-factory';
 import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
+import { Roles } from 'src/auth/shared/decorators/rolesdecorator';
+import { roles } from 'src/auth/shared/enums/role.enum';
+import { RoleGuard } from 'src/auth/shared/guards/role.guard';
+import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 
 @Controller('brands')
+@Roles(roles.ADMIN)
+@UseGuards(AuthGuard, RoleGuard)
 export class BrandsController {
   constructor(private readonly brandsService: BrandsService) {}
 
@@ -32,8 +39,8 @@ export class BrandsController {
   ): Promise<any> {
     return await this.brandsService.create(createBrandDto, file);
   }
-
   @Get()
+  @Roles(roles.USER, roles.ADMIN, roles.MANAGER)
   async findAll(@Query() queryString: QueryString) {
     return await this.brandsService.findAll(queryString);
   }

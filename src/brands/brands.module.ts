@@ -6,6 +6,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Brand, BrandSchema } from './schemas/brand.schema';
 import * as mongooseI18n from 'mongoose-i18n-localize';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
         },
       },
     ]),
+    AuthModule,
   ],
   controllers: [BrandsController],
   providers: [BrandsService, CustomI18nService],

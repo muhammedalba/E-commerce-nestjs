@@ -6,9 +6,11 @@ import * as mongooseI18n from 'mongoose-i18n-localize';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import { CategoriesController } from './categories.controller';
 import { CategoriesService } from './categories.service';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
+    AuthModule,
     FileUploadDiskStorageModule,
     MongooseModule.forFeatureAsync([
       {

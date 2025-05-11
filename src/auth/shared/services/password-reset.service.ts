@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { User } from 'src/users/shared/schemas/user.schema';
 import * as crypto from 'crypto';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import { EmailService } from 'src/email/email.service';
@@ -15,6 +14,7 @@ import { LoginUserDto } from '../Dto/login.dto';
 import { CookieService } from './cookie.service';
 import { Response } from 'express';
 import { tokenService } from 'src/auth/shared/services/token.service';
+import { User } from '../schema/user.schema';
 
 @Injectable()
 export class PasswordResetService {

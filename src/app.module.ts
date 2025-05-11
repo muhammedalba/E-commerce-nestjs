@@ -11,6 +11,7 @@ import { StaticConfig } from './config/static.config';
 import { JwtConfig } from './config/jwt/jwt.config';
 import { CategoriesModule } from './categories/categories.module';
 import { CarouselModule } from './carousel/carousel.module';
+import { CouponsModule } from './coupons/coupons.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -27,6 +28,7 @@ import { CarouselModule } from './carousel/carousel.module';
     BrandsModule,
     CategoriesModule,
     CarouselModule,
+    CouponsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
