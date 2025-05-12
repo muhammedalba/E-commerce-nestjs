@@ -42,7 +42,7 @@ export class BaseService<T> {
     value: string,
     excludeId?: string,
   ): Promise<boolean> {
-    const query: Record<string, any> = { [field]: value };
+    const query: Record<string, any> = { [field]: value.trim() };
     if (excludeId) query._id = { $ne: excludeId };
     const result = await this.model.exists(query);
     return !!result;

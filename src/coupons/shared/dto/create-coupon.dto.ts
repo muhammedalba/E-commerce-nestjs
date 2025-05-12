@@ -8,6 +8,7 @@ import {
   Max,
   Length,
 } from 'class-validator';
+import { IsFutureDate } from 'src/shared/utils/decorators/is-future-date.decorator';
 
 export class CreateCouponDto {
   @IsString()
@@ -18,6 +19,7 @@ export class CreateCouponDto {
   @Type(() => Date)
   @IsDate()
   @IsNotEmpty({ message: 'Coupon expire time is required' })
+  @IsFutureDate({ message: 'Expire date must be in the future' })
   expires?: Date;
 
   @IsNumber()

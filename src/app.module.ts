@@ -12,13 +12,14 @@ import { JwtConfig } from './config/jwt/jwt.config';
 import { CategoriesModule } from './categories/categories.module';
 import { CarouselModule } from './carousel/carousel.module';
 import { CouponsModule } from './coupons/coupons.module';
+import { ProductsModule } from './products/products.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
     }),
-
     I18nConfig,
     MongooseConfig,
     StaticConfig,
@@ -29,6 +30,7 @@ import { CouponsModule } from './coupons/coupons.module';
     CategoriesModule,
     CarouselModule,
     CouponsModule,
+    ProductsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

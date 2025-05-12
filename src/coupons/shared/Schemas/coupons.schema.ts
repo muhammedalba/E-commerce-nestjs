@@ -1,7 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 
-// 1. تحديد الـ Schema على شكل Class باستخدام الـ Decorators من @nestjs/mongoose
 @Schema({ timestamps: true })
 export class Coupon {
   @Prop({
@@ -10,6 +9,7 @@ export class Coupon {
     unique: true,
     minlength: 3,
     maxlength: 20,
+    trim: true,
   })
   name!: string;
 
