@@ -37,7 +37,7 @@ export class BaseService<T> {
     `/${process.env.UPLOADS_FOLDER}/${modelName}/${modelName === 'users' ? 'avatar.png' : 'default.png'}`;
 
   // This method is used to check if the email is already taken
-  private async isFieldTaken(
+  protected async isFieldTaken(
     field: string,
     value: string,
     excludeId?: string,

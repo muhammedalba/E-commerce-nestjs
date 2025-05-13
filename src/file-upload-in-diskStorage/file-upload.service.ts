@@ -8,6 +8,8 @@ import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
 interface FileSchema {
   avatar?: string;
   image?: string;
+  imageCover?: string;
+  infoProductPdf?: string;
   carouselSm?: string;
   carouselMd?: string;
   carouselLg?: string;
@@ -22,8 +24,9 @@ export class FileUploadService {
 
     // 2) if exists
     try {
+      const uploadsDir = process.env.UPLOADS_DIRECTORY || 'uploads';
       // 1) add path to the file
-      const destinationPath = `./${process.env.UPLOADS_FOLDER}/${modelName}`;
+      const destinationPath = `./${uploadsDir}/${modelName}`;
       // 1) generate a unique filename
       const timestamp = Date.now();
       const ext = extname(file.originalname);
@@ -33,6 +36,18 @@ export class FileUploadService {
       // const outputPath = `${destinationPath}/${filename}`;
       //2) Check if the destination directory exists, and create it if not.
       await fs.promises.mkdir(destinationPath, { recursive: true });
+      if (ext === '.pdf') {
+        // const filePath = path.join(uploadsDir, `${outputPath}`);
+
+        // Save the PDF file directly
+        fs.writeFileSync(outputPath, file.buffer);
+        // await writeFile(outputPath, file.buffer);
+        const file_path = outputPath.startsWith('.')
+          ? outputPath.slice(1)
+          : outputPath;
+        return file_path;
+      }
+
       //3) resize the image and save it to disk
       await this.processAndSaveImage(file, outputPath);
       // await writeFile(outputPath, file.buffer);
@@ -70,12 +85,16 @@ export class FileUploadService {
     let old_File_Path: string | null;
     const imagePath =
       doc.avatar ||
+      doc.infoProductPdf ||
+      doc.imageCover ||
       doc.image ||
       doc.carouselSm ||
       doc.carouselMd ||
       doc.carouselLg;
 
     if (doc && imagePath) {
+      console.log(imagePath);
+
       old_File_Path = `.${imagePath}`;
     } else {
       old_File_Path = null;
@@ -93,7 +112,9 @@ export class FileUploadService {
     }
   }
   async deleteFiles(filePaths: string[]): Promise<[]> {
-    await Promise.all(filePaths.map((filePath) => this.deleteFile(filePath)));
+    await Promise.all(
+      filePaths.map((filePath) => this.deleteFile(`./${filePath}`)),
+    );
     return [];
   }
   async deleteFile(Path: string): Promise<void> {

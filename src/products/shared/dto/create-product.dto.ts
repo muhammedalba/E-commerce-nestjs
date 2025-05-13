@@ -10,18 +10,21 @@ import {
   MaxLength,
   MinLength,
   IsPositive,
+  IsDefined,
+  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
 
 export class CreateProductDto {
-  @IsString()
-  @IsNotEmpty({ message: 'Title is required' })
-  @MinLength(3)
-  @MaxLength(70)
-  title!: string;
+  @IsDefined()
+  @Type(() => FieldLocalizeDto)
+  //   validaate opject in opject
+  @ValidateNested()
+  title!: FieldLocalizeDto;
 
   @IsString()
-  @IsNotEmpty({ message: 'Slug is required' })
+  @IsOptional()
   slug?: string;
 
   @IsString()

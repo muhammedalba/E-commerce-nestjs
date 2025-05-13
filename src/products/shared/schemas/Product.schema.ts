@@ -9,7 +9,8 @@ import { Types } from 'mongoose';
 })
 export class Product {
   @Prop({
-    type: String,
+    type: Object,
+    i18n: true,
     trim: true,
     required: [true, 'product title required'],
     minlength: 3,
@@ -95,7 +96,7 @@ export class Product {
     type: Number,
     min: 1,
     max: 5,
-    default: 0,
+    default: 1,
   })
   rating?: number;
 
@@ -120,7 +121,7 @@ export class Product {
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);
-export type CouponDocument = HydratedDocument<Product>;
+export type ProductDocument = HydratedDocument<Product>;
 // Virtual Populate (for example: reviews)
 // ProductSchema.virtual('reviews', {
 //   ref: 'Review',
