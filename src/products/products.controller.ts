@@ -33,6 +33,8 @@ export class ProductsController {
     { name: 'infoProductPdf', maxCount: 1 },
   ];
   @Post()
+  @Roles(roles.ADMIN)
+  @UseGuards(AuthGuard, RoleGuard)
   @UseInterceptors(FileFieldsInterceptor(ProductsController.imageSize))
   async create(
     @Body() createProductDto: CreateProductDto,
@@ -48,9 +50,9 @@ export class ProductsController {
       ),
     )
     files: {
-      imageCover: Express.Multer.File;
+      imageCover: Express.Multer.File[];
       images?: Express.Multer.File[];
-      infoProductPdf?: Express.Multer.File;
+      infoProductPdf?: Express.Multer.File[];
     },
   ) {
     return await this.productsService.create(createProductDto, files);

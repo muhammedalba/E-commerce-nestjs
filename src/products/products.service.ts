@@ -65,9 +65,9 @@ export class ProductsService {
   async create(
     createProductDto: CreateProductDto,
     files: {
-      imageCover: Express.Multer.File;
+      imageCover: Express.Multer.File[];
       images?: Express.Multer.File[];
-      infoProductPdf?: Express.Multer.File;
+      infoProductPdf?: Express.Multer.File[];
     },
   ) {
     // 1) Generate slug from title
@@ -188,7 +188,6 @@ export class ProductsService {
       .findById(idParamDto.id)
       .select('infoProductPdf imageCover images')
       .lean();
-
     if (!doc) {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }

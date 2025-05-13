@@ -128,3 +128,24 @@ export type ProductDocument = HydratedDocument<Product>;
 //   localField: '_id',
 //   foreignField: 'product',
 // });
+ProductSchema.post('init', function (doc: HydratedDocument<Product>) {
+  const hasTranslatedDescription =
+    doc?.title &&
+    typeof doc.title === 'object' &&
+    Object.values(doc.title).some(
+      (value) => typeof value === 'string' && value.trim() !== '',
+    );
+
+  const baseUrl = process.env.BASE_URL ?? '';
+
+  if (hasTranslatedDescription) {
+    ['imageCover', 'infoProductPdf'].forEach((key) => {
+      const path = doc[key as keyof Product];
+      if (typeof path === 'string' && !path.startsWith(baseUrl)) {
+        doc[key] = `${baseUrl}${path}`;
+      }
+    });
+    const paths = doc?.images?.map((key) => `${baseUrl}${key}`);
+    doc.images = paths;
+  }
+});
