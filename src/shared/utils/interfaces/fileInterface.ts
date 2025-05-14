@@ -1,2 +1,4 @@
-export type MulterFileType = Express.Multer.File | undefined;
-export type MulterFilesType = Express.Multer.File[] | undefined;
+import { Request } from 'express';
+
+export type MulterFileType = Request['file'] | undefined;
+export type MulterFilesType = Request['files'] | undefined;

@@ -62,7 +62,10 @@ export class ProductsService {
     folder: string,
   ): Promise<string[] | undefined> {
     if (!files || files.length === 0) return undefined;
-    return this.fileUploadService.saveFilesToDisk(files, folder);
+    const fileArray = Array.isArray(files)
+      ? files
+      : Object.values(files).flat();
+    return this.fileUploadService.saveFilesToDisk(fileArray, folder);
   }
 
   async create(
@@ -244,7 +247,7 @@ export class ProductsService {
         }
 
         // 4) Handle multiple images update
-        if (files.images && files.images.length > 0) {
+        if (Array.isArray(files.images) && files.images.length > 0) {
           // delete old images
           if (doc.images) {
             await this.fileUploadService.deleteFiles(doc.images);

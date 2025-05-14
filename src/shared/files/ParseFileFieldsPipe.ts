@@ -54,14 +54,15 @@ export class ParseFileFieldsPipe implements PipeTransform {
         }
         continue;
       }
+      if (Array.isArray(fileArray)) {
+        for (const file of fileArray) {
+          for (const validator of validators) {
+            const isValid = await validator.isValid(file);
+            if (!isValid) {
+              const message = `File validation failed.`;
 
-      for (const file of fileArray) {
-        for (const validator of validators) {
-          const isValid = await validator.isValid(file);
-          if (!isValid) {
-            const message = `File validation failed.`;
-
-            throw new UnprocessableEntityException(message);
+              throw new UnprocessableEntityException(message);
+            }
           }
         }
       }
