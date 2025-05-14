@@ -1,4 +1,4 @@
-import type { Request } from 'express';
+import { File } from 'multer';
 
-export type MulterFileType = Request['file'];
-export type MulterFilesType = Request['files'];
+export type MulterFileType = File | undefined;
+export type MulterFilesType = File[] | undefined;
