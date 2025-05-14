@@ -6,7 +6,6 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "postinstall": "npm install",
     "build": "nest build",
     "prepare": "npm install -g @nestjs/cli",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
