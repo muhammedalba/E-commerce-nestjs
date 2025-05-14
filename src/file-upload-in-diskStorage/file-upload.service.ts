@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
+import { Request } from 'express';
 
 interface FileSchema {
   avatar?: string;
@@ -14,8 +15,8 @@ interface FileSchema {
   carouselMd?: string;
   carouselLg?: string;
 }
-type fileType = Express.Multer.File;
-type filesType = Express.Multer.File[];
+type fileType = Request['file'];
+type filesType = Request['files'];
 @Injectable()
 export class FileUploadService {
   async saveFileToDisk(
@@ -69,13 +70,15 @@ export class FileUploadService {
     files: filesType,
     destinationPath: string,
   ): Promise<string[]> {
-    if (!files.length) {
+    if (!files?.length) {
       return [];
     }
 
     try {
       const filePaths = await Promise.all(
-        files.map((file) => this.saveFileToDisk(file, destinationPath)),
+        (files as MulterFileType[]).map((file) =>
+          this.saveFileToDisk(file, destinationPath),
+        ),
       );
       return filePaths;
     } catch (error) {
@@ -144,6 +147,9 @@ export class FileUploadService {
     let width = 500;
     let height = 500;
 
+    if (!file) {
+      throw new InternalServerErrorException('File is undefined');
+    }
     switch (file.fieldname) {
       case 'image':
         width = 600;
@@ -168,6 +174,10 @@ export class FileUploadService {
     }
 
     try {
+      if (!file?.buffer) {
+        throw new InternalServerErrorException('File buffer is undefined');
+      }
+
       await sharp(file.buffer)
         .resize({
           width,

@@ -13,7 +13,8 @@ import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.se
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
-type file = Express.Multer.File;
+import { Request } from 'express';
+type file = Request['file'];
 @Injectable()
 export class CarouselService extends BaseService<CarouselDocument> {
   constructor(
@@ -46,7 +47,7 @@ export class CarouselService extends BaseService<CarouselDocument> {
       const savedPaths = await Promise.all(
         requiredKeys.map((key) =>
           this.fileUploadService.saveFileToDisk(
-            files[key][0] as file,
+            files[key]?.[0] as file,
             'carousel',
           ),
         ),

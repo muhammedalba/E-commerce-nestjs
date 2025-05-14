@@ -10,6 +10,7 @@ import {
   UseInterceptors,
   UploadedFiles,
   UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
 import { CarouselService } from './carousel.service';
 import { CreateCarouselDto } from './shared/dto/create-carousel.dto';
@@ -24,7 +25,8 @@ import { Roles } from 'src/auth/shared/decorators/rolesdecorator';
 import { roles } from 'src/auth/shared/enums/role.enum';
 import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
-type file = Express.Multer.File;
+import { Request } from 'express';
+type file = Request['file'];
 @Controller('carousel')
 @Roles(roles.ADMIN)
 @UseGuards(AuthGuard, RoleGuard)
@@ -58,7 +60,14 @@ export class CarouselController {
       carouselSm: file;
     },
   ) {
-    return await this.carouselService.createCarousel(createCarouselDto, files);
+    if (!files.carouselLg || !files.carouselMd || !files.carouselSm) {
+      throw new BadRequestException('All carousel images are required.');
+    }
+    return await this.carouselService.createCarousel(createCarouselDto, {
+      carouselLg: files.carouselLg,
+      carouselMd: files.carouselMd,
+      carouselSm: files.carouselSm,
+    });
   }
   @Get()
   @Roles(roles.USER, roles.ADMIN, roles.MANAGER)
