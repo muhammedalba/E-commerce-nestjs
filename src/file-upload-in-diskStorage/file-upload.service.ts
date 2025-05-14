@@ -3,7 +3,7 @@ import { extname } from 'path';
 import * as fs from 'fs';
 import * as sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
-import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
+import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 
 interface FileSchema {
   avatar?: string;
@@ -16,7 +16,10 @@ interface FileSchema {
 }
 @Injectable()
 export class FileUploadService {
-  async saveFileToDisk(file: MulterFile, modelName: string): Promise<string> {
+  async saveFileToDisk(
+    file: MulterFileType,
+    modelName: string,
+  ): Promise<string> {
     // 1) check file if it not exists
     if (!file?.buffer) {
       return '';
@@ -78,7 +81,7 @@ export class FileUploadService {
       throw new InternalServerErrorException('Failed to save files to disk');
     }
   }
-  async updateFile(file: MulterFile, modelName: string, doc: FileSchema) {
+  async updateFile(file: MulterFileType, modelName: string, doc: FileSchema) {
     // 1) add path to the file
     const destinationPath = `./${process.env.UPLOADS_FOLDER}/${modelName}`;
     // 2) check if file exists

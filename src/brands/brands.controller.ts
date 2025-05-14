@@ -16,13 +16,13 @@ import { CreateBrandDto } from './dto/create-brand.dto';
 import { UpdateBrandDto } from './dto/update-brand.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { createParseFilePipe } from 'src/shared/files/files-validation-factory';
-import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
 import { Roles } from 'src/auth/shared/decorators/rolesdecorator';
 import { roles } from 'src/auth/shared/enums/role.enum';
 import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
+import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 
 @Controller('brands')
 @Roles(roles.ADMIN)
@@ -35,7 +35,7 @@ export class BrandsController {
   async create(
     @Body() createBrandDto: CreateBrandDto,
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], false))
-    file: MulterFile,
+    file: MulterFileType,
   ): Promise<any> {
     return await this.brandsService.create(createBrandDto, file);
   }
@@ -54,7 +54,7 @@ export class BrandsController {
   @UseInterceptors(FileInterceptor('image'))
   async updateBrand(
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
-    file: MulterFile,
+    file: MulterFileType,
     @Param() idParamDto: IdParamDto,
     @Body() updateBrandDto: UpdateBrandDto,
   ): Promise<any> {

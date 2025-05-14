@@ -12,7 +12,10 @@ import { Product, ProductDocument } from './shared/schemas/Product.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import slugify from 'slugify';
-import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
+import {
+  MulterFilesType,
+  MulterFileType,
+} from 'src/shared/utils/interfaces/fileInterface';
 import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
 import { I18nContext } from 'nestjs-i18n';
 import { ApiFeatures } from 'src/shared/utils/ApiFeatures';
@@ -43,7 +46,7 @@ export class ProductsService {
     return localizedDoc;
   }
   private async uploadFile(
-    file: MulterFile,
+    file: MulterFileType,
     modelName: string,
   ): Promise<string> {
     if (!file) {
@@ -55,7 +58,7 @@ export class ProductsService {
   }
 
   private async handleMultipleFilesUpload(
-    files: Express.Multer.File[] | undefined,
+    files: MulterFilesType,
     folder: string,
   ): Promise<string[] | undefined> {
     if (!files || files.length === 0) return undefined;

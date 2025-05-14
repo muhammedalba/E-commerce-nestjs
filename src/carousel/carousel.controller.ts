@@ -15,7 +15,7 @@ import { CarouselService } from './carousel.service';
 import { CreateCarouselDto } from './shared/dto/create-carousel.dto';
 import { UpdateCarouselDto } from './shared/dto/update-carousel.dto';
 
-import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
+import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
 import { ParseFileFieldsPipe } from 'src/shared/files/ParseFileFieldsPipe';
@@ -86,9 +86,9 @@ export class CarouselController {
       ),
     )
     files: {
-      carouselLg?: MulterFile;
-      carouselMd?: MulterFile;
-      carouselSm?: MulterFile;
+      carouselLg?: MulterFileType;
+      carouselMd?: MulterFileType;
+      carouselSm?: MulterFileType;
     },
     @Param() idParamDto: IdParamDto,
     @Body() updateCarouselDto: UpdateCarouselDto,

@@ -7,7 +7,7 @@ import { UpdateUserDto } from './shared/dto/update-user.dto';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import { BaseService } from 'src/shared/utils/service/base.service';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
-import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
+import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { IdParamDto } from './shared/dto/id-param.dto';
 import { User, UserDocument } from 'src/auth/shared/schema/user.schema';
 
@@ -23,7 +23,7 @@ export class UsersService extends BaseService<UserDocument> {
 
   async createUser(
     CreateUserDto: CreateUserDto,
-    file: MulterFile,
+    file: MulterFileType,
   ): Promise<any> {
     return await this.createOneDoc(CreateUserDto, file, 'users', {
       fileFieldName: 'avatar',
@@ -50,7 +50,7 @@ export class UsersService extends BaseService<UserDocument> {
   async update_user(
     idParamDto: IdParamDto,
     UpdateUserDto: UpdateUserDto,
-    file: MulterFile,
+    file: MulterFileType,
   ): Promise<any> {
     // //1) check  user if found
     // const user = await this.userModel.findById(id).select('_id avatar');

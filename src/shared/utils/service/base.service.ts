@@ -9,7 +9,7 @@ import { CustomI18nService } from '../i18n/costum-i18n-service';
 import { ApiFeatures } from '../ApiFeatures';
 import { QueryString } from '../interfaces/queryInterface';
 import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
-import { MulterFile } from '../interfaces/fileInterface';
+import { MulterFileType } from '../interfaces/fileInterface';
 import { I18nContext } from 'nestjs-i18n';
 import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
 //
@@ -65,7 +65,7 @@ export class BaseService<T> {
   }
   // This method is used to handle the file upload
   private async handleFileUpload(
-    file: MulterFile,
+    file: MulterFileType,
     modelName: string,
     doc?: FileSchema,
   ): Promise<string> {
@@ -90,7 +90,7 @@ export class BaseService<T> {
 
   async createOneDoc(
     CreateDataDto: { [key: string]: any },
-    file: MulterFile | undefined,
+    file: MulterFileType,
     modelName: string,
     options?: {
       fileFieldName?: string;
@@ -204,7 +204,7 @@ export class BaseService<T> {
       email?: string;
       [key: string]: any;
     },
-    file: MulterFile,
+    file: MulterFileType,
     modelName: string,
     selectedFields: string,
     options?: {

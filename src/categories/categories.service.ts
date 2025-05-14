@@ -7,7 +7,7 @@ import { Model } from 'mongoose';
 import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import { BaseService } from 'src/shared/utils/service/base.service';
-import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
+import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
 
@@ -22,7 +22,7 @@ export class CategoriesService extends BaseService<CategoryDocument> {
   }
   async create(
     createCategoryDto: CreateCategoryDto,
-    file: MulterFile,
+    file: MulterFileType,
   ): Promise<any> {
     return await this.createOneDoc(createCategoryDto, file, 'categories', {
       fileFieldName: 'image',
@@ -47,7 +47,7 @@ export class CategoriesService extends BaseService<CategoryDocument> {
   async update(
     idParamDto: IdParamDto,
     updateCategoryDto: UpdateCategoryDto,
-    file: MulterFile,
+    file: MulterFileType,
   ): Promise<any> {
     const selectedFields = 'image';
     return await this.updateOneDoc(

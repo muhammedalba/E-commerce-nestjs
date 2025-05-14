@@ -24,7 +24,7 @@ import { UpdateUserDto } from 'src/users/shared/dto/update-user.dto';
 import { Request, Response } from 'express';
 import { GoogleAuthGuard } from './oauth2/guards/GoogleAuthGuard';
 import { FacebookAuthGuard } from './oauth2/guards/facebook-auth.guard';
-import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
+import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 
 @Controller('auth')
 export class AuthController {
@@ -112,7 +112,7 @@ export class AuthController {
     @Body() createUserDto: CreateUserDto,
     @Res({ passthrough: true }) res: Response,
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], false))
-    file: MulterFile,
+    file: MulterFileType,
   ): Promise<any> {
     // Implement registration logic
     return await this.authService.register(createUserDto, file, res);
@@ -189,7 +189,7 @@ export class AuthController {
     @Req() request: { user: { user_id: string } },
     @Body() UpdateUserDto: UpdateUserDto,
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
-    file: MulterFile,
+    file: MulterFileType,
   ): Promise<any> {
     return await this.authService.updateMe(request, UpdateUserDto, file);
   }

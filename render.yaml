@@ -1,0 +1,74 @@
+services:
+  - type: web
+    name: nest-api
+    env: node
+    plan: free
+    branch: main
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: APP_NAME
+        value: Sky Galaxy
+      - key: BASE_URL
+        value: http://localhost:4000
+      - key: NODE_ENV
+        value: development
+        # outh
+      # google settings
+      - key: GOOGLE_CLIENT_ID
+        value: false
+      - key: GOOGLE_CLIENT_SECRET
+        value: false
+        # facebook settings
+      - key: FACEBOOK_CLIENT_ID
+        value: false
+        # i18n
+      - key: DEFAULT_LANGUAGE
+        value: ar
+      - key: LANGUAGES
+        value: ar,en
+        # jwt_secret
+      - key: jwt_Access_hToken_secret
+        value: cvdsvgdsbsfdbs
+      - key: jwt_Refres_hToken_secret
+        value: cvdsvfdsfsfsfgew
+      - key: saltOrRounds
+        value: 10
+        # static files settings
+      - key: UPLOADS_FOLDER
+        value: uploads
+      - key: UPLOADS_ROUTE
+        value: /uploads
+        # cors
+      - key: FRONTEND_ORIGIN
+        value: http://localhost:5173
+        # uploads directory
+      - key: UPLOADS_DIRECTORY
+        value: uploads
+        # db settings
+      - key: MONGODB_URI
+        value: 'mongodb+srv://E-commerce:M3LVCXGF9glTa2kg@clusterdbb.j8w4mhp.mongodb.net/driv?retryWrites=true&w=majority&appName=Clusterdbb'
+        # jwt
+      - key: JWT_SECRET_KEY
+        value: 524e1b5dd229c748a40de5ccb1e6894fb577a44e93f2194d952efee1c433eb01
+      - key: JWT_REFRESH_TOKEN_SECRET
+        value: 524e1b5dd229c748a40de5ccb1e6894fb577a44e93f2194d952efee1c433eb01
+      - key: JWT_EXPIRE_TIME
+        value: 15m
+      - key: JWT_REFRESH_TOKEN_EXPIRE_TIME
+        value: 7d
+        # email settings
+      - key: EMAIL_PORT
+        value: 587
+      - key: EMAIL_HOSt
+        value: smtp.gmail.com
+      - key: EMAIL_USER
+        value: skygalaxy.shop@gmail.com
+      - key: EMAIL_PASS
+        value: lplgqfzkbjniajvs
+      - key: EMAIL_FROM
+        value: skygalaxy.shop@gmail.com

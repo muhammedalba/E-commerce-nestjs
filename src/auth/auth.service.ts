@@ -23,8 +23,8 @@ import { userProfileService } from './shared/services/user-profile.service';
 import { tokenService } from 'src/auth/shared/services/token.service';
 import { googleService } from './oauth2/services/google.service';
 import { facebookService } from './oauth2/services/facebook.service';
-import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
 import { User } from './shared/schema/user.schema';
+import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 
 @Injectable()
 export class AuthService {
@@ -45,7 +45,7 @@ export class AuthService {
   // --- register user --- //
   async register(
     createUserDto: CreateUserDto,
-    file: MulterFile,
+    file: MulterFileType,
     res: Response,
   ): Promise<any> {
     const { email } = createUserDto;
@@ -188,7 +188,7 @@ export class AuthService {
   async updateMe(
     userId: { user: { user_id: string } },
     updateUserDto: UpdateUserDto,
-    file: MulterFile,
+    file: MulterFileType,
   ): Promise<any> {
     return await this.userProfileService.updateMe(userId, updateUserDto, file);
   }

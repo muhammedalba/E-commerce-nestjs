@@ -23,7 +23,7 @@ import { roles } from 'src/auth/shared/enums/role.enum';
 import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 import { Roles } from 'src/auth/shared/decorators/rolesdecorator';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
-import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
+import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 
 //  * rote: http://localhost:4000/api/v1/users
 //  * privet
@@ -42,7 +42,7 @@ export class UsersController {
     @Body()
     CreateUserDto: CreateUserDto,
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], false))
-    file: MulterFile,
+    file: MulterFileType,
   ) {
     return this.usersService.createUser(CreateUserDto, file);
   }
@@ -86,7 +86,7 @@ export class UsersController {
   @UseInterceptors(FileInterceptor('avatar'))
   update_user(
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
-    file: MulterFile,
+    file: MulterFileType,
     @Param()
     IdParamDto: IdParamDto,
     @Body()

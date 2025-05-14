@@ -15,7 +15,7 @@ import { CreateCategoryDto } from './shared/dto/create-category.dto';
 import { UpdateCategoryDto } from './shared/dto/update-category.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { createParseFilePipe } from 'src/shared/files/files-validation-factory';
-import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
+import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
 import { CategoriesService } from './categories.service';
@@ -34,7 +34,7 @@ export class CategoriesController {
   async create(
     @Body() createCategoryDto: CreateCategoryDto,
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], false))
-    file: MulterFile,
+    file: MulterFileType,
   ): Promise<any> {
     return await this.categoryService.create(createCategoryDto, file);
   }
@@ -54,7 +54,7 @@ export class CategoriesController {
   @UseInterceptors(FileInterceptor('image'))
   async update(
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
-    file: MulterFile,
+    file: MulterFileType,
     @Param() idParamDto: IdParamDto,
     @Body() updateCategoryDto: UpdateCategoryDto,
   ): Promise<any> {

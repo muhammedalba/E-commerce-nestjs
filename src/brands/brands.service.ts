@@ -4,12 +4,12 @@ import { InjectModel } from '@nestjs/mongoose';
 import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
 import { Brand, BrandDocument } from './schemas/brand.schema';
 import { Model } from 'mongoose';
-import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
 import { UpdateBrandDto } from './dto/update-brand.dto';
 import { BaseService } from 'src/shared/utils/service/base.service';
+import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 
 @Injectable()
 export class BrandsService extends BaseService<BrandDocument> {
@@ -20,7 +20,10 @@ export class BrandsService extends BaseService<BrandDocument> {
   ) {
     super(brandModel, i18n, fileUploadService);
   }
-  async create(createBrandDto: CreateBrandDto, file: MulterFile): Promise<any> {
+  async create(
+    createBrandDto: CreateBrandDto,
+    file: MulterFileType,
+  ): Promise<any> {
     return await this.createOneDoc(createBrandDto, file, 'brands', {
       fileFieldName: 'image',
       checkField: 'name.en',
@@ -42,7 +45,7 @@ export class BrandsService extends BaseService<BrandDocument> {
   async updateBrand(
     idParamDto: IdParamDto,
     updateBrandDto: UpdateBrandDto,
-    file: MulterFile,
+    file: MulterFileType,
   ): Promise<any> {
     const selectedFields = 'image';
     return await this.updateOneDoc(

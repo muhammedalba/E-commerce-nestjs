@@ -17,8 +17,8 @@ import { JwtService } from '@nestjs/jwt';
 import { CookieService } from './cookie.service';
 import { Request, Response } from 'express';
 import { tokenService } from 'src/auth/shared/services/token.service';
-import { MulterFile } from 'src/shared/utils/interfaces/fileInterface';
 import { User } from '../schema/user.schema';
+import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 
 interface DecodedToken {
   user_id: string;
@@ -69,7 +69,7 @@ export class userProfileService {
   async updateMe(
     userId: { user: { user_id: string } },
     updateUserDto: UpdateUserDto,
-    file: MulterFile,
+    file: MulterFileType,
   ): Promise<any> {
     const { user_id } = userId.user;
 
