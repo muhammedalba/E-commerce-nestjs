@@ -9,6 +9,7 @@ import { FileValidator } from '@nestjs/common/pipes/file/file-validator.interfac
 import { createFileTypeRegex } from './utils/file.util';
 import { FileSizeType, FileType } from './types/file.types';
 import * as bytes from 'bytes';
+import { MulterFilesType } from '../utils/interfaces/fileInterface';
 
 interface FileFieldConfig {
   name: string;
@@ -35,7 +36,7 @@ export class ParseFileFieldsPipe implements PipeTransform {
     ];
   }
 
-  async transform(files: Record<string, Express.Multer.File[]>) {
+  async transform(files: Record<string, MulterFilesType>) {
     if (!files || typeof files !== 'object') {
       files = {}; // نعاملها كـ كائن فارغ لتفادي الخطأ
     }

@@ -14,6 +14,8 @@ interface FileSchema {
   carouselMd?: string;
   carouselLg?: string;
 }
+type fileType = Express.Multer.File;
+type filesType = Express.Multer.File[];
 @Injectable()
 export class FileUploadService {
   async saveFileToDisk(
@@ -64,7 +66,7 @@ export class FileUploadService {
     }
   }
   async saveFilesToDisk(
-    files: Express.Multer.File[],
+    files: filesType,
     destinationPath: string,
   ): Promise<string[]> {
     if (!files.length) {
@@ -138,7 +140,7 @@ export class FileUploadService {
   }
 
   //
-  async processAndSaveImage(file: Express.Multer.File, outputPath: string) {
+  async processAndSaveImage(file: fileType, outputPath: string) {
     let width = 500;
     let height = 500;
 

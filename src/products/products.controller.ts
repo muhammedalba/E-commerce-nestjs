@@ -10,6 +10,7 @@ import {
   UploadedFiles,
   Query,
   UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './shared/dto/create-product.dto';
@@ -23,6 +24,7 @@ import { Roles } from 'src/auth/shared/decorators/rolesdecorator';
 import { roles } from 'src/auth/shared/enums/role.enum';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { RoleGuard } from 'src/auth/shared/guards/role.guard';
+import { MulterFilesType } from 'src/shared/utils/interfaces/fileInterface';
 
 @Controller('products')
 export class ProductsController {
@@ -50,12 +52,22 @@ export class ProductsController {
       ),
     )
     files: {
-      imageCover: Express.Multer.File[];
-      images?: Express.Multer.File[];
-      infoProductPdf?: Express.Multer.File[];
+      imageCover: MulterFilesType;
+      images?: MulterFilesType;
+      infoProductPdf?: MulterFilesType;
     },
   ) {
-    return await this.productsService.create(createProductDto, files);
+    if (!files.imageCover) {
+      throw new BadRequestException('imageCover is required');
+    }
+    return await this.productsService.create(
+      createProductDto,
+      files as {
+        imageCover: MulterFilesType;
+        images?: MulterFilesType;
+        infoProductPdf?: MulterFilesType;
+      },
+    );
   }
 
   @Get()
@@ -86,9 +98,9 @@ export class ProductsController {
       ),
     )
     files: {
-      imageCover?: Express.Multer.File[];
-      images?: Express.Multer.File[];
-      infoProductPdf?: Express.Multer.File[];
+      imageCover?: MulterFilesType;
+      images?: MulterFilesType;
+      infoProductPdf?: MulterFilesType;
     },
   ) {
     return await this.productsService.update(

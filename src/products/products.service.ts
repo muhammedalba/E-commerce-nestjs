@@ -68,9 +68,9 @@ export class ProductsService {
   async create(
     createProductDto: CreateProductDto,
     files: {
-      imageCover: Express.Multer.File[];
-      images?: Express.Multer.File[];
-      infoProductPdf?: Express.Multer.File[];
+      imageCover: MulterFilesType;
+      images?: MulterFilesType;
+      infoProductPdf?: MulterFilesType;
     },
   ) {
     // 1) Generate slug from title
@@ -91,8 +91,10 @@ export class ProductsService {
 
     try {
       // 3) Handle file uploads
-      createProductDto.imageCover =
-        (await this.uploadFile(files.imageCover[0], 'products')) ?? '';
+      if (files.imageCover) {
+        createProductDto.imageCover =
+          (await this.uploadFile(files.imageCover[0], 'products')) ?? '';
+      }
 
       if (files.infoProductPdf) {
         createProductDto.infoProductPdf = await this.uploadFile(
@@ -181,9 +183,9 @@ export class ProductsService {
     idParamDto: IdParamDto,
     updateProductDto: UpdateProductDto,
     files: {
-      imageCover?: Express.Multer.File[];
-      infoProductPdf?: Express.Multer.File[];
-      images?: Express.Multer.File[];
+      imageCover?: MulterFilesType;
+      infoProductPdf?: MulterFilesType;
+      images?: MulterFilesType;
     },
   ) {
     // 1) Fetch existing product
@@ -217,7 +219,7 @@ export class ProductsService {
     try {
       if (doc && files) {
         // 3) Handle single file updates
-        const singleFiles: Record<string, Express.Multer.File[] | undefined> = {
+        const singleFiles: Record<string, MulterFilesType> = {
           imageCover: files.imageCover,
           infoProductPdf: files.infoProductPdf,
         };
