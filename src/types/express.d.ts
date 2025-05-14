@@ -1,9 +1,9 @@
-import { UserDocument } from 'src/users/schemas/user.schema';
+declare namespace Express {
+  export interface Multer {
+    file: any;
+  }
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: UserDocument;
-    }
+  export interface Request {
+    files?: Multer.File[];
   }
 }
