@@ -19,7 +19,7 @@ export class facebookService {
   ) {}
 
   async facebookLogin(facebookUser: OAuthUser, res: Response) {
-    const { email } = facebookUser;
+    const { email, name, picture } = facebookUser;
 
     // 1) check user is use
     const user = await this.userModel
@@ -34,10 +34,10 @@ export class facebookService {
       const randomPassword = crypto.randomBytes(16).toString('hex');
       // 2) create user
       const newUser = await this.userModel.create({
-        email: facebookUser.email,
-        name: facebookUser.name,
+        email: email,
+        name: name,
         password: randomPassword,
-        avatar: facebookUser.picture,
+        avatar: picture,
         provider: 'facebook',
       });
       const userId = {

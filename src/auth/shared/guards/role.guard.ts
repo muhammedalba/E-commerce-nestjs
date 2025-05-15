@@ -11,18 +11,15 @@ import { Roles_key } from '../decorators/rolesdecorator';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import { JwtPayload } from '../types/jwt-payload.interface';
 
-type AuthenticatedUser = JwtPayload & {
-  name?: string;
-  password?: string;
-};
+// type AuthenticatedUser = JwtPayload & {
+//   name?: string;
+//   password?: string;
+// };
 
 type CustomRequest = Request & {
-  user?: AuthenticatedUser;
+  user?: JwtPayload;
 };
 // add this to your request object in middleware or guards
-// interface CustomRequest extends Request {
-//   user?: AuthenticatedUser;
-// }
 
 @Injectable()
 export class RoleGuard implements CanActivate {

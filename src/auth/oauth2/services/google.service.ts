@@ -20,7 +20,7 @@ export class googleService {
   ) {}
 
   async googleLogin(googleUser: OAuthUser, res: Response) {
-    const { email } = googleUser;
+    const { email, name, picture } = googleUser;
 
     // 1) check user is use
     const user = await this.userModel
@@ -37,10 +37,10 @@ export class googleService {
 
       // 2) create user
       const newUser = await this.userModel.create({
-        email: googleUser.email,
-        name: googleUser.name,
+        email: email,
+        name: name,
         password: randomPassword,
-        avatar: googleUser.picture,
+        avatar: picture,
         provider: 'google',
       });
       const userId = {
