@@ -25,6 +25,11 @@ import { Request, Response } from 'express';
 import { GoogleAuthGuard } from './oauth2/guards/GoogleAuthGuard';
 import { FacebookAuthGuard } from './oauth2/guards/facebook-auth.guard';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
+import {
+  FacebookOAuthUser,
+  OAuthUser,
+} from './shared/types/oauth-user.interface';
+import { JwtPayload } from './shared/types/jwt-payload.interface';
 
 @Controller('auth')
 export class AuthController {
@@ -51,16 +56,7 @@ export class AuthController {
     if (!user) {
       throw new BadRequestException('User information is missing.');
     }
-    return this.authService.googleLogin(
-      user as unknown as {
-        email: string;
-        name: string;
-        picture: string;
-        provider: string;
-        providerId: string;
-      },
-      res,
-    );
+    return this.authService.googleLogin(user as unknown as OAuthUser, res);
   }
   /*
    * public: /api/v1/facebook
@@ -81,13 +77,7 @@ export class AuthController {
       throw new BadRequestException('User information is missing.');
     }
     return this.authService.facebookLogin(
-      user as unknown as {
-        email: string;
-        name: string;
-        picture: string;
-        provider: string;
-        facebookId: string;
-      },
+      user as unknown as FacebookOAuthUser,
       res,
     );
   }
@@ -144,9 +134,7 @@ export class AuthController {
   }
   @Get('me-profile')
   @UseGuards(AuthGuard)
-  async getMe(
-    @Req() request: { user: { user_id: string; role: string } },
-  ): Promise<any> {
+  async getMe(@Req() request: { user: JwtPayload }): Promise<any> {
     return await this.authService.getMe(request);
   }
   /*

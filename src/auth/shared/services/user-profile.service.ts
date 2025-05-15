@@ -34,14 +34,12 @@ export class userProfileService {
     private readonly cookieService: CookieService,
     private readonly tokenService: tokenService,
   ) {}
-  async getMe(request: {
-    user: { user_id: string; role: string };
-  }): Promise<any> {
+  async getMe(request: { user: JwtPayload }): Promise<any> {
     // 1) get user from database
     const user_Id = request.user.user_id;
     const user = await this.userModel
       .findById(user_Id)
-      .select('-__v -role -slug')
+      .select('-__v -role -slug -password')
       .lean();
     if (!user) {
       throw new BadRequestException(
@@ -49,12 +47,12 @@ export class userProfileService {
       );
     }
     // 2) add avatar url
-    if (
-      user.avatar &&
-      !user.avatar.startsWith(process.env.BASE_URL ?? 'http')
-    ) {
-      user.avatar = `${process.env.BASE_URL}${user.avatar}`;
-    }
+    // if (
+    //   user.avatar &&
+    //   !user.avatar.startsWith(process.env.BASE_URL ?? 'http')
+    // ) {
+    //   user.avatar = `${process.env.BASE_URL}${user.avatar}`;
+    // }
     return {
       status: 'success',
       data: user,

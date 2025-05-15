@@ -3,6 +3,12 @@ export interface OAuthUser {
   name: string;
   picture: string;
   provider: string;
-  facebookId?: string; // or facebookId
-  providerId?: string; // or facebookId
+  providerId: string;
+}
+export interface FacebookOAuthUser {
+  email: string;
+  name: string;
+  picture: string;
+  provider: string;
+  facebookId: string;
 }

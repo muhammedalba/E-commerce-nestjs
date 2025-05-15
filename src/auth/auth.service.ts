@@ -25,6 +25,7 @@ import { googleService } from './oauth2/services/google.service';
 import { facebookService } from './oauth2/services/facebook.service';
 import { User } from './shared/schema/user.schema';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
+import { JwtPayload } from './shared/types/jwt-payload.interface';
 
 @Injectable()
 export class AuthService {
@@ -180,9 +181,7 @@ export class AuthService {
       );
     }
   }
-  async getMe(request: {
-    user: { user_id: string; role: string };
-  }): Promise<any> {
+  async getMe(request: { user: JwtPayload }): Promise<any> {
     return await this.userProfileService.getMe(request);
   }
   async updateMe(
