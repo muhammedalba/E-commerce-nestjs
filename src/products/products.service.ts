@@ -94,14 +94,24 @@ export class ProductsService {
 
     try {
       // 3) Handle file uploads
-      if (files.imageCover) {
+      if (
+        files.imageCover &&
+        Array.isArray(files.imageCover) &&
+        files.imageCover[0]
+      ) {
+        const imageCoverFile = files.imageCover[0];
         createProductDto.imageCover =
-          (await this.uploadFile(files.imageCover[0], 'products')) ?? '';
+          (await this.uploadFile(imageCoverFile, 'products')) ?? '';
       }
 
-      if (files.infoProductPdf) {
+      if (
+        files.infoProductPdf &&
+        Array.isArray(files.infoProductPdf) &&
+        files.infoProductPdf[0]
+      ) {
+        const infoProductPdfFile = files.infoProductPdf[0];
         createProductDto.infoProductPdf = await this.uploadFile(
-          files.infoProductPdf[0],
+          infoProductPdfFile,
           'products',
         );
       }
@@ -165,10 +175,17 @@ export class ProductsService {
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto.id);
     // 1) check  doc if found
     const doc = isObjectId
-      ? await this.productModel.findById(idParamDto.id).select('-__v').exec()
+      ? await this.productModel
+          .findById(idParamDto.id)
+          .select('-__v')
+          .populate('category', 'name')
+          .populate('brand', 'name')
+          .exec()
       : await this.productModel
           .findOne({ slug: idParamDto.id })
           .select('-__v')
+          .populate('category', 'name')
+          .populate('brand', 'name')
           .exec();
 
     if (!doc) {
@@ -194,7 +211,7 @@ export class ProductsService {
     // 1) Fetch existing product
     const doc = await this.productModel
       .findById(idParamDto.id)
-      .select('infoProductPdf imageCover images')
+      .select('infoProductPdf imageCover images price priceAfterDiscount')
       .lean();
     if (!doc) {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
@@ -218,7 +235,13 @@ export class ProductsService {
         );
       }
     }
+    const price = updateProductDto.price || doc.price;
+    const priceAfterDiscount =
+      updateProductDto.priceAfterDiscount || doc.priceAfterDiscount;
 
+    if (priceAfterDiscount && priceAfterDiscount >= price) {
+      throw new BadRequestException('Discounted price must be less than price');
+    }
     try {
       if (doc && files) {
         // 3) Handle single file updates
@@ -228,9 +251,9 @@ export class ProductsService {
         };
 
         for (const [key, file] of Object.entries(singleFiles)) {
-          if (file) {
+          if (file && Array.isArray(file) && file[0]) {
             const newPath = await this.fileUploadService.saveFileToDisk(
-              file?.[0],
+              file[0] as MulterFileType,
               'products',
             );
 

@@ -15,6 +15,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
+import { IsLessThan } from 'src/shared/utils/validators/is-less-than.decorator';
 
 export class CreateProductDto {
   @IsDefined()
@@ -51,7 +52,11 @@ export class CreateProductDto {
 
   @IsNumber()
   @IsOptional()
+  @Max(20000)
   @Type(() => Number)
+  @IsLessThan('price', {
+    message: 'Discounted price must be less than original price',
+  })
   priceAfterDiscount?: number;
 
   @IsArray()

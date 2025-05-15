@@ -34,5 +34,6 @@ import { AuthModule } from 'src/auth/auth.module';
   ],
   controllers: [BrandsController],
   providers: [BrandsService, CustomI18nService],
+  exports: [MongooseModule],
 })
 export class BrandsModule {}

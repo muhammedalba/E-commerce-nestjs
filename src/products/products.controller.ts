@@ -25,6 +25,8 @@ import { roles } from 'src/auth/shared/enums/role.enum';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 import { MulterFilesType } from 'src/shared/utils/interfaces/fileInterface';
+import { BrandExistsPipe } from 'src/products/shared/pipes/brand-exists.pipe';
+import { CategoryExistsPipe } from 'src/products/shared/pipes/category-exists.pipe';
 
 @Controller('products')
 export class ProductsController {
@@ -39,7 +41,10 @@ export class ProductsController {
   @UseGuards(AuthGuard, RoleGuard)
   @UseInterceptors(FileFieldsInterceptor(ProductsController.imageSize))
   async create(
-    @Body() createProductDto: CreateProductDto,
+    @Body('brand', BrandExistsPipe) brand: string,
+    @Body('category', CategoryExistsPipe) category: string,
+    @Body()
+    createProductDto: CreateProductDto,
     @UploadedFiles(
       new ParseFileFieldsPipe(
         '1MB',
@@ -85,6 +90,8 @@ export class ProductsController {
   @UseInterceptors(FileFieldsInterceptor(ProductsController.imageSize))
   async update(
     @Param() idParamDto: IdParamDto,
+    @Body('brand', BrandExistsPipe) brand: string,
+    @Body('category', CategoryExistsPipe) category: string,
     @Body() updateProductDto: UpdateProductDto,
     @UploadedFiles(
       new ParseFileFieldsPipe(

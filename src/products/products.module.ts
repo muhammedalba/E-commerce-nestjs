@@ -7,6 +7,9 @@ import { FileUploadDiskStorageModule } from 'src/file-upload-in-diskStorage/file
 import { Product, ProductSchema } from './shared/schemas/Product.schema';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import * as mongooseI18n from 'mongoose-i18n-localize';
+import { BrandsModule } from 'src/brands/brands.module';
+import { BrandExistsPipe } from 'src/products/shared/pipes/brand-exists.pipe';
+import { CategoriesModule } from 'src/categories/categories.module';
 @Module({
   imports: [
     FileUploadDiskStorageModule,
@@ -30,8 +33,10 @@ import * as mongooseI18n from 'mongoose-i18n-localize';
       },
     ]),
     AuthModule,
+    BrandsModule,
+    CategoriesModule,
   ],
   controllers: [ProductsController],
-  providers: [ProductsService, CustomI18nService],
+  providers: [ProductsService, CustomI18nService, BrandExistsPipe],
 })
 export class ProductsModule {}

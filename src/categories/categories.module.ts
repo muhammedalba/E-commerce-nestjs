@@ -34,5 +34,6 @@ import { AuthModule } from 'src/auth/auth.module';
   ],
   controllers: [CategoriesController],
   providers: [CategoriesService, CustomI18nService],
+  exports: [MongooseModule],
 })
 export class CategoriesModule {}
