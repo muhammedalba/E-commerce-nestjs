@@ -26,6 +26,10 @@ import { facebookService } from './oauth2/services/facebook.service';
 import { User } from './shared/schema/user.schema';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { JwtPayload } from './shared/types/jwt-payload.interface';
+import {
+  FacebookOAuthUser,
+  OAuthUser,
+} from './shared/types/oauth-user.interface';
 
 @Injectable()
 export class AuthService {
@@ -185,14 +189,14 @@ export class AuthService {
     return await this.userProfileService.getMe(request);
   }
   async updateMe(
-    userId: { user: { user_id: string } },
+    userId: { user: JwtPayload },
     updateUserDto: UpdateUserDto,
     file: MulterFileType,
   ): Promise<any> {
     return await this.userProfileService.updateMe(userId, updateUserDto, file);
   }
   async changeMyPassword(
-    userId: { user: { user_id: string } },
+    userId: { user: JwtPayload },
     updateUserDto: UpdateUserDto,
   ): Promise<any> {
     return await this.userProfileService.changeMyPassword(
@@ -223,28 +227,10 @@ export class AuthService {
       res,
     );
   }
-  async googleLogin(
-    googleUser: {
-      email: string;
-      name: string;
-      picture: string;
-      provider: string;
-      providerId: string;
-    },
-    res: Response,
-  ) {
+  async googleLogin(googleUser: OAuthUser, res: Response) {
     return await this.googleService.googleLogin(googleUser, res);
   }
-  async facebookLogin(
-    facebookUser: {
-      email: string;
-      name: string;
-      picture: string;
-      provider: string;
-      facebookId: string;
-    },
-    res: Response,
-  ) {
+  async facebookLogin(facebookUser: FacebookOAuthUser, res: Response) {
     return await this.facebookService.facebookLogin(facebookUser, res);
   }
 }

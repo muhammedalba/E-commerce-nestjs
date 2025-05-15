@@ -174,7 +174,7 @@ export class AuthController {
   @UseGuards(AuthGuard)
   @UseInterceptors(FileInterceptor('avatar'))
   async updateMe(
-    @Req() request: { user: { user_id: string } },
+    @Req() request: { user: JwtPayload },
     @Body() UpdateUserDto: UpdateUserDto,
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
     file: MulterFileType,
@@ -188,7 +188,7 @@ export class AuthController {
   @Put('changeMyPassword')
   @UseGuards(AuthGuard)
   async changeMyPassword(
-    @Req() request: { user: { user_id: string } },
+    @Req() request: { user: JwtPayload },
     @Body() UpdateUserDto: UpdateUserDto,
   ): Promise<any> {
     return await this.authService.changeMyPassword(request, UpdateUserDto);
