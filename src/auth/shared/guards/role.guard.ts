@@ -11,10 +11,10 @@ import { Roles_key } from '../decorators/rolesdecorator';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import { JwtPayload } from '../types/jwt-payload.interface';
 import { User } from '../schema/user.schema';
-
+type AuthenticatedUser = JwtPayload & Partial<Pick<User, 'name' | 'password'>>;
 // add this to your request object in middleware or guards
 interface CustomRequest extends Request {
-  user?: JwtPayload & Partial<User>;
+  user?: AuthenticatedUser;
 }
 
 @Injectable()
