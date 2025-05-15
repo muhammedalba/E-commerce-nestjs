@@ -52,7 +52,7 @@ export class AuthController {
       throw new BadRequestException('User information is missing.');
     }
     return this.authService.googleLogin(
-      user as {
+      user as unknown as {
         email: string;
         name: string;
         picture: string;
@@ -81,7 +81,7 @@ export class AuthController {
       throw new BadRequestException('User information is missing.');
     }
     return this.authService.facebookLogin(
-      user as {
+      user as unknown as {
         email: string;
         name: string;
         picture: string;

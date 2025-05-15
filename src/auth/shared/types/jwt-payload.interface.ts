@@ -4,4 +4,6 @@ export interface JwtPayload {
   role: string;
   iat?: number;
   exp?: number;
+  name?: string; // مضافة
+  password?: string;
 }
