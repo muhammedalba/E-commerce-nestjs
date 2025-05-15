@@ -8,6 +8,7 @@ import { tokenService } from 'src/auth/shared/services/token.service';
 import { CookieService } from 'src/auth/shared/services/cookie.service';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import { User } from 'src/auth/shared/schema/user.schema';
+import { OAuthUser } from 'src/auth/shared/types/oauth-user.interface';
 
 @Injectable()
 export class googleService {
@@ -18,16 +19,7 @@ export class googleService {
     private readonly cookieService: CookieService,
   ) {}
 
-  async googleLogin(
-    googleUser: {
-      email: string;
-      name: string;
-      picture: string;
-      provider: string;
-      providerId: string;
-    },
-    res: Response,
-  ) {
+  async googleLogin(googleUser: OAuthUser, res: Response) {
     const { email } = googleUser;
 
     // 1) check user is use

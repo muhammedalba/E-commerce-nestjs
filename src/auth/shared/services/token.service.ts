@@ -5,14 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import { RefreshToken } from 'src/auth/shared/schema/refresh-token.schema';
-
-interface DecodedToken {
-  user_id: string;
-  email: string;
-  role?: string;
-  iat?: number;
-  exp?: number;
-}
+import { JwtPayload } from '../types/jwt-payload.interface';
 
 @Injectable()
 export class tokenService {
@@ -24,7 +17,7 @@ export class tokenService {
   ) {}
 
   // --- generate new access tokens and delete old refresh token --- //
-  async generate_Tokens(userData: DecodedToken, expiresIn: string) {
+  async generate_Tokens(userData: JwtPayload, expiresIn: string) {
     // 1) generate new access token
     const access_token = await this.jwtService.signAsync(userData, {
       expiresIn: expiresIn,

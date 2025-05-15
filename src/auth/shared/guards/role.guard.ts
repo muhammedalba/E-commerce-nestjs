@@ -9,14 +9,11 @@ import { Request } from 'express';
 import { roles } from 'src/auth/shared/enums/role.enum';
 import { Roles_key } from '../decorators/rolesdecorator';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
+import { JwtPayload } from '../types/jwt-payload.interface';
 
 // add this to your request object in middleware or guards
 interface CustomRequest extends Request {
-  user?: {
-    user_id: string;
-    email: string;
-    role: string;
-  };
+  user?: JwtPayload;
 }
 
 @Injectable()

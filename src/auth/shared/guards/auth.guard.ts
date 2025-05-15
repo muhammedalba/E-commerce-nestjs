@@ -10,6 +10,7 @@ import { Request } from 'express';
 import { Model } from 'mongoose';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import { User } from '../schema/user.schema';
+import { JwtPayload } from '../types/jwt-payload.interface';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -33,7 +34,7 @@ export class AuthGuard implements CanActivate {
     }
 
     //3) Verify the token
-    let payload: { user_id: string; email: string; role: string; iat: number };
+    let payload: JwtPayload;
     try {
       payload = await this.jwtService.verifyAsync(token);
     } catch {
@@ -61,7 +62,10 @@ export class AuthGuard implements CanActivate {
         user.passwordChangeAt.getTime() / 1000,
       );
       // Check if the password was changed after the token was issued
-      if (tokenIssuedAt < passwordChangedAt) {
+      if (
+        typeof tokenIssuedAt === 'number' &&
+        tokenIssuedAt < passwordChangedAt
+      ) {
         throw new UnauthorizedException(
           this.i18n.translate('exception.LOGIN_AGAIN'),
         );

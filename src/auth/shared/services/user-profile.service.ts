@@ -19,14 +19,8 @@ import { Request, Response } from 'express';
 import { tokenService } from 'src/auth/shared/services/token.service';
 import { User } from '../schema/user.schema';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
+import { JwtPayload } from '../types/jwt-payload.interface';
 
-interface DecodedToken {
-  user_id: string;
-  email: string;
-  role?: string;
-  iat?: number;
-  exp?: number;
-}
 @Injectable()
 export class userProfileService {
   constructor(
@@ -214,9 +208,9 @@ export class userProfileService {
       );
     }
     //2) Verify ACCESS  token
-    let decoded_access_token: DecodedToken;
+    let decoded_access_token: JwtPayload;
     try {
-      decoded_access_token = await this.jwtService.verifyAsync<DecodedToken>(
+      decoded_access_token = await this.jwtService.verifyAsync<JwtPayload>(
         refreshTokenDto.access_token,
       );
     } catch {
