@@ -1,5 +1,4 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Query } from 'mongoose';
 import { HydratedDocument } from 'mongoose';
 import { Types } from 'mongoose';
 
@@ -122,15 +121,6 @@ export type ProductDocument = HydratedDocument<Product>;
 //   ref: 'Review',
 //   localField: '_id',
 //   foreignField: 'product',
-// });
-// mongoose  query middeware
-// ProductSchema.pre(/^find/, function (this: Query<any, ProductDocument>, next) {
-//   this.populate({ path: 'category', select: 'name' }).populate({
-//     path: 'brand',
-//     select: 'name',
-//   });
-
-//   next();
 // });
 
 ProductSchema.post('init', function (doc: HydratedDocument<Product>) {
