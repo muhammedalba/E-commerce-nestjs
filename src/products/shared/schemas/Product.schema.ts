@@ -26,6 +26,17 @@ export class Product {
   slug!: string;
 
   @Prop({
+    type: Boolean,
+    default: true,
+  })
+  SineLimit!: boolean;
+  @Prop({
+    type: Boolean,
+    default: false,
+  })
+  disabled!: boolean;
+
+  @Prop({
     type: String,
     trim: true,
     required: [true, 'product description required'],

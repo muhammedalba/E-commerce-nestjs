@@ -11,6 +11,7 @@ import {
 import { CartService } from './cart.service';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
+import { CreateCartDto } from './shared/dto/create-cart.dto';
 
 @Controller('cart')
 @UseGuards(AuthGuard)
@@ -18,23 +19,16 @@ export class CartController {
   constructor(private readonly cartService: CartService) {}
 
   @Get()
-  getCart(@Req() req: { user: JwtPayload }) {
-    return;
-    // return this.cartService.getCart(req.user.user_id,);
+  async getCart(@Req() req: { user: JwtPayload }) {
+    return await this.cartService.getCart(req.user.user_id);
   }
 
   @Post('add')
-  addItem(
+  async addItem(
     @Req() req: { user: JwtPayload },
-    @Body() body: { productId: string; quantity: number },
+    @Body() createCartDto: CreateCartDto,
   ) {
-    console.log(req.user);
-
-    return this.cartService.addItem(
-      req.user.user_id,
-      body.productId,
-      body.quantity,
-    );
+    return await this.cartService.addItem(req.user.user_id, createCartDto);
   }
 
   @Delete('remove/:productId')
@@ -49,4 +43,5 @@ export class CartController {
   clearCart(@Req() req: { user: JwtPayload }) {
     return this.cartService.clearCart(req.user.user_id);
   }
+
 }

@@ -12,8 +12,9 @@ import {
   IsPositive,
   IsDefined,
   ValidateNested,
+  IsBoolean,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
 import { IsLessThan } from 'src/shared/utils/validators/is-less-than.decorator';
 
@@ -27,6 +28,11 @@ export class CreateProductDto {
   @IsString()
   @IsOptional()
   slug?: string;
+
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsOptional()
+  SineLimit?: boolean;
 
   @IsString()
   @IsNotEmpty({ message: 'Description is required' })

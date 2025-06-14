@@ -10,6 +10,18 @@ export class Cart extends Document {
 
   @Prop({ type: [CartItemSchema], default: [] })
   items!: CartItem[];
+
+  @Prop({ default: 0 })
+  totalPrice!: number;
+
+  @Prop({ default: 0 })
+  totalQuantity!: number;
+
+  @Prop({ default: false })
+  isCheckedOut!: boolean;
+
+  @Prop({ default: false })
+  isSavedForLater!: boolean;
 }
 
 export const CartSchema = SchemaFactory.createForClass(Cart);
