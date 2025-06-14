@@ -20,12 +20,12 @@ import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
 export class OrderController {
   constructor(private readonly orderService: OrderService) {}
 
-  @Post('checkout')
+  @Post('PaymentByBankTransfer')
   async checkout(
     @Req() req: { user: JwtPayload },
     @Body() dto: CreateOrderDto,
   ) {
-    return await this.orderService.checkout(req.user.user_id, dto);
+    return await this.orderService.PaymentByBankTransfer(req.user.user_id, dto);
   }
   // This endpoint is used to apply a coupon to an order
 
