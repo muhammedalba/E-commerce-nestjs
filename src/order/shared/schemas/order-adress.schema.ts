@@ -1,13 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Types } from 'mongoose';
 
 @Schema({ _id: false }) // nested schema
 export class OrderAddress {
   @Prop({ type: String, required: true })
-  firsName!: Types.ObjectId;
+  firsName!: string;
 
   @Prop({ type: String, required: true })
-  lastName!: Types.ObjectId;
+  lastName!: string;
 
   @Prop({ type: String, required: true })
   phone!: string;

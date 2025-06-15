@@ -18,6 +18,9 @@ type validatedItems = Array<{
     category: string;
     title?: string;
     price: number;
+    quantity: number;
+    sold: number;
+    SineLimit?: boolean;
   };
   quantity: number;
   totalPrice?: number;
@@ -142,7 +145,7 @@ export class OrderService {
 
       const product = await this.ProductModel.findById(item.productId)
         .select(
-          'title price priceAfterDiscount quantity disabled SineLimit brand category imageCover',
+          'title price priceAfterDiscount SineLimit quantity sold disabled SineLimit brand category imageCover',
         )
         .exec();
 
@@ -175,6 +178,8 @@ export class OrderService {
           category: product.category?.toString() || '',
           title: translatedTitle,
           price,
+          quantity: product.quantity,
+          sold: product.sold || 0,
           imageCover: product.imageCover,
         },
         quantity: item.quantity,
@@ -195,139 +200,6 @@ export class OrderService {
       unAvailableProducts,
     };
   }
-
-  // async applyCoupon(userId: string, dto: CreateOrderDto) {
-  //   let totalPrice = 0;
-  //   let totalQuantity = 0;
-  //   let discountAmount = 0;
-  //   // const baseUrl = process.env.BASE_URL;
-  //   const validatedItems: validatedItems = [];
-
-  //   const updatedProducts: Array<{
-  //     productId: string;
-  //     availableQuantity: number;
-  //     RequiredQuantity: number;
-  //     title: string;
-  //   }> = [];
-
-  //   const unAvailableProducts: Array<{ productId: string }> = [];
-
-  //   // Step 1: Validate product items in the order
-  //   for (const item of dto.items) {
-  //     // 1.1 Validate product ID format
-  //     if (!Types.ObjectId.isValid(item.productId)) {
-  //       throw new BadRequestException(`Invalid product ID: ${item.productId}`);
-  //     }
-
-  //     // 1.2 Fetch product details
-  //     const product = await this.ProductModel.findById(item.productId)
-  //       .select(
-  //         'title price priceAfterDiscount quantity disabled SineLimit brand category imageCover',
-  //       )
-  //       .exec();
-
-  //     // 1.3 Check if product exists and is not disabled
-  //     if (!product || product.disabled) {
-  //       unAvailableProducts.push({ productId: item.productId.toString() });
-  //       continue;
-  //     }
-
-  //     // 1.4 Check stock availability
-  //     if (!product.SineLimit && product.quantity < item.quantity) {
-  //       updatedProducts.push({
-  //         productId: product._id.toString(),
-  //         availableQuantity: product.quantity,
-  //         RequiredQuantity: item.quantity,
-  //         title: product.title,
-  //       });
-  //       continue;
-  //     }
-
-  //     // 1.5 Accumulate item data and calculate totals
-  //     const price = product.priceAfterDiscount ?? product.price;
-  //     const itemTotal = price * item.quantity;
-  //     const lang = this.getCurrentLang();
-  //     // 1.6 Handle translations for product title
-  //     const translatedTitle =
-  //       typeof product.get(`title.${lang}`) === 'string'
-  //         ? (product.get(`title.${lang}`) as string)
-  //         : product.title;
-  //     // 1.7 Push validated item to the array
-  //     validatedItems.push({
-  //       product: {
-  //         id: product._id,
-  //         brand: product.brand?.toString() || '',
-  //         category: product.category?.toString() || '',
-  //         title: translatedTitle,
-  //         price,
-  //         imageCover: product.imageCover,
-  //       },
-  //       quantity: item.quantity,
-  //       totalPrice: itemTotal,
-  //     });
-
-  //     totalPrice += itemTotal;
-  //     totalQuantity += item.quantity;
-  //   }
-
-  //   totalPrice = Math.round(totalPrice * 100) / 100;
-
-  //   // Step 2: Validate and apply the coupon
-  //   if (!dto.couponCode) {
-  //     throw new BadRequestException('Coupon code is required');
-  //   }
-
-  //   const coupon = await this.couponModel.findOne({ name: dto.couponCode });
-
-  //   if (!coupon) {
-  //     throw new BadRequestException('Invalid or inactive coupon code');
-  //   }
-  //   this.validateCoupon(coupon, userId, totalPrice, validatedItems);
-  //   // Step 3: Calculate discount
-  //   if (coupon.type === 'percentage') {
-  //     discountAmount = (totalPrice * coupon.discount) / 100;
-  //   } else if (coupon.type === 'fixed') {
-  //     discountAmount = coupon.discount;
-  //   } else {
-  //     throw new BadRequestException('Unsupported coupon type');
-  //   }
-
-  //   // Step 3.1: Ensure discount doesn't exceed total price
-  //   if (discountAmount > totalPrice) {
-  //     throw new BadRequestException('Discount cannot exceed the total price');
-  //   }
-
-  //   // Step 3.2: Calculate final price
-  //   const totalPriceAfterDiscount =
-  //     Math.round((totalPrice - discountAmount) * 100) / 100;
-
-  //   // Step 4: Prepare coupon details
-  //   const couponDetails = {
-  //     couponCode: coupon.name,
-  //     discountAmount: coupon.discount,
-  //   };
-
-  //   // Return the final result
-  //   return {
-  //     success: 'success',
-  //     message: 'Coupon applied successfully',
-  //     data: {
-  //       items: validatedItems,
-  //       totalPrice,
-  //       totalPriceAfterDiscount,
-  //       totalQuantity,
-  //       couponDetails,
-  //     },
-  //     updatedProducts: {
-  //       message: 'Some products are not available',
-  //       data: updatedProducts,
-  //     },
-  //     unAvailableProducts: {
-  //       message: 'Some products are not available',
-  //       data: unAvailableProducts,
-  //     },
-  //   };
-  // }
 
   async applyCoupon(userId: string, dto: CreateOrderDto) {
     let discountAmount = 0;
@@ -403,8 +275,21 @@ export class OrderService {
       totalPrice,
       totalQuantity,
       updatedProducts,
-      unAvailableProducts,
+      // unAvailableProducts,
     } = await this.validateOrderItems(dto.items);
+    //3) Create the order object
+    const productItemsId: Array<{
+      productId: string;
+      quantity: number;
+      totalPrice: number;
+    }> = [];
+    validatedItems.forEach((item) => {
+      productItemsId.push({
+        productId: item.product.id.toString(),
+        quantity: item.quantity,
+        totalPrice: item.totalPrice ?? 0,
+      });
+    });
     // 2) Check if the user has provided a coupon code
     if (dto.couponCode) {
       let discountAmount = 0;
@@ -430,7 +315,7 @@ export class OrderService {
       // update the coupon usage count and usedByUsers
       coupon.usageCount = (coupon.usageCount || 0) + 1;
       coupon.usedByUsers = coupon.usedByUsers || [];
-      coupon.usedByUsers.push(userId);
+      // coupon.usedByUsers.push(userId);
 
       await coupon.save();
 
@@ -438,19 +323,42 @@ export class OrderService {
         couponCode: coupon.name,
         discountAmount: coupon.discount,
       };
+
       // 3) Create the order object with coupon details
       const order = await this.OrderModel.create({
         user: userId,
-        items: validatedItems,
+        items: productItemsId,
         totalPrice: totalPriceAfterDiscount,
         totalQuantity,
         isCheckedOut: true,
         paymentMethod: 'bankTransfer',
-        shippingAddress: dto.shippingAddress,
+        shippingAddress: { ...dto.shippingAddress },
         shippingMethod: dto.shippingMethod || 'default',
         couponCode: dto.couponCode,
         discountAmount,
       });
+      // after creating order,increment product sold,decrement product quantity
+      const bulkOptions = validatedItems.map((product) => {
+        const newSold = (product.product.sold || 0) + product.quantity;
+        let newQuantity = product.product.quantity - product.quantity;
+        if (!product.product.SineLimit && newQuantity <= 0) {
+          newQuantity = 0;
+        }
+
+        return {
+          updateOne: {
+            filter: { _id: product.product.id },
+            update: {
+              $set: {
+                sold: newSold,
+                quantity: newQuantity,
+              },
+            },
+          },
+        };
+      });
+
+      await this.ProductModel.bulkWrite(bulkOptions);
 
       return {
         message: 'تم إنشاء الطلب بنجاح',
@@ -458,48 +366,56 @@ export class OrderService {
         totalPriceAfterDiscount,
         couponDetails,
         data: order,
+        updatedProducts: {
+          message: this.i18n.translate('order.someProductsNotAvailable'),
+          data: updatedProducts,
+        },
       };
     }
 
-    //3) Create the order object
-    // const order = new this.OrderModel({
-    //   user: userId,
-    //   items: validatedItems,
-    //   totalPrice,
-    //   totalQuantity,
-    //   isCheckedOut: true,
-    //   paymentMethod: 'bankTransfer',
-    //   shippingAddress: dto.shippingAddress,
-    //   shippingMethod: dto.shippingMethod || 'default',
-    // });
-    // 4) Save the order to the database
-    // const createdOrder = await order.save();
+    // 3) Create the order object with coupon details
+    const order = await this.OrderModel.create({
+      user: userId,
+      items: productItemsId,
+      totalPrice,
+      totalQuantity,
+      isCheckedOut: true,
+      paymentMethod: 'bankTransfer',
+      shippingAddress: { ...dto.shippingAddress },
+      shippingMethod: dto.shippingMethod || 'default',
+    });
+    // after creating order,increment product sold,decrement product quantity
+    const bulkOptions = validatedItems.map((product) => {
+      const newSold = (product.product.sold || 0) + product.quantity;
+      let newQuantity = product.product.quantity - product.quantity;
+      if (!product.product.SineLimit && newQuantity <= 0) {
+        newQuantity = 0;
+      }
 
-    // 6) Return the success message
-    // if (updatedProducts.length > 0 || unAvailableProducts.length > 0) {
-    //   return {
-    //     message: this.i18n.t('order.orderCreatedWithSomeProductsNotAvailable', {
-    //       lang: this.getCurrentLang(),
-    //     }),
-    //     success: 'success',
-    //     data: createdOrder,
-    //     updatedProducts: {
-    //       message: this.i18n.t('order.someProductsNotAvailable', {
-    //         lang: this.getCurrentLang(),
-    //       }),
-    //       data: updatedProducts,
-    //     },
-    //     unAvailableProducts: {
-    //       message: this.i18n.t('order.someProductsNotAvailable', {
-    //         lang: this.getCurrentLang(),
-    //       }),
-    //       data: unAvailableProducts,
-    //     },
-    //   };
-    // }
+      return {
+        updateOne: {
+          filter: { _id: product.product.id },
+          update: {
+            $set: {
+              sold: newSold,
+              quantity: newQuantity,
+            },
+          },
+        },
+      };
+    });
+
+    await this.ProductModel.bulkWrite(bulkOptions);
+
     return {
       message: 'تم إنشاء الطلب بنجاح',
       success: 'success',
+      totalPrice,
+      data: order,
+      updatedProducts: {
+        message: this.i18n.translate('order.someProductsNotAvailable'),
+        data: updatedProducts,
+      },
     };
   }
 

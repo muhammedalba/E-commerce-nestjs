@@ -57,58 +57,58 @@ export class Order extends Document {
   @Prop({ type: OrderAddressSchema, required: true })
   shippingAddress!: OrderAddress; // Array of strings to store address lines
 
-  @Prop({ type: String, default: '' })
+  @Prop({ type: String, default: undefined })
   couponCode?: string;
 
   @Prop({ type: Number, default: 0 })
   discountAmount!: number;
 
-  @Prop({ type: Date, default: null })
+  @Prop({ type: Date, default: undefined })
   completedAt?: Date;
 
-  @Prop({ type: Date, default: null })
+  @Prop({ type: Date, default: undefined })
   cancelledAt?: Date;
 
-  @Prop({ type: Date, default: null })
+  @Prop({ type: Date, default: undefined })
   processingAt?: Date;
 
-  @Prop({ type: Date, default: null })
+  @Prop({ type: Date, default: undefined })
   checkedOutAt?: Date;
 
-  @Prop({ type: Date, default: null })
+  @Prop({ type: Date, default: undefined })
   savedForLaterAt?: Date;
 
-  @Prop({ type: Date, default: null })
+  @Prop({ type: Date, default: undefined })
   createdAt?: Date;
 
-  @Prop({ type: Date, default: null })
+  @Prop({ type: Date, default: undefined })
   updatedAt?: Date;
 
-  @Prop({ type: Date, default: null })
+  @Prop({ type: Date, default: undefined })
   deletedAt?: Date;
 
   @Prop({ type: Boolean, default: false })
   isDeleted?: boolean;
 
-  @Prop({ type: String, default: '' })
+  @Prop({ type: String, default: undefined })
   notes?: string; // Additional notes for the order
 
-  @Prop({ type: String, default: null })
+  @Prop({ type: String, default: undefined })
   LocationOnMap?: string; // Optional field for storing location on map
 
-  @Prop({ type: String, default: null })
+  @Prop({ type: String, default: undefined })
   deliveryDate?: string; // Optional field for estimated delivery date
 
-  @Prop({ type: String, default: null })
+  @Prop({ type: String, default: undefined })
   deliveryName?: string;
 
-  @Prop({ type: String, default: null })
+  @Prop({ type: String, default: undefined })
   customerServiceContact?: string; // Optional field for customer service contact information
 
-  @Prop({ type: String, default: null })
+  @Prop({ type: String, default: undefined })
   paymentStatus?: string; // Optional field for payment status (e.g., paid, pending, failed)
 
-  @Prop({ type: String, default: null })
+  @Prop({ type: String, default: undefined })
   DeliveryVerificationCode?: string;
 }
 

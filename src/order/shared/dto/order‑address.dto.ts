@@ -3,7 +3,7 @@ import { IsEnum, IsOptional, IsString, Length } from 'class-validator';
 export class OrderAddressDto {
   @IsString()
   @Length(1, 50)
-  firstName!: string;
+  firsName!: string;
 
   @IsString()
   @Length(1, 50)
