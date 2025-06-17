@@ -1,5 +1,6 @@
 {
   "found_SUCCESS": "Data found successfully",
+  "ORDER_CREATED_SUCCESSFULLY": "Order created successfully",
   "created_SUCCESS": "Created successfully",
   "updated_SUCCESS": "Updated successfully",
   "LOGOUT_SUCCESS": "Logged out successfully",

@@ -17,8 +17,8 @@ import { OrderAddressDto } from './order‑address.dto';
 
 export class CreateOrderDto {
   /*— file—*/
-  @IsOptional()
   @IsString()
+  @IsOptional()
   transferReceiptImg?: string;
 
   @IsOptional()
@@ -46,6 +46,11 @@ export class CreateOrderDto {
   @IsNumber()
   @Min(0)
   totalPrice?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  totalPriceAfterDiscount?: number;
 
   @IsOptional()
   @IsNumber()

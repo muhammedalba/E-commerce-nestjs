@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadGatewayException,
+  BadRequestException,
+  Injectable,
+} from '@nestjs/common';
 import { CreateOrderDto } from './shared/dto/create-order.dto';
 import { UpdateOrderDto } from './shared/dto/update-order.dto';
 import { Model, Types } from 'mongoose';
@@ -9,14 +13,16 @@ import { Coupon } from 'src/coupons/shared/Schemas/coupons.schema';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
 import { I18nContext } from 'nestjs-i18n';
+import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
+import { EmailService } from 'src/email/email.service';
 
 type validatedItems = Array<{
   product: {
     id: Types.ObjectId;
-    imageCover?: string;
+    imageCover: string;
     brand: string;
     category: string;
-    title?: string;
+    title: string;
     price: number;
     quantity: number;
     sold: number;
@@ -32,8 +38,9 @@ export class OrderService {
     @InjectModel(Order.name) private readonly OrderModel: Model<Order>,
     @InjectModel(Coupon.name) private readonly couponModel: Model<Coupon>,
     @InjectModel(Product.name) private readonly ProductModel: Model<Product>,
-    protected readonly i18n: CustomI18nService,
-    protected readonly fileUploadService: FileUploadService,
+    private readonly i18n: CustomI18nService,
+    private readonly fileUploadService: FileUploadService,
+    private readonly emailService: EmailService,
   ) {}
   private getCurrentLang(): string {
     const lang =
@@ -201,74 +208,76 @@ export class OrderService {
     };
   }
 
-  async applyCoupon(userId: string, dto: CreateOrderDto) {
-    let discountAmount = 0;
+  // async applyCoupon(userId: string, dto: CreateOrderDto) {
+  //   let discountAmount = 0;
 
-    const {
-      validatedItems,
-      totalPrice,
-      totalQuantity,
-      updatedProducts,
-      unAvailableProducts,
-    } = await this.validateOrderItems(dto.items);
+  //   const {
+  //     validatedItems,
+  //     totalPrice,
+  //     totalQuantity,
+  //     updatedProducts,
+  //     unAvailableProducts,
+  //   } = await this.validateOrderItems(dto.items);
 
-    if (!dto.couponCode) {
-      throw new BadRequestException('Coupon code is required');
-    }
+  //   if (!dto.couponCode) {
+  //     throw new BadRequestException('Coupon code is required');
+  //   }
 
-    const coupon = await this.couponModel.findOne({ name: dto.couponCode });
+  //   const coupon = await this.couponModel.findOne({ name: dto.couponCode });
 
-    if (!coupon) {
-      throw new BadRequestException('Invalid or inactive coupon code');
-    }
+  //   if (!coupon) {
+  //     throw new BadRequestException('Invalid or inactive coupon code');
+  //   }
 
-    this.validateCoupon(coupon, userId, totalPrice, validatedItems);
+  //   this.validateCoupon(coupon, userId, totalPrice, validatedItems);
 
-    if (coupon.type === 'percentage') {
-      discountAmount = (totalPrice * coupon.discount) / 100;
-    } else if (coupon.type === 'fixed') {
-      discountAmount = coupon.discount;
-    } else {
-      throw new BadRequestException('Unsupported coupon type');
-    }
+  //   if (coupon.type === 'percentage') {
+  //     discountAmount = (totalPrice * coupon.discount) / 100;
+  //   } else if (coupon.type === 'fixed') {
+  //     discountAmount = coupon.discount;
+  //   } else {
+  //     throw new BadRequestException('Unsupported coupon type');
+  //   }
 
-    if (discountAmount > totalPrice) {
-      throw new BadRequestException('Discount cannot exceed the total price');
-    }
+  //   if (discountAmount > totalPrice) {
+  //     throw new BadRequestException('Discount cannot exceed the total price');
+  //   }
 
-    const totalPriceAfterDiscount =
-      Math.round((totalPrice - discountAmount) * 100) / 100;
+  //   const totalPriceAfterDiscount =
+  //     Math.round((totalPrice - discountAmount) * 100) / 100;
 
-    const couponDetails = {
-      couponCode: coupon.name,
-      discountAmount: coupon.discount,
-    };
+  //   const couponDetails = {
+  //     couponCode: coupon.name,
+  //     discountAmount: coupon.discount,
+  //   };
 
-    return {
-      success: 'success',
-      message: 'Coupon applied successfully',
-      data: {
-        items: validatedItems,
-        totalPrice,
-        totalPriceAfterDiscount,
-        totalQuantity,
-        couponDetails,
-      },
-      updatedProducts: {
-        message: 'Some products are not available',
-        data: updatedProducts,
-      },
-      unAvailableProducts: {
-        message: 'Some products are not available',
-        data: unAvailableProducts,
-      },
-    };
-  }
+  //   return {
+  //     success: 'success',
+  //     message: 'Coupon applied successfully',
+  //     data: {
+  //       items: validatedItems,
+  //       totalPrice,
+  //       totalPriceAfterDiscount,
+  //       totalQuantity,
+  //       couponDetails,
+  //     },
+  //     updatedProducts: {
+  //       message: 'Some products are not available',
+  //       data: updatedProducts,
+  //     },
+  //     unAvailableProducts: {
+  //       message: 'Some products are not available',
+  //       data: unAvailableProducts,
+  //     },
+  //   };
+  // }
 
-  async PaymentByBankTransfer(userId: string, dto: CreateOrderDto) {
-    if (dto.transferReceiptImg) {
-      throw new BadRequestException('Transfer receipt image is required');
-    }
+  async PaymentByBankTransfer(
+    userId: string,
+    user_email: string,
+    dto: CreateOrderDto,
+    file: MulterFileType,
+  ) {
     // 1) Validate the order items
     const {
       validatedItems,
@@ -277,12 +286,13 @@ export class OrderService {
       updatedProducts,
       // unAvailableProducts,
     } = await this.validateOrderItems(dto.items);
-    //3) Create the order object
+    //2) Create the order object
     const productItemsId: Array<{
       productId: string;
       quantity: number;
       totalPrice: number;
     }> = [];
+
     validatedItems.forEach((item) => {
       productItemsId.push({
         productId: item.product.id.toString(),
@@ -290,7 +300,7 @@ export class OrderService {
         totalPrice: item.totalPrice ?? 0,
       });
     });
-    // 2) Check if the user has provided a coupon code
+    // 3) Check if the user has provided a coupon code
     if (dto.couponCode) {
       let discountAmount = 0;
       const coupon = await this.couponModel.findOne({ name: dto.couponCode });
@@ -298,6 +308,7 @@ export class OrderService {
         throw new BadRequestException('Invalid or inactive coupon code');
       }
       this.validateCoupon(coupon, userId, totalPrice, validatedItems);
+      // check coupon type
       if (coupon.type === 'percentage') {
         discountAmount = (totalPrice * coupon.discount) / 100;
       } else if (coupon.type === 'fixed') {
@@ -305,14 +316,12 @@ export class OrderService {
       } else {
         throw new BadRequestException('Unsupported coupon type');
       }
-
       if (discountAmount > totalPrice) {
         throw new BadRequestException('Discount cannot exceed the total price');
       }
-
       const totalPriceAfterDiscount =
         Math.round((totalPrice - discountAmount) * 100) / 100;
-      // update the coupon usage count and usedByUsers
+      //3.1) update the coupon usage count and usedByUsers
       coupon.usageCount = (coupon.usageCount || 0) + 1;
       coupon.usedByUsers = coupon.usedByUsers || [];
       // coupon.usedByUsers.push(userId);
@@ -323,12 +332,20 @@ export class OrderService {
         couponCode: coupon.name,
         discountAmount: coupon.discount,
       };
-
+      // 3.2) save file to disk
+      if (file) {
+        const filePath = await this.fileUploadService.saveFileToDisk(
+          file,
+          'orders',
+        );
+        dto.transferReceiptImg = filePath;
+      }
       // 3) Create the order object with coupon details
       const order = await this.OrderModel.create({
         user: userId,
         items: productItemsId,
-        totalPrice: totalPriceAfterDiscount,
+        totalPrice,
+        totalPriceAfterDiscount,
         totalQuantity,
         isCheckedOut: true,
         paymentMethod: 'bankTransfer',
@@ -359,24 +376,66 @@ export class OrderService {
       });
 
       await this.ProductModel.bulkWrite(bulkOptions);
-
+      //send email to admin and customer
+      try {
+        console.log('email send');
+        await this.emailService.new_admin_order(
+          process.env.APP_NAME || 'admin',
+          user_email, // customerName
+          order.createdAt ? order.createdAt.toISOString() : '',
+          order.totalPriceAfterDiscount
+            ? order.totalPriceAfterDiscount.toString()
+            : (order.totalPrice ?? 0).toString(),
+          `${process.env.BASE_URL}/api/v1/order/${order._id?.toString()}`,
+          order._id?.toString() ?? '', // orderId
+          validatedItems.map((item) => ({
+            product: {
+              id: item.product.id.toString(),
+              title: item.product.title,
+              price: item.product.price.toString(),
+              quantity: item.product.quantity.toString(),
+              imageCover: item.product.imageCover,
+            },
+            quantity: item.quantity.toString(),
+            totalPrice:
+              item.totalPrice?.toString() ??
+              (item.product.price * item.quantity).toString(),
+          })),
+          this.i18n.translate('email.NEW_ORDER_SUBJECT', {
+            args: { name: 'codeprops' },
+          }),
+        );
+      } catch (error) {
+        console.log('email error', error);
+        throw new BadGatewayException(
+          this.i18n.translate('exception.EMAIL_SEND_FAILED'),
+        );
+      }
       return {
-        message: 'تم إنشاء الطلب بنجاح',
+        message: this.i18n.translate('success.ORDER_CREATED_SUCCESSFULLY'),
         success: 'success',
-        totalPriceAfterDiscount,
         couponDetails,
         data: order,
         updatedProducts: {
-          message: this.i18n.translate('order.someProductsNotAvailable'),
+          message: this.i18n.translate('exception.SOME_PRODUCTS_NOT_AVAILABlE'),
           data: updatedProducts,
         },
       };
     }
+    // 6) Handle file upload if provided
+    if (file) {
+      const filePath = await this.fileUploadService.saveFileToDisk(
+        file,
+        'orders',
+      );
+      dto.transferReceiptImg = filePath;
+    }
 
-    // 3) Create the order object with coupon details
+    // 4) Create the order object with coupon details
     const order = await this.OrderModel.create({
       user: userId,
       items: productItemsId,
+      transferReceiptImg: dto.transferReceiptImg,
       totalPrice,
       totalQuantity,
       isCheckedOut: true,
@@ -384,7 +443,7 @@ export class OrderService {
       shippingAddress: { ...dto.shippingAddress },
       shippingMethod: dto.shippingMethod || 'default',
     });
-    // after creating order,increment product sold,decrement product quantity
+    // 5) after creating order,increment product sold,decrement product quantity
     const bulkOptions = validatedItems.map((product) => {
       const newSold = (product.product.sold || 0) + product.quantity;
       let newQuantity = product.product.quantity - product.quantity;
@@ -407,6 +466,7 @@ export class OrderService {
 
     await this.ProductModel.bulkWrite(bulkOptions);
 
+    // 7) Return the response
     return {
       message: 'تم إنشاء الطلب بنجاح',
       success: 'success',

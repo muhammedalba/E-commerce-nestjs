@@ -39,6 +39,9 @@ export class Order extends Document {
   @Prop({ default: 0 })
   totalQuantity!: number;
 
+  @Prop({ min: 0, default: undefined })
+  totalPriceAfterDiscount?: number;
+
   @Prop({ default: false })
   isCheckedOut!: boolean;
 

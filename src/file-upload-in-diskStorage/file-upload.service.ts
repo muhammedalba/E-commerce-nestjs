@@ -171,6 +171,10 @@ export class FileUploadService {
         width = 1200;
         height = 600;
         break;
+      case 'transferReceiptImg':
+        width = 1200;
+        height = 1024;
+        break;
     }
 
     try {

@@ -51,4 +51,46 @@ export class EmailService {
       },
     });
   }
+  async new_admin_order(
+    adminName: string,
+    customerName: string,
+    orderDate: string,
+    orderTotal: string,
+    orderLink: string,
+    orderId: string,
+    products: {
+      product: {
+        id: string;
+        title: string;
+        price: string;
+        quantity: string;
+        imageCover: string;
+      };
+      quantity: string;
+      totalPrice: string;
+    }[],
+
+    subject: string,
+  ): Promise<void> {
+    const lang = I18nContext.current()?.lang ?? process.env.DEFAULT_LANG;
+    const adminEmail = process.env.ADMIN_EMAIL;
+
+    await this.mailerService.sendMail({
+      to: adminEmail,
+      subject,
+      template: `new-admin-order-${lang}`,
+      context: {
+        adminName,
+        customerName,
+        orderId,
+        orderDate,
+        orderTotal,
+        orderLink,
+        products,
+        currency: 'ل.س',
+        year: new Date().getFullYear(),
+        companyName: process.env.APP_NAME,
+      },
+    });
+  }
 }

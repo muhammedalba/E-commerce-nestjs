@@ -40,5 +40,6 @@
     "ACTION_NOT_ALLOWED": "هذا الإجراء غير مسموح",
     "RESOURCE_LOCKED": "المورد مقفل حالياً",
     "ACCOUNT_NOT_ACTIVE": "الحساب غير مفعل",
-    "ERROR_SAVE": "حدث خطأ أثناء حفظ {variable}"
+    "ERROR_SAVE": "حدث خطأ أثناء حفظ {variable}",
+    "SOME_PRODUCTS_NOT_AVAILABlE": "بعض المنتجات غير متوفرة"
 }

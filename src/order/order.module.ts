@@ -14,6 +14,7 @@ import {
   Coupon,
   CouponSchema,
 } from 'src/coupons/shared/Schemas/coupons.schema';
+import { EmailModule } from 'src/email/email.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import {
     MongooseModule.forFeature([{ name: Coupon.name, schema: CouponSchema }]),
     MongooseModule.forFeature([{ name: Order.name, schema: OrderSchema }]),
     MongooseModule.forFeature([{ name: Product.name, schema: ProductSchema }]),
+    EmailModule,
   ],
   controllers: [OrderController],
   providers: [OrderService, CustomI18nService],
