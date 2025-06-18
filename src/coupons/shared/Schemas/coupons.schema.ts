@@ -28,10 +28,10 @@ export class Coupon {
   type!: 'percentage' | 'fixed';
 
   @Prop({ type: String, default: 'all' })
-  appleTo?: 'all' | 'products' | 'categories' | 'brands';
+  applyTo?: 'all' | 'products' | 'categories' | 'brands';
 
   @Prop({ type: [String], default: undefined })
-  appleItems?: string[];
+  applyItems?: string[];
 
   @Prop({ type: Date, required: true })
   expires!: Date;

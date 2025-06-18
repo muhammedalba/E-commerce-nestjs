@@ -30,13 +30,13 @@ export class CreateCouponDto {
     message: 'applyTo must be one of all, products, categories, brands',
   })
   @IsOptional()
-  appleTo?: 'all' | 'products' | 'categories' | 'brands';
+  applyTo?: 'all' | 'products' | 'categories' | 'brands';
 
   @IsArray()
   @IsString({ each: true })
   @ArrayUnique()
   @IsOptional()
-  appleItems?: string[];
+  applyItems?: string[];
 
   @Type(() => Date)
   @IsDate()

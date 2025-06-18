@@ -21,15 +21,15 @@ export class OrderAddress {
   street!: string;
 
   @Prop({ type: String, required: true })
-  building!: string; // Building number or name مبنى
+  building!: string;
 
   @Prop({ type: String, required: true })
   postalCode?: string;
 
-  @Prop({ type: String, required: true })
-  additionalInfo?: string; // Optional field for any additional information
+  @Prop({ type: String, required: false })
+  additionalInfo?: string;
 
-  @Prop({ type: String, required: true })
+  @Prop({ type: String, required: true, default: 'home' })
   addressType!: 'home' | 'office' | 'other'; // Type of address
 
   @Prop({ type: String, required: false })

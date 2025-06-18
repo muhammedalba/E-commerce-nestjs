@@ -1,4 +1,14 @@
 {
+    "coupon": {
+        "INVALID_COUPON": "رمز الخصم غير صالح",
+        "INACTIVE_COUPON": "رمز الخصم غير مفعل حالياً",
+        "EXPIRED_COUPON": "انتهت صلاحية رمز الخصم",
+        "USAGE_LIMIT_EXCEEDED": "تم تجاوز الحد الأقصى لاستخدام رمز الخصم",
+        "ALREADY_USED": "لقد استخدمت رمز الخصم مسبقًا",
+        "MIN_ORDER_AMOUNT": "الحد الأدنى لقيمة الطلب هو {{amount}}",
+        "MAX_ORDER_AMOUNT": "الحد الأقصى لقيمة الطلب هو {{amount}}",
+        "INVALID_ITEMS_IN_ORDER": "رمز الخصم لا ينطبق على بعض عناصر الطلب"
+    },
     "EMAIL_EXISTS": "البريد الإلكتروني مستخدم بالفعل",
     "NAME_EXISTS": "الاسم مستخدم بالفعل",
     "EMAIL_NOT_VERIFIED": "يرجى تأكيد البريد الإلكتروني أولاً",
@@ -36,7 +46,7 @@
     "UPLOAD_LIMIT_EXCEEDED": "تم تجاوز الحد المسموح به للتحميل",
     "FILE_TYPE_NOT_ALLOWED": "نوع الملف غير مدعوم",
     "PROFILE_UPDATE_FAILED": "فشل تحديث الملف الشخصي",
-    "PROFILE_UPDATE_OLD-IMAGE": "   فشل حذف صورة الملف الشخصي القديمة" ,
+    "PROFILE_UPDATE_OLD-IMAGE": "   فشل حذف صورة الملف الشخصي القديمة",
     "ACTION_NOT_ALLOWED": "هذا الإجراء غير مسموح",
     "RESOURCE_LOCKED": "المورد مقفل حالياً",
     "ACCOUNT_NOT_ACTIVE": "الحساب غير مفعل",
