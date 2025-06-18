@@ -5,12 +5,10 @@ import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Product } from 'src/products/shared/schemas/Product.schema';
 import { Order } from './shared/schemas/Order.schema';
-import { Coupon } from 'src/coupons/shared/Schemas/coupons.schema';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
 import { I18nContext } from 'nestjs-i18n';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
-import { EmailService } from 'src/email/email.service';
 import { OrderHelperService } from './shared/order-helper/order-helper.service';
 
 type validatedItems = Array<{
@@ -248,11 +246,11 @@ export class OrderService {
 
     await this.orderHelperService.updateProductStats(validatedItems);
 
-    // await this.orderHelperService.sendOrderEmail(
-    //   order,
-    //   validatedItems,
-    //   user_email,
-    // );
+    await this.orderHelperService.sendOrderEmail(
+      order,
+      validatedItems,
+      user_email,
+    );
 
     return {
       message: this.i18n.translate('success.ORDER_CREATED_SUCCESSFULLY'),

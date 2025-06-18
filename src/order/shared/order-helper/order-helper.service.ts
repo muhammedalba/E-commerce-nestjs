@@ -10,43 +10,27 @@ import { Coupon } from 'src/coupons/shared/Schemas/coupons.schema';
 import { EmailService } from 'src/email/email.service';
 import { Product } from 'src/products/shared/schemas/Product.schema';
 import { HydratedDocument } from 'mongoose';
-
-interface Order {
-  user: Types.ObjectId;
-  _id?: Types.ObjectId;
-  items: string;
-  totalPrice: string;
-  totalPriceAfterDiscount: string;
-  totalQuantity: string;
-  transferReceiptImg: any;
-  isCheckedOut: boolean;
-  paymentMethod: string;
-  shippingAddress: any;
-  shippingMethod: string;
-  couponCode: string;
-  createdAt: string;
-  discountAmount: string;
-}
+import { Order } from '../schemas/Order.schema';
 
 type OrderDocument = HydratedDocument<Order>;
 
-interface Order {
-  user: Types.ObjectId;
-  _id?: Types.ObjectId;
+// interface Order {
+//   user: Types.ObjectId;
+//   _id?: Types.ObjectId;
 
-  items: string;
-  totalPrice: string;
-  totalPriceAfterDiscount: string;
-  totalQuantity: string;
-  transferReceiptImg: any;
-  isCheckedOut: boolean;
-  paymentMethod: string;
-  shippingAddress: any;
-  shippingMethod: string;
-  couponCode: string;
-  createdAt: string;
-  discountAmount: string;
-}
+//   items: string;
+//   totalPrice: string;
+//   totalPriceAfterDiscount: string;
+//   totalQuantity: string;
+//   transferReceiptImg: any;
+//   isCheckedOut: boolean;
+//   paymentMethod: string;
+//   shippingAddress: any;
+//   shippingMethod: string;
+//   couponCode: string;
+//   createdAt: string;
+//   discountAmount: string;
+// }
 
 type ValidatedItem = {
   product: {
@@ -237,7 +221,7 @@ export class OrderHelperService {
       await this.emailService.new_admin_order(
         process.env.APP_NAME || 'admin',
         user_email,
-        order.createdAt ?? '',
+        order.createdAt ? order.createdAt.toISOString() : '',
         order.totalPriceAfterDiscount?.toString() ??
           order.totalPrice.toString(),
         `${process.env.BASE_URL}/api/v1/order/${order._id?.toString() ?? ''}`,
