@@ -64,7 +64,7 @@
 #         # email settings
 #       - key: EMAIL_PORT
 #         value: 587
-#       - key: EMAIL_HOSt
+#       - key: EMAIL_HOST
 #         value: smtp.gmail.com
 #       - key: EMAIL_USER
 #         value: skygalaxy.shop@gmail.com

@@ -1,0 +1,135 @@
+<html lang='ar'>
+  <head>
+    <meta charset='UTF-8' />
+    <title>طلب جديد تم إنشاؤه</title>
+    <style>
+      body {
+        background-color: #f4f4f7;
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        padding: 0;
+        margin: 0;
+        direction: rtl;
+      }
+      .container {
+        max-width: 600px;
+        margin: 40px auto;
+        background: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+      .header {
+        background-color: #16a34a;
+        color: #ffffff;
+        text-align: center;
+        padding: 20px 0;
+        font-size: 24px;
+        font-weight: bold;
+      }
+      .content {
+        padding: 30px;
+        text-align: right;
+      }
+      .content h2 {
+        color: #333333;
+        margin-bottom: 10px;
+      }
+      .content p {
+        color: #555555;
+        font-size: 16px;
+        margin-bottom: 15px;
+        line-height: 1.6;
+      }
+      .product-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+      .product-table th,
+      .product-table td {
+        border: 1px solid #ddd;
+        padding: 10px;
+        text-align: center;
+        vertical-align: middle;
+      }
+      .product-table th {
+        background-color: #f0f0f0;
+        font-weight: bold;
+      }
+      .product-image {
+        width: 60px;
+        height: 60px;
+        object-fit: cover;
+        border-radius: 4px;
+      }
+      .button {
+        display: inline-block;
+        background-color: #16a34a;
+        color: #ffffff;
+        padding: 12px 25px;
+        border-radius: 5px;
+        text-decoration: none;
+        font-size: 16px;
+        margin-top: 25px;
+      }
+      .footer {
+        margin-top: 20px;
+        padding: 15px;
+        text-align: center;
+        font-size: 12px;
+        color: #999999;
+      }
+    </style>
+  </head>
+  <body>
+    <div class='container'>
+      <div class='header'>new order!</div>
+      <div class='content'>
+        <h2>hallo {{adminName}},</h2>
+        <p>order created with : <strong>{{customerName}}</strong>.</p>
+        <p>order details:</p>
+        <p>
+          رقم الطلب:
+          <strong>{{orderId}}</strong><br />
+          التاريخ:
+          <strong>{{orderDate}}</strong><br />
+          المبلغ الإجمالي:
+          <strong>{{orderTotal}}</strong>
+        </p>
+
+<table class="product-table" style="width:100%; border-collapse: collapse; margin-top: 20px;">
+  <thead style="background-color: #f0f0f0;">
+    <tr>
+      <th style="padding: 10px; border: 1px solid #ddd;">المنتج</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">الصورة</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">سعر الوحدة</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">الكمية المطلوبة</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">الإجمالي</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each products}}
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd;">{{product.title}}</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">
+        <img src="{{product.imageCover}}" alt="{{product.title}}" style="max-width: 80px; max-height: 80px;" />
+      </td>
+      <td style="padding: 10px; border: 1px solid #ddd;">{{product.price}} {{../currency}}</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">{{quantity}}</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">{{totalPrice}} {{../currency}}</td>
+    </tr>
+    {{/each}}
+  </tbody>
+</table>
+
+
+        <a href='{{orderLink}}' class='button'>عرض الطلب الآن</a>
+      </div>
+      <div class='footer'>
+        &copy;
+        {{year}}
+        {{companyName}}. جميع الحقوق محفوظة.
+      </div>
+    </div>
+  </body>
+</html>
