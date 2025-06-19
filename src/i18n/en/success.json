@@ -8,5 +8,6 @@
   "LOGIN_SUCCESS": "Logged in successfully",
   "RESET_CODE_SENDED": "Reset code has been sent to your email",
   "RESET_CODE_VALID": "Code verified successfully",
-  "SUCCESS_RESET_PASSWORD": "Password reset successfully"
+  "SUCCESS_RESET_PASSWORD": "Password reset successfully",
+  "APPLY_COUPON_SUCCESS":"apply coupon successfully"
 }

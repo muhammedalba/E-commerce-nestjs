@@ -8,5 +8,6 @@
       "LOGIN_SUCCESS": "تم تسجيل الدخول بنجاح  ",
       "RESET_CODE_SENDED": "تم إرسال رمز إعادة التعيين إلى بريدك الإلكتروني",
       "RESET_CODE_VALID": "تم التحقق من الرمز بنجاح",
-      "SUCCESS_RESET_PASSWORD": "تم إعادة تعيين كلمة المرور بنجاح"
+      "SUCCESS_RESET_PASSWORD": "تم إعادة تعيين كلمة المرور بنجاح",
+      "APPLY_COUPON_SUCCESS":"تم تطبيق  الخصم بنجاح "
 }

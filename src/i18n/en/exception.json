@@ -1,6 +1,9 @@
 {
       "coupon": {
             "INVALID_COUPON": "Invalid coupon code",
+            "REQUIRED_COUPON": "coupon is required",
+            "INVALID_SOME_PRODUCTS": "Some products are not available",
+            "SOME_PRODUCTS_HAVE_LESS_QUANTITY": "Some products have less quantity than required",
             "INACTIVE_COUPON": "Coupon is not currently active",
             "EXPIRED_COUPON": "Coupon has expired",
             "USAGE_LIMIT_EXCEEDED": "Coupon usage limit exceeded",

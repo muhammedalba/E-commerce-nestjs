@@ -1,7 +1,10 @@
 {
     "coupon": {
         "INVALID_COUPON": "رمز الخصم غير صالح",
+        "REQUIRED_COUPON": "رمز الخصم مطلوب ",
         "INACTIVE_COUPON": "رمز الخصم غير مفعل حالياً",
+        "INVALID_SOME_PRODUCTS": "بعض المنتجات غير متاحة ",
+        "SOME_PRODUCTS_HAVE_LESS_QUANTITY": "بعض المنتجات الكمية المتوفرة اقل من المطلوبة",
         "EXPIRED_COUPON": "انتهت صلاحية رمز الخصم",
         "USAGE_LIMIT_EXCEEDED": "تم تجاوز الحد الأقصى لاستخدام رمز الخصم",
         "ALREADY_USED": "لقد استخدمت رمز الخصم مسبقًا",

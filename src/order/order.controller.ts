@@ -42,12 +42,12 @@ export class OrderController {
   // This endpoint is used to apply a coupon to an order
 
   @Post('applyCoupon')
-  // async applyCoupon(
-  //   @Req() req: { user: JwtPayload },
-  //   @Body() dto: CreateOrderDto,
-  // ) {
-  //   return await this.orderService.applyCoupon(req.user.user_id, dto);
-  // }
+  async applyCoupon(
+    @Req() req: { user: JwtPayload },
+    @Body() dto: CreateOrderDto,
+  ) {
+    return await this.orderService.applyCoupon(req.user.user_id, dto);
+  }
   @Get()
   findAll() {
     return this.orderService.findAll();
