@@ -16,6 +16,9 @@ import {
 } from 'src/coupons/shared/Schemas/coupons.schema';
 import { EmailModule } from 'src/email/email.module';
 import { OrderHelperService } from './shared/order-helper/order-helper.service';
+import { OrderEmailService } from './shared/order-helper/order-email.service';
+import { CouponHelperService } from './shared/order-helper/coupon.helper';
+import { ProductHelperService } from './shared/order-helper/product.helper';
 
 @Module({
   imports: [
@@ -27,6 +30,13 @@ import { OrderHelperService } from './shared/order-helper/order-helper.service';
     EmailModule,
   ],
   controllers: [OrderController],
-  providers: [OrderService, CustomI18nService, OrderHelperService],
+  providers: [
+    OrderService,
+    CustomI18nService,
+    OrderHelperService,
+    OrderEmailService,
+    CouponHelperService,
+    ProductHelperService,
+  ],
 })
 export class OrderModule {}

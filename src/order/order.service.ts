@@ -8,6 +8,9 @@ import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { OrderHelperService } from './shared/order-helper/order-helper.service';
+import { OrderEmailService } from './shared/order-helper/order-email.service';
+import { CouponHelperService } from './shared/order-helper/coupon.helper';
+import { ProductHelperService } from './shared/order-helper/product.helper';
 
 @Injectable()
 export class OrderService {
@@ -16,46 +19,13 @@ export class OrderService {
     private readonly i18n: CustomI18nService,
     private readonly fileUploadService: FileUploadService,
     private readonly orderHelperService: OrderHelperService,
+    private readonly orderEmailService: OrderEmailService,
+    private readonly productHelperService: ProductHelperService,
+    private readonly couponHelperService: CouponHelperService,
   ) {}
 
   async applyCoupon(userId: string, dto: CreateOrderDto) {
-    const {
-      validatedItems,
-      totalPrice,
-      totalQuantity,
-      updatedProducts,
-      unAvailableProducts,
-    } = await this.orderHelperService.validateOrderItems(dto.items);
-
-    const { discountAmount, totalPriceAfterDiscount, couponDetails } =
-      await this.orderHelperService.applyCouponIfAvailable(
-        dto.couponCode,
-        userId,
-        totalPrice,
-      );
-
-    return {
-      success: 'success',
-      message: this.i18n.translate('success.APPLY_COUPON_SUCCESS'),
-      data: {
-        items: validatedItems,
-        totalPrice,
-        totalPriceAfterDiscount,
-        discountAmount,
-        totalQuantity,
-        couponDetails,
-      },
-      updatedProducts: {
-        message: this.i18n.translate(
-          'exception.coupon.SOME_PRODUCTS_HAVE_LESS_QUANTITY',
-        ),
-        data: updatedProducts,
-      },
-      unAvailableProducts: {
-        message: this.i18n.translate('exception.coupon.INVALID_SOME_PRODUCTS'),
-        data: unAvailableProducts,
-      },
-    };
+    return await this.couponHelperService.applyCoupon(userId, dto);
   }
 
   async PaymentByBankTransfer(
@@ -74,7 +44,7 @@ export class OrderService {
     }));
 
     const { discountAmount, totalPriceAfterDiscount, couponDetails } =
-      await this.orderHelperService.applyCouponIfAvailable(
+      await this.couponHelperService.applyCouponIfAvailable(
         dto.couponCode,
         userId,
         totalPrice,
@@ -87,8 +57,7 @@ export class OrderService {
       );
       dto.transferReceiptImg = filePath;
     }
-
-    const order = await this.OrderModel.create({
+    const newOrder = {
       user: userId,
       items: productItemsId,
       totalPrice,
@@ -101,16 +70,17 @@ export class OrderService {
       shippingMethod: dto.shippingMethod || 'default',
       couponCode: dto.couponCode || undefined,
       discountAmount: dto.couponCode ? discountAmount : undefined,
-    });
+    };
+    const order = await this.OrderModel.create(newOrder);
     if (couponDetails) {
-      await this.orderHelperService.markCouponAsUsed(
+      await this.couponHelperService.markCouponAsUsed(
         couponDetails.CouponId,
         userId,
       );
     }
-    await this.orderHelperService.updateProductStats(validatedItems);
+    await this.productHelperService.updateProductStats(validatedItems);
 
-    await this.orderHelperService.sendOrderEmail(
+    await this.orderEmailService.sendOrderEmail(
       order,
       validatedItems,
       user_email,
