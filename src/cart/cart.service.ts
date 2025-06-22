@@ -14,7 +14,6 @@ export class CartService {
     protected readonly i18n: CustomI18nService,
   ) {}
 
-
   async getCart(userId: string) {
     const cart = await this.cartModel
       .findOne({ user: userId })

@@ -51,8 +51,8 @@ export class Order extends Document {
   @Prop({ type: String, default: 'pending' })
   status!: 'pending' | 'processing' | 'completed' | 'cancelled';
 
-  @Prop({ type: String, default: 'cash' })
-  paymentMethod!: 'cash' | 'creditCard' | 'paypal';
+  @Prop({ type: String, default: 'bankTransfer' })
+  paymentMethod!: 'cash' | 'creditCard' | 'paypal' | 'bankTransfer';
 
   @Prop({ type: String, default: 'default' })
   shippingMethod!: 'default' | 'express' | 'pickup';
@@ -77,9 +77,6 @@ export class Order extends Document {
 
   @Prop({ type: Date, default: undefined })
   checkedOutAt?: Date;
-
-  @Prop({ type: Date, default: undefined })
-  savedForLaterAt?: Date;
 
   @Prop({ type: Date, default: undefined })
   createdAt?: Date;
@@ -109,7 +106,7 @@ export class Order extends Document {
   customerServiceContact?: string; // Optional field for customer service contact information
 
   @Prop({ type: String, default: undefined })
-  paymentStatus?: string; // Optional field for payment status (e.g., paid, pending, failed)
+  paymentStatus?: 'paid' | 'pending' | 'failed';
 
   @Prop({ type: String, default: undefined })
   DeliveryVerificationCode?: string;

@@ -95,7 +95,8 @@ export class CouponHelperService {
     }[] = [],
   ): Promise<{
     discountAmount: number;
-    totalPriceAfterDiscount: number;
+    totalPriceAfterDiscount?: number;
+    totalPrice: number;
     couponDetails: {
       couponCode: string;
       discountAmount: number;
@@ -105,7 +106,7 @@ export class CouponHelperService {
     if (!couponCode) {
       return {
         discountAmount: 0,
-        totalPriceAfterDiscount: totalPrice,
+        totalPrice,
         couponDetails: null,
       };
     }
@@ -130,6 +131,7 @@ export class CouponHelperService {
 
     return {
       discountAmount,
+      totalPrice,
       totalPriceAfterDiscount,
       couponDetails: {
         couponCode: coupon.name,
@@ -154,6 +156,7 @@ export class CouponHelperService {
       .exec();
   }
   async applyCoupon(userId: string, dto: CreateOrderDto) {
+    //1) check order items is validate
     const {
       validatedItems,
       totalPrice,
@@ -161,7 +164,7 @@ export class CouponHelperService {
       updatedProducts,
       unAvailableProducts,
     } = await this.orderHelperService.validateOrderItems(dto.items);
-
+    // 2) if coupon is exist apply
     const { discountAmount, totalPriceAfterDiscount, couponDetails } =
       await this.applyCouponIfAvailable(dto.couponCode, userId, totalPrice);
 

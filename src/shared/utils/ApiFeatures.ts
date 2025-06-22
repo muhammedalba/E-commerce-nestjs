@@ -23,6 +23,7 @@ export class ApiFeatures<T> {
       'rating',
       'brand',
       'email',
+      'user',
     ];
     const mongoQuery: Record<string, any> = {};
 
@@ -71,7 +72,6 @@ export class ApiFeatures<T> {
         .map((field) => field.trim())
         .filter((field) => field !== '')
         .join(' '); // Mongoose expects space-separated fields
-      console.log(sortBy, 'sortBy');
       if (sortBy) {
         this.mongooseQuery = this.mongooseQuery.sort(sortBy);
       } else {
@@ -88,8 +88,6 @@ export class ApiFeatures<T> {
 
   limitFields() {
     if (this.queryString.fields) {
-      console.log(this.queryString.fields);
-
       const fields = this.queryString.fields
         .split(',')
         .map((field) => field.trim())
@@ -121,6 +119,18 @@ export class ApiFeatures<T> {
             $or: [
               { name: { $regex: keyword, $options: 'i' } },
               { email: { $regex: keyword, $options: 'i' } },
+            ],
+          };
+          break;
+        case 'orders':
+          query = {
+            $or: [
+              {
+                'shippingAddress.firstName': { $regex: keyword, $options: 'i' },
+              },
+              {
+                'shippingAddress.lastName': { $regex: keyword, $options: 'i' },
+              },
             ],
           };
           break;
@@ -158,7 +168,6 @@ export class ApiFeatures<T> {
 
     return this;
   }
-
   getQuery() {
     return this.mongooseQuery;
   }

@@ -1,5 +1,5 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { extname } from 'path';
+import path, { extname } from 'path';
 import * as fs from 'fs';
 import * as sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
@@ -14,6 +14,8 @@ interface FileSchema {
   carouselSm?: string;
   carouselMd?: string;
   carouselLg?: string;
+  transferReceiptImg?: string;
+  InvoicePdf?: string;
 }
 type fileType = Request['file'];
 type filesType = Request['files'];
@@ -93,6 +95,8 @@ export class FileUploadService {
     let old_File_Path: string | null;
     const imagePath =
       doc.avatar ||
+      doc.transferReceiptImg ||
+      doc.InvoicePdf ||
       doc.infoProductPdf ||
       doc.imageCover ||
       doc.image ||
@@ -101,8 +105,6 @@ export class FileUploadService {
       doc.carouselLg;
 
     if (doc && imagePath) {
-      console.log(imagePath);
-
       old_File_Path = `.${imagePath}`;
     } else {
       old_File_Path = null;
@@ -114,6 +116,8 @@ export class FileUploadService {
       if (old_File_Path) {
         await this.deleteFile(old_File_Path);
       }
+      console.log(old_File_Path);
+
       return file_path;
     } catch (error) {
       console.error(`Error updating file ${destinationPath}:`, error);
@@ -131,6 +135,7 @@ export class FileUploadService {
     if (default_avatar_image !== Path) {
       // Check if file exists before trying to delete it.
       try {
+        console.log(path);
         await fs.promises.access(Path);
         await fs.promises.unlink(Path);
       } catch (error) {
