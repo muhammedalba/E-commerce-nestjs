@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { CreateOrderDto } from './shared/dto/create-order.dto';
 import { UpdateOrderDto } from './shared/dto/update-order.dto';
 import { Model } from 'mongoose';
@@ -27,6 +27,8 @@ export class OrderService {
     private readonly productHelperService: ProductHelperService,
     private readonly couponHelperService: CouponHelperService,
   ) {}
+
+  private readonly logger = new Logger(OrderService.name);
 
   async applyCoupon(userId: string, dto: CreateOrderDto) {
     return await this.couponHelperService.applyCoupon(userId, dto);
@@ -188,7 +190,7 @@ export class OrderService {
       throw new BadRequestException('معرف الطلب غير صالح');
     }
     const order = await this.OrderModel.findById(idParamDto.id).select(
-      'transferReceiptImg InvoicePdf DeliveryReceiptImage',
+      ' InvoicePdf DeliveryReceiptImage ',
     );
     if (!order) {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
@@ -199,16 +201,9 @@ export class OrderService {
         files.InvoicePdf[0] as MulterFileType,
         'orders',
         order,
+        order.InvoicePdf,
       );
       updateOrderDto.InvoicePdf = newPdfPath;
-    }
-    if (files.transferReceiptImg) {
-      const newPath = await this.fileUploadService.updateFile(
-        files.transferReceiptImg[0] as MulterFileType,
-        'orders',
-        order,
-      );
-      updateOrderDto.transferReceiptImg = newPath;
     }
 
     const updatedData = await this.OrderModel.findByIdAndUpdate(
@@ -223,22 +218,34 @@ export class OrderService {
   }
 
   async remove(idParamDto: IdParamDto) {
-    // 1) check id is valid
+    // 1) : Validate ID format
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto.id);
     if (!isObjectId) {
       throw new BadRequestException('معرف الطلب غير صالح');
     }
-    // 2) get order from db
-    const data = await this.OrderModel.findById(idParamDto.id)
-      .select('transferReceiptImg')
+
+    // 2) Retrieve and delete order
+    const data = await this.OrderModel.findOneAndDelete({ _id: idParamDto.id })
+      .select('transferReceiptImg InvoicePdf DeliveryReceiptImage')
       .lean();
+
     if (!data) {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }
-    // 3) delete file
-    if (data.transferReceiptImg) {
-      await this.fileUploadService.deleteFile(`.${data.transferReceiptImg}`);
+
+    // 4) : Delete associated files if any
+    const paths = [
+      data.InvoicePdf,
+      data.transferReceiptImg,
+      data.DeliveryReceiptImage,
+    ].filter((p): p is string => typeof p === 'string');
+
+    if (paths.length) {
+      try {
+        await this.fileUploadService.deleteFiles(paths);
+      } catch (err) {
+        this.logger.warn?.('فشل حذف الملفات المرتبطة بالطلب', err);
+      }
     }
-    return;
   }
 }

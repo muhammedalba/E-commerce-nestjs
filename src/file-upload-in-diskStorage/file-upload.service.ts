@@ -88,12 +88,18 @@ export class FileUploadService {
       throw new InternalServerErrorException('Failed to save files to disk');
     }
   }
-  async updateFile(file: MulterFileType, modelName: string, doc: FileSchema) {
+  async updateFile(
+    file: MulterFileType,
+    modelName: string,
+    doc: FileSchema,
+    old_Path?: string,
+  ) {
     // 1) add path to the file
     const destinationPath = `./${process.env.UPLOADS_FOLDER}/${modelName}`;
     // 2) check if file exists
     let old_File_Path: string | null;
     const imagePath =
+      old_Path ||
       doc.avatar ||
       doc.transferReceiptImg ||
       doc.InvoicePdf ||
@@ -116,7 +122,7 @@ export class FileUploadService {
       if (old_File_Path) {
         await this.deleteFile(old_File_Path);
       }
-      console.log(old_File_Path);
+      console.log('old_File_Path', old_File_Path);
 
       return file_path;
     } catch (error) {
