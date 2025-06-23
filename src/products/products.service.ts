@@ -20,12 +20,14 @@ import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
 import { I18nContext } from 'nestjs-i18n';
 import { ApiFeatures } from 'src/shared/utils/ApiFeatures';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
+import { ProductsStatistics } from './products-helper/products-statistics.service';
 @Injectable()
 export class ProductsService {
   constructor(
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     protected readonly fileUploadService: FileUploadService,
     protected readonly i18n: CustomI18nService,
+    protected readonly productsStatistics: ProductsStatistics,
   ) {}
   private getCurrentLang(): string {
     const lang =
@@ -66,6 +68,13 @@ export class ProductsService {
       ? files
       : Object.values(files).flat();
     return this.fileUploadService.saveFilesToDisk(fileArray, folder);
+  }
+
+  async numbers_of_Products_statistics() {
+    return await this.productsStatistics.numbers_of_Products_statistics(
+      'sold',
+      'ar',
+    );
   }
 
   async create(

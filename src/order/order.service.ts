@@ -15,6 +15,7 @@ import { ApiFeatures } from 'src/shared/utils/ApiFeatures';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
 import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
+import { OrdersStatisticsService } from './shared/order-helper/order-statistics.service';
 
 @Injectable()
 export class OrderService {
@@ -26,9 +27,13 @@ export class OrderService {
     private readonly orderEmailService: OrderEmailService,
     private readonly productHelperService: ProductHelperService,
     private readonly couponHelperService: CouponHelperService,
+    private readonly ordersStatisticsService: OrdersStatisticsService,
   ) {}
-
   private readonly logger = new Logger(OrderService.name);
+
+  async numbers_of_orders_statistics() {
+    return await this.ordersStatisticsService.numbers_of_orders_statistics();
+  }
 
   async applyCoupon(userId: string, dto: CreateOrderDto) {
     return await this.couponHelperService.applyCoupon(userId, dto);

@@ -36,6 +36,13 @@ export class ProductsController {
     { name: 'images', maxCount: MaxFileCount.PRODUCTS_IMAGES },
     { name: 'infoProductPdf', maxCount: 1 },
   ];
+  @Get('ProductsStatistics')
+  @Roles(roles.ADMIN)
+  @UseGuards(AuthGuard, RoleGuard)
+  async numbers_of_Products_statistics() {
+    return await this.productsService.numbers_of_Products_statistics();
+  }
+
   @Post()
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)

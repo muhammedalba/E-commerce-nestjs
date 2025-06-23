@@ -19,6 +19,7 @@ import { OrderHelperService } from './shared/order-helper/order-helper.service';
 import { OrderEmailService } from './shared/order-helper/order-email.service';
 import { CouponHelperService } from './shared/order-helper/coupon.helper';
 import { ProductHelperService } from './shared/order-helper/product.helper';
+import { OrdersStatisticsService } from './shared/order-helper/order-statistics.service';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { ProductHelperService } from './shared/order-helper/product.helper';
     OrderEmailService,
     CouponHelperService,
     ProductHelperService,
+    OrdersStatisticsService,
   ],
 })
 export class OrderModule {}

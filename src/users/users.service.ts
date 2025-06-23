@@ -10,6 +10,7 @@ import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { IdParamDto } from './shared/dto/id-param.dto';
 import { User, UserDocument } from 'src/auth/shared/schema/user.schema';
+import { UsersStatistics } from './users-helper/users-statistics.service';
 
 @Injectable()
 export class UsersService extends BaseService<UserDocument> {
@@ -17,10 +18,13 @@ export class UsersService extends BaseService<UserDocument> {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     protected readonly fileUploadService: FileUploadService,
     protected readonly i18n: CustomI18nService,
+    protected readonly usersStatistics: UsersStatistics,
   ) {
     super(userModel, i18n, fileUploadService);
   }
-
+  async get_users_statistics() {
+    await this.usersStatistics.users_statistics();
+  }
   async createUser(
     CreateUserDto: CreateUserDto,
     file: MulterFileType,

@@ -32,6 +32,12 @@ import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 @UseGuards(AuthGuard, RoleGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @Get('UsersStatistics')
+  async get_users_statistics(): Promise<any> {
+    return await this.usersService.get_users_statistics();
+  }
+
   /*
    * Creates a new user with the provided data and avatar file.
    * The uploaded avatar file, validated to be of type png, jpeg, or webp and not exceeding 1MB.

@@ -29,6 +29,7 @@ import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
 import { Roles } from 'src/auth/shared/decorators/rolesdecorator';
 import { roles } from 'src/auth/shared/enums/role.enum';
 import { ParseFileFieldsPipe } from 'src/shared/files/ParseFileFieldsPipe';
+import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 
 @Controller('order')
 @UseGuards(AuthGuard)
@@ -39,7 +40,12 @@ export class OrderController {
     { name: 'InvoicePdf', maxCount: 1 },
     { name: 'DeliveryReceiptImage', maxCount: 1 },
   ];
-
+  @Get('numbersOfOrders')
+  @Roles(roles.ADMIN)
+  @UseGuards(AuthGuard, RoleGuard)
+  async numbersOfOrders() {
+    return await this.orderService.numbers_of_orders_statistics();
+  }
   @Post('PaymentByBankTransfer')
   @UseInterceptors(FileInterceptor('transferReceiptImg'))
   async checkoutByBankTransfer(

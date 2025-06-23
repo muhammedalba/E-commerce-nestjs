@@ -40,6 +40,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "cookie-parser": "^1.4.7",
+    "date-fns": "^4.1.0",
     "handlebars": "^4.7.8",
     "magic-bytes.js": "^1.10.0",
     "mime-types": "^2.1.35",

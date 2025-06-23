@@ -10,6 +10,7 @@ import * as mongooseI18n from 'mongoose-i18n-localize';
 import { BrandsModule } from 'src/brands/brands.module';
 import { BrandExistsPipe } from 'src/products/shared/pipes/brand-exists.pipe';
 import { CategoriesModule } from 'src/categories/categories.module';
+import { ProductsStatistics } from './products-helper/products-statistics.service';
 @Module({
   imports: [
     FileUploadDiskStorageModule,
@@ -37,6 +38,11 @@ import { CategoriesModule } from 'src/categories/categories.module';
     CategoriesModule,
   ],
   controllers: [ProductsController],
-  providers: [ProductsService, CustomI18nService, BrandExistsPipe],
+  providers: [
+    ProductsService,
+    CustomI18nService,
+    BrandExistsPipe,
+    ProductsStatistics,
+  ],
 })
 export class ProductsModule {}
