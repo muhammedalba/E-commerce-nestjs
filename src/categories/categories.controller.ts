@@ -29,6 +29,10 @@ import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 export class CategoriesController {
   constructor(private readonly categoryService: CategoriesService) {}
 
+  @Get('Statistics')
+  async Categories_statistics() {
+    return await this.categoryService.Categories_statistics();
+  }
   @Post()
   @UseInterceptors(FileInterceptor('image'))
   async create(

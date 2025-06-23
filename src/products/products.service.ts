@@ -71,10 +71,7 @@ export class ProductsService {
   }
 
   async numbers_of_Products_statistics() {
-    return await this.productsStatistics.numbers_of_Products_statistics(
-      'sold',
-      'ar',
-    );
+    return await this.productsStatistics.numbers_of_Products_statistics();
   }
 
   async create(

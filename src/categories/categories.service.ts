@@ -10,6 +10,7 @@ import { BaseService } from 'src/shared/utils/service/base.service';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
+import { CategoriesStatistics } from './Categories-helper/categories-statistics.service';
 
 @Injectable()
 export class CategoriesService extends BaseService<CategoryDocument> {
@@ -17,8 +18,12 @@ export class CategoriesService extends BaseService<CategoryDocument> {
     @InjectModel(Category.name) private categoryModel: Model<CategoryDocument>,
     protected readonly fileUploadService: FileUploadService,
     protected readonly i18n: CustomI18nService,
+    protected readonly categoriesStatistics: CategoriesStatistics,
   ) {
     super(categoryModel, i18n, fileUploadService);
+  }
+  async Categories_statistics() {
+    return await this.categoriesStatistics.categoriesStatistics();
   }
   async create(
     createCategoryDto: CreateCategoryDto,

@@ -16,11 +16,13 @@ import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
 import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
 import { OrdersStatisticsService } from './shared/order-helper/order-statistics.service';
+import { User } from 'src/auth/shared/schema/user.schema';
 
 @Injectable()
 export class OrderService {
   constructor(
     @InjectModel(Order.name) private readonly OrderModel: Model<Order>,
+    @InjectModel(User.name) private readonly UserModel: Model<User>,
     private readonly i18n: CustomI18nService,
     private readonly fileUploadService: FileUploadService,
     private readonly orderHelperService: OrderHelperService,
@@ -101,6 +103,8 @@ export class OrderService {
     }
     // 6) Modify the number of products and sales of sold products
     await this.productHelperService.updateProductStats(validatedItems);
+    // 6.1) update user
+    await this.UserModel.findByIdAndUpdate(userId, { $inc: { totalOrder: 1 } });
     // 7) send email to admin (you have new order)
     await this.orderEmailService.sendOrderEmail(
       order,

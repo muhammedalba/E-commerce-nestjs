@@ -23,7 +23,7 @@ export class UsersService extends BaseService<UserDocument> {
     super(userModel, i18n, fileUploadService);
   }
   async get_users_statistics() {
-    await this.usersStatistics.users_statistics();
+    return await this.usersStatistics.users_statistics();
   }
   async createUser(
     CreateUserDto: CreateUserDto,

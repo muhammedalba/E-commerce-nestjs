@@ -65,6 +65,13 @@ export class User {
   passwordResetExpires?: number;
   @Prop({
     required: false,
+    type: Number,
+    default: 0,
+  })
+  totalOrder?: number;
+
+  @Prop({
+    required: false,
     type: 'string',
     default: undefined,
   })
@@ -89,6 +96,13 @@ export class User {
     trim: true,
   })
   provider?: string;
+  @Prop({
+    required: false,
+    type: String,
+    default: 'active',
+    trim: true,
+  })
+  status?: 'active' | 'inactive';
 }
 export type UserDocument = HydratedDocument<User>;
 export const UserSchema = SchemaFactory.createForClass(User);

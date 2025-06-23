@@ -13,7 +13,7 @@ import { UsersStatistics } from './users-helper/users-statistics.service';
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
   ],
   controllers: [UsersController],
-  providers: [UsersService, CustomI18nService],
-  exports: [UsersService, UsersStatistics],
+  providers: [UsersService, CustomI18nService, UsersStatistics],
+  exports: [UsersService],
 })
 export class UsersModule {}

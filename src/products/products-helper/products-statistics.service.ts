@@ -3,6 +3,7 @@ import { startOfMonth, endOfMonth, subDays, startOfDay } from 'date-fns';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Product } from '../shared/schemas/Product.schema';
+import { I18nContext } from 'nestjs-i18n';
 
 @Injectable()
 export class ProductsStatistics {
@@ -12,8 +13,9 @@ export class ProductsStatistics {
 
   async numbers_of_Products_statistics(
     sortBy: 'sold' | 'ratingsAverage' | 'quantity' = 'sold',
-    lang: 'en' | 'ar' = 'en',
   ) {
+    const lang =
+      I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
     try {
       const today: Date = new Date();
       const startMonth = startOfMonth(today);
