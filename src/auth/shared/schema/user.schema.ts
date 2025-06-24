@@ -15,12 +15,14 @@ export class User {
     maxlength: [30, 'name must be a maximum of 30 characters'],
   })
   name!: string;
+
   @Prop({
     type: 'string',
     trim: true,
     lowercase: true,
   })
   slug?: string;
+
   @Prop({
     required: true,
     type: 'string',
@@ -49,7 +51,8 @@ export class User {
     default: 'user',
   })
   @Exclude()
-  role?: string;
+  role?: 'user' | 'admin' | 'manager';
+
   @Exclude()
   @Prop({
     required: false,
@@ -57,12 +60,17 @@ export class User {
     default: undefined,
   })
   verificationCode?: boolean;
+
   @Prop({
     required: false,
     type: Number,
     default: undefined,
   })
   passwordResetExpires?: number;
+
+  @Prop({ type: Date, default: null })
+  lastEmailAttemptAt?: Date;
+
   @Prop({
     required: false,
     type: Number,
@@ -76,12 +84,14 @@ export class User {
     default: undefined,
   })
   passwordResetCode?: string;
+
   @Prop({
     required: false,
     type: 'date',
     default: undefined,
   })
   passwordChangeAt?: Date;
+
   @Prop({
     required: false,
     type: 'string',
@@ -89,6 +99,7 @@ export class User {
     trim: true,
   })
   avatar?: string;
+
   @Prop({
     required: false,
     type: 'string',
@@ -96,6 +107,7 @@ export class User {
     trim: true,
   })
   provider?: string;
+
   @Prop({
     required: false,
     type: String,

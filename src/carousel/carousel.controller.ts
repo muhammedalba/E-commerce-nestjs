@@ -26,6 +26,7 @@ import { roles } from 'src/auth/shared/enums/role.enum';
 import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { Request } from 'express';
+import { MaxFileCount } from 'src/shared/files/constants/file-count.constants';
 type file = Request['file'];
 @Controller('carousel')
 @Roles(roles.ADMIN)
@@ -34,9 +35,9 @@ export class CarouselController {
   constructor(private readonly carouselService: CarouselService) {}
 
   static readonly imageSize = [
-    { name: 'carouselSm', maxCount: 1 },
-    { name: 'carouselMd', maxCount: 1 },
-    { name: 'carouselLg', maxCount: 1 },
+    { name: 'carouselSm', maxCount: MaxFileCount.CAROUSEl },
+    { name: 'carouselMd', maxCount: MaxFileCount.CAROUSEl },
+    { name: 'carouselLg', maxCount: MaxFileCount.CAROUSEl },
   ];
   @Post()
   @UseInterceptors(FileFieldsInterceptor(CarouselController.imageSize))

@@ -37,7 +37,8 @@ export class tokenService {
       userId: userId,
     })
       .select('userId')
-      .lean();
+      .lean()
+      .exec();
 
     //2) add expiry date to refresh token
     const expiryDate = new Date();

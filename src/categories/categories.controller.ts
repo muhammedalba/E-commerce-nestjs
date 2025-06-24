@@ -29,7 +29,7 @@ import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 export class CategoriesController {
   constructor(private readonly categoryService: CategoriesService) {}
 
-  @Get('Statistics')
+  @Get('statistics')
   async Categories_statistics() {
     return await this.categoryService.Categories_statistics();
   }
@@ -57,7 +57,7 @@ export class CategoriesController {
   @Patch(':id')
   @UseInterceptors(FileInterceptor('image'))
   async update(
-    @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
+    @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], false))
     file: MulterFileType,
     @Param() idParamDto: IdParamDto,
     @Body() updateCategoryDto: UpdateCategoryDto,

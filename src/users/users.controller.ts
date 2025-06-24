@@ -33,7 +33,7 @@ import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Get('UsersStatistics')
+  @Get('statistics')
   async get_users_statistics(): Promise<any> {
     return await this.usersService.get_users_statistics();
   }

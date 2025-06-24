@@ -2,7 +2,7 @@
 import { Injectable, PipeTransform, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Brand } from 'src/brands/schemas/brand.schema';
+import { Brand } from 'src/brands/shared/schemas/brand.schema';
 
 @Injectable()
 export class BrandExistsPipe implements PipeTransform {

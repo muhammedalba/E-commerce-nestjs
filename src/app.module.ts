@@ -15,6 +15,7 @@ import { CouponsModule } from './coupons/coupons.module';
 import { ProductsModule } from './products/products.module';
 import { CartModule } from './cart/cart.module';
 import { OrderModule } from './order/order.module';
+import { CustomI18nValidationExceptionFilter } from './filters/i18n-validation-exception.filter';
 
 @Module({
   imports: [
@@ -37,6 +38,6 @@ import { OrderModule } from './order/order.module';
     OrderModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, CustomI18nValidationExceptionFilter],
 })
 export class AppModule {}

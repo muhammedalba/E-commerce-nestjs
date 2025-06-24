@@ -33,7 +33,7 @@ export class PasswordResetService {
         email: forgotPasswordDto.email,
       })
       .select(
-        'email name passwordResetCode passwordResetExpires verificationCode',
+        'email name passwordResetCode passwordResetExpires verificationCode   lastEmailAttemptAt',
       )
       .exec();
     if (!user) {
@@ -43,6 +43,23 @@ export class PasswordResetService {
         }),
       );
     }
+    //1.1) Check if it has been 10 minutes since your last submission.
+    const now = new Date();
+    if (user.lastEmailAttemptAt) {
+      const diffInMinutes =
+        (now.getTime() - new Date(user.lastEmailAttemptAt).getTime()) / 60000;
+
+      if (diffInMinutes < 10) {
+        const minutesLeft = Math.ceil(10 - diffInMinutes);
+
+        throw new BadRequestException(
+          this.i18n.translate('exception.TOO_MANY_Attempts', {
+            args: { minutesLeft },
+          }),
+        );
+      }
+    }
+
     // 2) generate hash reset random 6 digits and save it in db
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
     const hashedResetCode = crypto
@@ -54,6 +71,7 @@ export class PasswordResetService {
     // add expiration time for password reset code (10 min)
     user.passwordResetExpires = Date.now() + 10 * 60 * 1000;
     user.verificationCode = false;
+    user.lastEmailAttemptAt = now;
     await user.save();
 
     // 3 ) send email with code
@@ -68,6 +86,7 @@ export class PasswordResetService {
       user.passwordResetCode = undefined;
       user.passwordResetExpires = undefined;
       user.verificationCode = undefined;
+      user.lastEmailAttemptAt = undefined;
       await user.save();
       throw new BadGatewayException(
         this.i18n.translate('exception.EMAIL_SEND_FAILED'),

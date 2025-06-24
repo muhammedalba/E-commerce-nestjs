@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  Patch,
   Post,
   Put,
   Req,
@@ -127,7 +128,7 @@ export class AuthController {
   @Post('logout')
   @UseGuards(AuthGuard)
   async logout(
-    @Req() request: { user: { user_id: string } },
+    @Req() request: { user: JwtPayload },
     @Res({ passthrough: true }) res: Response,
   ): Promise<any> {
     return await this.authService.logout(request, res);
@@ -151,7 +152,7 @@ export class AuthController {
    * public: /api/v1/auth/verify-code
    * method: POST
    */
-  @Put('reset-password')
+  @Patch('reset-password')
   async resetPassword(
     @Body() LoginUserDto: LoginUserDto,
     @Res({ passthrough: true }) res: Response,
@@ -176,7 +177,7 @@ export class AuthController {
   async updateMe(
     @Req() request: { user: JwtPayload },
     @Body() UpdateUserDto: UpdateUserDto,
-    @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
+    @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], false))
     file: MulterFileType,
   ): Promise<any> {
     return await this.authService.updateMe(request, UpdateUserDto, file);
@@ -185,7 +186,7 @@ export class AuthController {
    * public: /api/v1/auth/changeMyPassword
    * method: POST
    */
-  @Put('changeMyPassword')
+  @Patch('changeMyPassword')
   @UseGuards(AuthGuard)
   async changeMyPassword(
     @Req() request: { user: JwtPayload },

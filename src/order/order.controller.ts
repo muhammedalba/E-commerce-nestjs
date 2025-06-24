@@ -40,11 +40,11 @@ export class OrderController {
     { name: 'InvoicePdf', maxCount: 1 },
     { name: 'DeliveryReceiptImage', maxCount: 1 },
   ];
-  @Get('numbersOfOrders')
+  @Get('statistics')
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
-  async numbersOfOrders() {
-    return await this.orderService.numbers_of_orders_statistics();
+  async OrdersStatistics() {
+    return await this.orderService.OrdersStatistics();
   }
   @Post('PaymentByBankTransfer')
   @UseInterceptors(FileInterceptor('transferReceiptImg'))

@@ -1,7 +1,8 @@
 import * as cookieParser from 'cookie-parser';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { I18nValidationExceptionFilter, I18nValidationPipe } from 'nestjs-i18n';
+import { I18nValidationPipe } from 'nestjs-i18n';
+import { CustomI18nValidationExceptionFilter } from './filters/i18n-validation-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -16,7 +17,9 @@ async function bootstrap() {
     }),
   );
   // to translate the class-validator errors
-  app.useGlobalFilters(new I18nValidationExceptionFilter());
+  // app.useGlobalFilters(new I18nValidationExceptionFilter());
+  // هندلة الايرور
+  app.useGlobalFilters(app.get(CustomI18nValidationExceptionFilter));
 
   await app.listen(process.env.PORT ?? 3000);
 }

@@ -10,6 +10,7 @@ export class Brand {
     i18n: true,
   })
   name!: string | { en?: string; ar?: string };
+
   @Prop({
     type: 'string',
     trim: true,

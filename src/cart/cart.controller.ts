@@ -12,7 +12,7 @@ import { CartService } from './cart.service';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
 import { CreateCartDto } from './shared/dto/create-cart.dto';
-
+// هذه الموديل غير مستخدم في التطبيق سيمسح
 @Controller('cart')
 @UseGuards(AuthGuard)
 export class CartController {
@@ -43,5 +43,4 @@ export class CartController {
   clearCart(@Req() req: { user: JwtPayload }) {
     return this.cartService.clearCart(req.user.user_id);
   }
-
 }

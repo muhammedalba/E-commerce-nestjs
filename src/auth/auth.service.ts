@@ -84,7 +84,7 @@ export class AuthService {
     //4) generate refresh token and access token and save the refresh token in database and delete old refresh token
     const userId = {
       user_id: newUser._id.toString(),
-      role: UserRole.USER,
+      role: UserRole.USER.toLocaleLowerCase(),
       email: newUser.email,
     };
 
@@ -121,7 +121,8 @@ export class AuthService {
     const user = await this.userModel
       .findOne({ email })
       .select('password email role avatar name ')
-      .lean();
+      .lean()
+      .exec();
 
     if (!user) {
       throw new BadRequestException(
@@ -185,37 +186,30 @@ export class AuthService {
       );
     }
   }
+  // ---- userProfileService----||
   async getMe(request: { user: JwtPayload }): Promise<any> {
-    return await this.userProfileService.getMe(request);
+    return await this.userProfileService.getMe(request.user.user_id);
   }
   async updateMe(
-    userId: { user: JwtPayload },
+    user_id: { user: JwtPayload },
     updateUserDto: UpdateUserDto,
     file: MulterFileType,
   ): Promise<any> {
-    return await this.userProfileService.updateMe(userId, updateUserDto, file);
+    return await this.userProfileService.updateMe(
+      user_id.user.user_id,
+      updateUserDto,
+      file,
+    );
   }
   async changeMyPassword(
-    userId: { user: JwtPayload },
+    req: { user: JwtPayload },
     updateUserDto: UpdateUserDto,
   ): Promise<any> {
     return await this.userProfileService.changeMyPassword(
-      userId,
+      req.user.user_id,
       updateUserDto,
     );
   }
-
-  async forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<any> {
-    return await this.passwordResetService.forgotPassword(forgotPasswordDto);
-  }
-
-  async verify_Pass_Reset_Code(resetCode: resetCodeDto): Promise<any> {
-    return await this.passwordResetService.verify_Pass_Reset_Code(resetCode);
-  }
-  async resetPassword(LoginUserDto: LoginUserDto, res: Response): Promise<any> {
-    return await this.passwordResetService.resetPassword(LoginUserDto, res);
-  }
-
   async refreshToken(
     refreshTokenDto: RefreshTokenDto,
     req: Request,
@@ -227,6 +221,18 @@ export class AuthService {
       res,
     );
   }
+  // ---- passwordResetService----||
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<any> {
+    return await this.passwordResetService.forgotPassword(forgotPasswordDto);
+  }
+
+  async verify_Pass_Reset_Code(resetCode: resetCodeDto): Promise<any> {
+    return await this.passwordResetService.verify_Pass_Reset_Code(resetCode);
+  }
+  async resetPassword(LoginUserDto: LoginUserDto, res: Response): Promise<any> {
+    return await this.passwordResetService.resetPassword(LoginUserDto, res);
+  }
+  // -----OuAT2 ----//
   async googleLogin(googleUser: OAuthUser, res: Response) {
     return await this.googleService.googleLogin(googleUser, res);
   }

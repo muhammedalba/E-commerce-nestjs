@@ -49,7 +49,8 @@ export class AuthGuard implements CanActivate {
     //) get the user from the database
     const user = await this.AuthModule.findById(payload.user_id)
       .select('passwordChangeAt')
-      .lean();
+      .lean()
+      .exec();
     if (!user) {
       throw new UnauthorizedException(
         this.i18n.translate('exception.INVALID', {

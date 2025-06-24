@@ -34,37 +34,28 @@ export class userProfileService {
     private readonly cookieService: CookieService,
     private readonly tokenService: tokenService,
   ) {}
-  async getMe(request: { user: JwtPayload }): Promise<any> {
+  async getMe(user_id: string): Promise<any> {
     // 1) get user from database
-    const user_Id = request.user.user_id;
     const user = await this.userModel
-      .findById(user_Id)
+      .findById(user_id)
       .select('-__v -role -slug -password')
-      .lean();
+      .lean()
+      .exec();
     if (!user) {
       throw new BadRequestException(
         this.i18n.translate('exception.USER_NOT_FOUND'),
       );
     }
-    // 2) add avatar url
-    // if (
-    //   user.avatar &&
-    //   !user.avatar.startsWith(process.env.BASE_URL ?? 'http')
-    // ) {
-    //   user.avatar = `${process.env.BASE_URL}${user.avatar}`;
-    // }
     return {
       status: 'success',
       data: user,
     };
   }
   async updateMe(
-    userId: { user: { user_id: string } },
+    user_id: string,
     updateUserDto: UpdateUserDto,
     file: MulterFileType,
   ): Promise<any> {
-    const { user_id } = userId.user;
-
     //1) check if user exists
     const user = await this.userModel
       .findById(user_id)
@@ -120,10 +111,9 @@ export class userProfileService {
     };
   }
   async changeMyPassword(
-    userId: { user: { user_id: string } },
+    user_id: string,
     updateUserDto: UpdateUserDto,
   ): Promise<any> {
-    const { user_id } = userId.user;
     // 1) update user password
     const user = await this.userModel
       .findByIdAndUpdate(
@@ -187,7 +177,8 @@ export class userProfileService {
       refresh_Token: refreshToken,
     })
       .select('refresh_Token expiryDate')
-      .lean();
+      .lean()
+      .exec();
 
     if (!tokenDoc) {
       throw new BadRequestException(

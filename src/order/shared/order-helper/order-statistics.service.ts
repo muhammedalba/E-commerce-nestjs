@@ -10,7 +10,7 @@ export class OrdersStatisticsService {
     @InjectModel(Order.name) private readonly OrderModel: Model<Order>,
   ) {}
 
-  async numbers_of_orders_statistics() {
+  async OrdersStatistics() {
     try {
       const today: Date = new Date();
 

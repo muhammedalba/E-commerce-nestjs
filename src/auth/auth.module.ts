@@ -33,8 +33,8 @@ import { User, UserSchema } from './shared/schema/user.schema';
   ],
 
   exports: [
-    AuthService,
-    MongooseModule, // 👈 هذا مهم لتصدير UserModel
+    // AuthService
+    MongooseModule,
   ],
   controllers: [AuthController],
   providers: [

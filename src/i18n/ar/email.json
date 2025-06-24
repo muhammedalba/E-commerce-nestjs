@@ -1,5 +1,5 @@
 {
       "VERIFY_CODE_SUBJECT":"رمز التحقق من بريدك الإلكتروني",
-      "NEW_ORDER_SUBJECT":"طلب جديد من {{name}}"
+      "NEW_ORDER_SUBJECT":"طلب جديد من {name}"
     }
     

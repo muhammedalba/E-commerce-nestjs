@@ -1,4 +1,4 @@
 {
   "VERIFY_CODE_SUBJECT": " Your email verification code ",
-  "NEW_ORDER_SUBJECT":"NEW ORDER SUBJECT {{name}}"
+  "NEW_ORDER_SUBJECT":"NEW ORDER SUBJECT {name}"
 }

@@ -70,8 +70,8 @@ export class ProductsService {
     return this.fileUploadService.saveFilesToDisk(fileArray, folder);
   }
 
-  async numbers_of_Products_statistics() {
-    return await this.productsStatistics.numbers_of_Products_statistics();
+  async Products_statistics() {
+    return await this.productsStatistics.Products_statistics();
   }
 
   async create(

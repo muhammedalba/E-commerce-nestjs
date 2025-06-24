@@ -11,7 +11,7 @@ export class ProductsStatistics {
     @InjectModel(Product.name) private readonly ProductModel: Model<Product>,
   ) {}
 
-  async numbers_of_Products_statistics(
+  async Products_statistics(
     sortBy: 'sold' | 'ratingsAverage' | 'quantity' = 'sold',
   ) {
     const lang =

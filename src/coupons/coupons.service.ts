@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { CreateCouponDto } from './shared/dto/create-coupon.dto';
 import { UpdateCouponDto } from './shared/dto/update-coupon.dto';
 import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
-import { BrandDocument } from 'src/brands/schemas/brand.schema';
+import { BrandDocument } from 'src/brands/shared/schemas/brand.schema';
 import { BaseService } from 'src/shared/utils/service/base.service';
 import { InjectModel } from '@nestjs/mongoose';
 import { Coupon } from './shared/Schemas/coupons.schema';
