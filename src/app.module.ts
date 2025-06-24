@@ -16,6 +16,7 @@ import { ProductsModule } from './products/products.module';
 import { CartModule } from './cart/cart.module';
 import { OrderModule } from './order/order.module';
 import { CustomI18nValidationExceptionFilter } from './filters/i18n-validation-exception.filter';
+import { PromoBannerModule } from './promo-banner/promo-banner.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { CustomI18nValidationExceptionFilter } from './filters/i18n-validation-e
     ProductsModule,
     CartModule,
     OrderModule,
+    PromoBannerModule,
   ],
   controllers: [AppController],
   providers: [AppService, CustomI18nValidationExceptionFilter],

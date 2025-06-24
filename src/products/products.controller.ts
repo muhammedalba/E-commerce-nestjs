@@ -91,6 +91,7 @@ export class ProductsController {
   findOne(@Param() idParamDto: IdParamDto) {
     return this.productsService.findOne(idParamDto);
   }
+
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
   @Patch(':id')
