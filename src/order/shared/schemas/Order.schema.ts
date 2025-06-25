@@ -93,8 +93,8 @@ export class Order extends Document {
   @Prop({ type: String, default: undefined })
   notes?: string; // Additional notes for the order
 
-  @Prop({ type: String, default: undefined })
-  LocationOnMap?: string; // Optional field for storing location on map
+  // @Prop({ type: String, default: undefined })
+  // LocationOnMap?: string; // Optional field for storing location on map
 
   @Prop({ type: String, default: undefined })
   deliveryDate?: string; // Optional field for estimated delivery date

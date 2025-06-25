@@ -1,5 +1,29 @@
-import { IsEnum, IsOptional, IsString, Length } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsEnum,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  Length,
+  ValidateNested,
+} from 'class-validator';
+class GeoLocationDto {
+  @IsString()
+  type?: 'Point';
 
+  @IsArray()
+  @ArrayMinSize(2, { message: 'coordinates must contain exactly 2 numbers' })
+  @ArrayMaxSize(2, { message: 'coordinates must contain exactly 2 numbers' })
+  @Transform(({ value }): number[] =>
+    Array.isArray(value) ? value.map((v: string) => parseFloat(v)) : [],
+  )
+  @IsNumber({}, { each: true })
+  coordinates!: number[]; // [longitude, latitude]
+}
 export class OrderAddressDto {
   @IsString()
   @Length(1, 50)
@@ -47,4 +71,10 @@ export class OrderAddressDto {
   @IsString()
   @Length(0, 100)
   companyName?: string;
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => GeoLocationDto)
+  location?: GeoLocationDto;
 }

@@ -47,6 +47,8 @@ export class OrderService {
     dto: CreateOrderDto,
     file: MulterFileType,
   ) {
+    console.log(dto, 'dto');
+
     //1) check order items is validate
     const {
       validatedItems,

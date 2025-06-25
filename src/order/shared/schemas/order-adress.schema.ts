@@ -34,6 +34,23 @@ export class OrderAddress {
 
   @Prop({ type: String, required: false })
   companyName?: string; // Optional field for company name
+  @Prop({
+    type: {
+      type: String,
+      enum: ['Point'],
+      required: false,
+      // default: 'Point',
+    },
+    coordinates: {
+      type: [Number],
+      required: false,
+    },
+  })
+  location?: {
+    type: string;
+    coordinates: number[]; //[longitude, latitude]،
+  };
 }
 
 export const OrderAddressSchema = SchemaFactory.createForClass(OrderAddress);
+OrderAddressSchema.index({ location: '2dsphere' });
