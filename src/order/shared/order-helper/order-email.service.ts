@@ -17,7 +17,7 @@ type ValidatedItem = {
     price: number;
     quantity: number;
     sold: number;
-    SineLimit?: boolean;
+    isUnlimitedStock?: boolean;
   };
   quantity: number;
   totalPrice?: number;

@@ -32,7 +32,7 @@ export class CreateProductDto {
   @IsBoolean()
   @Transform(({ value }) => value === 'true' || value === true)
   @IsOptional()
-  SineLimit?: boolean;
+  isUnlimitedStock?: boolean;
 
   @IsString()
   @IsNotEmpty({ message: 'Description is required' })
@@ -47,6 +47,7 @@ export class CreateProductDto {
 
   @IsNumber()
   @IsOptional()
+  @Min(0)
   @Type(() => Number)
   sold?: number;
 
@@ -69,9 +70,9 @@ export class CreateProductDto {
   @IsOptional()
   @IsString({ each: true })
   colors?: string[];
+
   @IsOptional()
   @IsString()
-  // @IsNotEmpty({ message: 'Image cover is required' })
   imageCover!: string;
 
   @IsArray()
@@ -82,6 +83,14 @@ export class CreateProductDto {
   @IsMongoId()
   @IsNotEmpty({ message: 'Category is required' })
   category!: string;
+
+  @IsArray()
+  @IsMongoId({
+    each: true,
+    message: 'كل عنصر في supCategories يجب أن يكون MongoId',
+  })
+  @IsOptional()
+  supCategories?: string[];
 
   @IsMongoId()
   @IsOptional()

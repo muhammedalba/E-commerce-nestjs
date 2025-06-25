@@ -15,7 +15,7 @@ type validatedItems = {
     price: number;
     quantity: number;
     sold: number;
-    SineLimit?: boolean;
+    isUnlimitedStock?: boolean;
   };
   quantity: number;
   totalPrice?: number;
@@ -69,7 +69,7 @@ export class OrderHelperService {
       const product = await this.productModel
         .findById(item.productId)
         .select(
-          'title price priceAfterDiscount SineLimit quantity sold disabled SineLimit brand category imageCover',
+          'title price priceAfterDiscount isUnlimitedStock  quantity sold disabled isUnlimitedStock  brand category imageCover',
         )
         .exec();
 
@@ -82,7 +82,7 @@ export class OrderHelperService {
           ? (product.get(`title.${lang}`) as string)
           : product.title;
 
-      if (!product.SineLimit && product.quantity < item.quantity) {
+      if (!product.isUnlimitedStock && product.quantity < item.quantity) {
         updatedProducts.push({
           productId: product._id.toString(),
           availableQuantity: product.quantity,

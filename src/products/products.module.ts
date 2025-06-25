@@ -11,6 +11,7 @@ import { BrandsModule } from 'src/brands/brands.module';
 import { BrandExistsPipe } from 'src/products/shared/pipes/brand-exists.pipe';
 import { CategoriesModule } from 'src/categories/categories.module';
 import { ProductsStatistics } from './products-helper/products-statistics.service';
+import { SupCategoryModule } from 'src/sup-category/sup-category.module';
 @Module({
   imports: [
     FileUploadDiskStorageModule,
@@ -36,6 +37,7 @@ import { ProductsStatistics } from './products-helper/products-statistics.servic
     AuthModule,
     BrandsModule,
     CategoriesModule,
+    SupCategoryModule,
   ],
   controllers: [ProductsController],
   providers: [

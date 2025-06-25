@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 import { Types } from 'mongoose';
+import { SupCategory } from 'src/sup-category/shared/schemas/sup-category.schema';
 
 @Schema({
   timestamps: true,
@@ -29,7 +30,7 @@ export class Product {
     type: Boolean,
     default: true,
   })
-  SineLimit!: boolean;
+  isUnlimitedStock!: boolean;
   @Prop({
     type: Boolean,
     default: false,
@@ -90,6 +91,10 @@ export class Product {
     required: [true, 'product must have a parent category'],
   })
   category?: Types.ObjectId;
+  @Prop({
+    type: [{ type: Types.ObjectId, ref: SupCategory.name, required: true }],
+  })
+  supCategories!: Types.ObjectId[];
 
   @Prop({
     type: Types.ObjectId,

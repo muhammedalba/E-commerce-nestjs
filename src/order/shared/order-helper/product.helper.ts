@@ -14,7 +14,7 @@ type ValidatedItem = {
     price: number;
     quantity: number;
     sold: number;
-    SineLimit?: boolean;
+    isUnlimitedStock?: boolean;
   };
   quantity: number;
   totalPrice?: number;
@@ -31,7 +31,7 @@ export class ProductHelperService {
     const bulkOptions = validatedItems.map((product) => {
       const newSold = (product.product.sold || 0) + product.quantity;
       let newQuantity = product.product.quantity - product.quantity;
-      if (!product.product.SineLimit && newQuantity <= 0) {
+      if (!product.product.isUnlimitedStock && newQuantity <= 0) {
         newQuantity = 0;
       }
       return {

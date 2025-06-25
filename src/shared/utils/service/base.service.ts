@@ -10,7 +10,7 @@ import { ApiFeatures } from '../ApiFeatures';
 import { QueryString } from '../interfaces/queryInterface';
 import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
 import { MulterFileType } from '../interfaces/fileInterface';
-import { I18nContext } from 'nestjs-i18n';
+import { I18nContext, TranslateOptions } from 'nestjs-i18n';
 import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
 //
 interface FileSchema {
@@ -49,8 +49,8 @@ export class BaseService<T> {
   }
 
   // This method is used to get the current language
-  private t(key: string): string {
-    return this.i18n.translate(key);
+  private t(key: string, option?: TranslateOptions): string {
+    return this.i18n.translate(key, option);
   }
   // This method is used to localize the document
   localize(data: T | T[]): T | T[] {
@@ -266,6 +266,13 @@ export class BaseService<T> {
     };
   }
   async deleteOneDoc(idParamDto: IdParamDto, selected: string): Promise<void> {
+    // 1) check if id is valid ObjectId or slug
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto.id);
+    if (!isObjectId) {
+      throw new NotFoundException(
+        this.t('exception.INVALID', { args: { variable: idParamDto.id } }),
+      );
+    }
     // 1) check  document if found
     const doc = (await this.model
       .findById(idParamDto.id)

@@ -41,7 +41,7 @@ export class CartService {
     let cart = await this.cartModel.findOne({ user: userId });
     // 2.check if the product exists
     const product = await this.ProductModel.findById(productId)
-      .select('quantity price SineLimit priceAfterDiscount')
+      .select('quantity price isUnlimitedStock  priceAfterDiscount')
       .lean()
       .exec();
 
@@ -50,7 +50,7 @@ export class CartService {
     }
 
     // 3.check if the quantity is valid
-    if (!product.SineLimit && product.quantity < quantity) {
+    if (!product.isUnlimitedStock && product.quantity < quantity) {
       throw new BadRequestException('الكمية غير متوفرة');
     }
 
@@ -76,7 +76,7 @@ export class CartService {
       if (existingItem) {
         // 6.1 if the product exists, update the quantity and total price
         const newTotalQty = existingItem.quantity + quantity;
-        if (!product.SineLimit && product.quantity < newTotalQty) {
+        if (!product.isUnlimitedStock && product.quantity < newTotalQty) {
           throw new BadRequestException('الكمية غير كافية');
         }
 

@@ -27,6 +27,7 @@ import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 import { MulterFilesType } from 'src/shared/utils/interfaces/fileInterface';
 import { BrandExistsPipe } from 'src/products/shared/pipes/brand-exists.pipe';
 import { CategoryExistsPipe } from 'src/products/shared/pipes/category-exists.pipe';
+import { SupCategoryExistsPipe } from './shared/pipes/sup-category-exists.pipe';
 
 @Controller('products')
 export class ProductsController {
@@ -50,6 +51,7 @@ export class ProductsController {
   async create(
     @Body('brand', BrandExistsPipe) brand: string,
     @Body('category', CategoryExistsPipe) category: string,
+    @Body('supCategories', SupCategoryExistsPipe) supCategory: string,
     @Body()
     createProductDto: CreateProductDto,
     @UploadedFiles(
@@ -100,6 +102,7 @@ export class ProductsController {
     @Param() idParamDto: IdParamDto,
     @Body('brand', BrandExistsPipe) brand: string,
     @Body('category', CategoryExistsPipe) category: string,
+    @Body('supCategories', SupCategoryExistsPipe) supCategory: string,
     @Body() updateProductDto: UpdateProductDto,
     @UploadedFiles(
       new ParseFileFieldsPipe(

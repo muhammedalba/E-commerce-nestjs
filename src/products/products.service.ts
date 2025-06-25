@@ -97,6 +97,13 @@ export class ProductsService {
         this.i18n.translate('exception.NAME_EXISTS'),
       );
     }
+    if (createProductDto.supCategories) {
+      const uniqueSupCategories = Array.from(
+        new Set(createProductDto.supCategories.map((id) => id.toString())),
+      );
+
+      createProductDto.supCategories = uniqueSupCategories;
+    }
 
     try {
       // 3) Handle file uploads
@@ -217,12 +224,25 @@ export class ProductsService {
     // 1) Fetch existing product
     const doc = await this.productModel
       .findById(idParamDto.id)
-      .select('infoProductPdf imageCover images price priceAfterDiscount')
+      .select(
+        'infoProductPdf imageCover images price priceAfterDiscount supCategories',
+      )
       .lean();
     if (!doc) {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }
+    if (updateProductDto.supCategories) {
+      //1) get SupCategories
+      const oldSupCategories = doc.supCategories.map((id) => id.toString());
+      const newSupCategories = updateProductDto.supCategories;
 
+      //
+      const mergedSupCategories = Array.from(
+        new Set([...oldSupCategories, ...newSupCategories]),
+      );
+
+      updateProductDto.supCategories = mergedSupCategories;
+    }
     // 2) Handle slug change if title is updated
     if (updateProductDto.title) {
       updateProductDto.slug = slugify(updateProductDto.title.en.trim(), {

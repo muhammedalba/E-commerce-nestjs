@@ -2,23 +2,22 @@ import { Injectable } from '@nestjs/common';
 import { CreateCouponDto } from './shared/dto/create-coupon.dto';
 import { UpdateCouponDto } from './shared/dto/update-coupon.dto';
 import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
-import { BrandDocument } from 'src/brands/shared/schemas/brand.schema';
 import { BaseService } from 'src/shared/utils/service/base.service';
 import { InjectModel } from '@nestjs/mongoose';
-import { Coupon } from './shared/Schemas/coupons.schema';
+import { Coupon, CouponDocument } from './shared/Schemas/coupons.schema';
 import { Model } from 'mongoose';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 
 @Injectable()
-export class CouponsService extends BaseService<BrandDocument> {
+export class CouponsService extends BaseService<CouponDocument> {
   constructor(
-    @InjectModel(Coupon.name) private brandModel: Model<BrandDocument>,
+    @InjectModel(Coupon.name) private couponModel: Model<CouponDocument>,
     protected readonly fileUploadService: FileUploadService,
     protected readonly i18n: CustomI18nService,
   ) {
-    super(brandModel, i18n, fileUploadService);
+    super(couponModel, i18n, fileUploadService);
   }
   async create(createCouponDto: CreateCouponDto) {
     return await this.createOneDoc(createCouponDto, undefined, 'coupon', {
