@@ -18,6 +18,7 @@ import { OrderModule } from './order/order.module';
 import { CustomI18nValidationExceptionFilter } from './filters/i18n-validation-exception.filter';
 import { PromoBannerModule } from './promo-banner/promo-banner.module';
 import { SupCategoryModule } from './sup-category/sup-category.module';
+import { SupplierModule } from './supplier/supplier.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { SupCategoryModule } from './sup-category/sup-category.module';
     OrderModule,
     PromoBannerModule,
     SupCategoryModule,
+    SupplierModule,
   ],
   controllers: [AppController],
   providers: [AppService, CustomI18nValidationExceptionFilter],

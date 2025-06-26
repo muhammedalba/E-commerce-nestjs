@@ -16,6 +16,7 @@ export class SupCategoryExistsPipe implements PipeTransform {
     const existing = await this.supCategoryModel
       .find({ _id: { $in: value } })
       .select('_id');
+
     const existingIds = existing.map((doc) => doc._id.toString());
 
     const notFound = value.filter((id) => !existingIds.includes(id));

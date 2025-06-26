@@ -25,9 +25,10 @@ import { roles } from 'src/auth/shared/enums/role.enum';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 import { MulterFilesType } from 'src/shared/utils/interfaces/fileInterface';
-import { BrandExistsPipe } from 'src/products/shared/pipes/brand-exists.pipe';
-import { CategoryExistsPipe } from 'src/products/shared/pipes/category-exists.pipe';
-import { SupCategoryExistsPipe } from './shared/pipes/sup-category-exists.pipe';
+import { BrandExistsPipe } from 'src/shared/utils/pipes/brand-exists.pipe';
+import { CategoryExistsPipe } from 'src/shared/utils/pipes/category-exists.pipe';
+import { SupplierExistsPipe } from 'src/shared/utils/pipes/supplier-exists.pipe';
+import { SupCategoryExistsPipe } from 'src/shared/utils/pipes/sup-category-exists.pipe';
 
 @Controller('products')
 export class ProductsController {
@@ -49,11 +50,13 @@ export class ProductsController {
   @UseGuards(AuthGuard, RoleGuard)
   @UseInterceptors(FileFieldsInterceptor(ProductsController.imageSize))
   async create(
-    @Body('brand', BrandExistsPipe) brand: string,
-    @Body('category', CategoryExistsPipe) category: string,
-    @Body('supCategories', SupCategoryExistsPipe) supCategory: string,
     @Body()
     createProductDto: CreateProductDto,
+    @Body('brand', BrandExistsPipe) brand: string,
+    @Body('category', CategoryExistsPipe) category: string,
+    @Body('supplier', SupplierExistsPipe) supplier: string,
+    @Body('supCategories', SupCategoryExistsPipe) supCategory: string,
+
     @UploadedFiles(
       new ParseFileFieldsPipe(
         '1MB',
@@ -75,7 +78,7 @@ export class ProductsController {
       throw new BadRequestException('imageCover is required');
     }
     return await this.productsService.create(
-      createProductDto,
+      { ...createProductDto, category, brand, supplier },
       files as {
         imageCover: MulterFilesType;
         images?: MulterFilesType;
@@ -100,10 +103,11 @@ export class ProductsController {
   @UseInterceptors(FileFieldsInterceptor(ProductsController.imageSize))
   async update(
     @Param() idParamDto: IdParamDto,
+    @Body() updateProductDto: UpdateProductDto,
     @Body('brand', BrandExistsPipe) brand: string,
     @Body('category', CategoryExistsPipe) category: string,
+    @Body('supplier', SupplierExistsPipe) supplier: string,
     @Body('supCategories', SupCategoryExistsPipe) supCategory: string,
-    @Body() updateProductDto: UpdateProductDto,
     @UploadedFiles(
       new ParseFileFieldsPipe(
         '1MB',
@@ -123,7 +127,7 @@ export class ProductsController {
   ) {
     return await this.productsService.update(
       idParamDto,
-      updateProductDto,
+      { ...updateProductDto, brand, category, supplier },
       files,
     );
   }

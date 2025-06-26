@@ -96,6 +96,10 @@ export class CreateProductDto {
   @IsOptional()
   brand?: string;
 
+  @IsMongoId()
+  @IsOptional()
+  supplier?: string;
+
   @IsNumber()
   @Min(1)
   @Max(5)

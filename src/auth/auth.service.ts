@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { CreateUserDto, UserRole } from 'src/users/shared/dto/create-user.dto';
+import { CreateUserDto } from 'src/users/shared/dto/create-user.dto';
 
 import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
 import * as bcrypt from 'bcrypt';
@@ -30,6 +30,7 @@ import {
   FacebookOAuthUser,
   OAuthUser,
 } from './shared/types/oauth-user.interface';
+import { roles } from './shared/enums/role.enum';
 
 @Injectable()
 export class AuthService {
@@ -79,12 +80,12 @@ export class AuthService {
     //3) save user to db with avatar path
     createUserDto.avatar = filePath;
     // reset role to user
-    createUserDto.role = UserRole.USER;
+    createUserDto.role = roles.USER;
     const newUser = await this.userModel.create(createUserDto);
     //4) generate refresh token and access token and save the refresh token in database and delete old refresh token
     const userId = {
       user_id: newUser._id.toString(),
-      role: UserRole.USER.toLocaleLowerCase(),
+      role: roles.USER.toLocaleLowerCase(),
       email: newUser.email,
     };
 

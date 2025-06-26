@@ -7,11 +7,21 @@ import { FileUploadDiskStorageModule } from 'src/file-upload-in-diskStorage/file
 import { Product, ProductSchema } from './shared/schemas/Product.schema';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import * as mongooseI18n from 'mongoose-i18n-localize';
-import { BrandsModule } from 'src/brands/brands.module';
-import { BrandExistsPipe } from 'src/products/shared/pipes/brand-exists.pipe';
-import { CategoriesModule } from 'src/categories/categories.module';
 import { ProductsStatistics } from './products-helper/products-statistics.service';
-import { SupCategoryModule } from 'src/sup-category/sup-category.module';
+
+import {
+  Supplier,
+  SupplierSchema,
+} from 'src/supplier/shared/schema/Supplier.schema';
+import { Brand, BrandSchema } from 'src/brands/shared/schemas/brand.schema';
+import {
+  Category,
+  CategorySchema,
+} from 'src/categories/shared/schemas/category.schema';
+import {
+  SupCategory,
+  SupCategorySchema,
+} from 'src/sup-category/shared/schemas/sup-category.schema';
 @Module({
   imports: [
     FileUploadDiskStorageModule,
@@ -33,18 +43,40 @@ import { SupCategoryModule } from 'src/sup-category/sup-category.module';
           return schema;
         },
       },
+      {
+        name: Supplier.name,
+        useFactory: () => {
+          return SupplierSchema;
+        },
+      },
+      {
+        name: Brand.name,
+        useFactory: () => {
+          return BrandSchema;
+        },
+      },
+      {
+        name: Category.name,
+        useFactory: () => {
+          return CategorySchema;
+        },
+      },
+      {
+        name: SupCategory.name,
+        useFactory: () => {
+          return SupCategorySchema;
+        },
+      },
     ]),
     AuthModule,
-    BrandsModule,
-    CategoriesModule,
-    SupCategoryModule,
   ],
   controllers: [ProductsController],
   providers: [
     ProductsService,
     CustomI18nService,
-    BrandExistsPipe,
+    // BrandExistsPipe,
     ProductsStatistics,
   ],
+  exports: [MongooseModule],
 })
 export class ProductsModule {}

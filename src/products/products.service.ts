@@ -104,7 +104,6 @@ export class ProductsService {
 
       createProductDto.supCategories = uniqueSupCategories;
     }
-
     try {
       // 3) Handle file uploads
       if (

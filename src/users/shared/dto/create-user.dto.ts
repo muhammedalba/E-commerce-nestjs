@@ -10,12 +10,7 @@ import {
   IsLowercase,
 } from 'class-validator';
 import { MatchPasswordValidator } from '../validators/match-password.validator';
-
-export enum UserRole {
-  ADMIN = 'admin',
-  USER = 'user',
-  MANAGER = 'manager',
-}
+import { roles } from 'src/auth/shared/enums/role.enum';
 
 export class CreateUserDto {
   @IsNotEmpty({ message: 'الاسم مطلوب' })
@@ -47,11 +42,11 @@ export class CreateUserDto {
   confirmPassword!: string;
 
   @IsOptional()
-  @IsEnum(UserRole, {
+  @IsEnum(roles, {
     message: 'يجب أن تكون الصلاحية إما admin أو user أو manager',
   })
   @IsLowercase()
-  role?: UserRole;
+  role?: roles;
 
   @IsOptional()
   @IsString()

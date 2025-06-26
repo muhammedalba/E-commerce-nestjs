@@ -4,7 +4,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { CustomI18nService } from '../i18n/costum-i18n-service';
 import { ApiFeatures } from '../ApiFeatures';
 import { QueryString } from '../interfaces/queryInterface';

@@ -1,7 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 import { Types } from 'mongoose';
+import { Brand } from 'src/brands/shared/schemas/brand.schema';
+import { Category } from 'src/categories/shared/schemas/category.schema';
 import { SupCategory } from 'src/sup-category/shared/schemas/sup-category.schema';
+import { Supplier } from 'src/supplier/shared/schema/Supplier.schema';
 
 @Schema({
   timestamps: true,
@@ -87,7 +90,7 @@ export class Product {
 
   @Prop({
     type: Types.ObjectId,
-    ref: 'Category',
+    ref: Category.name,
     required: [true, 'product must have a parent category'],
   })
   category?: Types.ObjectId;
@@ -98,9 +101,12 @@ export class Product {
 
   @Prop({
     type: Types.ObjectId,
-    ref: 'Brand',
+    ref: Brand.name,
   })
   brand?: Types.ObjectId;
+
+  @Prop({ type: Types.ObjectId, ref: Supplier.name })
+  supplier?: Types.ObjectId;
 
   @Prop({
     type: Number,

@@ -1,7 +1,7 @@
 // pipes/brand-exists.pipe.ts
 import { Injectable, PipeTransform, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Brand } from 'src/brands/shared/schemas/brand.schema';
 
 @Injectable()
@@ -11,7 +11,7 @@ export class BrandExistsPipe implements PipeTransform {
     private readonly brandModel: Model<Brand>,
   ) {}
 
-  async transform(value: any): Promise<string | number | null> {
+  async transform(value: string): Promise<Types.ObjectId | null> {
     if (!value) return null;
 
     const exists = await this.brandModel.exists({ _id: value });
@@ -19,6 +19,6 @@ export class BrandExistsPipe implements PipeTransform {
       throw new BadRequestException('Brand not found');
     }
 
-    return value as string | number;
+    return new Types.ObjectId(value);
   }
 }

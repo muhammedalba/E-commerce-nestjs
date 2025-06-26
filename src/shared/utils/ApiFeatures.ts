@@ -24,6 +24,7 @@ export class ApiFeatures<T> {
       'brand',
       'email',
       'user',
+      'name',
     ];
     const mongoQuery: Record<string, any> = {};
 
@@ -63,8 +64,7 @@ export class ApiFeatures<T> {
   }
 
   sort() {
-    const sortParam = this.queryString.sort;
-
+    const sortParam = this.queryString?.sort;
     if (sortParam) {
       // split by comma and filter out empty fields
       const sortBy = sortParam
@@ -87,7 +87,7 @@ export class ApiFeatures<T> {
   }
 
   limitFields() {
-    if (this.queryString.fields) {
+    if (this.queryString?.fields) {
       const fields = this.queryString.fields
         .split(',')
         .map((field) => field.trim())
@@ -101,7 +101,7 @@ export class ApiFeatures<T> {
   }
 
   search(modelName: string) {
-    if (this.queryString.keywords) {
+    if (this.queryString?.keywords && this.queryString.keywords.length > 0) {
       const keyword = this.queryString.keywords.trim();
       let query: object;
 
@@ -115,6 +115,7 @@ export class ApiFeatures<T> {
           };
           break;
         case 'users':
+        case 'suppliers':
           query = {
             $or: [
               { name: { $regex: keyword, $options: 'i' } },

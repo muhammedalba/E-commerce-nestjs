@@ -39,7 +39,6 @@ export class OrderAddress {
       type: String,
       enum: ['Point'],
       required: false,
-      // default: 'Point',
     },
     coordinates: {
       type: [Number],
