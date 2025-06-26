@@ -4,6 +4,8 @@ import {
   IsOptional,
   IsDefined,
   ValidateNested,
+  IsMongoId,
+  IsArray,
 } from 'class-validator';
 import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
 
@@ -17,4 +19,12 @@ export class CreateCategoryDto {
   @IsOptional()
   @IsString({ message: 'validation.IS_String' })
   image?: string;
+
+  @IsArray()
+  @IsMongoId({
+    each: true,
+    message: 'كل عنصر في supCategories يجب أن يكون MongoId',
+  })
+  @IsOptional()
+  supCategories?: string[];
 }

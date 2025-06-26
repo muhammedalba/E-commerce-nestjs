@@ -26,6 +26,13 @@ export class Category {
 }
 export type CategoryDocument = HydratedDocument<Category>;
 export const CategorySchema = SchemaFactory.createForClass(Category);
+CategorySchema.virtual('supCategories', {
+  ref: 'SupCategory',
+  localField: '_id',
+  foreignField: 'category',
+});
+CategorySchema.set('toObject', { virtuals: true });
+CategorySchema.set('toJSON', { virtuals: true });
 
 //update , findOne and findAll
 // this will be used to update the image url

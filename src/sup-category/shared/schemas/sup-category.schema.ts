@@ -16,7 +16,12 @@ export class SupCategory {
     lowercase: true,
   })
   slug?: string;
-  @Prop({ type: Types.ObjectId, ref: Category.name, required: true })
+  @Prop({
+    type: Types.ObjectId,
+    ref: Category.name,
+    required: true,
+    select: false,
+  })
   category!: Types.ObjectId;
 }
 export const SupCategorySchema = SchemaFactory.createForClass(SupCategory);

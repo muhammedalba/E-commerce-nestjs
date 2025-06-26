@@ -42,7 +42,11 @@ export class CategoriesService extends BaseService<CategoryDocument> {
     pagination: any;
     data: Category[];
   }> {
-    return await this.findAllDoc('categories', queryString);
+    const populate = {
+      path: 'supCategories',
+      select: 'name slug',
+    };
+    return await this.findAllDoc(Category.name, queryString, populate);
   }
 
   async findOne(idParamDto: IdParamDto) {

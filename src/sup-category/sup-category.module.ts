@@ -11,6 +11,10 @@ import * as mongooseI18n from 'mongoose-i18n-localize';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import { FileUploadDiskStorageModule } from 'src/file-upload-in-diskStorage/file-upload.module';
 import { SupCategoriesStatistics } from './shared/sup-categories-helper/sup-categories-statistics.service';
+import {
+  Category,
+  CategorySchema,
+} from 'src/categories/shared/schemas/category.schema';
 @Module({
   imports: [
     MongooseModule.forFeatureAsync([
@@ -30,6 +34,12 @@ import { SupCategoriesStatistics } from './shared/sup-categories-helper/sup-cate
             },
           });
           return schema;
+        },
+      },
+      {
+        name: Category.name,
+        useFactory: () => {
+          return CategorySchema;
         },
       },
     ]),

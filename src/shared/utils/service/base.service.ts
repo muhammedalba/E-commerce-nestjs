@@ -4,7 +4,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { CustomI18nService } from '../i18n/costum-i18n-service';
 import { ApiFeatures } from '../ApiFeatures';
 import { QueryString } from '../interfaces/queryInterface';
@@ -145,6 +145,10 @@ export class BaseService<T> {
   async findAllDoc(
     modelName: string,
     QueryString: QueryString,
+    populate?: {
+      path: string;
+      select: string;
+    },
   ): Promise<{
     status: string;
     results: number;
@@ -159,7 +163,11 @@ export class BaseService<T> {
       .limitFields()
       .paginate(total);
 
-    const data = await features.getQuery();
+    const data = populate
+      ? await features
+          .getQuery()
+          .populate({ path: populate.path, select: populate.select })
+      : await features.getQuery();
     if (!data) {
       throw new BadRequestException(this.t('exception.NOT_FOUND'));
     }
