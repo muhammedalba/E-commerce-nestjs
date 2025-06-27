@@ -20,8 +20,12 @@ async function bootstrap() {
   // app.useGlobalFilters(new I18nValidationExceptionFilter());
   // هندلة الايرور
   app.useGlobalFilters(app.get(CustomI18nValidationExceptionFilter));
+  app.enableCors({
+    origin: ['http://localhost:3000'], // عنوان واجهتك، غيّره إذا بورت مختلف
+    credentials: true, // لو تستخدم كوكيز، وإلا اجعله false أو احذفه
+  });
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 4000);
 }
 bootstrap().catch((err) => {
   console.error('Error during application bootstrap:', err);
