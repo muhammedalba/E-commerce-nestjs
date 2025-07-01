@@ -91,8 +91,7 @@ export class AuthService {
     newUser.avatar = `${process.env.BASE_URL}${filePath}`;
     const Tokens = await this.tokenService.generate_Tokens(userId, '1h');
     // 5) Set cookies using CookieService
-    // this.cookieService.setRefreshTokenCookie(res, Tokens.refresh_Token);
-    // this.cookieService.setAccessTokenCookie(res, Tokens.access_token);
+
     this.cookieService.setCookies(
       res,
       Tokens,

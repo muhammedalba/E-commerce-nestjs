@@ -165,8 +165,6 @@ export class PasswordResetService {
     };
     const Tokens = await this.tokenService.generate_Tokens(userId, '1h');
     // 4) Set cookies using CookieService
-    // this.cookieService.setRefreshTokenCookie(res, Tokens.refresh_Token);
-    // this.cookieService.setAccessTokenCookie(res, Tokens.access_token);
     this.cookieService.setCookies(res, Tokens, 'user', user.name, user.avatar);
     // 5) send email to user
     try {

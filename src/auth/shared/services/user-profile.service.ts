@@ -156,11 +156,7 @@ export class userProfileService {
       data: user,
     };
   }
-  async refreshToken(
-    // refreshTokenDto: RefreshTokenDto,
-    req: Request,
-    res: Response,
-  ) {
+  async refreshToken(req: Request, res: Response) {
     const cookies = req.cookies as {
       refresh_token?: string;
       access_token?: string;

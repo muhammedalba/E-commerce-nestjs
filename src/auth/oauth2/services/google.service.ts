@@ -51,17 +51,7 @@ export class googleService {
       // 3) generate access token
       Tokens = await this.tokenService.generate_Tokens(userId, '1h');
       //4) send token to cookies
-      // 5) Set cookies using CookieService
-      // this.cookieService.setRefreshTokenCookie(res, Tokens.refresh_Token);
-      // this.cookieService.setAccessTokenCookie(res, Tokens.access_token);
       this.cookieService.setCookies(res, Tokens, 'user', name, picture);
-
-      // return {
-      //   status: 'success',
-      //   message: this.i18n.translate('success.LOGIN_SUCCESS'),
-      //   data: { ...newUser.toObject(), password: undefined },
-      //   access_token: Tokens.access_token,
-      // };
       res.redirect(`${process.env.FRONTEND_ORIGIN}`);
     } else {
       const userId = {
@@ -70,8 +60,6 @@ export class googleService {
         email: user.email,
       };
       Tokens = await this.tokenService.generate_Tokens(userId, '1h');
-      // this.cookieService.setRefreshTokenCookie(res, Tokens.refresh_Token);
-      // this.cookieService.setAccessTokenCookie(res, Tokens.access_token);
       this.cookieService.setCookies(
         res,
         Tokens,
@@ -81,11 +69,5 @@ export class googleService {
       );
     }
     res.redirect(`${process.env.FRONTEND_ORIGIN}`);
-    // return {
-    //   status: 'success',
-    //   message: this.i18n.translate('success.LOGIN_SUCCESS'),
-    //   data: user,
-    //   access_token: Tokens.access_token,
-    // };
   }
 }

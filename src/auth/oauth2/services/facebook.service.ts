@@ -48,9 +48,7 @@ export class facebookService {
       // 3) generate access token
       Tokens = await this.tokenService.generate_Tokens(userId, '1h');
       //4) send token to cookies
-      // 5) Set cookies using CookieService
-      // this.cookieService.setRefreshTokenCookie(res, Tokens.refresh_Token);
-      // this.cookieService.setAccessTokenCookie(res, Tokens.access_token);
+
       this.cookieService.setCookies(
         res,
         Tokens,
@@ -72,8 +70,6 @@ export class facebookService {
         email: user.email,
       };
       Tokens = await this.tokenService.generate_Tokens(userId, '1h');
-      // this.cookieService.setRefreshTokenCookie(res, Tokens.refresh_Token);
-      // this.cookieService.setAccessTokenCookie(res, Tokens.access_token);
       this.cookieService.setCookies(
         res,
         Tokens,
