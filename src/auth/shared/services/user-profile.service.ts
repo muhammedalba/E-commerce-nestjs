@@ -12,7 +12,6 @@ import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import { EmailService } from 'src/email/email.service';
 import { RefreshToken } from '../schema/refresh-token.schema';
 import { UpdateUserDto } from 'src/users/shared/dto/update-user.dto';
-import { RefreshTokenDto } from '../Dto/refresh-Token.Dto';
 import { JwtService } from '@nestjs/jwt';
 import { CookieService } from './cookie.service';
 import { Request, Response } from 'express';
@@ -158,12 +157,16 @@ export class userProfileService {
     };
   }
   async refreshToken(
-    refreshTokenDto: RefreshTokenDto,
+    // refreshTokenDto: RefreshTokenDto,
     req: Request,
     res: Response,
   ) {
-    const cookies = req.cookies as { refresh_token?: string };
+    const cookies = req.cookies as {
+      refresh_token?: string;
+      access_token?: string;
+    };
     const refreshToken = cookies.refresh_token?.trim() || '';
+    const access_token = cookies.access_token?.trim() || '';
 
     if (!refreshToken) {
       throw new BadRequestException(
@@ -199,9 +202,8 @@ export class userProfileService {
     //2) Verify ACCESS  token
     let decoded_access_token: JwtPayload;
     try {
-      decoded_access_token = await this.jwtService.verifyAsync<JwtPayload>(
-        refreshTokenDto.access_token,
-      );
+      decoded_access_token =
+        await this.jwtService.verifyAsync<JwtPayload>(access_token);
     } catch {
       throw new BadRequestException(
         this.i18n.translate('exception.TOKEN_INVALID'),
@@ -217,8 +219,7 @@ export class userProfileService {
     // generate new access and refresh token and delete old refresh token
     const new_Tokens = await this.tokenService.generate_Tokens(userData, '1d');
     // 4) Set cookies using CookieService
-    this.cookieService.setRefreshTokenCookie(res, new_Tokens.refresh_Token);
-    this.cookieService.setAccessTokenCookie(res, new_Tokens.access_token);
+    this.cookieService.setCookies(res, new_Tokens);
 
     return {
       status: 'success',

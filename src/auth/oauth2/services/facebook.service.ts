@@ -49,8 +49,15 @@ export class facebookService {
       Tokens = await this.tokenService.generate_Tokens(userId, '1h');
       //4) send token to cookies
       // 5) Set cookies using CookieService
-      this.cookieService.setRefreshTokenCookie(res, Tokens.refresh_Token);
-      this.cookieService.setAccessTokenCookie(res, Tokens.access_token);
+      // this.cookieService.setRefreshTokenCookie(res, Tokens.refresh_Token);
+      // this.cookieService.setAccessTokenCookie(res, Tokens.access_token);
+      this.cookieService.setCookies(
+        res,
+        Tokens,
+        'user',
+        newUser.name,
+        newUser.avatar,
+      );
 
       return {
         status: 'success',
@@ -65,8 +72,15 @@ export class facebookService {
         email: user.email,
       };
       Tokens = await this.tokenService.generate_Tokens(userId, '1h');
-      this.cookieService.setRefreshTokenCookie(res, Tokens.refresh_Token);
-      this.cookieService.setAccessTokenCookie(res, Tokens.access_token);
+      // this.cookieService.setRefreshTokenCookie(res, Tokens.refresh_Token);
+      // this.cookieService.setAccessTokenCookie(res, Tokens.access_token);
+      this.cookieService.setCookies(
+        res,
+        Tokens,
+        user.role || 'user',
+        user.name,
+        user.avatar,
+      );
     }
 
     return {

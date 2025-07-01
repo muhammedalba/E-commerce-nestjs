@@ -135,7 +135,7 @@ export class PasswordResetService {
     // 1) get user by email
     const user = await this.userModel
       .findOne({ email: LoginUserDto.email })
-      .select('email role verificationCode passwordResetExpires')
+      .select('email avatar role verificationCode passwordResetExpires')
       .exec();
     if (!user) {
       throw new BadRequestException(
@@ -165,8 +165,9 @@ export class PasswordResetService {
     };
     const Tokens = await this.tokenService.generate_Tokens(userId, '1h');
     // 4) Set cookies using CookieService
-    this.cookieService.setRefreshTokenCookie(res, Tokens.refresh_Token);
-    this.cookieService.setAccessTokenCookie(res, Tokens.access_token);
+    // this.cookieService.setRefreshTokenCookie(res, Tokens.refresh_Token);
+    // this.cookieService.setAccessTokenCookie(res, Tokens.access_token);
+    this.cookieService.setCookies(res, Tokens, 'user', user.name, user.avatar);
     // 5) send email to user
     try {
       await this.emailService.send_reset_password_success(

@@ -15,7 +15,6 @@ import { ForgotPasswordDto } from './shared/Dto/forgotPassword.dto.';
 import { LoginUserDto } from './shared/Dto/login.dto';
 import { resetCodeDto } from './shared/Dto/resetCode.dto';
 import { UpdateUserDto } from 'src/users/shared/dto/update-user.dto';
-import { RefreshTokenDto } from './shared/Dto/refresh-Token.Dto';
 import { CookieService } from './shared/services/cookie.service';
 import { Request, Response } from 'express';
 import { PasswordResetService } from './shared/services/password-reset.service';
@@ -88,13 +87,20 @@ export class AuthService {
       role: roles.USER.toLocaleLowerCase(),
       email: newUser.email,
     };
-
-    const Tokens = await this.tokenService.generate_Tokens(userId, '1h');
-    // 5) Set cookies using CookieService
-    this.cookieService.setRefreshTokenCookie(res, Tokens.refresh_Token);
-    this.cookieService.setAccessTokenCookie(res, Tokens.access_token);
     //6) update avatar url and tokens
     newUser.avatar = `${process.env.BASE_URL}${filePath}`;
+    const Tokens = await this.tokenService.generate_Tokens(userId, '1h');
+    // 5) Set cookies using CookieService
+    // this.cookieService.setRefreshTokenCookie(res, Tokens.refresh_Token);
+    // this.cookieService.setAccessTokenCookie(res, Tokens.access_token);
+    this.cookieService.setCookies(
+      res,
+      Tokens,
+      createUserDto.role,
+      createUserDto.name,
+      createUserDto.avatar,
+    );
+
     // handel response
     const userWithTokens = {
       ...newUser.toObject(),
@@ -146,8 +152,13 @@ export class AuthService {
     };
     const Tokens = await this.tokenService.generate_Tokens(userId, '1h');
     // 4) Set cookies using CookieService
-    this.cookieService.setRefreshTokenCookie(res, Tokens.refresh_Token);
-    this.cookieService.setAccessTokenCookie(res, Tokens.access_token);
+    this.cookieService.setCookies(
+      res,
+      Tokens,
+      user.role ?? 'user',
+      user.name,
+      user.avatar ?? '',
+    );
 
     // 5) Clean user data before returning
     const userResponse = {
@@ -211,16 +222,8 @@ export class AuthService {
       updateUserDto,
     );
   }
-  async refreshToken(
-    refreshTokenDto: RefreshTokenDto,
-    req: Request,
-    res: Response,
-  ): Promise<any> {
-    return await this.userProfileService.refreshToken(
-      refreshTokenDto,
-      req,
-      res,
-    );
+  async refreshToken(req: Request, res: Response): Promise<any> {
+    return await this.userProfileService.refreshToken(req, res);
   }
   // ---- passwordResetService----||
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<any> {

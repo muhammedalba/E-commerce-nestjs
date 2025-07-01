@@ -17,7 +17,6 @@ import { CreateUserDto } from 'src/users/shared/dto/create-user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { createParseFilePipe } from 'src/shared/files/files-validation-factory';
 import { LoginUserDto } from 'src/auth/shared/Dto/login.dto';
-import { RefreshTokenDto } from './shared/Dto/refresh-Token.Dto';
 import { AuthGuard } from './shared/guards/auth.guard';
 import { ForgotPasswordDto } from './shared/Dto/forgotPassword.dto.';
 import { resetCodeDto } from './shared/Dto/resetCode.dto';
@@ -115,11 +114,11 @@ export class AuthController {
   @Post('refresh-token')
   @UseGuards(AuthGuard)
   async refreshToken(
-    @Body() refreshTokenDto: RefreshTokenDto,
+    // @Body() refreshTokenDto: RefreshTokenDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<any> {
-    return await this.authService.refreshToken(refreshTokenDto, req, res);
+    return await this.authService.refreshToken(req, res);
   }
   /*
    * public: /api/v1/auth/logout
