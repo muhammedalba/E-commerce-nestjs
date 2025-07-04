@@ -96,15 +96,15 @@ export class AuthController {
    * public: /api/v1/auth/register
    * method: POST
    */
+
   @Post('register')
   @UseInterceptors(FileInterceptor('avatar'))
   async register(
-    @Body() createUserDto: CreateUserDto,
     @Res({ passthrough: true }) res: Response,
+    @Body() createUserDto: CreateUserDto,
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], false))
     file: MulterFileType,
   ): Promise<any> {
-    // Implement registration logic
     return await this.authService.register(createUserDto, file, res);
   }
   /*
@@ -152,11 +152,8 @@ export class AuthController {
    * method: POST
    */
   @Patch('reset-password')
-  async resetPassword(
-    @Body() LoginUserDto: LoginUserDto,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<any> {
-    return this.authService.resetPassword(LoginUserDto, res);
+  async resetPassword(@Body() LoginUserDto: LoginUserDto): Promise<any> {
+    return this.authService.resetPassword(LoginUserDto);
   }
   /*
    * public: /api/v1/auth/verify-Pass-Reset-Code

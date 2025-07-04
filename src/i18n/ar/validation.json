@@ -1,5 +1,5 @@
 {
-    "LANG_CODE_LENGTH":" {property} يجب أن يكون طوله بين3  و32",
+    "LANG_CODE_LENGTH":" {property} يجب أن يكون طوله بين 3   و32",
     "IS_String": "{property} يجب أن يكون نصًا",
     "NOT_EMPTY": " {property} لا يمكن أن يكون فارغًا",
     "INVALID_EMAIL": "{property}  غير صالح",

@@ -232,8 +232,8 @@ export class AuthService {
   async verify_Pass_Reset_Code(resetCode: resetCodeDto): Promise<any> {
     return await this.passwordResetService.verify_Pass_Reset_Code(resetCode);
   }
-  async resetPassword(LoginUserDto: LoginUserDto, res: Response): Promise<any> {
-    return await this.passwordResetService.resetPassword(LoginUserDto, res);
+  async resetPassword(LoginUserDto: LoginUserDto): Promise<any> {
+    return await this.passwordResetService.resetPassword(LoginUserDto);
   }
   // -----OuAT2 ----//
   async googleLogin(googleUser: OAuthUser, res: Response) {

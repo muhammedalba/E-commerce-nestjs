@@ -6,10 +6,10 @@ import {
   MaxLength,
   IsNotEmpty,
 } from 'class-validator';
-import { i18nValidationMessage } from 'nestjs-i18n';
+
 export class LoginUserDto {
   @IsNotEmpty({ message: 'validation.NOT_EMPTY' })
-  @IsEmail({}, { message: i18nValidationMessage('validation.INVALID_EMAIL') })
+  @IsEmail({}, { message: 'validation.INVALID_EMAIL' })
   @Transform(({ value }: { value: string }) => value.toString().trim(), {
     toClassOnly: true,
   })

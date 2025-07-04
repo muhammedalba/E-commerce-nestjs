@@ -49,6 +49,5 @@ export class CreateUserDto {
   role?: roles;
 
   @IsOptional()
-  @IsString()
   avatar?: string;
 }

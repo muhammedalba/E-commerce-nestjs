@@ -11,8 +11,6 @@ import { EmailService } from 'src/email/email.service';
 import { ForgotPasswordDto } from '../Dto/forgotPassword.dto.';
 import { resetCodeDto } from '../Dto/resetCode.dto';
 import { LoginUserDto } from '../Dto/login.dto';
-import { CookieService } from './cookie.service';
-import { Response } from 'express';
 import { tokenService } from 'src/auth/shared/services/token.service';
 import { User } from '../schema/user.schema';
 
@@ -21,7 +19,6 @@ export class PasswordResetService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     private readonly emailService: EmailService,
-    private readonly cookieService: CookieService,
     private readonly tokenService: tokenService,
     private readonly i18n: CustomI18nService,
   ) {}
@@ -131,7 +128,7 @@ export class PasswordResetService {
       message: this.i18n.translate('success.RESET_CODE_VALID'),
     };
   }
-  async resetPassword(LoginUserDto: LoginUserDto, res: Response) {
+  async resetPassword(LoginUserDto: LoginUserDto) {
     // 1) get user by email
     const user = await this.userModel
       .findOne({ email: LoginUserDto.email })
@@ -164,8 +161,6 @@ export class PasswordResetService {
       email: user.email,
     };
     const Tokens = await this.tokenService.generate_Tokens(userId, '1h');
-    // 4) Set cookies using CookieService
-    this.cookieService.setCookies(res, Tokens, 'user', user.name, user.avatar);
     // 5) send email to user
     try {
       await this.emailService.send_reset_password_success(
