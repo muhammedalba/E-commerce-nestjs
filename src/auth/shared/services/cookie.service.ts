@@ -16,7 +16,8 @@ export class CookieService {
     res.setHeader('Authorization', `Bearer ${tokens.access_token}`);
 
     res.cookie('access_token', tokens.access_token, {
-      httpOnly: true,
+      httpOnly: false,
+      // httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       path: '/',
