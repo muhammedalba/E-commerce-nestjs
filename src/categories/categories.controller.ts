@@ -24,15 +24,17 @@ import { roles } from 'src/auth/shared/enums/role.enum';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 @Controller('categories')
-@Roles(roles.ADMIN)
-@UseGuards(AuthGuard, RoleGuard)
 export class CategoriesController {
   constructor(private readonly categoryService: CategoriesService) {}
 
+  @Roles(roles.ADMIN)
+  @UseGuards(AuthGuard, RoleGuard)
   @Get('statistics')
   async Categories_statistics() {
     return await this.categoryService.Categories_statistics();
   }
+  @Roles(roles.ADMIN)
+  @UseGuards(AuthGuard, RoleGuard)
   @Post()
   @UseInterceptors(FileInterceptor('image'))
   async create(
@@ -44,7 +46,6 @@ export class CategoriesController {
   }
 
   @Get()
-  @Roles(roles.ADMIN, roles.MANAGER, roles.USER)
   async findAll(@Query() queryString: QueryString) {
     return await this.categoryService.findAll(queryString);
   }
@@ -53,7 +54,8 @@ export class CategoriesController {
   async findOne(@Param() idParamDto: IdParamDto) {
     return await this.categoryService.findOne(idParamDto);
   }
-
+  @Roles(roles.ADMIN)
+  @UseGuards(AuthGuard, RoleGuard)
   @Patch(':id')
   @UseInterceptors(FileInterceptor('image'))
   async update(
@@ -68,7 +70,8 @@ export class CategoriesController {
       file,
     );
   }
-
+  @Roles(roles.ADMIN)
+  @UseGuards(AuthGuard, RoleGuard)
   @Delete(':id')
   async remove(@Param() idParamDto: IdParamDto) {
     return await this.categoryService.deleteOne(idParamDto);
