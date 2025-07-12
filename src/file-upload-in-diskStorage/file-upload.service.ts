@@ -1,5 +1,5 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import path, { extname } from 'path';
+import { extname } from 'path';
 import * as fs from 'fs';
 import * as sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
@@ -141,7 +141,6 @@ export class FileUploadService {
     if (default_avatar_image !== Path) {
       // Check if file exists before trying to delete it.
       try {
-        console.log(path);
         await fs.promises.access(Path);
         await fs.promises.unlink(Path);
       } catch (error) {

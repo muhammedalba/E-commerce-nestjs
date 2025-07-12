@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { Supplier, SupplierDocument } from '../schema/Supplier.schema';
 import {
   Product,
@@ -15,12 +15,6 @@ export class SupplierStatistics {
   ) {}
 
   async suppliers_statistics() {
-    console.log(
-      await this.productModel.find({
-        supplier: new Types.ObjectId('685c6d736bf79410ea255286'),
-      }),
-    );
-
     // إجمالي الموردين وعدد حسب الحالة
     const totalSuppliers = await this.supplierModel.countDocuments();
 

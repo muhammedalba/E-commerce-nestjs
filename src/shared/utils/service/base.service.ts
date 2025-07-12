@@ -196,7 +196,9 @@ export class BaseService<T> {
           .exec();
 
     if (!doc) {
-      throw new NotFoundException(this.t('exception.NOT_FOUND'));
+      throw new NotFoundException(
+        this.t('exception.NOT_FOUND', { args: { variable: idParamDto.id } }),
+      );
     }
     const localizedDoc = this.localize(doc);
     return {

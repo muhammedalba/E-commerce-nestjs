@@ -25,12 +25,12 @@ import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 
 @Controller('brands')
-@Roles(roles.ADMIN, roles.MANAGER)
-@UseGuards(AuthGuard, RoleGuard)
 export class BrandsController {
   constructor(private readonly brandsService: BrandsService) {}
 
   @Post()
+  @Roles(roles.ADMIN, roles.MANAGER)
+  @UseGuards(AuthGuard, RoleGuard)
   @UseInterceptors(FileInterceptor('image'))
   async create(
     @Body() createBrandDto: CreateBrandDto,
@@ -45,6 +45,8 @@ export class BrandsController {
     return await this.brandsService.findAll(queryString);
   }
   @Get('statistics')
+  @Roles(roles.ADMIN, roles.MANAGER)
+  @UseGuards(AuthGuard, RoleGuard)
   async BrandsStatistics() {
     return await this.brandsService.BrandsStatistics();
   }
@@ -54,6 +56,8 @@ export class BrandsController {
   }
 
   @Patch(':id')
+  @Roles(roles.ADMIN, roles.MANAGER)
+  @UseGuards(AuthGuard, RoleGuard)
   @UseInterceptors(FileInterceptor('image'))
   async updateBrand(
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
@@ -69,6 +73,8 @@ export class BrandsController {
   }
 
   @Delete(':id')
+  @Roles(roles.ADMIN, roles.MANAGER)
+  @UseGuards(AuthGuard, RoleGuard)
   async remove(@Param() idParamDto: IdParamDto) {
     return await this.brandsService.deleteOne(idParamDto);
   }
