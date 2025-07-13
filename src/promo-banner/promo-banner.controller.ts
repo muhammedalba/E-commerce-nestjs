@@ -40,7 +40,6 @@ export class PromoBannerController {
   async createBanner(
     @Body() promoBannerDto: PromoBannerDto,
   ): Promise<{ data: PromoBanner; status: string }> {
-
     return await this.promoBannerService.createBanner(promoBannerDto);
   }
   @Patch(':id')

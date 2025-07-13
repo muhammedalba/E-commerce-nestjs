@@ -17,17 +17,16 @@ export class CookieService {
 
     res.cookie('access_token', tokens.access_token, {
       httpOnly: false,
-      // httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/',
-      maxAge: 60 * 60 * 1000, // 1h
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: '/api/v1/auth/refresh-token',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7d
     });
 
     res.cookie('refresh_token', tokens.refresh_Token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/api/v1/auth/refresh-token',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7d
     });
@@ -36,14 +35,14 @@ export class CookieService {
       res.cookie('avatar', avatar, {
         httpOnly: false,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         path: '/',
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
       res.cookie('role', role, {
         httpOnly: false,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         path: '/',
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
@@ -51,7 +50,7 @@ export class CookieService {
       res.cookie('name', name, {
         httpOnly: false,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         path: '/',
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
