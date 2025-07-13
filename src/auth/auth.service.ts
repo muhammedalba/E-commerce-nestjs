@@ -177,7 +177,6 @@ export class AuthService {
     req: { user: { user_id: string } },
     res: Response,
   ): Promise<{ message: string }> {
-    console.log('logout called');
 
     // 1) check if user is logged in
     if (!req.user) {
