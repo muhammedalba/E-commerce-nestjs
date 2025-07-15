@@ -95,9 +95,9 @@ export class AuthService {
     this.cookieService.setCookies(
       res,
       Tokens,
-      createUserDto.role,
-      createUserDto.name,
-      createUserDto.avatar,
+      // createUserDto.role,
+      // createUserDto.name,
+      // createUserDto.avatar,
     );
 
     // handel response
@@ -149,14 +149,14 @@ export class AuthService {
       role: user.role || 'user',
       email: user.email,
     };
-    const Tokens = await this.tokenService.generate_Tokens(userId, '1h');
+    const Tokens = await this.tokenService.generate_Tokens(userId, '1m');
     // 4) Set cookies using CookieService
     this.cookieService.setCookies(
       res,
       Tokens,
-      user.role ?? 'user',
-      user.name,
-      user.avatar ?? '',
+      // user.role ?? 'user',
+      // user.name,
+      // user.avatar ?? '',
     );
 
     // 5) Clean user data before returning

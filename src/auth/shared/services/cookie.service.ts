@@ -9,63 +9,61 @@ export class CookieService {
       refresh_Token: string;
       access_token: string;
     },
-    role?: string,
-    name?: string,
-    avatar?: string,
+    // role?: string,
+    // name?: string,
+    // avatar?: string,
   ): void {
     res.setHeader('Authorization', `Bearer ${tokens.access_token}`);
-
     res.cookie('access_token', tokens.access_token, {
-      httpOnly: false,
+      httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      path: '/api/v1/auth/refresh-token',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7d
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
     res.cookie('refresh_token', tokens.refresh_Token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      sameSite: 'strict',
       path: '/api/v1/auth/refresh-token',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7d
     });
 
-    if (avatar && name && role) {
-      res.cookie('avatar', avatar, {
-        httpOnly: false,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        path: '/',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      });
-      res.cookie('role', role, {
-        httpOnly: false,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        path: '/',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      });
+    // if (avatar && name && role) {
+    //   res.cookie('avatar', avatar, {
+    //     httpOnly: false,
+    //     secure: process.env.NODE_ENV === 'production',
+    //     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    //     path: '/',
+    //     maxAge: 7 * 24 * 60 * 60 * 1000,
+    //   });
+    //   res.cookie('role', role, {
+    //     httpOnly: false,
+    //     secure: process.env.NODE_ENV === 'production',
+    //     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    //     path: '/',
+    //     maxAge: 7 * 24 * 60 * 60 * 1000,
+    //   });
 
-      res.cookie('name', name, {
-        httpOnly: false,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        path: '/',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      });
-    }
+    //   res.cookie('name', name, {
+    //     httpOnly: false,
+    //     secure: process.env.NODE_ENV === 'production',
+    //     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    //     path: '/',
+    //     maxAge: 7 * 24 * 60 * 60 * 1000,
+    //   });
+    // }
   }
 
   clearCookies(res: Response): void {
     const isProd = process.env.NODE_ENV === 'production';
 
-    // 🧼 حذف كوكيز محمية
     res.clearCookie('access_token', {
       httpOnly: true,
       secure: isProd,
       sameSite: 'strict',
-      path: '/',
+      path: '/api/v1/',
     });
 
     res.clearCookie('refresh_token', {

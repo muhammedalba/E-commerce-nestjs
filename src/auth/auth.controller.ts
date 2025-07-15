@@ -111,8 +111,8 @@ export class AuthController {
    * public: /api/v1/auth/refresh-token
    * method: POST
    */
-  @Post('refresh-token')
-  @UseGuards(AuthGuard)
+  @Get('refresh-token')
+  // @UseGuards(AuthGuard)
   async refreshToken(
     // @Body() refreshTokenDto: RefreshTokenDto,
     @Req() req: Request,

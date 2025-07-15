@@ -12,6 +12,10 @@ import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import { User } from '../schema/user.schema';
 import { JwtPayload } from '../types/jwt-payload.interface';
 
+interface SafeRequest extends Request {
+  cookies: Record<string, string>;
+}
+
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
@@ -78,8 +82,21 @@ export class AuthGuard implements CanActivate {
     return true;
   }
 
-  private extractTokenFromHeader(request: Request): string | undefined {
-    const [type, token] = request.headers.authorization?.split(' ') ?? [];
-    return type === 'Bearer' ? token : undefined;
+  // private extractTokenFromHeader(request: Request): string | undefined {
+  //   const [type, token] = request.headers.authorization?.split(' ') ?? [];
+
+  //   return type === 'Bearer' ? token : undefined;
+  // }
+  private extractTokenFromHeader(request: SafeRequest): string | undefined {
+    const authHeader = request.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      if (token) return token;
+    }
+
+    const cookieToken = request.cookies['access_token'];
+    if (cookieToken) return cookieToken;
+
+    return undefined;
   }
 }

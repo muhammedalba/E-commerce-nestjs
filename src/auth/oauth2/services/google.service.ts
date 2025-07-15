@@ -51,7 +51,11 @@ export class googleService {
       // 3) generate access token
       Tokens = await this.tokenService.generate_Tokens(userId, '1h');
       //4) send token to cookies
-      this.cookieService.setCookies(res, Tokens, 'user', name, picture);
+      this.cookieService.setCookies(
+        res,
+        Tokens,
+        //  'user', name, picture
+      );
       res.redirect(`${process.env.FRONTEND_ORIGIN}`);
     } else {
       const userId = {
@@ -63,9 +67,9 @@ export class googleService {
       this.cookieService.setCookies(
         res,
         Tokens,
-        'user',
-        user.name,
-        user.avatar,
+        // 'user',
+        // user.name,
+        // user.avatar,
       );
     }
     res.redirect(`${process.env.FRONTEND_ORIGIN}`);

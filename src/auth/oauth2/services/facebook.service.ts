@@ -52,9 +52,9 @@ export class facebookService {
       this.cookieService.setCookies(
         res,
         Tokens,
-        'user',
-        newUser.name,
-        newUser.avatar,
+        // 'user',
+        // newUser.name,
+        // newUser.avatar,
       );
 
       return {
@@ -73,9 +73,9 @@ export class facebookService {
       this.cookieService.setCookies(
         res,
         Tokens,
-        user.role || 'user',
-        user.name,
-        user.avatar,
+        // user.role || 'user',
+        // user.name,
+        // user.avatar,
       );
     }
 
