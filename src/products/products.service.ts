@@ -168,7 +168,11 @@ export class ProductsService {
       .limitFields()
       .paginate(total);
 
-    const data = await features.getQuery();
+    const data = await features
+      .getQuery()
+      .populate('category', 'name')
+      .populate('brand', 'name')
+      .exec();
     if (!data) {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }

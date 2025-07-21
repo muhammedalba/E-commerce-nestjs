@@ -160,7 +160,7 @@ export class PasswordResetService {
       role: user.role || 'user',
       email: user.email,
     };
-    const Tokens = await this.tokenService.generate_Tokens(userId, '1h');
+    const Tokens = await this.tokenService.generate_Tokens(userId, '5h');
     // 5) send email to user
     try {
       await this.emailService.send_reset_password_success(

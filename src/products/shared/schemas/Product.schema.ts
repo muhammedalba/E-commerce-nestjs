@@ -91,9 +91,10 @@ export class Product {
   @Prop({
     type: Types.ObjectId,
     ref: Category.name,
-    required: [true, 'product must have a parent category'],
+    required: false,
   })
   category?: Types.ObjectId;
+
   @Prop({
     type: [{ type: Types.ObjectId, ref: SupCategory.name, required: true }],
   })

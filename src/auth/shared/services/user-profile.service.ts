@@ -219,7 +219,7 @@ export class userProfileService {
       email: decoded_access_token.email,
     };
     // generate new access and refresh token and delete old refresh token
-    const new_Tokens = await this.tokenService.generate_Tokens(userData, '1m');
+    const new_Tokens = await this.tokenService.generate_Tokens(userData, '5h');
     // 4) Set cookies using CookieService
     this.cookieService.setCookies(res, new_Tokens);
 

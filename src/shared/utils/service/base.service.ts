@@ -200,11 +200,12 @@ export class BaseService<T> {
         this.t('exception.NOT_FOUND', { args: { variable: idParamDto.id } }),
       );
     }
-    const localizedDoc = this.localize(doc);
+    // const localizedDoc = this.localize(doc);
     return {
       status: 'success',
       message: this.t('success.found_SUCCESS'),
-      data: Array.isArray(localizedDoc) ? localizedDoc[0] : localizedDoc,
+      data: doc,
+      // data: Array.isArray(localizedDoc) ? localizedDoc[0] : localizedDoc,
     };
   }
 

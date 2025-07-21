@@ -104,12 +104,12 @@ export class ApiFeatures<T> {
     if (this.queryString?.keywords && this.queryString.keywords.length > 0) {
       const keyword = this.queryString.keywords.trim();
       let query: object;
-
       switch (modelName) {
         case 'products':
           query = {
             $or: [
-              { title: { $regex: keyword, $options: 'i' } },
+              { 'title.en': { $regex: keyword, $options: 'i' } },
+              { 'title.ar': { $regex: keyword, $options: 'i' } },
               { description: { $regex: keyword, $options: 'i' } },
             ],
           };
@@ -118,7 +118,8 @@ export class ApiFeatures<T> {
         case 'suppliers':
           query = {
             $or: [
-              { name: { $regex: keyword, $options: 'i' } },
+              { 'name.en': { $regex: keyword, $options: 'i' } },
+              { 'name.ar': { $regex: keyword, $options: 'i' } },
               { email: { $regex: keyword, $options: 'i' } },
             ],
           };
@@ -136,7 +137,13 @@ export class ApiFeatures<T> {
           };
           break;
         default:
-          query = { name: { $regex: keyword, $options: 'i' } };
+          query = {
+            $or: [
+              { 'name.en': { $regex: keyword, $options: 'i' } },
+              { 'name.ar': { $regex: keyword, $options: 'i' } },
+            ],
+          };
+          break;
       }
 
       this.mongooseQuery = this.mongooseQuery.find(query);
