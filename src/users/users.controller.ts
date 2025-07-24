@@ -10,6 +10,8 @@ import {
   UseGuards,
   Put,
   Query,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -24,9 +26,16 @@ import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 import { Roles } from 'src/auth/shared/decorators/rolesdecorator';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
+import {
+  ApiTags,
+  ApiConsumes,
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+} from '@nestjs/swagger';
 
-//  * rote: http://localhost:4000/api/v1/users
-//  * privet
+@ApiTags('users')
 @Controller('users')
 @Roles(roles.ADMIN)
 @UseGuards(AuthGuard, RoleGuard)
@@ -34,16 +43,26 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('statistics')
+  @ApiOperation({ summary: 'Get user statistics' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns user statistics.',
+  })
   async get_users_statistics(): Promise<any> {
     return await this.usersService.get_users_statistics();
   }
 
-  /*
-   * Creates a new user with the provided data and avatar file.
-   * The uploaded avatar file, validated to be of type png, jpeg, or webp and not exceeding 1MB.
-   */
   @Post('create-user')
+  @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FileInterceptor('avatar'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Create a new user' })
+  @ApiBody({ type: CreateUserDto })
+  @ApiResponse({
+    status: 201,
+    description: 'The user has been successfully created.',
+  })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
   createUser(
     @Body()
     CreateUserDto: CreateUserDto,
@@ -53,43 +72,30 @@ export class UsersController {
     return this.usersService.createUser(CreateUserDto, file);
   }
 
-  /**
-   * Retrieves a list of all users.
-   * rote: http://localhost:4000/api/v1/users
-   * privet
-   * returns An array of user objects.
-   */
   @Get()
+  @ApiOperation({ summary: 'Get all users' })
+  @ApiResponse({ status: 200, description: 'Returns all users.' })
   async getUsers(@Query() QueryDto: QueryString): Promise<any> {
     return await this.usersService.getUsers(QueryDto);
   }
 
-  // @Post('/users')
-  // @UseInterceptors(FilesInterceptor('file', MaxFileCount.PRODUCTS_IMAGES))
-  // createMany(
-  //   @UploadedFiles(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
-  //   file: Express.Multer.File,
-  // ): any {
-  //   return this.usersService.createMany(file);
-  // }
-
-  /**
-   * rote: /api/v1/users
-   * privet
-   * Retrieves a user by their unique identifier.
-   * @param IdParamDto - An object containing the user's ID.
-   * @returns The user object corresponding to the provided ID.
-   */
   @Get(':id')
+  @ApiOperation({ summary: 'Get a user by ID or slug' })
+  @ApiParam({ name: 'id', description: 'User ID or slug' })
+  @ApiResponse({ status: 200, description: 'Returns the user.' })
+  @ApiResponse({ status: 404, description: 'User not found.' })
   findOne(@Param() IdParamDto: IdParamDto) {
     return this.usersService.findOne(IdParamDto);
   }
-  /*
-   * rote: http://localhost:4000/api/v1/users/:id
-   * privet
-   */
+
   @Put(':id')
   @UseInterceptors(FileInterceptor('avatar'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Update a user' })
+  @ApiParam({ name: 'id', description: 'User ID or slug' })
+  @ApiBody({ type: UpdateUserDto })
+  @ApiResponse({ status: 200, description: 'User updated successfully.' })
+  @ApiResponse({ status: 404, description: 'User not found.' })
   update_user(
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
     file: MulterFileType,
@@ -100,11 +106,13 @@ export class UsersController {
   ) {
     return this.usersService.update_user(IdParamDto, UpdateUserDto, file);
   }
-  /*
-   * rote: http://localhost:4000/api/v1/users:id
-   * privet
-   */
+
   @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete a user' })
+  @ApiParam({ name: 'id', description: 'User ID or slug' })
+  @ApiResponse({ status: 204, description: 'User deleted successfully.' })
+  @ApiResponse({ status: 404, description: 'User not found.' })
   delete_user(@Param() idParamDto: IdParamDto) {
     return this.usersService.delete_user(idParamDto);
   }

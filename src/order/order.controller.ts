@@ -31,6 +31,17 @@ import { roles } from 'src/auth/shared/enums/role.enum';
 import { ParseFileFieldsPipe } from 'src/shared/files/ParseFileFieldsPipe';
 import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiParam,
+  ApiConsumes,
+  ApiQuery,
+} from '@nestjs/swagger';
+
+@ApiTags('Order')
 @Controller('order')
 @UseGuards(AuthGuard)
 export class OrderController {
@@ -41,12 +52,36 @@ export class OrderController {
     { name: 'DeliveryReceiptImage', maxCount: 1 },
   ];
   @Get('statistics')
+  @ApiOperation({ summary: 'Get order statistics (Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Order statistics retrieved successfully.',
+  })
+  @ApiResponse({ status: 403, description: 'Forbidden.' })
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
   async OrdersStatistics() {
     return await this.orderService.OrdersStatistics();
   }
   @Post('PaymentByBankTransfer')
+  @ApiOperation({ summary: 'Checkout by bank transfer' })
+  @ApiResponse({ status: 201, description: 'Order created successfully.' })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        transferReceiptImg: {
+          type: 'string',
+          format: 'binary',
+        },
+        dto: {
+          $ref: '#/components/schemas/CreateOrderDto',
+        },
+      },
+    },
+  })
   @UseInterceptors(FileInterceptor('transferReceiptImg'))
   async checkoutByBankTransfer(
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], true))
@@ -64,6 +99,9 @@ export class OrderController {
   // This endpoint is used to apply a coupon to an order
 
   @Post('applyCoupon')
+  @ApiOperation({ summary: 'Apply a coupon to an order' })
+  @ApiResponse({ status: 200, description: 'Coupon applied successfully.' })
+  @ApiResponse({ status: 400, description: 'Invalid coupon or order.' })
   async applyCoupon(
     @Req() req: { user: JwtPayload },
     @Body() dto: CreateOrderDto,
@@ -71,16 +109,74 @@ export class OrderController {
     return await this.orderService.applyCoupon(req.user.user_id, dto);
   }
   @Get()
+  @ApiOperation({ summary: 'Get all orders for the authenticated user' })
+  @ApiResponse({ status: 200, description: 'Orders retrieved successfully.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Limit the number of results',
+  })
+  @ApiQuery({
+    name: 'offset',
+    required: false,
+    type: Number,
+    description: 'Offset the results for pagination',
+  })
+  @ApiQuery({
+    name: 'sort',
+    required: false,
+    type: String,
+    description: 'Sort order (e.g., -createdAt)',
+  })
+  @ApiQuery({
+    name: 'filter',
+    required: false,
+    type: String,
+    description: 'Filter results (e.g., status=completed)',
+  })
   findAll(@Req() req: { user: JwtPayload }, @Query() queryString: QueryString) {
     return this.orderService.findAll(req.user, queryString);
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get an order by ID' })
+  @ApiParam({ name: 'id', description: 'ID of the order to retrieve' })
+  @ApiResponse({ status: 200, description: 'Order retrieved successfully.' })
+  @ApiResponse({ status: 404, description: 'Order not found.' })
   async findOne(@Param() idParamDto: IdParamDto) {
     return await this.orderService.findOne(idParamDto.id);
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Update an order by ID (Admin and Manager only)' })
+  @ApiResponse({ status: 200, description: 'Order updated successfully.' })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 403, description: 'Forbidden.' })
+  @ApiResponse({ status: 404, description: 'Order not found.' })
+  @ApiParam({ name: 'id', description: 'ID of the order to update' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        transferReceiptImg: {
+          type: 'string',
+          format: 'binary',
+        },
+        DeliveryReceiptImage: {
+          type: 'string',
+          format: 'binary',
+        },
+        InvoicePdf: {
+          type: 'string',
+          format: 'binary',
+        },
+        // Add other properties from UpdateOrderDto here if they are part of the multipart form
+      },
+    },
+  })
   @Roles(roles.ADMIN, roles.MANAGER)
   @UseInterceptors(FileFieldsInterceptor(OrderController.imageSize))
   async update(

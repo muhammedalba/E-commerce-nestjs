@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { I18nValidationPipe } from 'nestjs-i18n';
 import { CustomI18nValidationExceptionFilter } from './filters/i18n-validation-exception.filter';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -24,6 +25,18 @@ async function bootstrap() {
     origin: ['http://localhost:3000', process.env.CLIENT_URL],
     credentials: true,
   });
+
+  if (process.env.NODE_ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('Cars API')
+      .setDescription('The cars API description')
+      .setVersion('1.0')
+      .addTag('cars')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api', app, document);
+  }
 
   await app.listen(process.env.PORT ?? 4000);
 }
