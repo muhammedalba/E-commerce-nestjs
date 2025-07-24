@@ -196,12 +196,16 @@ export class ProductsService {
           .select('-__v')
           .populate('category', 'name')
           .populate('brand', 'name')
+          .populate('supplier', 'name')
+          .populate('supCategories', 'name')
           .exec()
       : await this.productModel
           .findOne({ slug: idParamDto.id })
           .select('-__v')
           .populate('category', 'name')
           .populate('brand', 'name')
+          .populate('supplier', 'name')
+          .populate('supCategories', 'name')
           .exec();
 
     if (!doc) {
@@ -211,7 +215,9 @@ export class ProductsService {
     return {
       status: 'success',
       message: this.i18n.translate('success.found_SUCCESS'),
-      data: localizedDoc,
+      data: Array.isArray(localizedDoc)
+        ? localizedDoc
+        : { ...localizedDoc, title: doc?.title },
     };
   }
 
