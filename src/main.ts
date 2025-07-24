@@ -28,10 +28,10 @@ async function bootstrap() {
 
   // if (process.env.NODE_ENV !== 'production') {
   const config = new DocumentBuilder()
-    .setTitle('Cars API')
-    .setDescription('The cars API description')
+    .setTitle('E-commerce API')
+    .setDescription('The E-commerce API description')
     .setVersion('1.0')
-    .addTag('cars')
+    .addTag('E-commerce')
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
