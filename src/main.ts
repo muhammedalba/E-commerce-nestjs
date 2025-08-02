@@ -4,11 +4,19 @@ import { AppModule } from './app.module';
 import { I18nValidationPipe } from 'nestjs-i18n';
 import { CustomI18nValidationExceptionFilter } from './filters/i18n-validation-exception.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-
+import { Request, Response, NextFunction } from 'express';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api/v1');
   app.use(cookieParser());
+
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.path === '/') {
+      return res.redirect('/api/v1');
+    }
+    next();
+  });
+
   // To use nestjs-i18n in your DTO validation
   app.useGlobalPipes(
     new I18nValidationPipe({

@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@nestjs-modules/mailer": "^2.0.2",
-    "@nestjs/cli": "^11.0.8",
+    "@nestjs/cli": "^11.0.10",
     "@nestjs/common": "^11.1.5",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.5",
@@ -45,7 +45,7 @@
     "handlebars": "^4.7.8",
     "magic-bytes.js": "^1.12.1",
     "mime-types": "^3.0.1",
-    "mongoose": "^8.16.5",
+    "mongoose": "^8.17.0",
     "mongoose-i18n-localize": "^0.3.0",
     "nestjs-i18n": "^10.5.1",
     "nodemailer": "^7.0.5",
@@ -61,8 +61,8 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "^9.32.0",
-    "@nestjs/cli": "^11.0.8",
-    "@nestjs/schematics": "^11.0.5",
+    "@nestjs/cli": "^11.0.10",
+    "@nestjs/schematics": "^11.0.7",
     "@nestjs/testing": "^11.1.5",
     "@swc/cli": "^0.7.8",
     "@swc/core": "^1.13.3",
@@ -86,7 +86,7 @@
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.8.3",
+    "typescript": "^5.9.2",
     "typescript-eslint": "^8.38.0"
   },
   "jest": {

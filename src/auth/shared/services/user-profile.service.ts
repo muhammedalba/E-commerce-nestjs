@@ -166,9 +166,7 @@ export class userProfileService {
 
     if (!refreshToken) {
       throw new BadRequestException(
-        this.i18n.translate('exception.NOT_FOUND', {
-          args: { variable: 'refresh token' },
-        }),
+        this.i18n.translate('exception.REFRESH_TOKEN_NOT_FOUND'),
       );
     }
     //1) find refresh token from database
