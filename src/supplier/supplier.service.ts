@@ -30,16 +30,16 @@ export class SupplierService extends BaseService<SupplierDocument> {
     createSupplierDto: CreateSupplierDto,
     file: MulterFileType,
   ): Promise<any> {
-    if (createSupplierDto.name) {
+    if (createSupplierDto.name.trim()) {
       createSupplierDto.slug = await generateUniqueSlug(
-        createSupplierDto.name,
+        createSupplierDto.name.trim(),
         this.SupplierModel,
       );
     }
     return await this.createOneDoc(createSupplierDto, file, Supplier.name, {
       fileFieldName: 'avatar',
       checkField: 'name',
-      fieldValue: createSupplierDto.name,
+      fieldValue: createSupplierDto.name.trim(),
     });
   }
   async get_Suppliers(queryString: QueryString): Promise<any> {

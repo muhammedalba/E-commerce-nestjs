@@ -5,6 +5,8 @@ import {
   IsEmail,
   IsUrl,
   IsEnum,
+  MinLength,
+  MaxLength,
 } from 'class-validator';
 export enum Status {
   Inactive = 'inactive',
@@ -54,6 +56,8 @@ export class CreateSupplierDto {
   })
   @IsOptional()
   @IsString()
+  @MinLength(10)
+  @MaxLength(500)
   address?: string;
 
   @ApiPropertyOptional({

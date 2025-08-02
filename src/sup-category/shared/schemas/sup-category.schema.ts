@@ -20,7 +20,6 @@ export class SupCategory {
     type: Types.ObjectId,
     ref: Category.name,
     required: true,
-    select: false,
   })
   category!: Types.ObjectId;
 }

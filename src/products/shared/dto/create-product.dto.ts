@@ -85,7 +85,7 @@ export class CreateProductDto {
 
   @ApiProperty({
     description: 'Original price of the product',
-    example: 150.00,
+    example: 150.0,
     maximum: 20000,
   })
   @IsNumber()
@@ -94,9 +94,15 @@ export class CreateProductDto {
   @Type(() => Number)
   price!: number;
 
+  @IsBoolean()
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  isFeatured?: boolean;
+
   @ApiPropertyOptional({
-    description: 'Discounted price of the product (must be less than original price)',
-    example: 120.00,
+    description:
+      'Discounted price of the product (must be less than original price)',
+    example: 120.0,
     maximum: 20000,
   })
   @IsNumber()

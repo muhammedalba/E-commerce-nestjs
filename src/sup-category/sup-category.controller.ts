@@ -21,11 +21,10 @@ import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { CategoryExistsPipe } from 'src/shared/utils/pipes/category-exists.pipe';
 
 @Controller('sup-category')
-@Roles(roles.ADMIN)
-@UseGuards(AuthGuard, RoleGuard)
 export class SupCategoryController {
   constructor(private readonly supCategoryService: SupCategoryService) {}
-
+  @Roles(roles.ADMIN)
+  @UseGuards(AuthGuard, RoleGuard)
   @Post()
   create(
     @Body() createSupCategoryDto: CreateSupCategoryDto,
@@ -42,15 +41,21 @@ export class SupCategoryController {
   findAll(@Query() queryString: QueryString) {
     return this.supCategoryService.findAll(queryString);
   }
+
+  @Roles(roles.ADMIN)
+  @UseGuards(AuthGuard, RoleGuard)
   @Get('Statistics')
   findStatistics() {
     return this.supCategoryService.findStatistics();
   }
+
   @Get(':id')
   findOne(@Param() idParamDto: IdParamDto) {
     return this.supCategoryService.findOne(idParamDto);
   }
 
+  @Roles(roles.ADMIN)
+  @UseGuards(AuthGuard, RoleGuard)
   @Patch(':id')
   update(
     @Param() idParamDto: IdParamDto,
@@ -62,7 +67,8 @@ export class SupCategoryController {
       category,
     });
   }
-
+  @Roles(roles.ADMIN)
+  @UseGuards(AuthGuard, RoleGuard)
   @Delete(':id')
   remove(@Param() idParamDto: IdParamDto) {
     return this.supCategoryService.remove(idParamDto);

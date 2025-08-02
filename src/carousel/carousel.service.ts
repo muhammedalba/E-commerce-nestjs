@@ -69,7 +69,11 @@ export class CarouselService extends BaseService<CarouselDocument> {
       newDoc.carouselLg = `${baseUrl}${createCarouselDto.carouselLg}`;
 
       //7) return the localized document
-      return this.localize(newDoc);
+      return {
+        status: 'success',
+        message: this.i18n.translate('success.created_SUCCESS'),
+        data: this.localize(newDoc),
+      };
     } catch (error) {
       console.error('Error saving carousel:', error);
       throw new InternalServerErrorException(

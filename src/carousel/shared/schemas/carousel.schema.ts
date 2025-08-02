@@ -16,6 +16,13 @@ export class Carousel {
   slug?: string;
 
   @Prop({
+    required: false,
+    type: Boolean,
+    default: false,
+  })
+  isActive?: boolean;
+
+  @Prop({
     required: true,
     type: 'string',
     default: 'default.png',
@@ -25,14 +32,14 @@ export class Carousel {
   @Prop({
     required: true,
     type: 'string',
-    default: 'default.png',
+    default: '/default.png',
     trim: true,
   })
   carouselMd?: string;
   @Prop({
     required: true,
     type: 'string',
-    default: 'default.png',
+    default: '/default.png',
     trim: true,
   })
   carouselLg?: string;
@@ -52,10 +59,16 @@ CarouselSchema.post('init', function (doc: HydratedDocument<Carousel>) {
   const baseUrl = process.env.BASE_URL ?? '';
 
   if (hasTranslatedDescription) {
-    ['carouselMd', 'carouselSm', 'carouselLg'].forEach((key) => {
-      const path = doc[key as keyof Carousel];
+    const keys: Array<'carouselMd' | 'carouselSm' | 'carouselLg'> = [
+      'carouselMd',
+      'carouselSm',
+      'carouselLg',
+    ];
+
+    keys.forEach((key) => {
+      const path = doc[key];
       if (typeof path === 'string' && !path.startsWith(baseUrl)) {
-        doc[key as keyof Carousel] = `${baseUrl}${path}`;
+        doc[key] = `${baseUrl}${path}`;
       }
     });
   }

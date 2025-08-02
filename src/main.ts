@@ -22,7 +22,11 @@ async function bootstrap() {
   // هندلة الايرور
   app.useGlobalFilters(app.get(CustomI18nValidationExceptionFilter));
   app.enableCors({
-    origin: ['http://localhost:3000', process.env.CLIENT_URL],
+    origin: [
+      'http://localhost:3000',
+      'http://10.5.50.6:3000',
+      process.env.CLIENT_URL,
+    ],
     credentials: true,
   });
 

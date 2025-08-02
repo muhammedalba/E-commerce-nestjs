@@ -12,7 +12,10 @@ export class CreateSupCategoryDto {
   @ApiProperty({
     description: 'Localized name of the sub-category',
     type: () => FieldLocalizeDto,
-    example: { en: 'Sub-Category Name (English)', ar: 'اسم الفئة الفرعية (العربية)' },
+    example: {
+      en: 'Sub-Category Name (English)',
+      ar: 'اسم الفئة الفرعية (العربية)',
+    },
   })
   @IsDefined()
   @Type(() => FieldLocalizeDto)

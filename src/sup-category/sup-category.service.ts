@@ -42,7 +42,10 @@ export class SupCategoryService extends BaseService<SupCategoryDocument> {
   }
 
   async findAll(queryString: QueryString) {
-    return await this.findAllDoc(SupCategory.name, queryString);
+    return await this.findAllDoc(SupCategory.name, queryString, {
+      path: 'category',
+      select: 'name image',
+    });
   }
 
   async findOne(idParamDto: IdParamDto) {

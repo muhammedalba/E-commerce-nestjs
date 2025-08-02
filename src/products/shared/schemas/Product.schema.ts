@@ -78,6 +78,13 @@ export class Product {
   colors!: string[];
 
   @Prop({
+    type: Boolean,
+    default: false,
+    required: false,
+  })
+  isFeatured?: boolean;
+
+  @Prop({
     type: String,
     required: [true, 'product imageCover is required'],
   })

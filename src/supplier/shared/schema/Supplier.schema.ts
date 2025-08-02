@@ -53,6 +53,7 @@ export class Supplier {
 export type SupplierDocument = HydratedDocument<Supplier>;
 export const SupplierSchema = SchemaFactory.createForClass(Supplier);
 
+//create
 SupplierSchema.pre('findOneAndUpdate', function (next) {
   const update = this.getUpdate();
   if (update && typeof update === 'object' && '$set' in update) {

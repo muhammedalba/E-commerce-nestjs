@@ -19,7 +19,7 @@ export class CookieService {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       path: '/',
-      maxAge: 15 * 60 * 1000, // 15 minutes
+      maxAge: 60 * 60 * 1000, // 15 minutes
     });
 
     res.cookie('refresh_token', tokens.refresh_Token, {
