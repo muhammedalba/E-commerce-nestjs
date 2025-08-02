@@ -3,6 +3,6 @@ import { Injectable } from '@nestjs/common';
 @Injectable()
 export class AppService {
   getHello(): string {
-    return 'Hello World!';
+    return `application ${process.env.APP_NAME}  is running with  ${process.env.BASE_URL}}`;
   }
 }
