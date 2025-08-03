@@ -88,7 +88,7 @@ export class CarouselService extends BaseService<CarouselDocument> {
     pagination: any;
     data: Carousel[];
   }> {
-    return await this.findAllDoc('carousel', queryString);
+    return await this.findAllDoc(Carousel.name, queryString);
   }
 
   async findOne(idParamDto: IdParamDto) {

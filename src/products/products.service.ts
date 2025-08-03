@@ -163,7 +163,7 @@ export class ProductsService {
     const total = await this.productModel.countDocuments();
     const features = new ApiFeatures(this.productModel.find(), queryString)
       .filter()
-      .search('products')
+      .search(Product.name)
       .sort()
       .limitFields()
       .paginate(total);

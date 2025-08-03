@@ -103,18 +103,29 @@ export class ApiFeatures<T> {
   search(modelName: string) {
     if (this.queryString?.keywords && this.queryString.keywords.length > 0) {
       const keyword = this.queryString.keywords.trim();
+      // console.log('modelName', modelName);
+
       let query: object;
       switch (modelName) {
-        case 'products':
+        case 'Product':
           query = {
             $or: [
               { 'title.en': { $regex: keyword, $options: 'i' } },
               { 'title.ar': { $regex: keyword, $options: 'i' } },
-              { description: { $regex: keyword, $options: 'i' } },
+              { 'description.en': { $regex: keyword, $options: 'i' } },
+              { 'description.ar': { $regex: keyword, $options: 'i' } },
             ],
           };
           break;
-        case 'users':
+        case 'Carousel':
+          query = {
+            $or: [
+              { 'description.en': { $regex: keyword, $options: 'i' } },
+              { 'description.ar': { $regex: keyword, $options: 'i' } },
+            ],
+          };
+          break;
+        case 'User':
         case 'suppliers':
           query = {
             $or: [
@@ -124,7 +135,7 @@ export class ApiFeatures<T> {
             ],
           };
           break;
-        case 'orders':
+        case 'Order':
           query = {
             $or: [
               {
