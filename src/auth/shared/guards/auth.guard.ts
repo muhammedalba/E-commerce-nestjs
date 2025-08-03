@@ -75,7 +75,7 @@ export class AuthGuard implements CanActivate {
       }
     }
 
-    request['user'] = payload;
+    request['user'] = payload as unknown as User;
 
     return true;
   }

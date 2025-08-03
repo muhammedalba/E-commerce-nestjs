@@ -41,8 +41,11 @@ export class tokenService {
       .exec();
 
     //2) add expiry date to refresh token
+    // const expiryDate = new Date();
+    // expiryDate.setDate(expiryDate.getDate() + 3);
     const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + 3);
+    expiryDate.setMinutes(expiryDate.getMinutes() + 5);
+
     //3) save refresh token in database
     try {
       await this.RefreshTokenModel.create({
