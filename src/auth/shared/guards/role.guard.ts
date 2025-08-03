@@ -7,7 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { roles } from 'src/auth/shared/enums/role.enum';
-import { Roles_key } from '../decorators/rolesdecorator';
+import { Roles_key } from '../decorators/roles.decorator';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import { JwtPayload } from '../types/jwt-payload.interface';
 

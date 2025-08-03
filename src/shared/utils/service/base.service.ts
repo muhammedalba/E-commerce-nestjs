@@ -99,9 +99,6 @@ export class BaseService<T> {
     },
   ): Promise<{ status: string; message: string; data: T }> {
     const { fileFieldName = 'avatar', checkField, fieldValue } = options || {};
-    console.log(fieldValue, 'fieldValue');
-    console.log(checkField, 'checkField');
-    console.log(CreateDataDto, 'CreateDataDto');
 
     if (
       checkField &&

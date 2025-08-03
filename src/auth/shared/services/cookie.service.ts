@@ -3,6 +3,8 @@ import { Response } from 'express';
 
 @Injectable()
 export class CookieService {
+  private readonly isProd = process.env.NODE_ENV === 'production';
+
   setCookies(
     res: Response,
     tokens: {
@@ -16,16 +18,16 @@ export class CookieService {
     res.setHeader('Authorization', `Bearer ${tokens.access_token}`);
     res.cookie('access_token', tokens.access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: this.isProd,
+      sameSite: this.isProd ? 'none' : 'lax',
       path: '/',
-      maxAge: 60 * 60 * 1000, // 15 minutes
+      maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
     res.cookie('refresh_token', tokens.refresh_Token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: this.isProd,
+      sameSite: this.isProd ? 'none' : 'lax',
       path: '/api/v1/auth/refresh-token',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7d
     });
@@ -34,14 +36,14 @@ export class CookieService {
     //   res.cookie('avatar', avatar, {
     //     httpOnly: false,
     //     secure: process.env.NODE_ENV === 'production',
-    //     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    //     sameSite: this.isProd ? 'none' : 'lax',
     //     path: '/',
     //     maxAge: 7 * 24 * 60 * 60 * 1000,
     //   });
     //   res.cookie('role', role, {
     //     httpOnly: false,
     //     secure: process.env.NODE_ENV === 'production',
-    //     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    //     sameSite: this.isProd ? 'none' : 'lax',
     //     path: '/',
     //     maxAge: 7 * 24 * 60 * 60 * 1000,
     //   });
@@ -49,7 +51,7 @@ export class CookieService {
     //   res.cookie('name', name, {
     //     httpOnly: false,
     //     secure: process.env.NODE_ENV === 'production',
-    //     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    //     sameSite: this.isProd ? 'none' : 'lax',
     //     path: '/',
     //     maxAge: 7 * 24 * 60 * 60 * 1000,
     //   });
@@ -57,45 +59,41 @@ export class CookieService {
   }
 
   clearCookies(res: Response): void {
-    const isProd = process.env.NODE_ENV === 'production';
-
     res.clearCookie('access_token', {
       httpOnly: true,
-      secure: isProd,
-      sameSite: 'strict',
-      path: '/api/v1/',
+      secure: this.isProd,
+      sameSite: this.isProd ? 'none' : 'lax',
+      path: '/',
     });
 
     res.clearCookie('refresh_token', {
       httpOnly: true,
-      secure: isProd,
-      sameSite: 'strict',
+      secure: this.isProd,
+      sameSite: this.isProd ? 'none' : 'lax',
       path: '/api/v1/auth/refresh-token',
     });
 
-    // 🧼 حذف كوكيز قابلة للقراءة من العميل
     res.clearCookie('role', {
       httpOnly: false,
-      secure: isProd,
-      sameSite: 'strict',
+      secure: this.isProd,
+      sameSite: this.isProd ? 'none' : 'lax',
       path: '/',
     });
 
     res.clearCookie('name', {
       httpOnly: false,
-      secure: isProd,
-      sameSite: 'strict',
+      secure: this.isProd,
+      sameSite: this.isProd ? 'none' : 'lax',
       path: '/',
     });
 
     res.clearCookie('avatar', {
       httpOnly: false,
-      secure: isProd,
-      sameSite: 'strict',
+      secure: this.isProd,
+      sameSite: this.isProd ? 'none' : 'lax',
       path: '/',
     });
-
-    // حذف الهيدر أيضاً
+    //delete token from  header
     res.setHeader('Authorization', '');
   }
 }

@@ -89,7 +89,7 @@ export class AuthService {
     };
     //6) update avatar url and tokens
     newUser.avatar = `${process.env.BASE_URL}${filePath}`;
-    const Tokens = await this.tokenService.generate_Tokens(userId, '5h');
+    const Tokens = await this.tokenService.generate_Tokens(userId, '1m');
     // 5) Set cookies using CookieService
 
     this.cookieService.setCookies(
@@ -149,7 +149,7 @@ export class AuthService {
       role: user.role || 'user',
       email: user.email,
     };
-    const Tokens = await this.tokenService.generate_Tokens(userId, '5h');
+    const Tokens = await this.tokenService.generate_Tokens(userId, '1m');
     // 4) Set cookies using CookieService
     this.cookieService.setCookies(
       res,

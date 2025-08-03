@@ -43,9 +43,7 @@ export class AuthGuard implements CanActivate {
       payload = await this.jwtService.verifyAsync(token);
     } catch {
       throw new UnauthorizedException(
-        this.i18n.translate('exception.INVALID', {
-          args: { variable: 'token' },
-        }),
+        this.i18n.translate('exception.TOKEN_INVALID'),
       );
     }
 
@@ -57,8 +55,8 @@ export class AuthGuard implements CanActivate {
       .exec();
     if (!user) {
       throw new UnauthorizedException(
-        this.i18n.translate('exception.INVALID', {
-          args: { variable: 'token' },
+        this.i18n.translate('exception.USER_NOT_FOUND', {
+          args: { variable: payload.email },
         }),
       );
     }
@@ -77,7 +75,7 @@ export class AuthGuard implements CanActivate {
       }
     }
 
-    request['user'] = payload as unknown as User;
+    request['user'] = payload;
 
     return true;
   }
@@ -89,12 +87,20 @@ export class AuthGuard implements CanActivate {
   // }
   private extractTokenFromHeader(request: SafeRequest): string | undefined {
     const authHeader = request.headers.authorization;
+
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1];
+      console.log('------------Header access_token-------');
+      console.log(token);
+      console.log('------------Header access_token-------');
       if (token) return token;
     }
 
     const cookieToken = request.cookies['access_token'];
+    console.log('--------------------cookieToken-----------------');
+    console.log(cookieToken);
+    console.log('--------------------cookieToken-----------------');
+
     if (cookieToken) return cookieToken;
 
     return undefined;

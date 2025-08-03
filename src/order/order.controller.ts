@@ -26,7 +26,7 @@ import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { createParseFilePipe } from 'src/shared/files/files-validation-factory';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
-import { Roles } from 'src/auth/shared/decorators/rolesdecorator';
+import { Roles } from 'src/auth/shared/decorators/roles.decorator';
 import { roles } from 'src/auth/shared/enums/role.enum';
 import { ParseFileFieldsPipe } from 'src/shared/files/ParseFileFieldsPipe';
 import { RoleGuard } from 'src/auth/shared/guards/role.guard';

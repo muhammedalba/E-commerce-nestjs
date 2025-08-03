@@ -23,7 +23,7 @@ import { UpdateUserDto } from './shared/dto/update-user.dto';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { roles } from 'src/auth/shared/enums/role.enum';
 import { RoleGuard } from 'src/auth/shared/guards/role.guard';
-import { Roles } from 'src/auth/shared/decorators/rolesdecorator';
+import { Roles } from 'src/auth/shared/decorators/roles.decorator';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import {

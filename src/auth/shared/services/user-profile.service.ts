@@ -2,6 +2,7 @@ import {
   BadGatewayException,
   BadRequestException,
   Injectable,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
@@ -179,8 +180,8 @@ export class userProfileService {
     // console.log(tokenDoc, 'tokenDoc from db');
 
     if (!tokenDoc) {
-      throw new BadRequestException(
-        this.i18n.translate('exception.TOKEN_INVALID'),
+      throw new UnauthorizedException(
+        this.i18n.translate('exception.REFRESH_TOKEN_INVALID'),
       );
     }
     // check expiryDate refresh token
@@ -190,7 +191,7 @@ export class userProfileService {
       await this.RefreshTokenModel.deleteOne({
         refresh_Token: refreshToken,
       });
-      throw new BadRequestException(
+      throw new UnauthorizedException(
         this.i18n.translate('exception.REFRESH_TOKEN_EXPIRED'),
       );
     }
@@ -203,7 +204,7 @@ export class userProfileService {
           ignoreExpiration: true, // تجاهل انتهاء الصلاحية
         },
       );
-      console.log(decoded_access_token, 'decoded_access_token');
+      // console.log(decoded_access_token, 'decoded_access_token');
     } catch {
       throw new BadRequestException(
         this.i18n.translate('exception.TOKEN_INVALID'),
@@ -217,8 +218,9 @@ export class userProfileService {
       email: decoded_access_token.email,
     };
     // generate new access and refresh token and delete old refresh token
-    const new_Tokens = await this.tokenService.generate_Tokens(userData, '5h');
+    const new_Tokens = await this.tokenService.generate_Tokens(userData, '1m');
     // 4) Set cookies using CookieService
+    console.log('=============== new_Tokens sending ============');
     this.cookieService.setCookies(res, new_Tokens);
 
     return {
