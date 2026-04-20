@@ -44,7 +44,7 @@ export class ProductsService {
     protected readonly i18n: CustomI18nService,
     protected readonly productsStatistics: ProductsStatistics,
     private readonly eventEmitter: EventEmitter2,
-  ) {}
+  ) { }
 
   // ──────────────────────────────────────────────────────
   //  HELPERS
@@ -512,7 +512,6 @@ export class ProductsService {
     },
   ) {
     const { variants: variantOps, ...productData } = updateProductDto;
-
     // 1) Fetch existing product
     const doc = await this.productModel
       .findById(idParamDto.id)
@@ -584,11 +583,15 @@ export class ProductsService {
     // 4) Handle file uploads
     try {
       if (doc && files) {
+        let remainingImages: string[] = [];
+        let newImages: string[] = [];
+        let remainingSet: Set<string> = new Set();
+        // 1. معالجة الملفات المفردة (imageCover + infoProductPdf)
         const singleFiles: Record<string, MulterFilesType | undefined> = {
           imageCover: files.imageCover,
           infoProductPdf: files.infoProductPdf,
         };
-
+        // loop over single files
         for (const [key, file] of Object.entries(singleFiles)) {
           if (file && Array.isArray(file) && file[0]) {
             const newPath = await this.fileUploadService.saveFileToDisk(
@@ -596,27 +599,64 @@ export class ProductsService {
               'products',
             );
             if (key === 'imageCover' || key === 'infoProductPdf') {
-              const oldPath = doc[key] as string;
+              const oldPath = doc[key];
               if (oldPath) {
                 await this.fileUploadService.deleteFile(`.${oldPath}`);
               }
             }
-            (productData as any)[key] = newPath;
+            productData[key] = newPath;
+          }
+        }
+        // 3. handle images from body
+        if (updateProductDto.images) {
+          remainingImages = Array.isArray(updateProductDto.images)
+            ? updateProductDto.images.filter((img) => typeof img === 'string')
+            : [updateProductDto.images];
+        }
+
+        // 4. delete images that are not in remainingImages
+        if (doc.images) {
+          // normalize to remove the domain and unify the path
+          const normalize = (url: string) => {
+            try {
+              return new URL(url.trim().toLowerCase()).pathname;
+            } catch {
+              return url.trim().toLowerCase();
+            }
+          };
+
+          // normalize to remove the domain and unify the path
+          remainingSet = new Set(remainingImages.map(normalize));
+
+          // find images to delete
+          const imagesToDelete = doc.images.filter(
+            (img) => !remainingSet.has(normalize(img)),
+          );
+
+          if (imagesToDelete.length > 0) {
+            await this.fileUploadService.deleteFiles(imagesToDelete);
           }
         }
 
-        if (Array.isArray(files.images) && files.images.length > 0) {
-          if (doc.images) {
-            await this.fileUploadService.deleteFiles(doc.images);
-          }
-          const newImages = await this.fileUploadService.saveFilesToDisk(
+        // 5. upload new images
+        if (
+          files.images &&
+          Array.isArray(files.images) &&
+          files.images.length > 0
+        ) {
+          newImages = await this.fileUploadService.saveFilesToDisk(
             files.images,
             'products',
           );
-          (productData as any).images = newImages;
         }
+
+        console.log('newImages', newImages);
+
+        // 6. merge final images (remaining old + new)
+        const remainingArray = Array.from(remainingSet);
+        productData.images = [...remainingArray, ...newImages];
       }
-    } catch (error) {
+    } catch {
       throw new InternalServerErrorException(
         this.i18n.translate('exception.ERROR_SAVE'),
       );

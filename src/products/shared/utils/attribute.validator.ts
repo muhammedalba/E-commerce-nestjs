@@ -36,8 +36,6 @@ export function validateAttributes(
 
   const attrs = attributes || {};
   const attrsKeys = Object.keys(attrs);
-  console.log(attrsKeys);
-  console.log(allowedAttributes);
   // 1. Check for required attributes
   for (const def of allowedAttributes) {
     if (def.required && !(def.name.trim() in attrs)) {

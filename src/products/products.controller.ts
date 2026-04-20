@@ -25,15 +25,11 @@ import { roles } from 'src/auth/shared/enums/role.enum';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 import { MulterFilesType } from 'src/shared/utils/interfaces/fileInterface';
-import { BrandExistsPipe } from 'src/shared/utils/pipes/brand-exists.pipe';
-import { CategoryExistsPipe } from 'src/shared/utils/pipes/category-exists.pipe';
-import { SupplierExistsPipe } from 'src/shared/utils/pipes/supplier-exists.pipe';
-import { SupCategoryExistsPipe } from 'src/shared/utils/pipes/sup-category-exists.pipe';
 import { ParseBodyJsonInterceptor } from 'src/shared/interceptors/parse-body-json.interceptor';
 
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(private readonly productsService: ProductsService) { }
 
   private static readonly imageSize = [
     { name: 'imageCover', maxCount: MaxFileCount.iMAGE_COVER },
@@ -69,10 +65,6 @@ export class ProductsController {
   async create(
     @Body()
     createProductDto: CreateProductDto,
-    @Body('brand', BrandExistsPipe) brand: string,
-    @Body('category', CategoryExistsPipe) category: string,
-    @Body('supplier', SupplierExistsPipe) supplier: string,
-    @Body('supCategories', SupCategoryExistsPipe) supCategory: string,
     @UploadedFiles(
       new ParseFileFieldsPipe(
         '1MB',
@@ -95,7 +87,7 @@ export class ProductsController {
     }
     // console.log(createProductDto);
     return await this.productsService.create(
-      { ...createProductDto, category, brand, supplier },
+      createProductDto,
       files as {
         imageCover: MulterFilesType;
         images?: MulterFilesType;
@@ -187,10 +179,6 @@ export class ProductsController {
   async update(
     @Param() idParamDto: IdParamDto,
     @Body() updateProductDto: UpdateProductDto,
-    @Body('brand', BrandExistsPipe) brand: string,
-    @Body('category', CategoryExistsPipe) category: string,
-    @Body('supplier', SupplierExistsPipe) supplier: string,
-    @Body('supCategories', SupCategoryExistsPipe) supCategory: string,
     @UploadedFiles(
       new ParseFileFieldsPipe(
         '1MB',
@@ -210,7 +198,7 @@ export class ProductsController {
   ) {
     return await this.productsService.update(
       idParamDto,
-      { ...updateProductDto, brand, category, supplier },
+      updateProductDto,
       files,
     );
   }

@@ -25,9 +25,6 @@ export class ParseBodyJsonInterceptor implements NestInterceptor {
     const request = context
       .switchToHttp()
       .getRequest<{ body: Record<string, unknown> }>();
-    console.log(request.body);
-    console.log(this.jsonFields);
-    console.log(this.arrayFields);
     if (request.body) {
       // Parse JSON-string fields into plain objects
       for (const field of this.jsonFields) {

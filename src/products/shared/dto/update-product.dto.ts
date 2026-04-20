@@ -14,6 +14,11 @@ import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { VariantOperationsDto } from './variant.dto';
 import { ProductAttributeDefinitionDto } from './create-product.dto';
+import { Exists } from 'src/shared/utils/decorators/exists.decorator';
+import { SupCategory } from 'src/sup-category/shared/schemas/sup-category.schema';
+import { Category } from 'src/categories/shared/schemas/category.schema';
+import { Brand } from 'src/brands/shared/schemas/brand.schema';
+import { Supplier } from 'src/supplier/shared/schema/Supplier.schema';
 
 export class UpdateProductDto {
   // ─── Localized Fields ──────────────────────────────────
@@ -43,11 +48,13 @@ export class UpdateProductDto {
   @IsString()
   imageCover?: string;
 
-  @ApiPropertyOptional({ description: 'Additional images' })
-  @IsArray()
   @IsOptional()
-  @IsString({ each: true })
-  images?: string[];
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) return value;
+    if (value !== undefined && value !== null && value !== '') return [value];
+    return [];
+  })
+  images?: string[] | string;
 
   @ApiPropertyOptional({ description: 'PDF file' })
   @IsString()
@@ -58,27 +65,30 @@ export class UpdateProductDto {
   @ApiPropertyOptional({ description: 'Category ID' })
   @IsMongoId()
   @IsOptional()
+  @Exists(Category.name)
   category?: string;
 
   @ApiPropertyOptional({ description: 'Sub-category IDs' })
-  @Transform(({ value }: { value: unknown }): unknown => {
-    if (Array.isArray(value)) return value;
-    if (value !== undefined && value !== null && value !== '') return [value];
-    return [];
+  @IsOptional()
+  @Transform(({ value }) => {
+    const rawIds = Array.isArray(value) ? value : (value ? [value] : []);
+    return [...new Set(rawIds.filter((id) => typeof id === 'string' && id.length > 0))];
   })
   @IsArray()
   @IsMongoId({ each: true })
-  @IsOptional()
+  @Exists(SupCategory.name)
   supCategories?: string[];
 
   @ApiPropertyOptional({ description: 'Brand ID' })
   @IsMongoId()
   @IsOptional()
+  @Exists(Brand.name)
   brand?: string;
 
   @ApiPropertyOptional({ description: 'Supplier ID' })
   @IsMongoId()
   @IsOptional()
+  @Exists(Supplier.name)
   supplier?: string;
 
   // ─── Flags ─────────────────────────────────────────────

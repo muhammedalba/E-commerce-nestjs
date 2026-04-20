@@ -20,6 +20,8 @@ import { CustomI18nValidationExceptionFilter } from './filters/i18n-validation-e
 import { PromoBannerModule } from './promo-banner/promo-banner.module';
 import { SupCategoryModule } from './sup-category/sup-category.module';
 import { SupplierModule } from './supplier/supplier.module';
+import { ExistsConstraint } from './shared/utils/decorators/exists.decorator';
+
 
 @Module({
   imports: [
@@ -46,6 +48,10 @@ import { SupplierModule } from './supplier/supplier.module';
     SupplierModule,
   ],
   controllers: [AppController],
-  providers: [AppService, CustomI18nValidationExceptionFilter],
+  providers: [
+    AppService,
+    ExistsConstraint,
+    CustomI18nValidationExceptionFilter,
+  ],
 })
 export class AppModule {}

@@ -1,3 +1,4 @@
+import { useContainer } from 'class-validator';
 import * as cookieParser from 'cookie-parser';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
@@ -10,6 +11,7 @@ import { Request, Response, NextFunction } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  useContainer(app.select(AppModule), { fallbackOnErrors: true });
   app.setGlobalPrefix('api/v1');
   app.use(cookieParser());
 
@@ -39,6 +41,7 @@ async function bootstrap() {
     origin: [
       'http://localhost:3000',
       'http://10.5.50.6:3000',
+      'http://172.20.10.7:3000',
       process.env.CLIENT_URL,
     ],
     credentials: true,

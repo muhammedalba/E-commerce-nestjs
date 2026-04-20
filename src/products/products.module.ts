@@ -87,7 +87,7 @@ import {
     ProductsService,
     CustomI18nService,
     ProductsStatistics,
-    AggregationSyncService,
+    AggregationSyncService
   ],
   exports: [MongooseModule],
 })

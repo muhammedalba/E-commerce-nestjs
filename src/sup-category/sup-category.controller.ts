@@ -18,7 +18,6 @@ import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
-import { CategoryExistsPipe } from 'src/shared/utils/pipes/category-exists.pipe';
 
 @Controller('sup-category')
 export class SupCategoryController {
@@ -32,12 +31,8 @@ export class SupCategoryController {
   @Post()
   create(
     @Body() createSupCategoryDto: CreateSupCategoryDto,
-    @Body('category', CategoryExistsPipe) category: string,
   ) {
-    return this.supCategoryService.create({
-      ...createSupCategoryDto,
-      category,
-    });
+    return this.supCategoryService.create(createSupCategoryDto);
   }
 
   // ------------ =============================== ---------- //
@@ -84,12 +79,8 @@ export class SupCategoryController {
   update(
     @Param() idParamDto: IdParamDto,
     @Body() updateSupCategoryDto: UpdateSupCategoryDto,
-    @Body('category', CategoryExistsPipe) category: string,
   ) {
-    return this.supCategoryService.update(idParamDto, {
-      ...updateSupCategoryDto,
-      category,
-    });
+    return this.supCategoryService.update(idParamDto, updateSupCategoryDto);
   }
 
   // ------------ =============================== ---------- //
