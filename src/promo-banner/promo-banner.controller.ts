@@ -24,17 +24,31 @@ export class PromoBannerController {
     return await this.promoBannerService.getActiveBanner();
   }
   @Get()
-  async getBanners(@Query() queryString: QueryString): Promise<{
+  async getBanners(
+    @Query() queryString: QueryString,
+    @Query('all_langs') allLangs?: string,
+  ): Promise<{
     data: PromoBanner[];
     status: string;
     results: number;
     pagination: any;
   }> {
-    return await this.promoBannerService.findAllDoc(queryString);
+    const returnAllLangs = allLangs === 'true';
+    return await this.promoBannerService.findAllDoc(
+      queryString,
+      returnAllLangs,
+    );
   }
   @Get(':id')
-  async getBanner(@Param() idParamDto: IdParamDto): Promise<any> {
-    return await this.promoBannerService.getBanner(idParamDto.id);
+  async getBanner(
+    @Param() idParamDto: IdParamDto,
+    @Query('all_langs') allLangs?: string,
+  ): Promise<any> {
+    const returnAllLangs = allLangs === 'true';
+    return await this.promoBannerService.getBanner(
+      idParamDto.id,
+      returnAllLangs,
+    );
   }
   @Post()
   async createBanner(

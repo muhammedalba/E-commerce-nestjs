@@ -32,15 +32,17 @@ export class CustomI18nValidationExceptionFilter implements ExceptionFilter {
       const propertyPath = parentPath
         ? `${parentPath}.${error.property}`
         : error.property;
-
       if (error.constraints) {
         for (const key in error.constraints) {
-          let translated = await this.i18n.translate(error.constraints[key]);
+          const translated = await this.i18n.translate(error.constraints[key]);
 
           // استبدال {property} باسم الحقل الكامل
           if (typeof translated === 'string') {
-            translated = translated.replace(/\{property\}/g, propertyPath);
-            messages.push(String(translated));
+            const replacedStr = translated.replace(
+              /\{property\}/g,
+              propertyPath,
+            );
+            messages.push(replacedStr);
           } else {
             messages.push(String(translated));
           }

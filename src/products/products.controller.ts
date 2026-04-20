@@ -11,7 +11,6 @@ import {
   Query,
   UseGuards,
   BadRequestException,
-  HttpStatus,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './shared/dto/create-product.dto';
@@ -30,110 +29,43 @@ import { BrandExistsPipe } from 'src/shared/utils/pipes/brand-exists.pipe';
 import { CategoryExistsPipe } from 'src/shared/utils/pipes/category-exists.pipe';
 import { SupplierExistsPipe } from 'src/shared/utils/pipes/supplier-exists.pipe';
 import { SupCategoryExistsPipe } from 'src/shared/utils/pipes/sup-category-exists.pipe';
-import {
-  ApiTags,
-  ApiConsumes,
-  ApiBody,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiQuery,
-  ApiParam,
-  ApiCreatedResponse,
-  ApiOkResponse,
-} from '@nestjs/swagger';
-import { Product } from './shared/schemas/Product.schema';
+import { ParseBodyJsonInterceptor } from 'src/shared/interceptors/parse-body-json.interceptor';
 
-@ApiTags('products')
 @Controller('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
+
   private static readonly imageSize = [
     { name: 'imageCover', maxCount: MaxFileCount.iMAGE_COVER },
     { name: 'images', maxCount: MaxFileCount.PRODUCTS_IMAGES },
     { name: 'infoProductPdf', maxCount: 1 },
   ];
+
+  // ──────────────────────────────────────────────────────
+  //  Statistics
+  // ──────────────────────────────────────────────────────
+
   @Get('statistics')
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
-  @ApiOperation({ summary: 'Get product statistics (Admin only)' })
-  @ApiBearerAuth()
-  @ApiOkResponse({ description: 'Product statistics retrieved successfully.' })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized.',
-  })
-  @ApiResponse({
-    status: HttpStatus.FORBIDDEN,
-    description: 'Forbidden. User does not have admin role.',
-  })
   async Products_statistics() {
     return await this.productsService.Products_statistics();
   }
 
+  // ──────────────────────────────────────────────────────
+  //  CREATE PRODUCT + VARIANTS (Transaction)
+  // ──────────────────────────────────────────────────────
+
   @Post()
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
-  @UseInterceptors(FileFieldsInterceptor(ProductsController.imageSize))
-  @ApiOperation({ summary: 'Create a new product (Admin only)' })
-  @ApiBearerAuth()
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        name: { type: 'string' },
-        description: { type: 'string' },
-        price: { type: 'number' },
-        quantity: { type: 'number' },
-        brand: { type: 'string' },
-        category: { type: 'string' },
-        supplier: { type: 'string' },
-        supCategories: { type: 'string' },
-        imageCover: {
-          type: 'string',
-          format: 'binary',
-        },
-        images: {
-          type: 'array',
-          items: {
-            type: 'string',
-            format: 'binary',
-          },
-        },
-        infoProductPdf: {
-          type: 'string',
-          format: 'binary',
-        },
-      },
-      required: [
-        'name',
-        'description',
-        'price',
-        'quantity',
-        'brand',
-        'category',
-        'supplier',
-        'imageCover',
-      ],
-    },
-  })
-  @ApiCreatedResponse({
-    description: 'The product has been successfully created.',
-    type: Product,
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Bad Request. Invalid input data or missing imageCover.',
-  })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized.',
-  })
-  @ApiResponse({
-    status: HttpStatus.FORBIDDEN,
-    description: 'Forbidden. User does not have admin role.',
-  })
+  @UseInterceptors(
+    FileFieldsInterceptor(ProductsController.imageSize),
+    new ParseBodyJsonInterceptor(
+      ['title', 'description', 'variants', 'allowedAttributes'],
+      ['supCategories'],
+    ),
+  )
   async create(
     @Body()
     createProductDto: CreateProductDto,
@@ -141,7 +73,6 @@ export class ProductsController {
     @Body('category', CategoryExistsPipe) category: string,
     @Body('supplier', SupplierExistsPipe) supplier: string,
     @Body('supCategories', SupCategoryExistsPipe) supCategory: string,
-
     @UploadedFiles(
       new ParseFileFieldsPipe(
         '1MB',
@@ -162,6 +93,7 @@ export class ProductsController {
     if (!files.imageCover) {
       throw new BadRequestException('imageCover is required');
     }
+    // console.log(createProductDto);
     return await this.productsService.create(
       { ...createProductDto, category, brand, supplier },
       files as {
@@ -172,123 +104,86 @@ export class ProductsController {
     );
   }
 
+  // ──────────────────────────────────────────────────────
+  //  GET ALL PRODUCTS (with optional variant filters)
+  // ──────────────────────────────────────────────────────
+
   @Get()
-  @ApiOperation({
-    summary: 'Get all products with optional filtering and pagination',
-  })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    type: Number,
-    description: 'Page number for pagination',
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    type: Number,
-    description: 'Number of items per page',
-  })
-  @ApiQuery({
-    name: 'sort',
-    required: false,
-    type: String,
-    description: 'Sort order (e.g., -createdAt)',
-  })
-  @ApiQuery({
-    name: 'fields',
-    required: false,
-    type: String,
-    description: 'Comma-separated list of fields to include (e.g., name,price)',
-  })
-  @ApiQuery({
-    name: 'keyword',
-    required: false,
-    type: String,
-    description: 'Search keyword for products',
-  })
-  @ApiOkResponse({ description: 'Return all products.', type: [Product] })
-  findAll(@Query() queryString: QueryString) {
-    return this.productsService.findAll(queryString);
+  findAll(
+    @Query() queryString: QueryString,
+    @Query('all_langs') allLangs?: string,
+    @Query('color') color?: string,
+    @Query('weight_min') weightMin?: string,
+    @Query('weight_max') weightMax?: string,
+    @Query('weight_unit') weightUnit?: string,
+    @Query('volume_min') volumeMin?: string,
+    @Query('volume_max') volumeMax?: string,
+    @Query('volume_unit') volumeUnit?: string,
+    @Query('price_min') priceMin?: string,
+    @Query('price_max') priceMax?: string,
+  ) {
+    const returnAllLangs = allLangs === 'true';
+
+    // Check if any variant filter is provided
+    const hasVariantFilters =
+      color ||
+      weightMin ||
+      weightMax ||
+      weightUnit ||
+      volumeMin ||
+      volumeMax ||
+      volumeUnit ||
+      priceMin ||
+      priceMax;
+
+    if (hasVariantFilters) {
+      return this.productsService.findAllWithFilters(
+        queryString,
+        {
+          color,
+          weightMin: weightMin ? Number(weightMin) : undefined,
+          weightMax: weightMax ? Number(weightMax) : undefined,
+          weightUnit,
+          volumeMin: volumeMin ? Number(volumeMin) : undefined,
+          volumeMax: volumeMax ? Number(volumeMax) : undefined,
+          volumeUnit,
+          priceMin: priceMin ? Number(priceMin) : undefined,
+          priceMax: priceMax ? Number(priceMax) : undefined,
+        },
+        returnAllLangs,
+      );
+    }
+
+    return this.productsService.findAll(queryString, returnAllLangs);
   }
 
+  // ──────────────────────────────────────────────────────
+  //  GET PRODUCT BY ID
+  // ──────────────────────────────────────────────────────
+
   @Get(':id')
-  @ApiOperation({ summary: 'Get a product by ID' })
-  @ApiParam({
-    name: 'id',
-    description: 'ID of the product to retrieve',
-    type: String,
-  })
-  @ApiOkResponse({ description: 'Return a single product.', type: Product })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Product not found.',
-  })
-  findOne(@Param() idParamDto: IdParamDto) {
-    return this.productsService.findOne(idParamDto);
+  findOne(
+    @Param() idParamDto: IdParamDto,
+    @Query('all_langs') allLangs?: string,
+  ) {
+    const returnAllLangs = allLangs === 'true';
+    return this.productsService.findOne(idParamDto, returnAllLangs);
   }
+
+  // ──────────────────────────────────────────────────────
+  //  UPDATE PRODUCT + VARIANTS (Transaction)
+  // ──────────────────────────────────────────────────────
 
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
   @Patch(':id')
-  @UseInterceptors(FileFieldsInterceptor(ProductsController.imageSize))
-  @ApiOperation({ summary: 'Update an existing product by ID (Admin only)' })
-  @ApiBearerAuth()
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        name: { type: 'string' },
-        description: { type: 'string' },
-        price: { type: 'number' },
-        quantity: { type: 'number' },
-        brand: { type: 'string' },
-        category: { type: 'string' },
-        supplier: { type: 'string' },
-        supCategories: { type: 'string' },
-        imageCover: {
-          type: 'string',
-          format: 'binary',
-        },
-        images: {
-          type: 'array',
-          items: {
-            type: 'string',
-            format: 'binary',
-          },
-        },
-        infoProductPdf: {
-          type: 'string',
-          format: 'binary',
-        },
-      },
-    },
-  })
-  @ApiParam({
-    name: 'id',
-    description: 'ID of the product to update',
-    type: String,
-  })
-  @ApiOkResponse({
-    description: 'The product has been successfully updated.',
-    type: Product,
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Bad Request. Invalid input data.',
-  })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized.',
-  })
-  @ApiResponse({
-    status: HttpStatus.FORBIDDEN,
-    description: 'Forbidden. User does not have admin role.',
-  })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Product not found.',
-  })
+  @UseInterceptors(
+    FileFieldsInterceptor(ProductsController.imageSize),
+    new ParseBodyJsonInterceptor(
+      ['title', 'description', 'variants', 'allowedAttributes'],
+      ['supCategories'],
+    ),
+  )
   async update(
     @Param() idParamDto: IdParamDto,
     @Body() updateProductDto: UpdateProductDto,
@@ -319,33 +214,37 @@ export class ProductsController {
       files,
     );
   }
+
+  // ──────────────────────────────────────────────────────
+  //  SOFT DELETE PRODUCT
+  // ──────────────────────────────────────────────────────
+
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete a product by ID (Admin only)' })
-  @ApiBearerAuth()
-  @ApiParam({
-    name: 'id',
-    description: 'ID of the product to delete',
-    type: String,
-  })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'The product has been successfully deleted.',
-  })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized.',
-  })
-  @ApiResponse({
-    status: HttpStatus.FORBIDDEN,
-    description: 'Forbidden. User does not have admin role.',
-  })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Product not found.',
-  })
   remove(@Param() idParamDto: IdParamDto) {
     return this.productsService.remove(idParamDto);
+  }
+
+  // ──────────────────────────────────────────────────────
+  //  HARD DELETE (permanently, admin-only)
+  // ──────────────────────────────────────────────────────
+
+  @Roles(roles.ADMIN)
+  @UseGuards(AuthGuard, RoleGuard)
+  @Delete(':id/permanent')
+  hardRemove(@Param() idParamDto: IdParamDto) {
+    return this.productsService.hardRemove(idParamDto);
+  }
+
+  // ──────────────────────────────────────────────────────
+  //  RESTORE soft-deleted product
+  // ──────────────────────────────────────────────────────
+
+  @Roles(roles.ADMIN)
+  @UseGuards(AuthGuard, RoleGuard)
+  @Patch(':id/restore')
+  restore(@Param() idParamDto: IdParamDto) {
+    return this.productsService.restore(idParamDto);
   }
 }

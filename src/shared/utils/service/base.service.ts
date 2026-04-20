@@ -97,7 +97,7 @@ export class BaseService<T> {
       checkField?: string;
       fieldValue?: string;
     },
-  ): Promise<{ status: string; message: string; data: T }> {
+  ): Promise<T> {
     const { fileFieldName = 'avatar', checkField, fieldValue } = options || {};
 
     if (
@@ -111,37 +111,30 @@ export class BaseService<T> {
           : 'exception.NAME_EXISTS';
       throw new BadRequestException(this.t(exceptionKey));
     }
-    // 2) handle file upload
 
     const filePath = await this.handleFileUpload(file, modelName);
     CreateDataDto[fileFieldName] = filePath;
 
-    // 3) create document in database
     const newDoc = await this.model.create(CreateDataDto);
-    // 4) optionally add full URL to avatar or image
+
     if (filePath) {
-      newDoc[fileFieldName] = `${process.env.BASE_URL}${filePath}`;
+      (newDoc as any)[fileFieldName] = `${process.env.BASE_URL}${filePath}`;
     }
-    let newDocFilter: T | T[];
-    // 5) clean up response
+
+    let newDocFilter: T;
     if (modelName === 'users') {
       newDocFilter = {
-        ...newDoc.toObject(),
+        ...(newDoc as any).toObject(),
         password: undefined,
         __v: undefined,
       } as T;
     } else {
-      newDocFilter = newDoc as T;
+      newDocFilter = newDoc as unknown as T;
     }
 
-    // 6) localize the document
     const localizedDoc = this.localize(newDocFilter);
 
-    return {
-      status: 'success',
-      message: this.t('success.created_SUCCESS'),
-      data: localizedDoc as T,
-    };
+    return localizedDoc as T;
   }
   async findAllDoc(
     modelName: string,
@@ -150,8 +143,8 @@ export class BaseService<T> {
       path: string;
       select: string;
     },
+    allLangs: boolean = false,
   ): Promise<{
-    status: string;
     results: number;
     pagination: any;
     data: T[];
@@ -173,9 +166,8 @@ export class BaseService<T> {
       throw new BadRequestException(this.t('exception.NOT_FOUND'));
     }
 
-    const localizedDoc = this.localize(data);
+    const localizedDoc = allLangs ? data : this.localize(data);
     return {
-      status: 'success',
       results: data.length,
       pagination: features.getPagination(),
       data: localizedDoc as T[],
@@ -185,7 +177,8 @@ export class BaseService<T> {
   async findOneDoc(
     idParamDto: IdParamDto,
     selected: string,
-  ): Promise<{ status: string; message: string; data: T }> {
+    allLangs: boolean = false,
+  ): Promise<T> {
     // 1) check if id is valid ObjectId or slug
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto.id);
     // 1) check  doc if found
@@ -201,13 +194,10 @@ export class BaseService<T> {
         this.t('exception.NOT_FOUND', { args: { variable: idParamDto.id } }),
       );
     }
-    // const localizedDoc = this.localize(doc);
-    return {
-      status: 'success',
-      message: this.t('success.found_SUCCESS'),
-      data: doc,
-      // data: Array.isArray(localizedDoc) ? localizedDoc[0] : localizedDoc,
-    };
+
+    const finalDoc = allLangs ? doc : (this.localize(doc as any) as T);
+
+    return finalDoc as T;
   }
 
   async updateOneDoc(
@@ -224,11 +214,7 @@ export class BaseService<T> {
       fieldValue?: string;
       checkField?: string;
     },
-  ): Promise<{
-    status: string;
-    message: string;
-    data: any;
-  }> {
+  ): Promise<T | null> {
     const { fileFieldName = 'avatar', checkField, fieldValue } = options || {};
     //1) check  doc if found
     const doc = (await this.model
@@ -270,12 +256,7 @@ export class BaseService<T> {
     if (filePath && updatedData) {
       updatedData[fileFieldName] = `${process.env.BASE_URL}${filePath}`;
     }
-    const localizedDoc = updatedData ? this.localize(updatedData) : null;
-    return {
-      status: 'success',
-      message: this.t('success.updated_SUCCESS'),
-      data: localizedDoc,
-    };
+    return updatedData ? (this.localize(updatedData) as T) : null;
   }
   async deleteOneDoc(idParamDto: IdParamDto, selected: string): Promise<void> {
     // 1) check if id is valid ObjectId or slug

@@ -19,21 +19,30 @@ export class CouponsService extends BaseService<CouponDocument> {
   ) {
     super(couponModel, i18n, fileUploadService);
   }
+  // ------------ =============================== ---------- //
+  // ------------ ======  CREATE COUPON   ====== ---------- //
+  // ------------ =============================== ---------- //
   async create(createCouponDto: CreateCouponDto) {
     return await this.createOneDoc(createCouponDto, undefined, 'coupon', {
       checkField: 'name',
       fieldValue: createCouponDto.name,
     });
   }
-
+  // ------------ =============================== ---------- //
+  // ------------ ======  GET ALL COUPONS  ====== ---------- //
+  // ------------ =============================== ---------- //
   async findAll(queryString: QueryString) {
-    return await this.findAllDoc('coupon', queryString);
+    return await this.findAllDoc('coupon', queryString, undefined);
   }
-
+  // ------------ =============================== ---------- //
+  // ------------ ======  GET COUPON BY ID   ====== ---------- //
+  // ------------ =============================== ---------- //
   async findOne(idParamDto: IdParamDto) {
     return await this.findOneDoc(idParamDto, '-__v');
   }
-
+  // ------------ =============================== ---------- //
+  // ------------ ======  UPDATE COUPON   ====== ---------- //
+  // ------------ =============================== ---------- //
   async update(idParamDto: IdParamDto, updateCouponDto: UpdateCouponDto) {
     const selectedFields = 'name';
     return await this.updateOneDoc(
@@ -48,7 +57,9 @@ export class CouponsService extends BaseService<CouponDocument> {
       },
     );
   }
-
+  // ------------ =============================== ---------- //
+  // ------------ ======  DELETE COUPON   ====== ---------- //
+  // ------------ =============================== ---------- //
   async remove(idParamDto: IdParamDto) {
     return await this.deleteOneDoc(idParamDto, 'image');
   }

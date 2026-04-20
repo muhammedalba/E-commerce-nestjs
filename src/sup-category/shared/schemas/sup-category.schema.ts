@@ -36,12 +36,12 @@ SupCategorySchema.pre('save', async function (next) {
         : this.name.trim();
     // generate a unique slug
     const model = this.constructor as unknown as Model<SupCategory>;
-    this.slug = await generateUniqueSlug(nameValue, model);
+    this.slug = await generateUniqueSlug(nameValue, model); 
   }
   next();
 });
 // this will be used to generate the slug
-SupCategorySchema.pre('findOneAndUpdate', async function (next) {
+SupCategorySchema.pre('findOneAndUpdate', async function (this: any, next) {
   const update = this.getUpdate();
   if (update && typeof update === 'object' && '$set' in update) {
     if (update?.$set?.name) {

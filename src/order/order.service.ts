@@ -55,11 +55,14 @@ export class OrderService {
       updatedProducts,
       unAvailableProducts,
     } = await this.orderHelperService.validateOrderItems(dto.items);
-    //1.1)
+    //1.1) Build order items with variant info
     const productItemsId = validatedItems.map((item) => ({
       productId: item.product.id.toString(),
+      variantId: item.variant.id.toString(),
       quantity: item.quantity,
       totalPrice: item.totalPrice ?? 0,
+      sku: item.variant.sku,
+      attributes: item.variant.attributes,
     }));
     // 2) if coupon is exist apply
     const { discountAmount, totalPriceAfterDiscount, couponDetails } =

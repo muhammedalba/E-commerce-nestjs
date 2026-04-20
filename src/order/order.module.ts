@@ -6,6 +6,10 @@ import {
   Product,
   ProductSchema,
 } from 'src/products/shared/schemas/Product.schema';
+import {
+  ProductVariant,
+  ProductVariantSchema,
+} from 'src/products/shared/schemas/ProductVariant.schema';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import { Order, OrderSchema } from './shared/schemas/Order.schema';
 import { AuthModule } from 'src/auth/auth.module';
@@ -28,6 +32,9 @@ import { OrdersStatisticsService } from './shared/order-helper/order-statistics.
     MongooseModule.forFeature([{ name: Coupon.name, schema: CouponSchema }]),
     MongooseModule.forFeature([{ name: Order.name, schema: OrderSchema }]),
     MongooseModule.forFeature([{ name: Product.name, schema: ProductSchema }]),
+    MongooseModule.forFeature([
+      { name: ProductVariant.name, schema: ProductVariantSchema },
+    ]),
     EmailModule,
   ],
   controllers: [OrderController],

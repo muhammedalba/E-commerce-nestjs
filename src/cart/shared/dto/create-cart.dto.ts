@@ -20,6 +20,14 @@ export class CreateCartDto {
   productId!: string;
 
   @ApiProperty({
+    description: 'ID of the product variant to add to the cart',
+    example: '60d21b4667d0d8992e610c86',
+  })
+  @IsMongoId()
+  @Type(() => String)
+  variantId!: string;
+
+  @ApiProperty({
     description: 'Quantity of the product to add',
     example: 1,
     minimum: 1,

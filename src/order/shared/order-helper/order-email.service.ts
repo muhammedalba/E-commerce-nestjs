@@ -14,14 +14,20 @@ type ValidatedItem = {
     brand: string;
     category: string;
     title: string;
-    price: number;
-    quantity: number;
-    sold: number;
     isUnlimitedStock?: boolean;
+  };
+  variant: {
+    id: Types.ObjectId;
+    price: number;
+    stock: number;
+    sold: number;
+    sku: string;
+    attributes: Record<string, unknown>;
   };
   quantity: number;
   totalPrice?: number;
 };
+
 @Injectable()
 export class OrderEmailService {
   constructor(
@@ -47,14 +53,14 @@ export class OrderEmailService {
           product: {
             id: item.product.id.toString(),
             title: item.product.title,
-            price: item.product.price.toString(),
-            quantity: item.product.quantity.toString(),
+            price: item.variant.price.toString(),
+            quantity: item.variant.stock.toString(),
             imageCover: item.product.imageCover,
           },
           quantity: item.quantity.toString(),
           totalPrice:
             item.totalPrice?.toString() ??
-            (item.product.price * item.quantity).toString(),
+            (item.variant.price * item.quantity).toString(),
         })),
         this.i18n.translate('email.NEW_ORDER_SUBJECT', {
           args: { name: 'codeProps' },

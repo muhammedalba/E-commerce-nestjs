@@ -25,6 +25,9 @@ export class CarouselService extends BaseService<CarouselDocument> {
     super(CarouselModel, i18n, fileUploadService);
   }
 
+  // ------------ =============================== ---------- //
+  // ------------ ======  create carousel   ====== ---------- //
+  // ------------ =============================== ---------- //
   async createCarousel(
     createCarouselDto: CreateCarouselDto,
     files: {
@@ -69,11 +72,7 @@ export class CarouselService extends BaseService<CarouselDocument> {
       newDoc.carouselLg = `${baseUrl}${createCarouselDto.carouselLg}`;
 
       //7) return the localized document
-      return {
-        status: 'success',
-        message: this.i18n.translate('success.created_SUCCESS'),
-        data: this.localize(newDoc),
-      };
+      return this.localize(newDoc);
     } catch (error) {
       console.error('Error saving carousel:', error);
       throw new InternalServerErrorException(
@@ -82,19 +81,32 @@ export class CarouselService extends BaseService<CarouselDocument> {
     }
   }
 
-  async findAll(queryString: QueryString): Promise<{
-    status: string;
+  async findAll(
+    queryString: QueryString,
+    allLangs: boolean,
+  ): Promise<{
     results: number;
     pagination: any;
     data: Carousel[];
   }> {
-    return await this.findAllDoc(Carousel.name, queryString);
+    return await this.findAllDoc(
+      Carousel.name,
+      queryString,
+      undefined,
+      allLangs,
+    );
   }
 
-  async findOne(idParamDto: IdParamDto) {
-    return await this.findOneDoc(idParamDto, '-__v');
+  // ------------ =============================== ---------- //
+  // ------------ ======  get carousel by id  ====== ---------- //
+  // ------------ =============================== ---------- //
+  async findOne(idParamDto: IdParamDto, allLangs: boolean = false) {
+    return await this.findOneDoc(idParamDto, '-__v', allLangs);
   }
 
+  // ------------ =============================== ---------- //
+  // ------------ ======  update carousel   ====== ---------- //
+  // ------------ =============================== ---------- //
   async updateOne(
     idParamDto: IdParamDto,
     updateCarouselDto: UpdateCarouselDto,
@@ -157,13 +169,12 @@ export class CarouselService extends BaseService<CarouselDocument> {
       { new: true, runValidators: true },
     );
 
-    return {
-      status: 'success',
-      message: this.i18n.translate('success.updated_SUCCESS'),
-      data: updatedDoc ? this.localize(updatedDoc) : [],
-    };
+    return updatedDoc ? this.localize(updatedDoc) : [];
   }
 
+  // ------------ =============================== ---------- //
+  // ------------ ======  delete carousel   ====== ---------- //
+  // ------------ =============================== ---------- //
   async remove(idParamDto: IdParamDto): Promise<void> {
     const { id } = idParamDto;
     // 1) check if the document exists

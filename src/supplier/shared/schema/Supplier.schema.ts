@@ -43,18 +43,16 @@ export class Supplier {
 
   @Prop({
     required: false,
-    type: String,
-    default: 'active',
-    enum: ['inactive', 'active'],
-    trim: true,
+    type: Boolean,
+    default: true,
   })
-  status?: 'active' | 'inactive';
+  active?: boolean;
 }
 export type SupplierDocument = HydratedDocument<Supplier>;
 export const SupplierSchema = SchemaFactory.createForClass(Supplier);
 
 //create
-SupplierSchema.pre('findOneAndUpdate', function (next) {
+SupplierSchema.pre('findOneAndUpdate', function (this: any, next) {
   const update = this.getUpdate();
   if (update && typeof update === 'object' && '$set' in update) {
     // Check if the name field is being updated

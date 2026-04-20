@@ -4,16 +4,13 @@ import {
   IsString,
   IsEmail,
   IsUrl,
-  IsEnum,
   MinLength,
   MaxLength,
+  IsBoolean,
 } from 'class-validator';
-export enum Status {
-  Inactive = 'inactive',
-  Active = 'active',
-}
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 
 export class CreateSupplierDto {
   @ApiProperty({ description: 'Name of the supplier', example: 'Supplier A' })
@@ -70,10 +67,10 @@ export class CreateSupplierDto {
 
   @ApiPropertyOptional({
     description: 'Status of the supplier',
-    enum: Status,
-    example: Status.Active,
+    example: true,
   })
   @IsOptional()
-  @IsEnum(Status)
-  status?: Status;
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true)
+  active?: boolean;
 }

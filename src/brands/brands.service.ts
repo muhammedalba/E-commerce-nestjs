@@ -22,10 +22,17 @@ export class BrandsService extends BaseService<BrandDocument> {
   ) {
     super(brandModel, i18n, fileUploadService);
   }
+
+  // ------------ =============================== ---------- //
+  // ------------ ======  brands statistics   ====== ---------- //
+  // ------------ =============================== ---------- //
   async BrandsStatistics() {
     return await this.brandsStatistics.statistics();
   }
 
+  // ------------ =============================== ---------- //
+  // ------------ ======  create brand   ====== ---------- //
+  // ------------ =============================== ---------- //
   async create(
     createBrandDto: CreateBrandDto,
     file: MulterFileType,
@@ -36,18 +43,31 @@ export class BrandsService extends BaseService<BrandDocument> {
       fieldValue: createBrandDto.name.en,
     });
   }
-  async findAll(queryString: QueryString): Promise<{
-    status: string;
+
+  // ------------ =============================== ---------- //
+  // ------------ ======  get all brands   ====== ---------- //
+  // ------------ =============================== ---------- //
+  async findAll(
+    queryString: QueryString,
+    allLangs: boolean,
+  ): Promise<{
     results: number;
     pagination: any;
     data: Brand[];
   }> {
-    return await this.findAllDoc('brands', queryString);
+    return await this.findAllDoc('brands', queryString, undefined, allLangs);
   }
 
-  async findOne(idParamDto: IdParamDto) {
-    return await this.findOneDoc(idParamDto, '-__v');
+  // ------------ =============================== ---------- //
+  // ------------ ======  get brand by id  ====== ---------- //
+  // ------------ =============================== ---------- //
+  async findOne(idParamDto: IdParamDto, allLangs: boolean = false) {
+    return await this.findOneDoc(idParamDto, '-__v', allLangs);
   }
+
+  // ------------ =============================== ---------- //
+  // ------------ ======  update brand   ====== ---------- //
+  // ------------ =============================== ---------- //
   async updateBrand(
     idParamDto: IdParamDto,
     updateBrandDto: UpdateBrandDto,
@@ -67,6 +87,10 @@ export class BrandsService extends BaseService<BrandDocument> {
       },
     );
   }
+
+  // ------------ =============================== ---------- //
+  // ------------ ======  delete brand   ====== ---------- //
+  // ------------ =============================== ---------- //
   async deleteOne(idParamDto: IdParamDto) {
     return await this.deleteOneDoc(idParamDto, 'image');
   }

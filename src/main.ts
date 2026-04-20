@@ -2,9 +2,12 @@ import * as cookieParser from 'cookie-parser';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { I18nValidationPipe } from 'nestjs-i18n';
-import { CustomI18nValidationExceptionFilter } from './filters/i18n-validation-exception.filter';
+import { AllExceptionsFilter } from './shared/filters/all-exceptions.filter';
+import { TransformInterceptor } from './shared/interceptors/transform.interceptor';
+import { I18nService } from 'nestjs-i18n';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Request, Response, NextFunction } from 'express';
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api/v1');
@@ -28,7 +31,10 @@ async function bootstrap() {
   // to translate the class-validator errors
   // app.useGlobalFilters(new I18nValidationExceptionFilter());
   // هندلة الايرور
-  app.useGlobalFilters(app.get(CustomI18nValidationExceptionFilter));
+  app.useGlobalFilters(new AllExceptionsFilter(app.get(I18nService)));
+
+  // توحيد الاستجابة الناجحة
+  app.useGlobalInterceptors(new TransformInterceptor(app.get(I18nService)));
   app.enableCors({
     origin: [
       'http://localhost:3000',
@@ -36,6 +42,7 @@ async function bootstrap() {
       process.env.CLIENT_URL,
     ],
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-lang'],
   });
 
   if (process.env.NODE_ENV == 'production') {

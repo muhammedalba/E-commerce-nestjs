@@ -23,6 +23,10 @@ import { CategoryExistsPipe } from 'src/shared/utils/pipes/category-exists.pipe'
 @Controller('sup-category')
 export class SupCategoryController {
   constructor(private readonly supCategoryService: SupCategoryService) {}
+
+  // ------------ =============================== ---------- //
+  // ------------ ======  CREATE SUP CATEGORY  ====== ---------- //
+  // ------------ =============================== ---------- //
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
   @Post()
@@ -36,12 +40,22 @@ export class SupCategoryController {
     });
   }
 
+  // ------------ =============================== ---------- //
+  // ------------ ======  GET ALL SUP CATEGORIES ====== ---------- //
+  // ------------ =============================== ---------- //
   @Get()
   @Roles(roles.ADMIN, roles.MANAGER, roles.USER)
-  findAll(@Query() queryString: QueryString) {
-    return this.supCategoryService.findAll(queryString);
+  findAll(
+    @Query() queryString: QueryString,
+    @Query('all_langs') allLangs?: string,
+  ) {
+    const returnAllLangs = allLangs === 'true';
+    return this.supCategoryService.findAll(queryString, returnAllLangs);
   }
 
+  // ------------ =============================== ---------- //
+  // ------------ ======  GET ALL SUP CATEGORIES STATISTICS ====== ---------- //
+  // ------------ =============================== ---------- //
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
   @Get('Statistics')
@@ -49,11 +63,21 @@ export class SupCategoryController {
     return this.supCategoryService.findStatistics();
   }
 
+  // ------------ =============================== ---------- //
+  // ------------ ======  GET SUP CATEGORY BY ID  ====== ---------- //
+  // ------------ =============================== ---------- //
   @Get(':id')
-  findOne(@Param() idParamDto: IdParamDto) {
-    return this.supCategoryService.findOne(idParamDto);
+  findOne(
+    @Param() idParamDto: IdParamDto,
+    @Query('all_langs') allLangs?: string,
+  ) {
+    const returnAllLangs = allLangs === 'true';
+    return this.supCategoryService.findOne(idParamDto, returnAllLangs);
   }
 
+  // ------------ =============================== ---------- //
+  // ------------ ======  UPDATE SUP CATEGORY  ====== ---------- //
+  // ------------ =============================== ---------- //
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
   @Patch(':id')
@@ -67,6 +91,10 @@ export class SupCategoryController {
       category,
     });
   }
+
+  // ------------ =============================== ---------- //
+  // ------------ ======  DELETE SUP CATEGORY  ====== ---------- //
+  // ------------ =============================== ---------- //
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
   @Delete(':id')

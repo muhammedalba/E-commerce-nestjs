@@ -1,4 +1,4 @@
-import { Query } from 'mongoose';
+import { Query, Types } from 'mongoose';
 import { QueryString } from './interfaces/queryInterface';
 
 export class ApiFeatures<T> {
@@ -13,15 +13,26 @@ export class ApiFeatures<T> {
 
   filter() {
     const queryObj = { ...this.queryString };
-    const excludedFields = ['page', 'limit', 'fields', 'sort', 'keywords'];
+    // remove unwanted fields from query
+    const excludedFields = [
+      'page',
+      'limit',
+      'fields',
+      'sort',
+      'keywords',
+      'With_all_languages',
+    ];
     excludedFields.forEach((field) => delete queryObj[field]);
 
     const allowedFilters = [
       'status',
+      'active',
       'category',
+      'brand',
+      'supCategories',
+      'supplier',
       'price',
       'rating',
-      'brand',
       'email',
       'user',
       'name',
@@ -56,7 +67,13 @@ export class ApiFeatures<T> {
     // الفلاتر المباشرة (مثل ?brand=Apple)
     for (const key in queryObj) {
       if (allowedFilters.includes(key) && !(key in mongoQuery)) {
-        mongoQuery[key] = queryObj[key];
+        const val = queryObj[key];
+        // تحويل النص إلى ObjectId إذا كان بصيغة صحيحة (لتفادي مشاكل عدم التطابق في قاعدة البيانات)
+        if (typeof val === 'string' && /^[0-9a-fA-F]{24}$/.test(val)) {
+          mongoQuery[key] = new Types.ObjectId(val);
+        } else {
+          mongoQuery[key] = val;
+        }
       }
     }
     this.mongooseQuery = this.mongooseQuery.find(mongoQuery);
@@ -102,8 +119,10 @@ export class ApiFeatures<T> {
 
   search(modelName: string) {
     if (this.queryString?.keywords && this.queryString.keywords.length > 0) {
-      const keyword = this.queryString.keywords.trim();
-      // console.log('modelName', modelName);
+      // Escape special characters to prevent invalid regular expression errors
+      const keyword = this.queryString.keywords
+        .trim()
+        .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
       let query: object;
       switch (modelName) {
@@ -126,11 +145,18 @@ export class ApiFeatures<T> {
           };
           break;
         case 'User':
-        case 'suppliers':
           query = {
             $or: [
               { 'name.en': { $regex: keyword, $options: 'i' } },
               { 'name.ar': { $regex: keyword, $options: 'i' } },
+              { email: { $regex: keyword, $options: 'i' } },
+            ],
+          };
+          break;
+        case 'suppliers':
+          query = {
+            $or: [
+              { name: { $regex: keyword, $options: 'i' } },
               { email: { $regex: keyword, $options: 'i' } },
             ],
           };

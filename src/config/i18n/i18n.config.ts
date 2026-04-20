@@ -11,7 +11,7 @@ export const I18nConfig = I18nModule.forRootAsync({
   useFactory: (configService: ConfigService) => ({
     fallbackLanguage: configService.getOrThrow('DEFAULT_LANGUAGE'),
     loaderOptions: {
-      path: path.join(__dirname, '..', '..', 'i18n'),
+      path: path.join(__dirname, '..', '..', '..', 'i18n'),
       watch: true,
     },
   }),

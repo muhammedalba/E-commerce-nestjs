@@ -10,13 +10,19 @@ import {
   Product,
   ProductSchema,
 } from 'src/products/shared/schemas/Product.schema';
-// import { FileUploadDiskStorageModule } from 'src/file-upload-in-diskStorage/file-upload.module';
+import {
+  ProductVariant,
+  ProductVariantSchema,
+} from 'src/products/shared/schemas/ProductVariant.schema';
 
 @Module({
   imports: [
     AuthModule,
     MongooseModule.forFeature([{ name: Cart.name, schema: CartSchema }]),
     MongooseModule.forFeature([{ name: Product.name, schema: ProductSchema }]),
+    MongooseModule.forFeature([
+      { name: ProductVariant.name, schema: ProductVariantSchema },
+    ]),
   ],
   controllers: [CartController],
   providers: [CartService, CustomI18nService],

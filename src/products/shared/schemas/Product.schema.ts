@@ -8,10 +8,9 @@ import { Supplier } from 'src/supplier/shared/schema/Supplier.schema';
 
 @Schema({
   timestamps: true,
-  //   toJSON: { virtuals: true },
-  //   toObject: { virtuals: true },
 })
 export class Product {
+  // ─── Localized Fields ──────────────────────────────────
   @Prop({
     type: Object,
     i18n: true,
@@ -20,7 +19,7 @@ export class Product {
     minlength: 3,
     maxlength: 70,
   })
-  title!: string;
+  title!: string | { en: string; ar: string };
 
   @Prop({
     type: String,
@@ -30,60 +29,16 @@ export class Product {
   slug!: string;
 
   @Prop({
-    type: Boolean,
-    default: true,
-  })
-  isUnlimitedStock!: boolean;
-  @Prop({
-    type: Boolean,
-    default: false,
-  })
-  disabled!: boolean;
-
-  @Prop({
-    type: String,
+    type: Object,
+    i18n: true,
     trim: true,
     required: [true, 'product description required'],
     minlength: 15,
+    maxlength: 2000,
   })
-  description!: string;
+  description!: string | { en?: string; ar?: string };
 
-  @Prop({
-    type: Number,
-    required: [true, 'product quantity required'],
-  })
-  quantity!: number;
-
-  @Prop({
-    type: Number,
-    default: 0,
-  })
-  sold!: number;
-
-  @Prop({
-    type: Number,
-    required: [true, 'product price required'],
-    max: 20000,
-  })
-  price!: number;
-
-  @Prop({
-    type: Number,
-  })
-  priceAfterDiscount!: number;
-
-  @Prop({
-    type: [String],
-  })
-  colors!: string[];
-
-  @Prop({
-    type: Boolean,
-    default: false,
-    required: false,
-  })
-  isFeatured?: boolean;
-
+  // ─── Media ─────────────────────────────────────────────
   @Prop({
     type: String,
     required: [true, 'product imageCover is required'],
@@ -95,6 +50,12 @@ export class Product {
   })
   images?: string[];
 
+  @Prop({
+    type: String,
+  })
+  infoProductPdf?: string;
+
+  // ─── Classification ────────────────────────────────────
   @Prop({
     type: Types.ObjectId,
     ref: Category.name,
@@ -110,12 +71,38 @@ export class Product {
   @Prop({
     type: Types.ObjectId,
     ref: Brand.name,
+    required: false,
   })
   brand?: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: Supplier.name })
+  @Prop({
+    type: Types.ObjectId,
+    ref: Supplier.name,
+    required: false,
+  })
   supplier?: Types.ObjectId;
 
+  // ─── Flags ─────────────────────────────────────────────
+  @Prop({
+    type: Boolean,
+    default: true,
+  })
+  isUnlimitedStock!: boolean;
+
+  @Prop({
+    type: Boolean,
+    default: false,
+  })
+  disabled!: boolean;
+
+  @Prop({
+    type: Boolean,
+    default: false,
+    required: false,
+  })
+  isFeatured?: boolean;
+
+  // ─── Ratings (aggregated, computed from reviews) ───────
   @Prop({
     type: Number,
     min: 1,
@@ -138,21 +125,76 @@ export class Product {
   })
   ratingsAverage!: number;
 
+  // ─── Attribute Versioning & Definitions ────────────────
+  @Prop({ type: Number, default: 1 })
+  allowedAttributesVersion!: number;
+
+  @Prop({ type: [Object], default: [] })
+  allowedAttributes!: Array<{
+    name: string;
+    type: 'string' | 'number';
+    required?: boolean;
+    obsolete?: boolean;
+    migratedTo?: string;
+    allowedUnits?: string[];
+    allowedValues?: string[];
+  }>;
+
+  // ─── Aggregated Variant Statistics ───────────────────────
+  @Prop({ type: Object, default: { min: 0, max: 0 } })
+  priceRange!: { min: number; max: number };
+
+  @Prop({ type: Number, default: 0 })
+  stockSummary!: number;
+
+  @Prop({ type: Number, default: 0 })
+  variantCount!: number;
+
+  // ─── Soft Delete ───────────────────────────────────────
   @Prop({
-    type: String,
+    type: Boolean,
+    default: false,
+    index: true,
   })
-  infoProductPdf?: string;
+  isDeleted!: boolean;
+
+  @Prop({
+    type: Date,
+    default: null,
+  })
+  deletedAt?: Date;
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);
 export type ProductDocument = HydratedDocument<Product>;
-// Virtual Populate (for example: reviews)
-// ProductSchema.virtual('reviews', {
-//   ref: 'Review',
-//   localField: '_id',
-//   foreignField: 'product',
-// });
 
+// ─── Indexes ─────────────────────────────────────────────
+ProductSchema.index({ slug: 1 }, { unique: true });
+ProductSchema.index({ category: 1, 'priceRange.min': 1 }); // Enhanced compound filter
+ProductSchema.index({ brand: 1 });
+ProductSchema.index({ supplier: 1 });
+ProductSchema.index({ isDeleted: 1, disabled: 1 });
+
+// ─── Auto-exclude soft-deleted documents ─────────────────
+ProductSchema.pre('find', function () {
+  if (!this.getFilter().isDeleted) {
+    this.where({ isDeleted: { $ne: true } });
+  }
+});
+
+ProductSchema.pre('findOne', function () {
+  if (!this.getFilter().isDeleted) {
+    this.where({ isDeleted: { $ne: true } });
+  }
+});
+
+ProductSchema.pre('countDocuments', function () {
+  if (!this.getFilter().isDeleted) {
+    this.where({ isDeleted: { $ne: true } });
+  }
+});
+
+// ─── URL Prefix for Media Fields ─────────────────────────
 ProductSchema.post('init', function (doc: HydratedDocument<Product>) {
   const hasTranslatedDescription =
     doc?.title &&

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
@@ -26,6 +27,7 @@ import { SupplierModule } from './supplier/supplier.module';
       isGlobal: true,
       cache: true,
     }),
+    EventEmitterModule.forRoot(),
     I18nConfig,
     MongooseConfig,
     StaticConfig,

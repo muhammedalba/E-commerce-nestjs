@@ -5,9 +5,14 @@ import { AuthModule } from 'src/auth/auth.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { FileUploadDiskStorageModule } from 'src/file-upload-in-diskStorage/file-upload.module';
 import { Product, ProductSchema } from './shared/schemas/Product.schema';
+import {
+  ProductVariant,
+  ProductVariantSchema,
+} from './shared/schemas/ProductVariant.schema';
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import * as mongooseI18n from 'mongoose-i18n-localize';
 import { ProductsStatistics } from './products-helper/products-statistics.service';
+import { AggregationSyncService } from './products-helper/aggregation-sync.service';
 
 import {
   Supplier,
@@ -22,6 +27,7 @@ import {
   SupCategory,
   SupCategorySchema,
 } from 'src/sup-category/shared/schemas/sup-category.schema';
+
 @Module({
   imports: [
     FileUploadDiskStorageModule,
@@ -41,6 +47,12 @@ import {
             },
           });
           return schema;
+        },
+      },
+      {
+        name: ProductVariant.name,
+        useFactory: () => {
+          return ProductVariantSchema;
         },
       },
       {
@@ -74,8 +86,8 @@ import {
   providers: [
     ProductsService,
     CustomI18nService,
-    // BrandExistsPipe,
     ProductsStatistics,
+    AggregationSyncService,
   ],
   exports: [MongooseModule],
 })

@@ -4,5 +4,6 @@ export interface QueryString {
   sort?: string;
   fields?: string;
   keywords?: string;
+  With_all_languages?: boolean;
   [key: string]: any;
 }

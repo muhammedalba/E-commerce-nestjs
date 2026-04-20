@@ -17,10 +17,10 @@ export class tokenService {
   ) {}
 
   // --- generate new access tokens and delete old refresh token --- //
-  async generate_Tokens(userData: JwtPayload, expiresIn: string) {
+  async generate_Tokens(userData: JwtPayload, expiresIn?: string) {
     // 1) generate new access token
     const access_token = await this.jwtService.signAsync(userData, {
-      expiresIn: expiresIn,
+      expiresIn: expiresIn || (process.env.JWT_EXPIRE_TIME ?? '1d'),
     });
     //2) generate new refresh token
     const refresh_Token = uuidv4();
@@ -42,7 +42,10 @@ export class tokenService {
 
     //2) add expiry date to refresh token
     const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + 3);
+    expiryDate.setDate(
+      expiryDate.getDate() +
+        parseInt(process.env.JWT_REFRESH_TOKEN_EXPIRE_TIME ?? '5'),
+    ); // 5 day
 
     //3) save refresh token in database
     try {

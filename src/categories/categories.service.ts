@@ -22,9 +22,17 @@ export class CategoriesService extends BaseService<CategoryDocument> {
   ) {
     super(categoryModel, i18n, fileUploadService);
   }
+
+  // ------------ =============================== ---------- //
+  // ------------ ======  categories statistics  ====== ---------- //
+  // ------------ =============================== ---------- //
   async Categories_statistics() {
     return await this.categoriesStatistics.categoriesStatistics();
   }
+
+  // ------------ =============================== ---------- //
+  // ------------ ======  create category   ====== ---------- //
+  // ------------ =============================== ---------- //
   async create(
     createCategoryDto: CreateCategoryDto,
     file: MulterFileType,
@@ -36,8 +44,13 @@ export class CategoriesService extends BaseService<CategoryDocument> {
     });
   }
 
-  async findAll(queryString: QueryString): Promise<{
-    status: string;
+  // ------------ =============================== ---------- //
+  // ------------ ======  get all categories ====== ---------- //
+  // ------------ =============================== ---------- //
+  async findAll(
+    queryString: QueryString,
+    allLangs: boolean,
+  ): Promise<{
     results: number;
     pagination: any;
     data: Category[];
@@ -46,13 +59,24 @@ export class CategoriesService extends BaseService<CategoryDocument> {
       path: 'supCategories',
       select: 'name slug',
     };
-    return await this.findAllDoc(Category.name, queryString, populate);
+    return await this.findAllDoc(
+      Category.name,
+      queryString,
+      populate,
+      allLangs,
+    );
   }
 
-  async findOne(idParamDto: IdParamDto) {
-    return await this.findOneDoc(idParamDto, '-__v');
+  // ------------ =============================== ---------- //
+  // ------------ ======  get category by id ====== ---------- //
+  // ------------ =============================== ---------- //
+  async findOne(idParamDto: IdParamDto, allLangs: boolean) {
+    return await this.findOneDoc(idParamDto, '-__v', allLangs);
   }
 
+  // ------------ =============================== ---------- //
+  // ------------ ======  update category   ====== ---------- //
+  // ------------ =============================== ---------- //
   async update(
     idParamDto: IdParamDto,
     updateCategoryDto: UpdateCategoryDto,
@@ -73,6 +97,9 @@ export class CategoriesService extends BaseService<CategoryDocument> {
     );
   }
 
+  // ------------ =============================== ---------- //
+  // ------------ ======  delete category   ====== ---------- //
+  // ------------ =============================== ---------- //
   async deleteOne(idParamDto: IdParamDto) {
     return await this.deleteOneDoc(idParamDto, 'image');
   }

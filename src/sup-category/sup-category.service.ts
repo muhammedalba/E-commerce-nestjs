@@ -25,10 +25,17 @@ export class SupCategoryService extends BaseService<SupCategoryDocument> {
   ) {
     super(supCategoryModel, i18n, fileUploadService);
   }
+
+  // ------------ =============================== ---------- //
+  // ------------ ======  GET SUP CATEGORIES STATISTICS  ====== ---------- //
+  // ------------ =============================== ---------- //
   async findStatistics() {
     return await this.supCategoriesStatistics.supCategoriesStatistics();
   }
 
+  // ------------ =============================== ---------- //
+  // ------------ ======  CREATE SUP CATEGORY  ====== ---------- //
+  // ------------ =============================== ---------- //
   async create(createSupCategoryDto: CreateSupCategoryDto): Promise<any> {
     return await this.createOneDoc(
       createSupCategoryDto,
@@ -41,17 +48,31 @@ export class SupCategoryService extends BaseService<SupCategoryDocument> {
     );
   }
 
-  async findAll(queryString: QueryString) {
-    return await this.findAllDoc(SupCategory.name, queryString, {
-      path: 'category',
-      select: 'name image',
-    });
+  // ------------ =============================== ---------- //
+  // ------------ ======  GET ALL SUP CATEGORIES  ====== ---------- //
+  // ------------ =============================== ---------- //
+  async findAll(queryString: QueryString, allLangs: boolean) {
+    return await this.findAllDoc(
+      SupCategory.name,
+      queryString,
+      {
+        path: 'category',
+        select: 'name',
+      },
+      allLangs,
+    );
   }
 
-  async findOne(idParamDto: IdParamDto) {
-    return await this.findOneDoc(idParamDto, '-__v');
+  // ------------ =============================== ---------- //
+  // ------------ ======  GET SUP CATEGORY BY ID  ====== ---------- //
+  // ------------ =============================== ---------- //
+  async findOne(idParamDto: IdParamDto, allLangs: boolean = false) {
+    return await this.findOneDoc(idParamDto, '-__v', allLangs);
   }
 
+  // ------------ =============================== ---------- //
+  // ------------ ======  UPDATE SUP CATEGORY  ====== ---------- //
+  // ------------ =============================== ---------- //
   async update(
     idParamDto: IdParamDto,
     updateCategoryDto: UpdateSupCategoryDto,
@@ -70,6 +91,9 @@ export class SupCategoryService extends BaseService<SupCategoryDocument> {
     );
   }
 
+  // ------------ =============================== ---------- //
+  // ------------ ======  DELETE SUP CATEGORY  ====== ---------- //
+  // ------------ =============================== ---------- //
   async remove(idParamDto: IdParamDto) {
     return await this.deleteOneDoc(idParamDto, 'image');
   }

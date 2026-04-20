@@ -14,7 +14,7 @@ export class Category {
     trim: true,
     lowercase: true,
   })
-  slug?: string;
+  slug!: string;
 
   @Prop({
     required: false,

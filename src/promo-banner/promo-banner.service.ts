@@ -69,7 +69,10 @@ export class PromoBannerService {
     };
   }
 
-  async findAllDoc(queryString: QueryString): Promise<{
+  async findAllDoc(
+    queryString: QueryString,
+    allLangs: boolean = false,
+  ): Promise<{
     status: string;
     results: number;
     pagination: any;
@@ -89,7 +92,7 @@ export class PromoBannerService {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }
 
-    const localizedDoc = this.localize(data);
+    const localizedDoc = allLangs ? data : this.localize(data);
     return {
       status: 'success',
       results: data.length,
@@ -98,7 +101,7 @@ export class PromoBannerService {
     };
   }
   //
-  async getBanner(id: string): Promise<any> {
+  async getBanner(id: string, allLangs: boolean = false): Promise<any> {
     const promo = await this.promoBannerModel.findById(id).exec();
     if (!promo) {
       throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
@@ -106,7 +109,7 @@ export class PromoBannerService {
     return {
       status: 'success',
       message: this.i18n.translate('success.found_SUCCESS'),
-      data: this.localize(promo),
+      data: allLangs ? promo : this.localize(promo),
     };
   }
   async createBanner(

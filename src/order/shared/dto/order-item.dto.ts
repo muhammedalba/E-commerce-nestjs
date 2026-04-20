@@ -12,6 +12,14 @@ export class OrderItemDto {
   productId!: string;
 
   @ApiProperty({
+    description: 'ID of the product variant',
+    example: '60d21b4667d0d8992e610c86',
+  })
+  @IsMongoId({ message: 'معرّف المتغير غير صالح' })
+  @Type(() => String)
+  variantId!: string;
+
+  @ApiProperty({
     description: 'Quantity of the product',
     example: 1,
     minimum: 1,

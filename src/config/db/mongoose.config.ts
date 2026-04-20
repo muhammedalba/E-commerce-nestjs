@@ -4,7 +4,6 @@ import { ConfigService } from '@nestjs/config';
 export const MongooseConfig = MongooseModule.forRootAsync({
   useFactory: (configService: ConfigService) => {
     const uri = configService.get<string>('MONGODB_URI');
-    console.log('--------MONGODB_URI------:', uri); // MONGODB_URI
     if (!uri) {
       throw new Error(
         'MONGODB_URI is not defined in the environment variables',
@@ -12,7 +11,7 @@ export const MongooseConfig = MongooseModule.forRootAsync({
     }
     return {
       uri,
-      dbName: 'driv',
+      dbName: 'nest-commerce',
     };
   },
   inject: [ConfigService],

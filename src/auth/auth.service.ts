@@ -47,7 +47,9 @@ export class AuthService {
     private readonly facebookService: facebookService,
   ) {}
 
-  // --- register user --- //
+  /* ------------ =============================== ---------- */
+  /* ------------ ======  REGISTER  ====== ------------------- */
+  /* ------------ =============================== ---------- */
   async register(
     createUserDto: CreateUserDto,
     file: MulterFileType,
@@ -89,7 +91,7 @@ export class AuthService {
     };
     //6) update avatar url and tokens
     newUser.avatar = `${process.env.BASE_URL}${filePath}`;
-    const Tokens = await this.tokenService.generate_Tokens(userId, '1m');
+    const Tokens = await this.tokenService.generate_Tokens(userId);
     // 5) Set cookies using CookieService
 
     this.cookieService.setCookies(
@@ -113,6 +115,9 @@ export class AuthService {
       access_token: Tokens.access_token,
     };
   }
+  /* ------------ =============================== ---------- */
+  /* ------------ ======  LOGIN  ====== ------------------- */
+  /* ------------ =============================== ---------- */
   async login(
     loginUserDto: LoginUserDto,
     res: Response,
@@ -149,7 +154,7 @@ export class AuthService {
       role: user.role || 'user',
       email: user.email,
     };
-    const Tokens = await this.tokenService.generate_Tokens(userId, '1m');
+    const Tokens = await this.tokenService.generate_Tokens(userId);
     // 4) Set cookies using CookieService
     this.cookieService.setCookies(
       res,
@@ -173,6 +178,9 @@ export class AuthService {
       access_token: Tokens.access_token,
     };
   }
+  /* ------------ =============================== ---------- */
+  /* ------------ ======  LOGOUT  ====== ------------------- */
+  /* ------------ =============================== ---------- */
   async logout(
     req: { user: { user_id: string } },
     res: Response,
@@ -197,10 +205,15 @@ export class AuthService {
       );
     }
   }
-  // ---- userProfileService----||
+  /* ------------ =============================== ---------- */
+  /* ------------ ======  GET ME PROFILE  ====== ---------- */
+  /* ------------ =============================== ---------- */
   async getMe(request: { user: JwtPayload }): Promise<any> {
     return await this.userProfileService.getMe(request.user.user_id);
   }
+  /* ------------ =============================== ---------- */
+  /* ------------ ======  UPDATE ME  ====== ------------------- */
+  /* ------------ =============================== ---------- */
   async updateMe(
     user_id: { user: JwtPayload },
     updateUserDto: UpdateUserDto,
@@ -212,6 +225,9 @@ export class AuthService {
       file,
     );
   }
+  /* ------------ =============================== ---------- */
+  /* ------------ ======  CHANGE MY PASSWORD  ====== ---------- */
+  /* ------------ =============================== ---------- */
   async changeMyPassword(
     req: { user: JwtPayload },
     updateUserDto: UpdateUserDto,
@@ -221,24 +237,39 @@ export class AuthService {
       updateUserDto,
     );
   }
+  /* ------------ =============================== ---------- */
+  /* ------------ ======  REFRESH TOKEN  ====== ---------- */
+  /* ------------ =============================== ---------- */
   async refreshToken(req: Request, res: Response): Promise<any> {
     return await this.userProfileService.refreshToken(req, res);
   }
-  // ---- passwordResetService----||
+  /* ------------ =============================== ---------- */
+  /* ------------ ======  FORGOT PASSWORD  ====== ---------- */
+  /* ------------ =============================== ---------- */
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<any> {
     return await this.passwordResetService.forgotPassword(forgotPasswordDto);
   }
-
+  /* ------------ =============================== ---------- */
+  /* ------------ ======  VERIFY PASS RESET CODE  ====== ---------- */
+  /* ------------ =============================== ---------- */
   async verify_Pass_Reset_Code(resetCode: resetCodeDto): Promise<any> {
     return await this.passwordResetService.verify_Pass_Reset_Code(resetCode);
   }
+  /* ------------ =============================== ---------- */
+  /* ------------ ======  RESET PASSWORD  ====== ---------- */
+  /* ------------ =============================== ---------- */
   async resetPassword(LoginUserDto: LoginUserDto): Promise<any> {
     return await this.passwordResetService.resetPassword(LoginUserDto);
   }
-  // -----OuAT2 ----//
+  /* ------------ =============================== ---------- */
+  /* ------------ ======  GOOGLE LOGIN  ====== ---------- */
+  /* ------------ =============================== ---------- */
   async googleLogin(googleUser: OAuthUser, res: Response) {
     return await this.googleService.googleLogin(googleUser, res);
   }
+  /* ------------ =============================== ---------- */
+  /* ------------ ======  FACEBOOK LOGIN  ====== ---------- */
+  /* ------------ =============================== ---------- */
   async facebookLogin(facebookUser: FacebookOAuthUser, res: Response) {
     return await this.facebookService.facebookLogin(facebookUser, res);
   }

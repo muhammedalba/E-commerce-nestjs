@@ -3,16 +3,19 @@ import { startOfMonth, endOfMonth, subDays, startOfDay } from 'date-fns';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Product } from '../shared/schemas/Product.schema';
+import { ProductVariant } from '../shared/schemas/ProductVariant.schema';
 import { I18nContext } from 'nestjs-i18n';
 
 @Injectable()
 export class ProductsStatistics {
   constructor(
     @InjectModel(Product.name) private readonly ProductModel: Model<Product>,
+    @InjectModel(ProductVariant.name)
+    private readonly VariantModel: Model<ProductVariant>,
   ) {}
 
   async Products_statistics(
-    sortBy: 'sold' | 'ratingsAverage' | 'quantity' = 'sold',
+    sortBy: 'sold' | 'ratingsAverage' | 'stock' = 'sold',
   ) {
     const lang =
       I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
@@ -30,6 +33,7 @@ export class ProductsStatistics {
         topProductsRaw,
         lowStockCount,
         lowStockProductsRaw,
+        variantStats,
       ] = await Promise.all([
         this.ProductModel.countDocuments(),
 
@@ -58,59 +62,90 @@ export class ProductsStatistics {
           { $sort: { _id: 1 } },
         ]),
 
-        this.ProductModel.aggregate([
+        // Top products by variant sales (aggregated)
+        this.VariantModel.aggregate([
+          { $match: { isDeleted: { $ne: true } } },
           {
-            $addFields: {
-              sortField:
-                sortBy === 'sold'
-                  ? '$sold'
-                  : sortBy === 'ratingsAverage'
-                    ? '$ratingsAverage'
-                    : '$quantity',
+            $group: {
+              _id: '$productId',
+              totalSold: { $sum: '$sold' },
+              totalStock: { $sum: '$stock' },
+              minPrice: { $min: '$price' },
+              maxPrice: { $max: '$price' },
+              variantCount: { $sum: 1 },
             },
           },
-          { $sort: { sortField: -1 } },
+          { $sort: { totalSold: -1 } },
           { $limit: 5 },
+          {
+            $lookup: {
+              from: 'products',
+              localField: '_id',
+              foreignField: '_id',
+              as: 'product',
+            },
+          },
+          { $unwind: '$product' },
           {
             $project: {
               _id: 0,
               productId: '$_id',
-              productName: `$title.${lang}`,
-              sold: 1,
-              ratingsAverage: 1,
-              quantity: 1,
-              price: 1,
+              productName: `$product.title.${lang}`,
+              totalSold: 1,
+              totalStock: 1,
+              minPrice: 1,
+              maxPrice: 1,
+              variantCount: 1,
             },
           },
         ]),
 
-        // عدد المنتجات التي المخزون فيها أقل من 15
-        this.ProductModel.countDocuments({ quantity: { $lt: 15 } }),
+        // Low stock variants count (stock < 15)
+        this.VariantModel.countDocuments({
+          stock: { $lt: 15 },
+          isDeleted: { $ne: true },
+        }),
 
-        // قائمة بأهم 5 منتجات قليلة المخزون (أقل من 15)
-        this.ProductModel.aggregate([
-          { $match: { quantity: { $lt: 15 } } },
+        // Low stock variants details
+        this.VariantModel.aggregate([
+          { $match: { stock: { $lt: 15 }, isDeleted: { $ne: true } } },
+          { $sort: { stock: 1 } },
+          { $limit: 10 },
           {
-            $addFields: {
-              sortField:
-                sortBy === 'sold'
-                  ? '$sold'
-                  : sortBy === 'ratingsAverage'
-                    ? '$ratingsAverage'
-                    : '$quantity',
+            $lookup: {
+              from: 'products',
+              localField: 'productId',
+              foreignField: '_id',
+              as: 'product',
             },
           },
-          { $sort: { sortField: 1 } }, // نرتب تصاعديًا عشان نعرض الأقل كمية أولًا
-          { $limit: 5 },
+          { $unwind: '$product' },
           {
             $project: {
               _id: 0,
-              productId: '$_id',
-              productName: `$title.${lang}`,
+              variantId: '$_id',
+              productId: '$productId',
+              productName: `$product.title.${lang}`,
+              sku: 1,
+              stock: 1,
               sold: 1,
-              ratingsAverage: 1,
-              quantity: 1,
               price: 1,
+              attributes: 1,
+              label: 1,
+            },
+          },
+        ]),
+
+        // Overall variant stats
+        this.VariantModel.aggregate([
+          { $match: { isDeleted: { $ne: true } } },
+          {
+            $group: {
+              _id: null,
+              totalVariants: { $sum: 1 },
+              totalStock: { $sum: '$stock' },
+              totalSold: { $sum: '$sold' },
+              avgPrice: { $avg: '$price' },
             },
           },
         ]),
@@ -141,6 +176,12 @@ export class ProductsStatistics {
           topProducts: topProductsRaw,
           lowStockCount,
           lowStockProducts: lowStockProductsRaw,
+          variantStats: variantStats[0] ?? {
+            totalVariants: 0,
+            totalStock: 0,
+            totalSold: 0,
+            avgPrice: 0,
+          },
           sortedBy: sortBy,
           lang,
         },

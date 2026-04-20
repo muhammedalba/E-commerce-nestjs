@@ -9,7 +9,7 @@ export class FieldLocalizeDto {
   })
   @IsNotEmpty({ message: 'validation.NOT_EMPTY' })
   @IsString({ message: 'validation.NOT_EMPTY' })
-  @Length(3, 70, {
+  @Length(3, 2000, {
     message: 'validation.LANG_CODE_LENGTH',
   })
   @Transform(({ value }: TransformFnParams) => {
@@ -26,7 +26,7 @@ export class FieldLocalizeDto {
   @Transform(({ value }: TransformFnParams) => {
     return typeof value === 'string' ? value.trim() : String(value).trim();
   })
-  @Length(3, 70, {
+  @Length(3, 2000, {
     message: 'validation.LANG_CODE_LENGTH',
   })
   en!: string;

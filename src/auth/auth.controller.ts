@@ -11,7 +11,6 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
-  HttpStatus,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from 'src/users/shared/dto/create-user.dto';
@@ -31,39 +30,17 @@ import {
   OAuthUser,
 } from './shared/types/oauth-user.interface';
 import { JwtPayload } from './shared/types/jwt-payload.interface';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBody,
-  ApiConsumes,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
 
-@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
-
-  @ApiOperation({ summary: 'Authenticate with Google' })
-  @ApiResponse({
-    status: HttpStatus.FOUND,
-    description: 'Redirects to Google for authentication.',
-  })
+  // ------------ =============================== ---------- //
+  // ------------ ======  GOOGLE AUTH  ====== ---------- //
+  // ------------ =============================== ---------- //
   @Get('google')
   @UseGuards(GoogleAuthGuard)
   googleAuth() {}
 
-  @ApiOperation({ summary: 'Google authentication redirect callback' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description:
-      'Successful Google authentication and user login/registration.',
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'User information is missing.',
-  })
   @Get('google/redirect')
   @UseGuards(GoogleAuthGuard)
   googleAuthRedirect(
@@ -76,26 +53,13 @@ export class AuthController {
     }
     return this.authService.googleLogin(user as unknown as OAuthUser, res);
   }
-
-  @ApiOperation({ summary: 'Authenticate with Facebook' })
-  @ApiResponse({
-    status: HttpStatus.FOUND,
-    description: 'Redirects to Facebook for authentication.',
-  })
+  // ------------ =============================== ---------- //
+  // ------------ ======  FACEBOOK AUTH  ====== ---------- //
+  // ------------ =============================== ---------- //
   @Get('facebook')
   @UseGuards(FacebookAuthGuard)
   facebookLogin() {}
 
-  @ApiOperation({ summary: 'Facebook authentication redirect callback' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description:
-      'Successful Facebook authentication and user login/registration.',
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'User information is missing.',
-  })
   @Get('facebook/redirect')
   @UseGuards(FacebookAuthGuard)
   facebookLoginRedirect(
@@ -111,17 +75,9 @@ export class AuthController {
       res,
     );
   }
-
-  @ApiOperation({ summary: 'User login' })
-  @ApiBody({ type: LoginUserDto })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'User successfully logged in.',
-  })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized. Invalid credentials.',
-  })
+  // ------------ =============================== ---------- //
+  // ------------ ======  LOGIN  ====== ---------- //
+  // ------------ =============================== ---------- //
   @Post('login')
   async login(
     @Body() loginUserDto: LoginUserDto,
@@ -129,29 +85,9 @@ export class AuthController {
   ): Promise<any> {
     return await this.authService.login(loginUserDto, res);
   }
-
-  @ApiOperation({ summary: 'Register a new user' })
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        avatar: {
-          type: 'string',
-          format: 'binary',
-          description: 'User avatar image',
-        },
-      },
-    },
-  })
-  @ApiResponse({
-    status: HttpStatus.CREATED,
-    description: 'User successfully registered.',
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Bad Request. Invalid input data or email already exists.',
-  })
+  // ------------ =============================== ---------- //
+  // ------------ ======  REGISTER  ====== ---------- //
+  // ------------ =============================== ---------- //
   @Post('register')
   @UseInterceptors(FileInterceptor('avatar'))
   async register(
@@ -162,17 +98,9 @@ export class AuthController {
   ): Promise<any> {
     return await this.authService.register(createUserDto, file, res);
   }
-
-  @ApiOperation({ summary: 'Refresh access token' })
-  @ApiBearerAuth() // Indicates that this endpoint requires authentication
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Access token successfully refreshed.',
-  })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized. Invalid or expired refresh token.',
-  })
+  // ------------ =============================== ---------- //
+  // ------------ ======  REFRESH TOKEN  ====== ---------- //
+  // ------------ =============================== ---------- //
   @Get('refresh-token')
   // @UseGuards(AuthGuard) // Uncomment if AuthGuard is needed for refresh token endpoint
   async refreshToken(
@@ -181,17 +109,9 @@ export class AuthController {
   ): Promise<any> {
     return await this.authService.refreshToken(req, res);
   }
-
-  @ApiOperation({ summary: 'User logout' })
-  @ApiBearerAuth()
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'User successfully logged out.',
-  })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized.',
-  })
+  /* ------------ =============================== ---------- */
+  /* ------------ ======  LOGOUT  ====== ------------------- */
+  /* ------------ =============================== ---------- */
   @Post('logout')
   @UseGuards(AuthGuard)
   async logout(
@@ -200,100 +120,40 @@ export class AuthController {
   ): Promise<any> {
     return await this.authService.logout(request, res);
   }
-
-  @ApiOperation({ summary: 'Get current user profile' })
-  @ApiBearerAuth()
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'User profile retrieved successfully.',
-  })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized.',
-  })
+  /* ------------ =============================== ---------- */
+  /* ------------ ======  GET ME PROFILE  ====== ---------- */
+  /* ------------ =============================== ---------- */
   @Get('me-profile')
   @UseGuards(AuthGuard)
   async getMe(@Req() request: { user: JwtPayload }): Promise<any> {
     return await this.authService.getMe(request);
   }
-
-  @ApiOperation({ summary: 'Request password reset' })
-  @ApiBody({ type: ForgotPasswordDto })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Password reset email sent successfully.',
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Bad Request. Invalid email or user not found.',
-  })
+  /* ------------ =============================== ---------- */
+  /* ------------ ======  FORGOT PASSWORD  ====== ---------- */
+  /* ------------ =============================== ---------- */
   @Post('forgot-password')
   async forgotPassword(
     @Body() forgotPassword: ForgotPasswordDto,
   ): Promise<any> {
     return await this.authService.forgotPassword(forgotPassword);
   }
-
-  @ApiOperation({ summary: 'Reset user password' })
-  @ApiBody({
-    type: LoginUserDto,
-    description: 'Provide email and new password',
-  })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Password successfully reset.',
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Bad Request. Invalid reset code or new password.',
-  })
+  /* ------------ =============================== ---------- */
+  /* ------------ ======  RESET PASSWORD  ====== ---------- */
+  /* ------------ =============================== ---------- */
   @Patch('reset-password')
   async resetPassword(@Body() LoginUserDto: LoginUserDto): Promise<any> {
     return this.authService.resetPassword(LoginUserDto);
   }
-
-  @ApiOperation({ summary: 'Verify password reset code' })
-  @ApiBody({ type: resetCodeDto })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Reset code verified successfully.',
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Bad Request. Invalid or expired reset code.',
-  })
+  /* ------------ =============================== ---------- */
+  /* ------------ ======  VERIFY PASS RESET CODE  ====== ---------- */
+  /* ------------ =============================== ---------- */
   @Post('verify-Pass-Reset-Code')
   async verify_Pass_Reset_Code(@Body() code: resetCodeDto): Promise<any> {
     return this.authService.verify_Pass_Reset_Code(code);
   }
-
-  @ApiOperation({ summary: 'Update current user profile' })
-  @ApiBearerAuth()
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        avatar: {
-          type: 'string',
-          format: 'binary',
-          description: 'User avatar image',
-        },
-      },
-    },
-  })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'User profile updated successfully.',
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Bad Request. Invalid input data.',
-  })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized.',
-  })
+  /* ------------ =============================== ---------- */
+  /* ------------ ======  UPDATE ME  ====== ---------- */
+  /* ------------ =============================== ---------- */
   @Put('updateMe')
   @UseGuards(AuthGuard)
   async updateMe(
@@ -304,25 +164,9 @@ export class AuthController {
   ): Promise<any> {
     return await this.authService.updateMe(request, UpdateUserDto, file);
   }
-
-  @ApiOperation({ summary: 'Change current user password' })
-  @ApiBearerAuth()
-  @ApiBody({
-    type: UpdateUserDto,
-    description: 'Provide current and new password',
-  })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Password changed successfully.',
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Bad Request. Invalid current password or new password.',
-  })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized.',
-  })
+  /* ------------ =============================== ---------- */
+  /* ------------ ======  CHANGE MY PASSWORD  ====== ---------- */
+  /* ------------ =============================== ---------- */
   @Patch('changeMyPassword')
   @UseGuards(AuthGuard)
   async changeMyPassword(
