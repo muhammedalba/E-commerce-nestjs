@@ -114,11 +114,6 @@ export class ProductsService {
   ) {
     const { variants, ...productData } = createProductDto;
 
-    // 1) Validate variants BEFORE any DB operation
-    if (!variants || variants.length === 0) {
-      throw new BadRequestException('At least one variant is required');
-    }
-
     // 2) Generate slug early for SKU generator
     productData.slug = slugify(productData.title.en.trim(), {
       lower: true,
@@ -141,29 +136,38 @@ export class ProductsService {
     );
 
     // 4) Generate & Check SKUs
+    const manualSkus: string[] = [];
     for (const v of variants) {
       if (!v.sku) {
         v.sku = generateSku(productData.slug, v.attributes);
+        // Auto-resolve generated SKUs
+        v.sku = await ensureUniqueSku(this.variantModel, v.sku);
       } else {
-        v.sku = v.sku.toUpperCase();
+        v.sku = v.sku.toUpperCase().trim();
+        manualSkus.push(v.sku);
       }
     }
 
     const skus = variants.map((v) => v.sku as string);
-    const skuSet = new Set(skus);
-    if (skuSet.size !== skus.length) {
+    if (new Set(skus).size !== skus.length) {
       throw new BadRequestException('Duplicate SKUs found in request');
     }
 
-    const existingSkus = await this.variantModel
-      .find({ sku: { $in: skus } })
-      .select('sku')
-      .lean();
+    // Strict validation for manual SKUs against DB
+    if (manualSkus.length > 0) {
+      const foundExisting = await this.variantModel
+        .find({
+          sku: { $in: manualSkus },
+          isDeleted: { $in: [true, false] },
+        })
+        .select('sku')
+        .lean();
 
-    if (existingSkus.length > 0) {
-      throw new BadRequestException(
-        `SKU(s) already exist: ${existingSkus.map((s) => s.sku).join(', ')}`,
-      );
+      if (foundExisting.length > 0) {
+        throw new BadRequestException(
+          `Manual SKU(s) already exist: ${foundExisting.map((v) => v.sku).join(', ')}`,
+        );
+      }
     }
 
     // 5) Deduplicate supCategories
@@ -511,6 +515,7 @@ export class ProductsService {
       images?: MulterFilesType;
     },
   ) {
+    console.log(updateProductDto.variants);
     const { variants: variantOps, ...productData } = updateProductDto;
     // 1) Fetch existing product
     const doc = await this.productModel
@@ -547,26 +552,42 @@ export class ProductsService {
         updateProductDto.allowedAttributes || doc.allowedAttributes || [],
       );
 
+      // 3) Validate & Generate SKUs for new variants
+      const manualSkus: string[] = [];
       const newBaseSlug = productData.slug || doc.slug;
 
       for (const v of variantOps.create) {
         if (!v.sku) {
           v.sku = generateSku(newBaseSlug, v.attributes);
+          // Auto-resolve generated SKUs
+          v.sku = await ensureUniqueSku(this.variantModel, v.sku);
         } else {
-          v.sku = v.sku.toUpperCase(); // normalize provided
+          v.sku = v.sku.toUpperCase().trim();
+          manualSkus.push(v.sku);
         }
       }
 
-      // Check SKU uniqueness for new variants
-      const newSkus = variantOps.create.map((v) => v.sku);
-      const existingSkus = await this.variantModel
-        .find({ sku: { $in: newSkus } })
-        .select('sku')
-        .lean();
-      if (existingSkus.length > 0) {
-        throw new BadRequestException(
-          `SKU(s) already exist: ${existingSkus.map((s) => s.sku).join(', ')}`,
-        );
+      // Check for duplicates in current request
+      const allNewSkus = variantOps.create.map((v) => v.sku);
+      if (new Set(allNewSkus).size !== allNewSkus.length) {
+        throw new BadRequestException('Duplicate SKUs found in new variants');
+      }
+
+      // Strict validation for manual SKUs against DB
+      if (manualSkus.length > 0) {
+        const existingSkus = await this.variantModel
+          .find({
+            sku: { $in: manualSkus },
+            isDeleted: { $in: [true, false] },
+          })
+          .select('sku')
+          .lean();
+
+        if (existingSkus.length > 0) {
+          throw new BadRequestException(
+            `Manual SKU(s) already exist: ${existingSkus.map((s) => s.sku).join(', ')}`,
+          );
+        }
       }
     }
 

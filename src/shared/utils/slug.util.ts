@@ -6,7 +6,7 @@ export async function generateUniqueSlug(
   model: Model<any>,
   counter = 0,
 ): Promise<string> {
-  const baseSlug = slugify(name, { lower: true, strict: true });
+  const baseSlug = slugify(name.trim().toLowerCase(), { lower: true, strict: true });
   const slug = counter ? `${baseSlug}-${counter}` : baseSlug;
 
   const exists = await model.exists({ slug });

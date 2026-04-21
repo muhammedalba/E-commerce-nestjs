@@ -21,6 +21,7 @@ import { PromoBannerModule } from './promo-banner/promo-banner.module';
 import { SupCategoryModule } from './sup-category/sup-category.module';
 import { SupplierModule } from './supplier/supplier.module';
 import { ExistsConstraint } from './shared/utils/decorators/exists.decorator';
+import { CacheModule } from '@nestjs/cache-manager';
 
 
 @Module({
@@ -28,6 +29,9 @@ import { ExistsConstraint } from './shared/utils/decorators/exists.decorator';
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
+    }),
+    CacheModule.register({
+      isGlobal: true,
     }),
     EventEmitterModule.forRoot(),
     I18nConfig,

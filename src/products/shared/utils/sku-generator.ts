@@ -22,6 +22,7 @@ export function generateDeterministicSku(
     .replace(/[^a-zA-Z0-9]/g, '')
     .substring(0, 4)
     .toUpperCase()
+    .trim()
     .padEnd(3, 'X');
 
   // 2. Attributes core (human readable parts)
@@ -38,14 +39,15 @@ export function generateDeterministicSku(
 
       if (isMeasuredAttribute(val)) {
         // e.g. 20KG
-        attrParts.push(`${val.value}${val.unit.toUpperCase()}`);
+        attrParts.push(`${val.value}${val.unit.toUpperCase().trim()}`);
       } else if (typeof val === 'string') {
         // e.g. BLK
         // Take first 3 consonants if possible, or just first 3 chars
         const consonants = val.replace(/[aeiou\s]/gi, '');
         const shortVal = (consonants.length >= 2 ? consonants : val)
           .substring(0, 3)
-          .toUpperCase();
+          .toUpperCase()
+          .trim();
         attrParts.push(shortVal);
       }
     }
@@ -54,7 +56,7 @@ export function generateDeterministicSku(
   // 3. Components (e.g. A20KG, B4LTR)
   if (components && components.length > 0) {
     const sortedComponents = [...components].sort((a, b) =>
-      a.name.localeCompare(b.name),
+      a.name.trim().localeCompare(b.name.trim()),
     );
     for (const comp of sortedComponents) {
       attrParts.push(`${comp.name}${comp.value}${comp.unit.toUpperCase()}`);
@@ -73,7 +75,7 @@ export function generateDeterministicSku(
     .update(hashString)
     .digest('hex')
     .substring(0, 4)
-    .toUpperCase();
+    .toUpperCase().trim();
 
   return [prefix, humanReadable, shortHash].filter(Boolean).join('-');
 }
@@ -96,7 +98,10 @@ export async function ensureUniqueSku(
   let attempts = 0;
 
   while (attempts < maxAttempts) {
-    const exists = await model.exists({ sku }).lean();
+    const exists = await model.exists({ 
+      sku,
+      isDeleted: { $in: [true, false] } // Bypass soft-delete hook
+    }).lean();
     if (!exists) {
       return sku;
     }

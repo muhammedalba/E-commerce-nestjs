@@ -48,7 +48,7 @@ export function validateAttributes(
   // 2. Validate each provided attribute against definitions
   for (const key of attrsKeys) {
     // console.log(key);
-    const def = allowedAttributes.find((a) => a.name.trim() === key.trim());
+    const def = allowedAttributes.find((a) => a.name.trim().toLowerCase() === key.trim().toLowerCase());
     if (!def) {
       throw new BadRequestException(
         `Attribute "${key}" is not allowed for this product. Allowed: ${allowedAttributes.map((a) => a.name).join(', ')}`,
@@ -63,7 +63,7 @@ export function validateAttributes(
       }
       // Check enum if provided
       if (def.allowedValues && def.allowedValues.length > 0) {   
-        if (!def.allowedValues.includes(value)) {
+        if (!def.allowedValues.includes(value.trim().toLowerCase())) {
           throw new BadRequestException(
             `Invalid value "${value}" for attribute "${key}". Allowed: ${def.allowedValues.join(', ')}`,
           );
@@ -82,7 +82,7 @@ export function validateAttributes(
       }
       // Check allowed units if provided
       if (def.allowedUnits && def.allowedUnits.length > 0) {
-        if (!def.allowedUnits.includes(value.unit)) {
+        if (!def.allowedUnits.includes(value.unit.trim().toLowerCase())) {
           throw new BadRequestException(
             `Invalid unit "${value.unit}" for attribute "${key}". Allowed: ${def.allowedUnits.join(', ')}`,
           );
