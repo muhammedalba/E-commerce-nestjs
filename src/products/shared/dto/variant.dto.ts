@@ -9,6 +9,11 @@ import {
   ValidateNested,
   IsBoolean,
   IsEnum,
+  ValidateIf,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+  ValidationArguments,
+  Validate,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { MeasurementUnit } from '../schemas/ProductVariant.schema';
@@ -41,6 +46,20 @@ export class MeasuredAttributeDto {
   unit!: string;
 }
 
+// ─── Custom Validators ───────────────────────────────────
+@ValidatorConstraint({ name: 'isLessThanPrice', async: false })
+export class IsLessThanPriceConstraint implements ValidatorConstraintInterface {
+  validate(priceAfterDiscount: number, args: ValidationArguments) {
+    const object = args.object as any;
+    if (object.price === undefined || object.price === null) return true; // Ignored if price is not provided
+    return typeof priceAfterDiscount === 'number' && typeof object.price === 'number' && priceAfterDiscount < object.price;
+  }
+
+  defaultMessage(args: ValidationArguments) {
+    return 'Price after discount must be strictly less than the original price';
+  }
+}
+
 // ─── Create Variant DTO ──────────────────────────────────
 export class CreateVariantDto {
   @IsString()
@@ -63,6 +82,8 @@ export class CreateVariantDto {
   @Min(0)
   @Max(200000)
   @Type(() => Number)
+  // Ensures priceAfterDiscount is less than price
+  @Validate(IsLessThanPriceConstraint)
   priceAfterDiscount?: number;
 
   @IsNumber()
@@ -120,6 +141,7 @@ export class UpdateVariantDto {
   @Min(0)
   @Max(200000)
   @Type(() => Number)
+  @Validate(IsLessThanPriceConstraint)
   priceAfterDiscount?: number;
 
   @IsNumber()

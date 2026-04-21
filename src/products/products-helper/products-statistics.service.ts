@@ -1,7 +1,9 @@
 import { Model } from 'mongoose';
 import { startOfMonth, endOfMonth, subDays, startOfDay } from 'date-fns';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { Product } from '../shared/schemas/Product.schema';
 import { ProductVariant } from '../shared/schemas/ProductVariant.schema';
 import { I18nContext } from 'nestjs-i18n';
@@ -12,18 +14,28 @@ export class ProductsStatistics {
     @InjectModel(Product.name) private readonly ProductModel: Model<Product>,
     @InjectModel(ProductVariant.name)
     private readonly VariantModel: Model<ProductVariant>,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
 
   async Products_statistics(
+    startDate?: string,
+    endDate?: string,
     sortBy: 'sold' | 'ratingsAverage' | 'stock' = 'sold',
   ) {
     const lang =
       I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
+
+    // Check cache first
+    const cacheKey = `products:statistics:${lang}:${sortBy}:${startDate}:${endDate}`;
+    const cached = await this.cacheManager.get(cacheKey);
+    if (cached) return cached;
+
     try {
       const today: Date = new Date();
-      const startMonth = startOfMonth(today);
-      const endMonth = endOfMonth(today);
+      const start = startDate ? new Date(startDate) : startOfMonth(today);
+      const end = endDate ? new Date(endDate) : endOfMonth(today);
       const start7DaysAgo = subDays(startOfDay(today), 6);
+      const start30DaysAgo = subDays(startOfDay(today), 29);
 
       const [
         totalProducts,
@@ -34,6 +46,9 @@ export class ProductsStatistics {
         lowStockCount,
         lowStockProductsRaw,
         variantStats,
+        compositionRaw,
+        categoryDistributionRaw,
+        last30DaysRaw,
       ] = await Promise.all([
         this.ProductModel.countDocuments(),
 
@@ -42,7 +57,7 @@ export class ProductsStatistics {
         ]),
 
         this.ProductModel.countDocuments({
-          createdAt: { $gte: startMonth, $lte: endMonth },
+          createdAt: { $gte: start, $lte: end },
         }),
 
         this.ProductModel.aggregate([
@@ -136,7 +151,7 @@ export class ProductsStatistics {
           },
         ]),
 
-        // Overall variant stats
+        // Overall variant stats + Portfolio Value
         this.VariantModel.aggregate([
           { $match: { isDeleted: { $ne: true } } },
           {
@@ -145,11 +160,83 @@ export class ProductsStatistics {
               totalVariants: { $sum: 1 },
               totalStock: { $sum: '$stock' },
               totalSold: { $sum: '$sold' },
+              totalValue: { $sum: { $multiply: ['$price', '$stock'] } },
               avgPrice: { $avg: '$price' },
             },
           },
         ]),
+
+        // Composition: Simple vs Variable
+        this.ProductModel.aggregate([
+          { $match: { isDeleted: { $ne: true } } },
+          {
+            $group: {
+              _id: { $cond: [{ $gt: ['$variantCount', 1] }, 'variable', 'simple'] },
+              count: { $sum: 1 },
+            },
+          },
+        ]),
+
+        // Category Distribution
+        this.ProductModel.aggregate([
+          { $match: { isDeleted: { $ne: true } } },
+          {
+            $group: {
+              _id: '$category',
+              count: { $sum: 1 },
+            },
+          },
+          {
+            $lookup: {
+              from: 'categories',
+              localField: '_id',
+              foreignField: '_id',
+              as: 'categoryInfo',
+            },
+          },
+          { $unwind: { path: '$categoryInfo', preserveNullAndEmptyArrays: true } },
+          {
+            $project: {
+              categoryName: { $ifNull: [`$categoryInfo.name.${lang}`, 'Uncategorized'] },
+              count: 1,
+            },
+          },
+        ]),
+
+        // Timeline: 30 days
+        this.ProductModel.aggregate([
+          {
+            $match: {
+              createdAt: { $gte: start30DaysAgo },
+            },
+          },
+          {
+            $group: {
+              _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+              count: { $sum: 1 },
+            },
+          },
+          { $sort: { _id: 1 } },
+        ]),
       ]);
+
+      const composition = (statusCounts as any[]).reduce<Record<string, number>>(
+        (acc, curr) => {
+          acc[curr._id] = curr.count;
+          return acc;
+        },
+        {},
+      );
+
+      const categoryDistribution = (categoryDistributionRaw as any[]).map((entry) => ({
+        name: entry.categoryName,
+        value: entry.count,
+      }));
+
+      const last30DaysProducts = (last30DaysRaw as any[]).map((entry) => ({
+        date: entry._id,
+        count: entry.count,
+      }));
 
       const statusBreakdown = statusCounts.reduce<Record<string, number>>(
         (acc, curr: { _id: string; count: number }) => {
@@ -166,26 +253,47 @@ export class ProductsStatistics {
         }),
       );
 
-      return {
+      const result = {
         status: 'success',
         data: {
           totalProducts,
           statusBreakdown,
-          currentMonthProducts,
+          currentPeriodProducts: currentMonthProducts,
           dailyNewProducts,
+          last30DaysProducts,
+          composition: {
+            simple: (compositionRaw as any[]).find(c => c._id === 'simple')?.count || 0,
+            variable: (compositionRaw as any[]).find(c => c._id === 'variable')?.count || 0,
+          },
+          categoryDistribution,
           topProducts: topProductsRaw,
           lowStockCount,
           lowStockProducts: lowStockProductsRaw,
-          variantStats: variantStats[0] ?? {
-            totalVariants: 0,
-            totalStock: 0,
-            totalSold: 0,
-            avgPrice: 0,
-          },
+          inventoryStats: variantStats[0]
+            ? {
+                ...variantStats[0],
+                stockHealth: totalProducts > 0 
+                  ? ((totalProducts - (lowStockCount > totalProducts ? totalProducts : lowStockCount)) / totalProducts) * 100 
+                  : 0
+              }
+            : {
+                totalVariants: 0,
+                totalStock: 0,
+                totalSold: 0,
+                totalValue: 0,
+                avgPrice: 0,
+                stockHealth: 0,
+              },
+          dateRange: { start, end },
           sortedBy: sortBy,
           lang,
         },
       };
+
+      // Store in cache for 5 minutes
+      await this.cacheManager.set(cacheKey, result, 300_000);
+
+      return result;
     } catch (error) {
       return {
         status: 'error',

@@ -22,8 +22,8 @@ export function generateDeterministicSku(
     .replace(/[^a-zA-Z0-9]/g, '')
     .substring(0, 4)
     .toUpperCase()
-    .trim()
-    .padEnd(3, 'X');
+    .padEnd(3, 'X')
+    .trim();
 
   // 2. Attributes core (human readable parts)
   const attrParts: string[] = [];
@@ -43,6 +43,7 @@ export function generateDeterministicSku(
       } else if (typeof val === 'string') {
         // e.g. BLK
         // Take first 3 consonants if possible, or just first 3 chars
+        // cspell:ignore aeiou
         const consonants = val.replace(/[aeiou\s]/gi, '');
         const shortVal = (consonants.length >= 2 ? consonants : val)
           .substring(0, 3)
@@ -98,7 +99,7 @@ export async function ensureUniqueSku(
   let attempts = 0;
 
   while (attempts < maxAttempts) {
-    const exists = await model.exists({ 
+    const exists = await model.exists({
       sku,
       isDeleted: { $in: [true, false] } // Bypass soft-delete hook
     }).lean();

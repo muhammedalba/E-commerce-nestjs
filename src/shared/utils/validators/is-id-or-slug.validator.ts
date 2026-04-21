@@ -16,7 +16,6 @@ export class IsIdOrSlugConstraint implements ValidatorConstraintInterface {
       /^[\u0621-\u064Aa-zA-Z0-9]+(?:-[\u0621-\u064Aa-zA-Z0-9]+)*$/.test(
         trimmed,
       );
-
     return isMongoId || isSlug;
   }
 

@@ -5,9 +5,12 @@ import { Brand } from 'src/brands/shared/schemas/brand.schema';
 import { Category } from 'src/categories/shared/schemas/category.schema';
 import { SupCategory } from 'src/sup-category/shared/schemas/sup-category.schema';
 import { Supplier } from 'src/supplier/shared/schema/Supplier.schema';
+import { ProductVariant } from './ProductVariant.schema';
 
 @Schema({
   timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
 })
 export class Product {
   // ─── Localized Fields ──────────────────────────────────
@@ -163,9 +166,18 @@ export class Product {
     default: null,
   })
   deletedAt?: Date;
+
+  // ─── Virtuals (TypeScript types) ────────────────────────
+  variants?:ProductVariant[];
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);
+
+ProductSchema.virtual('variants', {
+  ref: 'ProductVariant',
+  localField: '_id',
+  foreignField: 'productId',
+});
 export type ProductDocument = HydratedDocument<Product>;
 
 // ─── Indexes ─────────────────────────────────────────────

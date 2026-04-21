@@ -28,6 +28,12 @@ import {
   SupCategorySchema,
 } from 'src/sup-category/shared/schemas/sup-category.schema';
 
+// ─── New separated services ──────────────────────────────
+import { ProductQueryService } from './services/products-query.service';
+import { ProductMutationService } from './services/products-mutation.service';
+import { ProductFileService } from './services/products-file.service';
+import { ProductSkuService } from './services/products-sku.service';
+
 @Module({
   imports: [
     FileUploadDiskStorageModule,
@@ -84,10 +90,17 @@ import {
   ],
   controllers: [ProductsController],
   providers: [
+    // Facade
     ProductsService,
+    // Separated services
+    ProductQueryService,
+    ProductMutationService,
+    ProductFileService,
+    ProductSkuService,
+    // Helpers
     CustomI18nService,
     ProductsStatistics,
-    AggregationSyncService
+    AggregationSyncService,
   ],
   exports: [MongooseModule],
 })

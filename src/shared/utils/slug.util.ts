@@ -1,17 +1,22 @@
 import slugify from 'slugify';
 import { Model } from 'mongoose';
+import { BadRequestException } from '@nestjs/common';
 
 export async function generateUniqueSlug(
   name: string,
   model: Model<any>,
-  counter = 0,
+  excludeId?: string | any,
+  message?: string,
 ): Promise<string> {
-  const baseSlug = slugify(name.trim().toLowerCase(), { lower: true, strict: true });
-  const slug = counter ? `${baseSlug}-${counter}` : baseSlug;
+  const slug = slugify(name.trim().toLowerCase(), { lower: true, strict: true });
+  const query: any = { slug };
+  if (excludeId) {
+    query._id = { $ne: excludeId };
+  }
 
-  const exists = await model.exists({ slug });
+  const exists = await model.exists(query);
   if (exists) {
-    return generateUniqueSlug(name, model, counter + 1);
+    throw new BadRequestException(message || 'name already exists');
   }
 
   return slug;

@@ -8,8 +8,8 @@ export class IdParamDto {
   @Transform(({ value }: TransformFnParams) => {
     return typeof value === 'string' ? value.trim() : String(value).trim();
   })
-  @MaxLength(50, {
-    message: 'id must be less than 50 characters',
+  @MaxLength(250, {
+    message: 'id must be less than 250 characters',
   })
   @Validate(IsIdOrSlugConstraint)
   id!: string;

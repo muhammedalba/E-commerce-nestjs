@@ -48,7 +48,10 @@ export function normalizeAttributes(
   const normalized: Record<string, unknown> = {};
 
   for (const [rawKey, value] of Object.entries(attributes)) {
-    const key = normalizeAttributeName(rawKey);
+    console.log("rawKey", rawKey);
+    console.log("value", value);
+
+    const key = normalizeAttributeName(rawKey); //e.g " color " -> "color" 
     if (!key) continue; // skip empty keys
 
     if (isMeasuredAttribute(value)) {
@@ -60,7 +63,7 @@ export function normalizeAttributes(
     } else if (typeof value === 'string') {
       normalized[key] = value.trim().toLowerCase();
     } else {
-      normalized[key] = value;
+      normalized[key] = String(value).trim().toLowerCase();
     }
   }
 

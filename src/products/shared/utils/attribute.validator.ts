@@ -36,6 +36,14 @@ export function validateAttributes(
 
   const attrs = attributes || {};
   const attrsKeys = Object.keys(attrs);
+
+  // If the user provides NO attributes at all (Simple Variant),
+  // we allow it to bypass the required checks even if allowedAttributes are defined.
+  // This allows having a "Base" price variant without characteristics.
+  if (attrsKeys.length === 0) {
+    return;
+  }
+
   // 1. Check for required attributes
   for (const def of allowedAttributes) {
     if (def.required && !(def.name.trim() in attrs)) {
@@ -104,6 +112,8 @@ export function validateAndNormalizeVariantsAttributes(
 
   for (const variant of variants) {
     if (variant.attributes) {
+      console.log('variant.attributes',variant);
+      console.log('allowedAttributes',allowedAttributes);
       variant.attributes = normalizeAttributes(variant.attributes);
     }
     validateAttributes(variant.attributes, allowedAttributes);

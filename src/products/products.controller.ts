@@ -12,6 +12,7 @@ import {
   UseGuards,
   BadRequestException,
 } from '@nestjs/common';
+import { CacheTTL } from '@nestjs/cache-manager';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './shared/dto/create-product.dto';
 import { UpdateProductDto } from './shared/dto/update-product.dto';
@@ -26,10 +27,11 @@ import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 import { MulterFilesType } from 'src/shared/utils/interfaces/fileInterface';
 import { ParseBodyJsonInterceptor } from 'src/shared/interceptors/parse-body-json.interceptor';
+import { ProductsCacheInterceptor } from './shared/interceptors/products-cache.interceptor';
 
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) { }
+  constructor(private readonly productsService: ProductsService) {}
 
   private static readonly imageSize = [
     { name: 'imageCover', maxCount: MaxFileCount.iMAGE_COVER },
@@ -38,14 +40,19 @@ export class ProductsController {
   ];
 
   // ──────────────────────────────────────────────────────
-  //  Statistics
+  //  Statistics (cached 5 minutes)
   // ──────────────────────────────────────────────────────
 
   @Get('statistics')
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
-  async Products_statistics() {
-    return await this.productsService.Products_statistics();
+  @UseInterceptors(ProductsCacheInterceptor)
+  @CacheTTL(300_000) // 5 minutes
+  async Products_statistics(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return await this.productsService.Products_statistics(startDate, endDate);
   }
 
   // ──────────────────────────────────────────────────────
@@ -85,7 +92,6 @@ export class ProductsController {
     if (!files.imageCover) {
       throw new BadRequestException('imageCover is required');
     }
-    // console.log(createProductDto);
     return await this.productsService.create(
       createProductDto,
       files as {
@@ -97,10 +103,12 @@ export class ProductsController {
   }
 
   // ──────────────────────────────────────────────────────
-  //  GET ALL PRODUCTS (with optional variant filters)
+  //  GET ALL PRODUCTS (cached 60 seconds)
   // ──────────────────────────────────────────────────────
 
   @Get()
+  @UseInterceptors(ProductsCacheInterceptor)
+  @CacheTTL(60_000) // 60 seconds
   findAll(
     @Query() queryString: QueryString,
     @Query('all_langs') allLangs?: string,
@@ -150,10 +158,12 @@ export class ProductsController {
   }
 
   // ──────────────────────────────────────────────────────
-  //  GET PRODUCT BY ID
+  //  GET PRODUCT BY ID (cached 120 seconds)
   // ──────────────────────────────────────────────────────
 
   @Get(':id')
+  @UseInterceptors(ProductsCacheInterceptor)
+  @CacheTTL(120_000) // 120 seconds
   findOne(
     @Param() idParamDto: IdParamDto,
     @Query('all_langs') allLangs?: string,
