@@ -53,7 +53,7 @@ export class SupCategoryController {
   // ------------ =============================== ---------- //
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
-  @Get('Statistics')
+  @Get('statistics')
   findStatistics() {
     return this.supCategoryService.findStatistics();
   }

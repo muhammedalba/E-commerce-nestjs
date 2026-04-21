@@ -36,6 +36,7 @@ export class ApiFeatures<T> {
       'email',
       'user',
       'name',
+      'isDeleted',
     ];
     const mongoQuery: Record<string, any> = {};
 
@@ -67,7 +68,12 @@ export class ApiFeatures<T> {
     // الفلاتر المباشرة (مثل ?brand=Apple)
     for (const key in queryObj) {
       if (allowedFilters.includes(key) && !(key in mongoQuery)) {
-        const val = queryObj[key];
+        let val = queryObj[key];
+
+        // تحويل النصوص المنطقية إلى boolean
+        if (val === 'true') val = true;
+        if (val === 'false') val = false;
+
         // تحويل النص إلى ObjectId إذا كان بصيغة صحيحة (لتفادي مشاكل عدم التطابق في قاعدة البيانات)
         if (typeof val === 'string' && /^[0-9a-fA-F]{24}$/.test(val)) {
           mongoQuery[key] = new Types.ObjectId(val);
