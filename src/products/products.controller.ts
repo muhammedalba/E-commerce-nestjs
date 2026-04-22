@@ -31,7 +31,7 @@ import { ProductsCacheInterceptor } from './shared/interceptors/products-cache.i
 
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(private readonly productsService: ProductsService) { }
 
   private static readonly imageSize = [
     { name: 'imageCover', maxCount: MaxFileCount.iMAGE_COVER },
@@ -119,8 +119,11 @@ export class ProductsController {
     @Query('volume_min') volumeMin?: string,
     @Query('volume_max') volumeMax?: string,
     @Query('volume_unit') volumeUnit?: string,
-    @Query('price_min') priceMin?: string,
-    @Query('price_max') priceMax?: string,
+    @Query('sold_min') soldMin?: string,
+    @Query('sold_max') soldMax?: string,
+    @Query('skuSearch') skuSearch?: string,
+
+
   ) {
     const returnAllLangs = allLangs === 'true';
 
@@ -133,22 +136,24 @@ export class ProductsController {
       volumeMin ||
       volumeMax ||
       volumeUnit ||
-      priceMin ||
-      priceMax;
+      soldMin ||
+      soldMax ||
+      skuSearch;
 
     if (hasVariantFilters) {
       return this.productsService.findAllWithFilters(
         queryString,
         {
-          color,
+          color: color?.toLowerCase().trim(),
           weightMin: weightMin ? Number(weightMin) : undefined,
           weightMax: weightMax ? Number(weightMax) : undefined,
-          weightUnit,
+          weightUnit: weightUnit?.toLowerCase().trim(),
           volumeMin: volumeMin ? Number(volumeMin) : undefined,
           volumeMax: volumeMax ? Number(volumeMax) : undefined,
-          volumeUnit,
-          priceMin: priceMin ? Number(priceMin) : undefined,
-          priceMax: priceMax ? Number(priceMax) : undefined,
+          volumeUnit: volumeUnit?.toLowerCase().trim(),
+          soldMin: soldMin ? Number(soldMin) : undefined,
+          soldMax: soldMax ? Number(soldMax) : undefined,
+          skuSearch: skuSearch?.toLowerCase().trim(),
         },
         returnAllLangs,
       );

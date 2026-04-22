@@ -11,8 +11,9 @@ export interface VariantFilterParams {
   volumeMin?: number;
   volumeMax?: number;
   volumeUnit?: string;
-  priceMin?: number;
-  priceMax?: number;
+  soldMin?: number;
+  soldMax?: number;
+  skuSearch?: string;
 }
 
 /**
@@ -25,16 +26,11 @@ export function buildVariantFilter(
   const vFilter: FilterQuery<ProductVariantDocument> = {};
 
   // 1. Color (String match, sanitized regex)
-  if (params.color && typeof params.color === 'string') {
-    const sanitizedColor = params.color
-      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      .trim();
-    if (sanitizedColor) {
-      // NOTE: We don't use dynamic index here, this will be filtered post-category narrowed.
-      vFilter['attributes.color'] = {
-        $regex: new RegExp(`^${sanitizedColor}$`, 'i'),
-      };
-    }
+  if (params.color) {
+    const colors = params.color.split(',').map((c) => c.trim());
+    vFilter['attributes.color'] = colors.length > 1
+      ? { $in: colors.map((c) => new RegExp(c, 'i')) }
+      : { $regex: new RegExp(params.color, 'i') };
   }
 
   // 2. Weight (Numeric Range + Unit check)
@@ -99,22 +95,25 @@ export function buildVariantFilter(
   }
 
   // 4. Price (Numeric Range)
-  if (params.priceMin !== undefined || params.priceMax !== undefined) {
+  if (params.soldMin !== undefined || params.soldMax !== undefined) {
     const priceQuery: Record<string, any> = {};
-    if (params.priceMin !== undefined) {
-      const min = Number(params.priceMin);
+    if (params.soldMin !== undefined) {
+      const min = Number(params.soldMin);
       if (!isNaN(min) && min >= 0) priceQuery.$gte = min;
     }
-    if (params.priceMax !== undefined) {
-      const max = Number(params.priceMax);
+    if (params.soldMax !== undefined) {
+      const max = Number(params.soldMax);
       if (!isNaN(max) && max >= 0) priceQuery.$lte = max;
     }
 
     if (Object.keys(priceQuery).length > 0) {
-      vFilter.price = priceQuery;
+      vFilter.sold = priceQuery;
     }
   }
-
+  // البحث عن SKU بشكل صريح بناءً على خطتك
+  if (params.skuSearch) {
+    vFilter.sku = { $regex: params.skuSearch, $options: 'i' };
+  }
   // Only consider active, non-deleted variants
   vFilter.isDeleted = { $ne: true };
   vFilter.isActive = true;

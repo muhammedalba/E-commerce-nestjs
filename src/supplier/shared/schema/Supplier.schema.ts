@@ -46,7 +46,7 @@ export class Supplier {
     type: Boolean,
     default: true,
   })
-  active?: boolean;
+  isActive?: boolean;
 }
 export type SupplierDocument = HydratedDocument<Supplier>;
 export const SupplierSchema = SchemaFactory.createForClass(Supplier);

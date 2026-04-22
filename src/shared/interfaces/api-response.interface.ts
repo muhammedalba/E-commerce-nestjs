@@ -1,6 +1,7 @@
 export interface ApiResponse<T = any> {
   success: boolean;
   statusCode: number;
+  totalCount?: number;
   message?: string;
   data?: T;
   meta?: {

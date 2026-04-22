@@ -13,40 +13,73 @@ export class ApiFeatures<T> {
 
   filter() {
     const queryObj = { ...this.queryString };
-    // remove unwanted fields from query
+
     const excludedFields = [
       'page',
       'limit',
       'fields',
       'sort',
       'keywords',
-      'With_all_languages',
+      'allLangs',
     ];
     excludedFields.forEach((field) => delete queryObj[field]);
 
     const allowedFilters = [
-      'status',
-      'active',
       'category',
-      'brand',
       'supCategories',
+      'brand',
       'supplier',
-      'price',
-      'rating',
-      'email',
-      'user',
-      'name',
+      'isUnlimitedStock',
+      'stockSummary',
+      'isFeatured',
+      'disabled',
       'isDeleted',
+      'rating',
+      'ratingsQuantity',
+      'ratingsAverage',
+      'variantCount',
+      'name',
+      'user',
+      'email',
+      'isActive',
+      'priceRange', // مهم
+      'totalSold',
     ];
+
     const mongoQuery: Record<string, any> = {};
 
-    // أولوية للفلترة بشرط [lt],[gte], إلخ
+    // -----------------------------------------
+    // 1️⃣ دعم pricerange[min] و pricerange[max]
+    // -----------------------------------------
     for (const key in queryObj) {
-      const match = key.match(/^(\w+)\[(gte|lte|lt|gt|in|ne|nin)\]$/); // دعم in, ne, nin
+
+      const match = key.match(/^pricerange\[(min|max)\]$/i);
+      if (match) {
+        const type = match[1]; // min أو max
+        const value = Number(queryObj[key]);
+
+        if (!isNaN(value)) {
+          if (type === 'min') {
+            mongoQuery['priceRange.min'] = { $gte: value };
+          }
+          if (type === 'max') {
+            mongoQuery['priceRange.max'] = { $lte: value };
+          }
+        }
+
+        delete queryObj[key];
+      }
+    }
+
+    // -----------------------------------------------------
+    // 2️⃣ فلاتر operators مثل: field[gte], field[lte], field[in]
+    // -----------------------------------------------------
+    for (const key in queryObj) {
+      const match = key.match(/^(\w+)\[(gte|lte|lt|gt|in|ne|nin)\]$/);
+
       if (match) {
         const field = match[1];
         const operator = match[2];
-
         if (!allowedFilters.includes(field)) continue;
 
         if (!mongoQuery[field] || typeof mongoQuery[field] !== 'object') {
@@ -54,6 +87,7 @@ export class ApiFeatures<T> {
         }
 
         const value = queryObj[key];
+        console.log("key",key); 
         if (operator === 'in' || operator === 'nin') {
           mongoQuery[field][`$${operator}`] = value.split(',');
         } else {
@@ -65,16 +99,16 @@ export class ApiFeatures<T> {
       }
     }
 
-    // الفلاتر المباشرة (مثل ?brand=Apple)
+    // -----------------------------------------
+    // 3️⃣ الفلاتر المباشرة مثل: ?brand=Apple
+    // -----------------------------------------
     for (const key in queryObj) {
       if (allowedFilters.includes(key) && !(key in mongoQuery)) {
         let val = queryObj[key];
 
-        // تحويل النصوص المنطقية إلى boolean
         if (val === 'true') val = true;
         if (val === 'false') val = false;
 
-        // تحويل النص إلى ObjectId إذا كان بصيغة صحيحة (لتفادي مشاكل عدم التطابق في قاعدة البيانات)
         if (typeof val === 'string' && /^[0-9a-fA-F]{24}$/.test(val)) {
           mongoQuery[key] = new Types.ObjectId(val);
         } else {
@@ -82,9 +116,12 @@ export class ApiFeatures<T> {
         }
       }
     }
+
     this.mongooseQuery = this.mongooseQuery.find(mongoQuery);
     return this;
   }
+
+
 
   sort() {
     const sortParam = this.queryString?.sort;

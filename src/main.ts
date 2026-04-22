@@ -11,10 +11,13 @@ import { Request, Response, NextFunction } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  // to use class-validator in DTOs
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
+  // prefix for all routes
   app.setGlobalPrefix('api/v1');
+  // cookie parser
   app.use(cookieParser());
-
+// redirect to api/v1
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (req.path === '/') {
       return res.redirect('/api/v1');
@@ -32,10 +35,10 @@ async function bootstrap() {
   );
   // to translate the class-validator errors
   // app.useGlobalFilters(new I18nValidationExceptionFilter());
-  // هندلة الايرور
+  // handle all exceptions
   app.useGlobalFilters(new AllExceptionsFilter(app.get(I18nService)));
 
-  // توحيد الاستجابة الناجحة
+  // standardize the response
   app.useGlobalInterceptors(new TransformInterceptor(app.get(I18nService)));
   app.enableCors({
     origin: [

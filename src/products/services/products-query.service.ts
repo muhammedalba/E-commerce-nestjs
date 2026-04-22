@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Product, ProductDocument } from '../shared/schemas/Product.schema';
@@ -11,13 +12,8 @@ import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
 import { I18nContext } from 'nestjs-i18n';
 import { ApiFeatures } from 'src/shared/utils/ApiFeatures';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { VariantFilterParams } from '../shared/utils/variant-query-builder';
+import { buildVariantFilter, VariantFilterParams } from '../shared/utils/variant-query-builder';
 
-/**
- * Read-only product operations: findAll, findOne, findAllWithFilters.
- * Caching is handled at the Controller level via @CacheInterceptor.
- */
 @Injectable()
 export class ProductQueryService {
   constructor(
@@ -26,271 +22,167 @@ export class ProductQueryService {
     @InjectModel(ProductVariant.name)
     private readonly variantModel: Model<ProductVariantDocument>,
     private readonly i18n: CustomI18nService,
-  ) {}
+  ) { }
 
   // ──────────────────────────────────────────────────────
-  //  HELPERS
+  //  1. HELPERS (المساعدات)
   // ──────────────────────────────────────────────────────
 
-  getCurrentLang(): string {
+  private getCurrentLang(): string {
     return I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
   }
 
-  localize(data: Product | Product[]) {
-    const toJSONLocalizedOnly = this.productModel.schema.methods
-      ?.toJSONLocalizedOnly as
-      | ((data: Product | Product[], lang: string) => Product)
-      | undefined;
-
-    return typeof toJSONLocalizedOnly === 'function'
-      ? toJSONLocalizedOnly(data as Product, this.getCurrentLang())
-      : data;
+  public localize(data: any, allLangs: boolean = false) {
+    if (allLangs) return data;
+    const lang = this.getCurrentLang();
+    const translate = (obj: any) => {
+      if (!obj) return obj;
+      const raw = obj.toObject ? obj.toObject() : obj;
+      return {
+        ...raw,
+        title: raw.title?.[lang] || raw.title,
+        description: raw.description?.[lang] || raw.description,
+        category: raw.category ? { ...raw.category, name: raw.category.name?.[lang] || raw.category.name } : raw.category,
+        brand: raw.brand ? { ...raw.brand, name: raw.brand.name?.[lang] || raw.brand.name } : raw.brand,
+      };
+    };
+    return Array.isArray(data) ? data.map(translate) : translate(data);
   }
 
+  // /**
+  //  * بناء فلتر المتغيرات بناءً على skuSearch وخصائص المتغير الأخرى
+  //  */
+  // private buildVariantFilter(vParams: VariantFilterParams, skuSearch?: string): Record<string, any> {
+  //   const filter: Record<string, any> = { isDeleted: false, isActive: true };
+  //   console.log("build Variant Filter", vParams, skuSearch);
+  //   // البحث عن SKU بشكل صريح بناءً على خطتك
+  //   if (skuSearch) {
+  //     filter.sku = { $regex: skuSearch, $options: 'i' };
+  //   }
+
+  //   // فلترة المبيعات على مستوى المتغير (sold)
+  //   if (vParams.soldMin) filter.sold = { $gte: Number(vParams.soldMin) };
+  //   if (vParams.soldMax) filter.sold = { $lte: Number(vParams.soldMax) };
+  //   // فلترة السمات (Attributes)
+  //   if (vParams.color) {
+  //     const colors = vParams.color.split(',').map((c) => c.trim());
+  //     filter['attributes.color'] = colors.length > 1
+  //       ? { $in: colors.map((c) => new RegExp(c, 'i')) }
+  //       : { $regex: new RegExp(vParams.color, 'i') };
+  //   }
+
+  //   // فلترة الوزن والحجم
+  //   if (vParams.weightMin !== undefined || vParams.weightMax !== undefined) {
+  //     filter['attributes.weight.value'] = { $ne: null };
+  //     if (vParams.weightMin !== undefined) filter['attributes.weight.value'].$gte = vParams.weightMin;
+  //     if (vParams.weightMax !== undefined) filter['attributes.weight.value'].$lte = vParams.weightMax;
+  //   }
+  //   console.log("buildVariantFilter", filter);
+  //   return filter;
+  // }
+
   /**
-   * Fetches variants for multiple products and groups them by productId.
+   * التحقق مما إذا كان الطلب يتطلب فحص جدول المتغيرات
    */
-  private async getVariantsByProducts(
-    productIds: Types.ObjectId[],
-  ): Promise<Map<string, any[]>> {
-    const allVariants = await this.variantModel
-      .find({ productId: { $in: productIds } })
+  private shouldQueryVariants(vParams: VariantFilterParams, skuSearch?: string): boolean {
+    // console.log("shouldQueryVariants", vParams, skuSearch);
+    return !!(skuSearch || vParams.color || vParams.soldMin || vParams.soldMax || vParams.weightMin || vParams.weightMax || vParams.volumeMin || vParams.volumeMax || vParams.volumeUnit || vParams.weightUnit);
+  }
+
+  // ──────────────────────────────────────────────────────
+  //  2. CORE LOGIC (منطق التنفيذ)
+  // ──────────────────────────────────────────────────────
+
+  private async getProcessedFeatures(queryString: QueryString, productIds?: Types.ObjectId[]) {
+    const filter: any = productIds ? { _id: { $in: productIds } } : {};
+    const baseQuery = this.productModel.find(filter).select('-__v');
+
+    // ApiFeatures سيعالج keywords (البحث العام) و totalSold (فلترة المبيعات الإجمالية)
+    const features = new ApiFeatures(baseQuery, queryString).filter().search('Product');
+
+    const total = await this.productModel.countDocuments(features.getQuery().getFilter());
+    features.sort().limitFields().paginate(total);
+
+    return { features, total };
+  }
+
+  private async assembleFinalResponse(products: any[], total: number, pagination: any, allLangs: boolean) {
+    if (!products.length) return { results: 0, total: 0, pagination, data: [] };
+
+    const productIds = products.map((p) => p._id);
+    const variants = await this.variantModel
+      .find({ productId: { $in: productIds }, isActive: true, isDeleted: false })
       .lean();
 
-    const map = new Map<string, typeof allVariants>();
-    for (const v of allVariants) {
-      const key = v.productId.toString();
-      if (!map.has(key)) {
-        map.set(key, []);
-      }
-      map.get(key)!.push(v);
-    }
-    return map;
-  }
-
-  /**
-   * Maps products array with their variants into the response format.
-   */
-  private mapProductsWithVariants(
-    products: any[],
-    variantsByProduct: Map<string, any[]>,
-    allLangs: boolean,
-  ) {
-    const localizedProducts = allLangs
-      ? products
-      : this.localize(products);
-
-    const productsArray = Array.isArray(localizedProducts)
-      ? localizedProducts
-      : [localizedProducts];
-
-    return productsArray.map((product: any) => ({
-      ...(product.toJSON?.() ?? product),
-      variants: variantsByProduct.get(product._id?.toString()) ?? [],
+    const data = products.map((product) => ({
+      ...(product.toObject ? product.toObject() : product),
+      variants: variants.filter((v) => v.productId.toString() === product._id.toString()),
     }));
-  }
-
-  // ──────────────────────────────────────────────────────
-  //  GET ALL PRODUCTS
-  // ──────────────────────────────────────────────────────
-
-  async findAll(queryString: QueryString, allLangs: boolean = false) {
-    const baseFilter = {};
-    const baseQuery = this.productModel.find(baseFilter).select('-__v');
-
-    // Run count and query in parallel
-    const [total, features] = await Promise.all([
-      this.productModel.countDocuments(baseFilter),
-      Promise.resolve(
-        new ApiFeatures(baseQuery, queryString)
-          .filter()
-          .search(Product.name)
-          .sort()
-          .limitFields(),
-      ),
-    ]);
-
-    features.paginate(total);
-
-    const products = await features
-      .getQuery()
-      .populate('category', 'name')
-      .populate('brand', 'name')
-      .exec();
-
-    if (!products || products.length === 0) {
-      throw new BadRequestException(
-        this.i18n.translate('exception.NOT_FOUND'),
-      );
-    }
-
-    // Fetch variants for all products in a single query
-    const productIds = products.map((p) => p._id);
-    const variantsByProduct = await this.getVariantsByProducts(productIds);
-
-    const data = this.mapProductsWithVariants(
-      products,
-      variantsByProduct,
-      allLangs,
-    );
 
     return {
-      results: products.length,
+      results: data.length,
       total,
-      pagination: features.getPagination(),
-      data,
+      pagination,
+      data: this.localize(data, allLangs),
     };
   }
 
   // ──────────────────────────────────────────────────────
-  //  FIND ALL WITH VARIANT FILTERS
+  //  3. PUBLIC API
   // ──────────────────────────────────────────────────────
+
+  async findAll(queryString: QueryString, allLangs: boolean = false) {
+    // تمرير مصفوفة فارغة لـ variantFilters ليعمل كبحث عام
+    return this.findAllWithFilters(queryString, {}, allLangs);
+  }
 
   async findAllWithFilters(
     queryString: QueryString,
     variantFilters: VariantFilterParams,
     allLangs: boolean = false,
   ) {
-    // Build variant filter
-    const vFilter: Record<string, any> = {};
+    let productIds: Types.ObjectId[] | undefined;
+    const skuSearch = queryString['skuSearch'] as string;
 
-    if (variantFilters.color) {
-      vFilter['attributes.color'] = {
-        $regex: new RegExp(variantFilters.color, 'i'),
-      };
-    }
+    // 1. البحث في المتغيرات إذا وُجد SKU أو فلاتر تخص المتغير
+    if (this.shouldQueryVariants(variantFilters, skuSearch)) {
+      const vFilter = buildVariantFilter(variantFilters);
+      console.log("vFilter", vFilter);
+      const matchingVariants = await this.variantModel.find(vFilter).select('productId').lean();
 
-    if (variantFilters.weightMin || variantFilters.weightMax) {
-      vFilter['attributes.weight.value'] = {};
-      if (variantFilters.weightMin)
-        vFilter['attributes.weight.value'].$gte = variantFilters.weightMin;
-      if (variantFilters.weightMax)
-        vFilter['attributes.weight.value'].$lte = variantFilters.weightMax;
-      if (variantFilters.weightUnit) {
-        vFilter['attributes.weight.unit'] =
-          variantFilters.weightUnit.toLowerCase();
-      }
-    }
-
-    if (variantFilters.volumeMin || variantFilters.volumeMax) {
-      vFilter['attributes.volume.value'] = {};
-      if (variantFilters.volumeMin)
-        vFilter['attributes.volume.value'].$gte = variantFilters.volumeMin;
-      if (variantFilters.volumeMax)
-        vFilter['attributes.volume.value'].$lte = variantFilters.volumeMax;
-      if (variantFilters.volumeUnit) {
-        vFilter['attributes.volume.unit'] =
-          variantFilters.volumeUnit.toLowerCase();
-      }
-    }
-
-    if (variantFilters.priceMin || variantFilters.priceMax) {
-      vFilter.price = {};
-      if (variantFilters.priceMin) vFilter.price.$gte = variantFilters.priceMin;
-      if (variantFilters.priceMax) vFilter.price.$lte = variantFilters.priceMax;
-    }
-
-    // Find matching variant productIds
-    let productIds: Types.ObjectId[] | null = null;
-    if (Object.keys(vFilter).length > 0) {
-      const matchingVariants = await this.variantModel
-        .find(vFilter)
-        .select('productId')
-        .lean();
       productIds = [...new Set(matchingVariants.map((v) => v.productId))];
 
-      if (productIds.length === 0) {
+      // إذا كان هناك skuSearch محدد ولم يطابق أي شيء، ننهي العملية فوراً
+      if (skuSearch && productIds.length === 0) {
         return { results: 0, total: 0, pagination: {}, data: [] };
       }
     }
 
-    // Build product query
-    const filter: Record<string, any> = {};
-    if (productIds) {
-      filter._id = { $in: productIds };
-    }
+    // 2. البحث في المنتجات (الاسم، الوصف، والمبيعات الإجمالية totalSold) عبر ApiFeatures
+    const { features, total } = await this.getProcessedFeatures(queryString, productIds);
 
-    const baseQuery = this.productModel.find(filter).select('-__v');
-
-    // Run count and query in parallel
-    const [total, features] = await Promise.all([
-      this.productModel.countDocuments(filter),
-      Promise.resolve(
-        new ApiFeatures(baseQuery, queryString)
-          .filter()
-          .search(Product.name)
-          .sort()
-          .limitFields(),
-      ),
-    ]);
-
-    features.paginate(total);
-
-    const products = await features
-      .getQuery()
-      .populate('category', 'name')
-      .populate('brand', 'name')
+    const products = await features.getQuery()
+      .populate('category brand', 'name')
       .exec();
 
-    if (!products || products.length === 0) {
-      return {
-        results: 0,
-        total: 0,
-        pagination: features.getPagination(),
-        data: [],
-      };
-    }
-
-    // Fetch all variants for the found products
-    const foundIds = products.map((p) => p._id);
-    const variantsByProduct = await this.getVariantsByProducts(foundIds);
-
-    const data = this.mapProductsWithVariants(
-      products,
-      variantsByProduct,
-      allLangs,
-    );
-
-    return {
-      results: products.length,
-      total,
-      pagination: features.getPagination(),
-      data,
-    };
+    return this.assembleFinalResponse(products, total, features.getPagination(), allLangs);
   }
-
-  // ──────────────────────────────────────────────────────
-  //  GET ONE PRODUCT
-  // ──────────────────────────────────────────────────────
 
   async findOne(idParamDto: IdParamDto, allLangs: boolean = false) {
     const { id } = idParamDto;
-    const isObjectId = /^[0-9a-fA-F]{24}$/.test(id);
-    const filter = isObjectId ? { _id: id } : { slug: id };
+    const filter = Types.ObjectId.isValid(id) ? { _id: id } : { slug: id };
 
     const product = await this.productModel
       .findOne(filter)
-      .select('-__v')
-      .populate('category', 'name')
-      .populate('brand', 'name')
-      .populate('supplier', 'name')
-      .populate('supCategories', 'name')
+      .populate('category brand supplier supCategories', 'name')
       .exec();
 
-    if (!product) {
-      throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
-    }
+    if (!product) throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
 
-    // Fetch variants for this product
     const variants = await this.variantModel
-      .find({ productId: product._id })
+      .find({ productId: product._id, isActive: true, isDeleted: false })
       .lean();
 
-    const localizedProduct = allLangs ? product : this.localize(product);
-
-    return {
-      product: localizedProduct,
-      variants,
-    };
+    return { product: this.localize(product, allLangs), variants };
   }
 }

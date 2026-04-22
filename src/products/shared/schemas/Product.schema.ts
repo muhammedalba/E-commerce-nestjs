@@ -128,6 +128,12 @@ export class Product {
   })
   ratingsAverage!: number;
 
+  @Prop({
+    type: Number,
+    default: 0,
+  })
+  totalSold!: number;
+
   // ─── Attribute Versioning & Definitions ────────────────
   @Prop({ type: Number, default: 1 })
   allowedAttributesVersion!: number;
@@ -168,7 +174,7 @@ export class Product {
   deletedAt?: Date;
 
   // ─── Virtuals (TypeScript types) ────────────────────────
-  variants?:ProductVariant[];
+  variants?: ProductVariant[];
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);
@@ -186,6 +192,7 @@ ProductSchema.index({ category: 1, 'priceRange.min': 1 }); // Enhanced compound 
 ProductSchema.index({ brand: 1 });
 ProductSchema.index({ supplier: 1 });
 ProductSchema.index({ isDeleted: 1, disabled: 1 });
+
 
 // ─── Auto-exclude soft-deleted documents ─────────────────
 ProductSchema.pre('find', function () {

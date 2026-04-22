@@ -121,6 +121,7 @@ export class TransformInterceptor<T>
         return {
           ...baseResponse,
           message: finalMessage,
+          totalCount: meta?.total,
           data,
           meta,
           access_token,

@@ -43,7 +43,9 @@ export class ProductsService {
     variantFilters: VariantFilterParams,
     allLangs: boolean = false,
   ) {
-    return this.queryService.findAllWithFilters(
+
+
+    return  this.queryService.findAllWithFilters(
       queryString,
       variantFilters,
       allLangs,
