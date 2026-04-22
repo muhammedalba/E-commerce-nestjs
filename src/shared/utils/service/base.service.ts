@@ -12,6 +12,7 @@ import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.se
 import { MulterFileType } from '../interfaces/fileInterface';
 import { I18nContext, TranslateOptions } from 'nestjs-i18n';
 import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
+import { I18nHelper } from '../i18n/i18n-helper';
 //
 interface FileSchema {
   avatar?: string;
@@ -134,7 +135,7 @@ export class BaseService<T> {
 
     const localizedDoc = this.localize(newDocFilter);
 
-    return localizedDoc as T;
+    return  I18nHelper.localize(newDocFilter);
   }
   async findAllDoc(
     modelName: string,
@@ -170,7 +171,8 @@ export class BaseService<T> {
     return {
       results: data.length,
       pagination: features.getPagination(),
-      data: localizedDoc as T[],
+      data: I18nHelper.localize(data, allLangs),
+      // data: localizedDoc as T[],
     };
   }
 
@@ -197,7 +199,7 @@ export class BaseService<T> {
 
     const finalDoc = allLangs ? doc : (this.localize(doc as any) as T);
 
-    return finalDoc as T;
+    return  I18nHelper.localize(doc, allLangs);
   }
 
   async updateOneDoc(
@@ -256,7 +258,7 @@ export class BaseService<T> {
     if (filePath && updatedData) {
       updatedData[fileFieldName] = `${process.env.BASE_URL}${filePath}`;
     }
-    return updatedData ? (this.localize(updatedData) as T) : null;
+    return updatedData ?  I18nHelper.localize(updatedData) : null;
   }
   async deleteOneDoc(idParamDto: IdParamDto, selected: string): Promise<void> {
     // 1) check if id is valid ObjectId or slug

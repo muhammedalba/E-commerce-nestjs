@@ -12,9 +12,9 @@ import {
 import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
 import { PromoBannerDto } from './shared/dto/promo-banner.dto';
 import { UpdatePromoBannerDto } from './shared/dto/updatepromo_banner.dto';
-import { I18nContext } from 'nestjs-i18n';
 import { ApiFeatures } from 'src/shared/utils/ApiFeatures';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
+import { I18nHelper } from 'src/shared/utils/i18n/i18n-helper';
 
 @Injectable()
 export class PromoBannerService {
@@ -22,39 +22,9 @@ export class PromoBannerService {
     @InjectModel(PromoBanner.name)
     private promoBannerModel: Model<PromoBannerDocument>,
     protected readonly i18n: CustomI18nService,
-  ) {}
-  private getCurrentLang(): string {
-    const lang =
-      I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
-    return lang;
-  }
-  //
-  // This method is used to localize the document
-  localize(data: PromoBanner | PromoBanner[]): PromoBanner | PromoBanner[] {
-    const toJSONLocalizedOnly = this.promoBannerModel.schema.methods
-      ?.toJSONLocalizedOnly as
-      | ((data: PromoBanner | PromoBanner[], lang: string) => PromoBanner)
-      | undefined;
+  ) { }
 
-    const localizedDoc =
-      typeof toJSONLocalizedOnly === 'function'
-        ? toJSONLocalizedOnly(data as PromoBanner, this.getCurrentLang())
-        : data;
-    return localizedDoc;
-  }
-  //
-  // localize(data: PromoBanner): PromoBanner {
-  //   const toJSONLocalizedOnly = this.promoBannerModel.schema.methods
-  //     ?.toJSONLocalizedOnly as
-  //     | ((data: PromoBanner, lang: string) => PromoBanner)
-  //     | undefined;
-
-  //   const localizedDoc =
-  //     typeof toJSONLocalizedOnly === 'function'
-  //       ? toJSONLocalizedOnly(data, this.getCurrentLang())
-  //       : data;
-  //   return localizedDoc;
-  // }
+  
   async getActiveBanner(): Promise<any> {
     const promo = await this.promoBannerModel
       .findOne({ isActive: true })
@@ -62,11 +32,7 @@ export class PromoBannerService {
     if (!promo) {
       throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
     }
-    return {
-      status: 'success',
-      message: this.i18n.translate('success.found_SUCCESS'),
-      data: this.localize(promo),
-    };
+    return I18nHelper.localize(promo);
   }
 
   async findAllDoc(
@@ -92,13 +58,7 @@ export class PromoBannerService {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }
 
-    const localizedDoc = allLangs ? data : this.localize(data);
-    return {
-      status: 'success',
-      results: data.length,
-      pagination: features.getPagination(),
-      data: localizedDoc as PromoBanner[],
-    };
+    return I18nHelper.localize(data, allLangs);
   }
   //
   async getBanner(id: string, allLangs: boolean = false): Promise<any> {
@@ -106,20 +66,13 @@ export class PromoBannerService {
     if (!promo) {
       throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
     }
-    return {
-      status: 'success',
-      message: this.i18n.translate('success.found_SUCCESS'),
-      data: allLangs ? promo : this.localize(promo),
-    };
+    return I18nHelper.localize(promo, allLangs);
   }
   async createBanner(
     promoBannerDto: PromoBannerDto,
   ): Promise<{ data: PromoBanner; status: string }> {
     const data = await this.promoBannerModel.create(promoBannerDto);
-    return {
-      status: 'success',
-      data: data,
-    };
+    return I18nHelper.localize(data);
   }
 
   async update(
@@ -134,10 +87,7 @@ export class PromoBannerService {
     if (!banner) {
       throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
     }
-    return {
-      status: 'success',
-      data: banner,
-    };
+    return I18nHelper.localize(banner);
   }
   async deleteBanner(id: string): Promise<void> {
     await this.promoBannerModel.findByIdAndDelete(id);

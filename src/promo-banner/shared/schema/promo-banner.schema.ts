@@ -6,7 +6,7 @@ export class PromoBanner {
   @Prop({ required: true, minlength: 3, max: 400, i18n: true })
   text!: string;
 
-  @Prop({ default: true })
+  @Prop({ default: false })
   isActive?: boolean;
 }
 

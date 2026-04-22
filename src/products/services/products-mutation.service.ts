@@ -27,6 +27,7 @@ import { ProductFileService } from './products-file.service';
 import { ProductSkuService } from './products-sku.service';
 import { ProductQueryService } from './products-query.service';
 import { generateUniqueSlug } from 'src/shared/utils/slug.util';
+import { I18nHelper } from 'src/shared/utils/i18n/i18n-helper';
 
 /**
  * Handles all write operations: create, update, delete, restore.
@@ -150,7 +151,7 @@ export class ProductMutationService {
         : undefined;
 
       return {
-        product: this.queryService.localize(newProduct),
+        product: I18nHelper.localize(newProduct),
         variants: createdVariants,
       };
     } catch (error: any) {
@@ -366,7 +367,7 @@ export class ProductMutationService {
         .lean();
 
       return {
-        product: this.queryService.localize(updatedProduct),
+        product: I18nHelper.localize(updatedProduct),
         variants: finalVariants,
       };
     } catch (error: any) {
@@ -527,7 +528,8 @@ export class ProductMutationService {
         .lean();
 
       return {
-        product: this.queryService.localize(product),
+        product:  I18nHelper.localize(product),
+        // product: this.queryService.localize(product),
         variants,
       };
     } catch (error) {

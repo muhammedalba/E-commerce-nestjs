@@ -37,7 +37,7 @@ export class BrandsService extends BaseService<BrandDocument> {
     createBrandDto: CreateBrandDto,
     file: MulterFileType,
   ): Promise<any> {
-    return await this.createOneDoc(createBrandDto, file, 'brands', {
+    return await this.createOneDoc(createBrandDto, file, Brand.name, {
       fileFieldName: 'image',
       checkField: 'name.en',
       fieldValue: createBrandDto.name.en,
@@ -55,7 +55,7 @@ export class BrandsService extends BaseService<BrandDocument> {
     pagination: any;
     data: Brand[];
   }> {
-    return await this.findAllDoc('brands', queryString, undefined, allLangs);
+    return await this.findAllDoc(Brand.name, queryString, undefined, allLangs);
   }
 
   // ------------ =============================== ---------- //
@@ -78,7 +78,7 @@ export class BrandsService extends BaseService<BrandDocument> {
       idParamDto,
       updateBrandDto,
       file,
-      'brands',
+      Brand.name,
       selectedFields,
       {
         checkField: 'name.en',

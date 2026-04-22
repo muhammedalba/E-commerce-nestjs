@@ -13,6 +13,7 @@ import { I18nContext } from 'nestjs-i18n';
 import { ApiFeatures } from 'src/shared/utils/ApiFeatures';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { buildVariantFilter, VariantFilterParams } from '../shared/utils/variant-query-builder';
+import { I18nHelper } from 'src/shared/utils/i18n/i18n-helper';
 
 @Injectable()
 export class ProductQueryService {
@@ -32,22 +33,22 @@ export class ProductQueryService {
     return I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
   }
 
-  public localize(data: any, allLangs: boolean = false) {
-    if (allLangs) return data;
-    const lang = this.getCurrentLang();
-    const translate = (obj: any) => {
-      if (!obj) return obj;
-      const raw = obj.toObject ? obj.toObject() : obj;
-      return {
-        ...raw,
-        title: raw.title?.[lang] || raw.title,
-        description: raw.description?.[lang] || raw.description,
-        category: raw.category ? { ...raw.category, name: raw.category.name?.[lang] || raw.category.name } : raw.category,
-        brand: raw.brand ? { ...raw.brand, name: raw.brand.name?.[lang] || raw.brand.name } : raw.brand,
-      };
-    };
-    return Array.isArray(data) ? data.map(translate) : translate(data);
-  }
+  // public localize(data: any, allLangs: boolean = false) {
+  //   if (allLangs) return data;
+  //   const lang = this.getCurrentLang();
+  //   const translate = (obj: any) => {
+  //     if (!obj) return obj;
+  //     const raw = obj.toObject ? obj.toObject() : obj;
+  //     return {
+  //       ...raw,
+  //       title: raw.title?.[lang] || raw.title,
+  //       description: raw.description?.[lang] || raw.description,
+  //       category: raw.category ? { ...raw.category, name: raw.category.name?.[lang] || raw.category.name } : raw.category,
+  //       brand: raw.brand ? { ...raw.brand, name: raw.brand.name?.[lang] || raw.brand.name } : raw.brand,
+  //     };
+  //   };
+  //   return Array.isArray(data) ? data.map(translate) : translate(data);
+  // }
 
   // /**
   //  * بناء فلتر المتغيرات بناءً على skuSearch وخصائص المتغير الأخرى
@@ -119,11 +120,13 @@ export class ProductQueryService {
       variants: variants.filter((v) => v.productId.toString() === product._id.toString()),
     }));
 
+    // ستجد أنها ترجمت 'title' و 'description' تلقائياً
     return {
       results: data.length,
       total,
       pagination,
-      data: this.localize(data, allLangs),
+      // data: this.localize(data, allLangs),
+      data: I18nHelper.localize(data, allLangs),
     };
   }
 
@@ -183,6 +186,7 @@ export class ProductQueryService {
       .find({ productId: product._id, isActive: true, isDeleted: false })
       .lean();
 
-    return { product: this.localize(product, allLangs), variants };
+    // return { product: this.localize(product, allLangs), variants };
+    return { product: I18nHelper.localize(product, allLangs), variants };
   }
 }

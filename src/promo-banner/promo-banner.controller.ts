@@ -33,7 +33,7 @@ export class PromoBannerController {
     results: number;
     pagination: any;
   }> {
-    const returnAllLangs = allLangs === 'true';
+    const returnAllLangs = allLangs == 'true';
     return await this.promoBannerService.findAllDoc(
       queryString,
       returnAllLangs,
@@ -44,7 +44,7 @@ export class PromoBannerController {
     @Param() idParamDto: IdParamDto,
     @Query('all_langs') allLangs?: string,
   ): Promise<any> {
-    const returnAllLangs = allLangs === 'true';
+    const returnAllLangs = allLangs == 'true';
     return await this.promoBannerService.getBanner(
       idParamDto.id,
       returnAllLangs,

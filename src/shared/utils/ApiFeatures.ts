@@ -196,7 +196,15 @@ export class ApiFeatures<T> {
             ],
           };
           break;
-        case 'suppliers':
+        case 'PromoBanner':
+          query = {
+            $or: [
+              { 'text.en': { $regex: keyword, $options: 'i' } },
+              { 'text.ar': { $regex: keyword, $options: 'i' } },
+            ],
+          };
+          break;
+        case 'Supplier':
           query = {
             $or: [
               { name: { $regex: keyword, $options: 'i' } },
