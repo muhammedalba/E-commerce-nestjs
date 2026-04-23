@@ -2,6 +2,7 @@ import {
   BadGatewayException,
   BadRequestException,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { Model } from 'mongoose';
@@ -22,6 +23,8 @@ interface FileSchema {
   _id: string;
 }
 export class BaseService<T> {
+  protected readonly logger = new Logger(this.constructor.name);
+
   constructor(
     protected readonly model: Model<T>,
     protected readonly i18n: CustomI18nService,
@@ -82,7 +85,7 @@ export class BaseService<T> {
             this.getDefaultFilePath(modelName))
         : await this.fileUploadService.saveFileToDisk(file, modelName);
     } catch (error) {
-      console.error('File upload failed:', error);
+      this.logger.error('File upload failed', error);
       throw new InternalServerErrorException(
         this.t('exception.ERROR_FILE_UPLOAD'),
       );
@@ -283,7 +286,7 @@ export class BaseService<T> {
       try {
         await this.fileUploadService.deleteFile(path);
       } catch (error) {
-        console.error(`Error deleting file ${path}:`, error);
+        this.logger.error(`Error deleting file ${path}`, error);
         throw new BadGatewayException(
           this.t('exception.PROFILE_UPDATE_OLD-IMAGE'),
         );

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -33,6 +34,8 @@ import { roles } from './shared/enums/role.enum';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(RefreshToken.name)
@@ -54,7 +57,7 @@ export class AuthService {
     createUserDto: CreateUserDto,
     file: MulterFileType,
     res: Response,
-  ): Promise<any> {
+  ): Promise<{ data: any; access_token: string }> {
     const { email } = createUserDto;
     //1) check email if is in use
     const isExists = await this.userModel.exists({
@@ -72,7 +75,7 @@ export class AuthService {
       try {
         filePath = await this.fileUploadService.saveFileToDisk(file, 'users');
       } catch (error) {
-        console.error('File upload failed:', error);
+        this.logger.error('File upload failed', error);
         throw new InternalServerErrorException(
           this.i18n.translate('exception.ERROR_FILE_UPLOAD'),
         );
@@ -109,8 +112,6 @@ export class AuthService {
       __v: undefined,
     };
     return {
-      status: 'success',
-      message: this.i18n.translate('success.LOGIN_SUCCESS'),
       data: userWithTokens,
       access_token: Tokens.access_token,
     };
@@ -122,8 +123,6 @@ export class AuthService {
     loginUserDto: LoginUserDto,
     res: Response,
   ): Promise<{
-    status: string;
-    message: string;
     data: any;
     access_token: string;
   }> {
@@ -172,8 +171,6 @@ export class AuthService {
     };
 
     return {
-      status: 'success',
-      message: this.i18n.translate('success.LOGIN_SUCCESS'),
       data: userResponse,
       access_token: Tokens.access_token,
     };
@@ -195,7 +192,7 @@ export class AuthService {
     try {
       await this.RefreshTokenModel.deleteOne({
         userId: req.user.user_id,
-      });
+      }); 
       // remove cookies
       this.cookieService.clearCookies(res);
       return { message: this.i18n.translate('success.LOGOUT_SUCCESS') };

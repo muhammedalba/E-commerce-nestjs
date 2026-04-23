@@ -20,7 +20,7 @@ export class tokenService {
   async generate_Tokens(userData: JwtPayload, expiresIn?: string) {
     // 1) generate new access token
     const access_token = await this.jwtService.signAsync(userData, {
-      expiresIn: expiresIn || (process.env.JWT_EXPIRE_TIME ?? '1d'),
+      expiresIn: (expiresIn || process.env.JWT_EXPIRE_TIME || '1d') as any,
     });
     //2) generate new refresh token
     const refresh_Token = uuidv4();

@@ -150,7 +150,6 @@ export class ProductQueryService {
     // 1. البحث في المتغيرات إذا وُجد SKU أو فلاتر تخص المتغير
     if (this.shouldQueryVariants(variantFilters, skuSearch)) {
       const vFilter = buildVariantFilter(variantFilters);
-      console.log("vFilter", vFilter);
       const matchingVariants = await this.variantModel.find(vFilter).select('productId').lean();
 
       productIds = [...new Set(matchingVariants.map((v) => v.productId))];

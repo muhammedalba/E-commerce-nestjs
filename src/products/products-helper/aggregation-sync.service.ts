@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Product, ProductDocument } from '../shared/schemas/Product.schema';
@@ -14,6 +14,8 @@ export class VariantChangedEvent {
 
 @Injectable()
 export class AggregationSyncService {
+  private readonly logger = new Logger(AggregationSyncService.name);
+
   constructor(
     @InjectModel(Product.name)
     private readonly productModel: Model<ProductDocument>,
@@ -66,8 +68,8 @@ export class AggregationSyncService {
         },
       );
     } catch (error) {
-      console.error(
-        `[AggregationSyncWorker] Failed to sync aggregates for product ${event.productId}:`,
+      this.logger.error(
+        `Failed to sync aggregates for product ${event.productId}`,
         error,
       );
     }

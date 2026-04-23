@@ -220,7 +220,6 @@ export class userProfileService {
     // generate new access and refresh token and delete old refresh token
     const new_Tokens = await this.tokenService.generate_Tokens(userData);
     // 4) Set cookies using CookieService
-    console.log('=============== new_Tokens sending ============');
     this.cookieService.setCookies(res, new_Tokens);
 
     return {

@@ -112,8 +112,6 @@ export function validateAndNormalizeVariantsAttributes(
 
   for (const variant of variants) {
     if (variant.attributes) {
-      console.log('variant.attributes',variant);
-      console.log('allowedAttributes',allowedAttributes);
       variant.attributes = normalizeAttributes(variant.attributes);
     }
     validateAttributes(variant.attributes, allowedAttributes);

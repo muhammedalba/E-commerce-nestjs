@@ -1,4 +1,4 @@
-import { BadGatewayException, Injectable } from '@nestjs/common';
+import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { I18nService } from 'nestjs-i18n';
 import { EmailService } from 'src/email/email.service';
@@ -30,6 +30,8 @@ type ValidatedItem = {
 
 @Injectable()
 export class OrderEmailService {
+  private readonly logger = new Logger(OrderEmailService.name);
+
   constructor(
     private readonly emailService: EmailService,
     private readonly i18n: I18nService,
@@ -67,7 +69,7 @@ export class OrderEmailService {
         }),
       );
     } catch (err) {
-      console.log('error send email', err);
+      this.logger.error('Failed to send order email', err);
       throw new BadGatewayException(
         this.i18n.translate('exception.EMAIL_SEND_FAILED'),
       );

@@ -3,6 +3,7 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
@@ -35,6 +36,8 @@ import { I18nHelper } from 'src/shared/utils/i18n/i18n-helper';
  */
 @Injectable()
 export class ProductMutationService {
+  private readonly logger = new Logger(ProductMutationService.name);
+
   constructor(
     @InjectModel(Product.name)
     private readonly productModel: Model<ProductDocument>,
@@ -156,7 +159,7 @@ export class ProductMutationService {
       };
     } catch (error: any) {
       await session.abortTransaction();
-      console.error('Transaction Error (create product):', error);
+      this.logger.error('Transaction Error (create product)', error?.stack || error);
       throw new InternalServerErrorException(
         this.i18n.translate('exception.ERROR_SAVE'),
       );
@@ -372,7 +375,7 @@ export class ProductMutationService {
       };
     } catch (error: any) {
       await session.abortTransaction();
-      console.error('Transaction Error (update product):', error);
+      this.logger.error('Transaction Error (update product)', error?.stack || error);
 
       if (
         error instanceof BadRequestException ||
@@ -437,7 +440,7 @@ export class ProductMutationService {
       return { message: 'Product and variants soft-deleted successfully' };
     } catch (error) {
       await session.abortTransaction();
-      console.error('Transaction Error (delete product):', error);
+      this.logger.error('Transaction Error (delete product)',  error);
       throw new InternalServerErrorException(
         this.i18n.translate('exception.ERROR_DELETE'),
       );
@@ -484,7 +487,7 @@ export class ProductMutationService {
       return { message: 'Product and variants permanently deleted' };
     } catch (error) {
       await session.abortTransaction();
-      console.error('Transaction Error (hard delete):', error);
+      this.logger.error('Transaction Error (hard delete)',  error);
       throw new InternalServerErrorException(
         this.i18n.translate('exception.ERROR_DELETE'),
       );

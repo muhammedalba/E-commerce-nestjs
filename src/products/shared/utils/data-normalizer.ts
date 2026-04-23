@@ -48,9 +48,6 @@ export function normalizeAttributes(
   const normalized: Record<string, unknown> = {};
 
   for (const [rawKey, value] of Object.entries(attributes)) {
-    console.log("rawKey", rawKey);
-    console.log("value", value);
-
     const key = normalizeAttributeName(rawKey); //e.g " color " -> "color" 
     if (!key) continue; // skip empty keys
 

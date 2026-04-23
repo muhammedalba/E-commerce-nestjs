@@ -87,7 +87,6 @@ export class ApiFeatures<T> {
         }
 
         const value = queryObj[key];
-        console.log("key",key); 
         if (operator === 'in' || operator === 'nin') {
           mongoQuery[field][`$${operator}`] = value.split(',');
         } else {
@@ -152,7 +151,7 @@ export class ApiFeatures<T> {
         .split(',')
         .map((field) => field.trim())
         .filter((field) => field !== '')
-        .join('');
+        .join(' ');
       this.mongooseQuery = this.mongooseQuery.select(fields);
     } else {
       this.mongooseQuery = this.mongooseQuery.select('-__v');

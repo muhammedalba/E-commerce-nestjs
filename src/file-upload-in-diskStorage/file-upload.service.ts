@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { extname } from 'path';
 import * as fs from 'fs';
 import * as sharp from 'sharp';
@@ -21,6 +21,8 @@ type fileType = Request['file'];
 type filesType = Request['files'];
 @Injectable()
 export class FileUploadService {
+  private readonly logger = new Logger(FileUploadService.name);
+
   async saveFileToDisk(
     file: MulterFileType,
     modelName: string,
@@ -64,7 +66,7 @@ export class FileUploadService {
         : outputPath;
       return file_path;
     } catch (error) {
-      console.error('Error saving file to disk:', error);
+      this.logger.error('Error saving file to disk', error);
       throw new InternalServerErrorException('Failed to save file to disk');
     }
   }
@@ -84,7 +86,7 @@ export class FileUploadService {
       );
       return filePaths;
     } catch (error) {
-      console.error('Error saving files to disk:', error);
+      this.logger.error('Error saving files to disk', error);
       throw new InternalServerErrorException('Failed to save files to disk');
     }
   }
@@ -124,7 +126,7 @@ export class FileUploadService {
       }
       return file_path;
     } catch (error) {
-      console.error(`Error updating file ${destinationPath}:`, error);
+      this.logger.error(`Error updating file ${destinationPath}`, error);
     }
   }
   async deleteFiles(filePaths: string[]): Promise<[]> {
@@ -135,7 +137,7 @@ export class FileUploadService {
   }
   async deleteFile(Path: string): Promise<void> {
     if (!Path) {
-      console.warn('No path provided for file deletion.');
+      this.logger.warn('No path provided for file deletion.');
       return;
     }
     // delete avatar file from disk, but not if it's the default avatar image path.
@@ -148,7 +150,7 @@ export class FileUploadService {
       await fs.promises.unlink(Path);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-        console.error(`Error deleting file ${Path}:`, error);
+        this.logger.error(`Error deleting file ${Path}`, error);
       }
       // }
     }
@@ -207,7 +209,7 @@ export class FileUploadService {
 
       return outputPath;
     } catch (error) {
-      console.error('❌ Error resizing image:', error);
+      this.logger.error('Error resizing image', error);
       throw new InternalServerErrorException('Failed to resize image');
     }
   }

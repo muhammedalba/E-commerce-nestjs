@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { CreateCarouselDto } from './shared/dto/create-carousel.dto';
 import { UpdateCarouselDto } from './shared/dto/update-carousel.dto';
@@ -18,6 +19,8 @@ import { I18nHelper } from 'src/shared/utils/i18n/i18n-helper';
 type file = Request['file'];
 @Injectable()
 export class CarouselService extends BaseService<CarouselDocument> {
+  protected override readonly logger = new Logger(CarouselService.name);
+
   constructor(
     @InjectModel(Carousel.name) private CarouselModel: Model<CarouselDocument>,
     protected readonly fileUploadService: FileUploadService,
@@ -76,7 +79,7 @@ export class CarouselService extends BaseService<CarouselDocument> {
       return I18nHelper.localize(newDoc);
       // return this.localize(newDoc);
     } catch (error) {
-      console.error('Error saving carousel:', error);
+      this.logger.error('Error saving carousel', error);
       throw new InternalServerErrorException(
         this.i18n.translate('exception.ERROR_SAVE'),
       );
@@ -162,7 +165,7 @@ export class CarouselService extends BaseService<CarouselDocument> {
         }
       }
     } catch (error) {
-      console.error('Error processing carousel images:', error);
+      this.logger.error('Error processing carousel images', error);
       throw new InternalServerErrorException(
         this.i18n.translate('exception.ERROR_SAVE'),
       );
@@ -203,7 +206,7 @@ export class CarouselService extends BaseService<CarouselDocument> {
         imagePaths.map((path) => this.fileUploadService.deleteFile(`.${path}`)),
       );
     } catch (error) {
-      console.error('Error deleting carousel images:', error);
+      this.logger.error('Error deleting carousel images', error);
       throw new InternalServerErrorException(
         this.i18n.translate('exception.ERROR_SAVE'),
       );
