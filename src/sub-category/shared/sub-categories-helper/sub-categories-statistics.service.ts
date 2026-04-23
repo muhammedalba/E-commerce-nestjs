@@ -1,17 +1,17 @@
 import { Model } from 'mongoose';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { SupCategory } from '../schemas/sup-category.schema';
+import { SubCategory } from '../schemas/sub-category.schema';
 
 @Injectable()
-export class SupCategoriesStatistics {
+export class SubCategoriesStatistics {
   constructor(
-    @InjectModel(SupCategory.name)
-    private readonly SupCategoryModel: Model<SupCategory>,
+    @InjectModel(SubCategory.name)
+    private readonly SubCategoryModel: Model<SubCategory>,
   ) {}
 
-  async supCategoriesStatistics() {
-    const totalCategories = await this.SupCategoryModel.countDocuments();
+  async SubCategoriesStatistics() {
+    const totalCategories = await this.SubCategoryModel.countDocuments();
     return { status: 'success', data: totalCategories };
   }
 }

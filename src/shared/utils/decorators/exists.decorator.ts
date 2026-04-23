@@ -28,7 +28,9 @@ export class ExistsConstraint implements ValidatorConstraintInterface {
 
       // Unique IDs
       const rawIds = Array.isArray(value) ? value : [value];
-      const uniqueIds = [...new Set(rawIds.filter((id) => id && typeof id === 'string'))];
+      const uniqueIds = [
+        ...new Set(rawIds.filter((id) => id && typeof id === 'string')),
+      ];
 
       if (uniqueIds.length === 0) return true;
 
@@ -37,21 +39,21 @@ export class ExistsConstraint implements ValidatorConstraintInterface {
         uniqueIds.map(async (id) => {
           const cacheKey = `exists:${modelName.toLowerCase().trim()}:${id}`;
           const cached = await this.cacheManager.get<boolean>(cacheKey);
-          
+
           if (cached !== undefined) {
-             return { id, exists: cached, fromCache: true };
+            return { id, exists: cached, fromCache: true };
           }
           return { id, exists: null, fromCache: false };
         }),
       );
 
-      const unknownIds = results.filter(r => !r.fromCache).map(r => r.id);
+      const unknownIds = results.filter((r) => !r.fromCache).map((r) => r.id);
 
       if (unknownIds.length > 0) {
         const foundDocs = await model
           .find({ _id: { $in: unknownIds } })
           .select('_id')
-          .lean<{ _id: string }[]>(); 
+          .lean<{ _id: string }[]>();
         const foundIds = new Set(foundDocs.map((d) => d._id.toString().trim()));
 
         // Update cache for unknown IDs
@@ -60,16 +62,16 @@ export class ExistsConstraint implements ValidatorConstraintInterface {
             const exists = foundIds.has(id);
             const cacheKey = `exists:${modelName.toLowerCase()}:${id}`;
             await this.cacheManager.set(cacheKey, exists, 300000); // 5 minutes TTL
-            
+
             // Update results for return check
-            const res = results.find(r => r.id === id);
+            const res = results.find((r) => r.id === id);
             if (res) res.exists = exists;
-          })
+          }),
         );
       }
 
       // Final check: all uniqueIds must exist
-      return results.every(r => r.exists === true);
+      return results.every((r) => r.exists === true);
     } catch (error: any) {
       console.error(`ExistsConstraint Error: ${error.message}`);
       return false;
@@ -82,7 +84,10 @@ export class ExistsConstraint implements ValidatorConstraintInterface {
   }
 }
 
-export function Exists(modelName: string, validationOptions?: ValidationOptions) {
+export function Exists(
+  modelName: string,
+  validationOptions?: ValidationOptions,
+) {
   return function (object: object, propertyName: string) {
     registerDecorator({
       target: object.constructor,

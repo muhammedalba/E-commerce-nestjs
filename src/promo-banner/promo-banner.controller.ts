@@ -7,23 +7,32 @@ import {
   Patch,
   Post,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
+import { CacheTTL } from '@nestjs/cache-manager';
 import { PromoBannerService } from './promo-banner.service';
 import { PromoBanner } from './shared/schema/promo-banner.schema';
 import { PromoBannerDto } from './shared/dto/promo-banner.dto';
-import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
+import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { UpdatePromoBannerDto } from './shared/dto/updatepromo_banner.dto';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
+import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
+import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 
 @Controller('promo-banner')
+@UseInterceptors(ClearCacheInterceptor)
 export class PromoBannerController {
   constructor(private readonly promoBannerService: PromoBannerService) {}
 
   @Get('active')
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(60000) // 60 seconds
   async getActiveBanner(): Promise<any> {
     return await this.promoBannerService.getActiveBanner();
   }
   @Get()
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(60000) // 60 seconds
   async getBanners(
     @Query() queryString: QueryString,
     @Query('all_langs') allLangs?: string,
@@ -40,6 +49,8 @@ export class PromoBannerController {
     );
   }
   @Get(':id')
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(60000) // 60 seconds
   async getBanner(
     @Param() idParamDto: IdParamDto,
     @Query('all_langs') allLangs?: string,

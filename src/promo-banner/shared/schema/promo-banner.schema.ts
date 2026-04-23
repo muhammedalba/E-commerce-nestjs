@@ -3,7 +3,7 @@ import { HydratedDocument } from 'mongoose';
 
 @Schema({ timestamps: { updatedAt: true } })
 export class PromoBanner {
-  @Prop({ required: true, minlength: 3, max: 400, i18n: true })
+  @Prop({ required: true, minlength: 3, max: 400 })
   text!: string;
 
   @Prop({ default: false })

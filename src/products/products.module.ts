@@ -3,14 +3,14 @@ import { ProductsService } from './products.service';
 import { ProductsController } from './products.controller';
 import { AuthModule } from 'src/auth/auth.module';
 import { MongooseModule } from '@nestjs/mongoose';
-import { FileUploadDiskStorageModule } from 'src/file-upload-in-diskStorage/file-upload.module';
+import { FileUploadDiskStorageModule } from 'src/file-upload/file-upload.module';
 import { Product, ProductSchema } from './shared/schemas/Product.schema';
 import {
   ProductVariant,
   ProductVariantSchema,
 } from './shared/schemas/ProductVariant.schema';
-import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
-import * as mongooseI18n from 'mongoose-i18n-localize';
+import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
+
 import { ProductsStatistics } from './products-helper/products-statistics.service';
 import { AggregationSyncService } from './products-helper/aggregation-sync.service';
 
@@ -24,11 +24,11 @@ import {
   CategorySchema,
 } from 'src/categories/shared/schemas/category.schema';
 import {
-  SupCategory,
-  SupCategorySchema,
-} from 'src/sup-category/shared/schemas/sup-category.schema';
+  SubCategory,
+  SubCategorySchema,
+} from 'src/sub-category/shared/schemas/sub-category.schema';
 
-// ─── New separated services ──────────────────────────────
+// â”€â”€â”€ New separated services â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 import { ProductQueryService } from './services/products-query.service';
 import { ProductMutationService } from './services/products-mutation.service';
 import { ProductFileService } from './services/products-file.service';
@@ -41,18 +41,7 @@ import { ProductSkuService } from './services/products-sku.service';
       {
         name: Product.name,
         useFactory() {
-          const schema = ProductSchema;
-          schema.plugin(mongooseI18n, {
-            locales: process.env.LANGUAGES?.split(',') ?? ['ar', 'en'],
-            defaultLocale: process.env.DEFAULT_LANGUAGE ?? 'ar',
-            textCase: 'lowercase',
-            autoPopulate: true,
-            indexes: {
-              title: 1,
-              slug: 1,
-            },
-          });
-          return schema;
+          return ProductSchema;
         },
       },
       {
@@ -80,9 +69,9 @@ import { ProductSkuService } from './services/products-sku.service';
         },
       },
       {
-        name: SupCategory.name,
+        name: SubCategory.name,
         useFactory: () => {
-          return SupCategorySchema;
+          return SubCategorySchema;
         },
       },
     ]),

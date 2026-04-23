@@ -19,7 +19,7 @@ export class ProductSkuService {
   constructor(
     @InjectModel(ProductVariant.name)
     private readonly variantModel: Model<ProductVariantDocument>,
-  ) { }
+  ) {}
 
   // ──────────────────────────────────────────────────────
   //  VALIDATE ATTRIBUTES
@@ -29,10 +29,10 @@ export class ProductSkuService {
     variants: { attributes?: Record<string, unknown> }[],
     allowedAttributes: any[],
     existing_variant_count: number = 0,
-    existing_simple_count: number = 0
+    existing_simple_count: number = 0,
   ): void {
-    const newSimpleCount = variants.filter(v => 
-      !v.attributes || Object.keys(v.attributes).length === 0
+    const newSimpleCount = variants.filter(
+      (v) => !v.attributes || Object.keys(v.attributes).length === 0,
     ).length;
 
     const totalSimpleCount = existing_simple_count + newSimpleCount;
@@ -40,17 +40,24 @@ export class ProductSkuService {
 
     // Rule 1: You cannot have more than 1 "Simple" variant (no attributes)
     if (totalSimpleCount > 1) {
-      throw new BadRequestException('لا يمكن إنشاء أكثر من متغير واحد بدون خصائص (Simple Variant)');
+      throw new BadRequestException(
+        'لا يمكن إنشاء أكثر من متغير واحد بدون خصائص (Simple Variant)',
+      );
     }
 
     // Rule 2: If NO attributes are defined, you can ONLY have 1 variant total (which must be a simple variant)
-    if ((!allowedAttributes || allowedAttributes.length === 0) && totalVariantCount > 1) {
-      throw new BadRequestException('لا يمكن إنشاء أكثر من متغير واحد لمنتج لا يحتوي على خصائص (Attributes)');
+    if (
+      (!allowedAttributes || allowedAttributes.length === 0) &&
+      totalVariantCount > 1
+    ) {
+      throw new BadRequestException(
+        'لا يمكن إنشاء أكثر من متغير واحد لمنتج لا يحتوي على خصائص (Attributes)',
+      );
     }
 
     validateAndNormalizeVariantsAttributes(variants, allowedAttributes);
   }
- 
+
   // ──────────────────────────────────────────────────────
   //  GENERATE & VALIDATE SKUs FOR NEW VARIANTS
   // ──────────────────────────────────────────────────────

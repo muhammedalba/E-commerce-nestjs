@@ -12,14 +12,15 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { CacheTTL } from '@nestjs/cache-manager';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from 'src/users/shared/dto/create-user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { createParseFilePipe } from 'src/shared/files/files-validation-factory';
-import { LoginUserDto } from './shared/Dto/login.dto';
+import { LoginUserDto } from './shared/dto/login.dto';
 import { AuthGuard } from './shared/guards/auth.guard';
-import { ForgotPasswordDto } from './shared/Dto/forgotPassword.dto.';
-import { resetCodeDto } from './shared/Dto/resetCode.dto';
+import { ForgotPasswordDto } from './shared/dto/forgotPassword.dto.';
+import { resetCodeDto } from './shared/dto/resetCode.dto';
 import { UpdateUserDto } from 'src/users/shared/dto/update-user.dto';
 import { Request, Response } from 'express';
 import { GoogleAuthGuard } from './oauth2/guards/GoogleAuthGuard';
@@ -30,8 +31,11 @@ import {
   OAuthUser,
 } from './shared/types/oauth-user.interface';
 import { JwtPayload } from './shared/types/jwt-payload.interface';
+import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
+import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 
 @Controller('auth')
+@UseInterceptors(ClearCacheInterceptor)
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
   // ------------ =============================== ---------- //
@@ -124,6 +128,8 @@ export class AuthController {
   /* ------------ ======  GET ME PROFILE  ====== ---------- */
   /* ------------ =============================== ---------- */
   @Get('me-profile')
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(30000) // 30 seconds
   @UseGuards(AuthGuard)
   async getMe(@Req() request: { user: JwtPayload }): Promise<any> {
     return await this.authService.getMe(request);

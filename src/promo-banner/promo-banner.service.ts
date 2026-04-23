@@ -9,7 +9,7 @@ import {
   PromoBanner,
   PromoBannerDocument,
 } from './shared/schema/promo-banner.schema';
-import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
+import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { PromoBannerDto } from './shared/dto/promo-banner.dto';
 import { UpdatePromoBannerDto } from './shared/dto/updatepromo_banner.dto';
 import { ApiFeatures } from 'src/shared/utils/ApiFeatures';
@@ -22,9 +22,8 @@ export class PromoBannerService {
     @InjectModel(PromoBanner.name)
     private promoBannerModel: Model<PromoBannerDocument>,
     protected readonly i18n: CustomI18nService,
-  ) { }
+  ) {}
 
-  
   async getActiveBanner(): Promise<any> {
     const promo = await this.promoBannerModel
       .findOne({ isActive: true })

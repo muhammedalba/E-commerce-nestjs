@@ -23,9 +23,10 @@ interface MetaData {
 }
 
 @Injectable()
-export class TransformInterceptor<T>
-  implements NestInterceptor<T, ApiResponse<T>>
-{
+export class TransformInterceptor<T> implements NestInterceptor<
+  T,
+  ApiResponse<T>
+> {
   constructor(private readonly i18n: I18nService) {}
 
   intercept(
@@ -109,22 +110,12 @@ export class TransformInterceptor<T>
             ? translatedMessage
             : messageKey;
 
-        // 4. Capture access_token if present in resultObj
-        let access_token: string | undefined = undefined;
-        if (res && typeof res === 'object' && !Array.isArray(res)) {
-          const resultObj = res as Record<string, unknown>;
-          if (typeof resultObj.access_token === 'string') {
-            access_token = resultObj.access_token;
-          }
-        }
-
         return {
           ...baseResponse,
           message: finalMessage,
           totalCount: meta?.total,
           data,
           meta,
-          access_token,
         } as ApiResponse<T>;
       }),
     );

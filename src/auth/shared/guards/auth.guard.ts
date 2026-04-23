@@ -8,7 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Request } from 'express';
 import { Model } from 'mongoose';
-import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
+import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { User } from '../schema/user.schema';
 import { JwtPayload } from '../types/jwt-payload.interface';
 
@@ -75,7 +75,8 @@ export class AuthGuard implements CanActivate {
       }
     }
 
-    request['user'] = payload as unknown as User;
+    // @ts-expect-error We are injecting the payload into the request object
+    request['user'] = payload;
 
     return true;
   }

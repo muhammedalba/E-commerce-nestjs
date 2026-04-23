@@ -4,8 +4,8 @@ import { UpdateOrderDto } from './shared/dto/update-order.dto';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Order } from './shared/schemas/Order.schema';
-import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
-import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
+import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
+import { FileUploadService } from 'src/file-upload/file-upload.service';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { OrderHelperService } from './shared/order-helper/order-helper.service';
 import { OrderEmailService } from './shared/order-helper/order-email.service';
@@ -14,7 +14,7 @@ import { ProductHelperService } from './shared/order-helper/product.helper';
 import { ApiFeatures } from 'src/shared/utils/ApiFeatures';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
-import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
+import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { OrdersStatisticsService } from './shared/order-helper/order-statistics.service';
 import { User } from 'src/auth/shared/schema/user.schema';
 
@@ -167,7 +167,9 @@ export class OrderService {
   async findOne(idParamDto: string) {
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto);
     if (!isObjectId) {
-      throw new BadRequestException('معرف الطلب غير صالح');
+      throw new BadRequestException(
+        'Ã™â€¦Ã˜Â¹Ã˜Â±Ã™Â Ã˜Â§Ã™â€žÃ˜Â·Ã™â€žÃ˜Â¨ Ã˜ÂºÃ™Å Ã˜Â± Ã˜ÂµÃ˜Â§Ã™â€žÃ˜Â­',
+      );
     }
     const order = await this.OrderModel.findById(idParamDto)
       .populate({
@@ -199,7 +201,9 @@ export class OrderService {
     // 1) check id is valid
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto.id);
     if (!isObjectId) {
-      throw new BadRequestException('معرف الطلب غير صالح');
+      throw new BadRequestException(
+        'Ã™â€¦Ã˜Â¹Ã˜Â±Ã™Â Ã˜Â§Ã™â€žÃ˜Â·Ã™â€žÃ˜Â¨ Ã˜ÂºÃ™Å Ã˜Â± Ã˜ÂµÃ˜Â§Ã™â€žÃ˜Â­',
+      );
     }
     const order = await this.OrderModel.findById(idParamDto.id).select(
       ' InvoicePdf DeliveryReceiptImage ',
@@ -233,7 +237,9 @@ export class OrderService {
     // 1) : Validate ID format
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto.id);
     if (!isObjectId) {
-      throw new BadRequestException('معرف الطلب غير صالح');
+      throw new BadRequestException(
+        'Ã™â€¦Ã˜Â¹Ã˜Â±Ã™Â Ã˜Â§Ã™â€žÃ˜Â·Ã™â€žÃ˜Â¨ Ã˜ÂºÃ™Å Ã˜Â± Ã˜ÂµÃ˜Â§Ã™â€žÃ˜Â­',
+      );
     }
 
     // 2) Retrieve and delete order
@@ -256,7 +262,10 @@ export class OrderService {
       try {
         await this.fileUploadService.deleteFiles(paths);
       } catch (err) {
-        this.logger.warn?.('فشل حذف الملفات المرتبطة بالطلب', err);
+        this.logger.warn?.(
+          'Ã™ÂÃ˜Â´Ã™â€ž Ã˜Â­Ã˜Â°Ã™Â Ã˜Â§Ã™â€žÃ™â€¦Ã™â€žÃ™ÂÃ˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â±Ã˜ÂªÃ˜Â¨Ã˜Â·Ã˜Â© Ã˜Â¨Ã˜Â§Ã™â€žÃ˜Â·Ã™â€žÃ˜Â¨',
+          err,
+        );
       }
     }
   }

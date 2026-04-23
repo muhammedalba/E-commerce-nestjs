@@ -6,7 +6,6 @@ import { generateUniqueSlug } from 'src/shared/utils/slug.util';
 export class Category {
   @Prop({
     type: Object,
-    i18n: true,
   })
   name!: string | { en?: string; ar?: string };
   @Prop({
@@ -26,8 +25,8 @@ export class Category {
 }
 export type CategoryDocument = HydratedDocument<Category>;
 export const CategorySchema = SchemaFactory.createForClass(Category);
-CategorySchema.virtual('supCategories', {
-  ref: 'SupCategory',
+CategorySchema.virtual('SubCategories', {
+  ref: 'SubCategory',
   localField: '_id',
   foreignField: 'category',
 });

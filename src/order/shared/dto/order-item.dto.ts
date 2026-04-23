@@ -1,13 +1,14 @@
 import { Type } from 'class-transformer';
 import { IsMongoId, IsNumber, IsPositive, Min } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { i18nValidationMessage } from 'nestjs-i18n';
 
 export class OrderItemDto {
   @ApiProperty({
     description: 'ID of the product',
     example: '60d21b4667d0d8992e610c85',
   })
-  @IsMongoId({ message: 'معرّف المنتج غير صالح' })
+  @IsMongoId({ message: i18nValidationMessage('validation.IS_MONGO_ID') })
   @Type(() => String)
   productId!: string;
 
@@ -15,7 +16,7 @@ export class OrderItemDto {
     description: 'ID of the product variant',
     example: '60d21b4667d0d8992e610c86',
   })
-  @IsMongoId({ message: 'معرّف المتغير غير صالح' })
+  @IsMongoId({ message: i18nValidationMessage('validation.IS_MONGO_ID') })
   @Type(() => String)
   variantId!: string;
 

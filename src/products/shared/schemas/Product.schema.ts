@@ -3,7 +3,7 @@ import { HydratedDocument } from 'mongoose';
 import { Types } from 'mongoose';
 import { Brand } from 'src/brands/shared/schemas/brand.schema';
 import { Category } from 'src/categories/shared/schemas/category.schema';
-import { SupCategory } from 'src/sup-category/shared/schemas/sup-category.schema';
+import { SubCategory } from 'src/sub-category/shared/schemas/sub-category.schema';
 import { Supplier } from 'src/supplier/shared/schema/Supplier.schema';
 import { ProductVariant } from './ProductVariant.schema';
 
@@ -16,7 +16,6 @@ export class Product {
   // ─── Localized Fields ──────────────────────────────────
   @Prop({
     type: Object,
-    i18n: true,
     trim: true,
     required: [true, 'product title required'],
     minlength: 3,
@@ -33,7 +32,6 @@ export class Product {
 
   @Prop({
     type: Object,
-    i18n: true,
     trim: true,
     required: [true, 'product description required'],
     minlength: 15,
@@ -67,9 +65,9 @@ export class Product {
   category?: Types.ObjectId;
 
   @Prop({
-    type: [{ type: Types.ObjectId, ref: SupCategory.name, required: true }],
+    type: [{ type: Types.ObjectId, ref: SubCategory.name, required: true }],
   })
-  supCategories!: Types.ObjectId[];
+  SubCategories!: Types.ObjectId[];
 
   @Prop({
     type: Types.ObjectId,
@@ -192,7 +190,6 @@ ProductSchema.index({ category: 1, 'priceRange.min': 1 }); // Enhanced compound 
 ProductSchema.index({ brand: 1 });
 ProductSchema.index({ supplier: 1 });
 ProductSchema.index({ isDeleted: 1, disabled: 1 });
-
 
 // ─── Auto-exclude soft-deleted documents ─────────────────
 ProductSchema.pre('find', function () {

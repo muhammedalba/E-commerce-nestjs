@@ -3,12 +3,13 @@ import {
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
-import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
+import { FileUploadService } from 'src/file-upload/file-upload.service';
+import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import {
   MulterFilesType,
   MulterFileType,
 } from 'src/shared/utils/interfaces/fileInterface';
+import { Product } from '../shared/schemas/Product.schema';
 
 /**
  * Handles all file upload / delete operations for products.
@@ -20,9 +21,9 @@ export class ProductFileService {
     private readonly i18n: CustomI18nService,
   ) {}
 
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   //  SINGLE FILE UPLOAD
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   async uploadSingleFile(
     file: MulterFileType,
@@ -36,9 +37,9 @@ export class ProductFileService {
     return this.fileUploadService.saveFileToDisk(file, folder);
   }
 
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   //  MULTIPLE FILES UPLOAD
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   async uploadMultipleFiles(
     files: MulterFilesType,
@@ -51,9 +52,9 @@ export class ProductFileService {
     return this.fileUploadService.saveFilesToDisk(fileArray, folder);
   }
 
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   //  HANDLE FILES ON CREATE
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   async handleCreateFiles(files: {
     imageCover: MulterFilesType;
@@ -77,7 +78,7 @@ export class ProductFileService {
         files.imageCover[0]
       ) {
         result.imageCover =
-          (await this.uploadSingleFile(files.imageCover[0], 'products')) ?? '';
+          await this.uploadSingleFile(files.imageCover[0], Product.name) ?? '';
       }
 
       if (
@@ -87,14 +88,11 @@ export class ProductFileService {
       ) {
         result.infoProductPdf = await this.uploadSingleFile(
           files.infoProductPdf[0],
-          'products',
+          Product.name,
         );
       }
 
-      result.images = await this.uploadMultipleFiles(
-        files.images,
-        'products',
-      );
+      result.images = await this.uploadMultipleFiles(files.images, Product.name);
     } catch {
       throw new InternalServerErrorException(
         this.i18n.translate('exception.ERROR_SAVE'),
@@ -104,9 +102,9 @@ export class ProductFileService {
     return result;
   }
 
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   //  HANDLE FILES ON UPDATE
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   async handleUpdateFiles(
     doc: {
@@ -116,8 +114,8 @@ export class ProductFileService {
     },
     files: {
       imageCover?: MulterFilesType;
-      images?: MulterFilesType;
       infoProductPdf?: MulterFilesType;
+      images?: MulterFilesType;
     },
     bodyImages?: string[] | string,
   ): Promise<
@@ -140,10 +138,10 @@ export class ProductFileService {
         if (file && Array.isArray(file) && file[0]) {
           const newPath = await this.fileUploadService.saveFileToDisk(
             file[0] as MulterFileType,
-            'products',
+            Product.name,
           );
           if (key === 'imageCover' || key === 'infoProductPdf') {
-            const oldPath = doc[key as 'imageCover' | 'infoProductPdf'];
+            const oldPath = doc[key];
             if (oldPath) {
               await this.fileUploadService.deleteFile(`.${oldPath}`);
             }
@@ -189,7 +187,7 @@ export class ProductFileService {
       ) {
         newImages = await this.fileUploadService.saveFilesToDisk(
           files.images,
-          'products',
+          Product.name,
         );
       }
 
@@ -205,9 +203,9 @@ export class ProductFileService {
     return result;
   }
 
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   //  DELETE ALL PRODUCT FILES
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   async deleteProductFiles(doc: {
     imageCover?: string;

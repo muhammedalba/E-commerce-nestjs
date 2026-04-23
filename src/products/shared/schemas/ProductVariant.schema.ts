@@ -55,7 +55,6 @@ export class ProductVariant {
   @Prop({
     type: String,
     required: true,
-    unique: true,
     uppercase: true,
     trim: true,
   })
@@ -64,7 +63,6 @@ export class ProductVariant {
   @Prop({
     type: String,
     trim: true,
-    sparse: true,
   })
   barcode?: string;
 

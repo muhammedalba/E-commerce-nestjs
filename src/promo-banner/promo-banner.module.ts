@@ -6,22 +6,15 @@ import {
 } from './shared/schema/promo-banner.schema';
 import { PromoBannerService } from './promo-banner.service';
 import { PromoBannerController } from './promo-banner.controller';
-import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
-import * as mongooseI18n from 'mongoose-i18n-localize';
+import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
+
 @Module({
   imports: [
     MongooseModule.forFeatureAsync([
       {
         name: PromoBanner.name,
         useFactory() {
-          const schema = PromoBannerSchema;
-          schema.plugin(mongooseI18n, {
-            locales: process.env.LANGUAGES?.split(',') ?? ['ar', 'en'],
-            defaultLocale: process.env.DEFAULT_LANGUAGE ?? 'ar',
-            textCase: 'lowercase',
-            autoPopulate: true,
-          });
-          return schema;
+          return PromoBannerSchema;
         },
       },
     ]),

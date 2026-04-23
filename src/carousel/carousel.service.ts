@@ -10,10 +10,10 @@ import { BaseService } from 'src/shared/utils/service/base.service';
 import { Carousel, CarouselDocument } from './shared/schemas/carousel.schema';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
-import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
+import { FileUploadService } from 'src/file-upload/file-upload.service';
+import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
-import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
+import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { Request } from 'express';
 import { I18nHelper } from 'src/shared/utils/i18n/i18n-helper';
 type file = Request['file'];
@@ -55,7 +55,7 @@ export class CarouselService extends BaseService<CarouselDocument> {
         requiredKeys.map((key) =>
           this.fileUploadService.saveFileToDisk(
             files[key]?.[0] as file,
-            'carousel',
+            Carousel.name,
           ),
         ),
       );
@@ -148,7 +148,7 @@ export class CarouselService extends BaseService<CarouselDocument> {
           // save the new file to disk
           const newPath = await this.fileUploadService.saveFileToDisk(
             file,
-            'carousel',
+            Carousel.name,
           );
 
           // delete the old file from disk

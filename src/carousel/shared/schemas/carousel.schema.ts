@@ -5,7 +5,6 @@ import { HydratedDocument } from 'mongoose';
 export class Carousel {
   @Prop({
     type: Object,
-    i18n: true,
   })
   description!: string | { en?: string; ar?: string };
   @Prop({

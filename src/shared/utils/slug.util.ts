@@ -8,7 +8,10 @@ export async function generateUniqueSlug(
   excludeId?: string | any,
   message?: string,
 ): Promise<string> {
-  const slug = slugify(name.trim().toLowerCase(), { lower: true, strict: true });
+  const slug = slugify(name.trim().toLowerCase(), {
+    lower: true,
+    strict: true,
+  });
   const query: any = { slug };
   if (excludeId) {
     query._id = { $ne: excludeId };

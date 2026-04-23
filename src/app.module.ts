@@ -1,9 +1,12 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { ConfigModule } from '@nestjs/config';
+import { validateEnv } from './config/env.validation';
 import { AuthModule } from './auth/auth.module';
 import { BrandsModule } from './brands/brands.module';
 import { MongooseConfig } from './config/db/mongoose.config';
@@ -18,18 +21,24 @@ import { CartModule } from './cart/cart.module';
 import { OrderModule } from './order/order.module';
 import { CustomI18nValidationExceptionFilter } from './filters/i18n-validation-exception.filter';
 import { PromoBannerModule } from './promo-banner/promo-banner.module';
-import { SupCategoryModule } from './sup-category/sup-category.module';
+import { SubCategoryModule } from './sub-category/sub-category.module';
 import { SupplierModule } from './supplier/supplier.module';
 import { ExistsConstraint } from './shared/utils/decorators/exists.decorator';
 import { CacheModule } from '@nestjs/cache-manager';
-
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
+      validate: validateEnv,
     }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 100,
+      },
+    ]),
     CacheModule.register({
       isGlobal: true,
     }),
@@ -48,11 +57,15 @@ import { CacheModule } from '@nestjs/cache-manager';
     CartModule,
     OrderModule,
     PromoBannerModule,
-    SupCategoryModule,
+    SubCategoryModule,
     SupplierModule,
   ],
   controllers: [AppController],
   providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
     AppService,
     ExistsConstraint,
     CustomI18nValidationExceptionFilter,

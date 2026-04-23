@@ -72,5 +72,5 @@ export class CreateSupplierDto {
   @IsOptional()
   @IsBoolean()
   @Transform(({ value }) => value === 'true' || value === true)
-  active?: boolean;
+  isActive?: boolean;
 }

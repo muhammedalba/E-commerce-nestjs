@@ -8,7 +8,7 @@ import {
   ProductVariant,
   ProductVariantDocument,
 } from 'src/products/shared/schemas/ProductVariant.schema';
-import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
+import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 
 @Injectable()
 export class CartService {
@@ -57,7 +57,7 @@ export class CartService {
       .exec();
 
     if (!product || product.disabled) {
-      throw new BadRequestException('المنتج غير موجود');
+      throw new BadRequestException('Ø§Ù„Ù…Ù†ØªØ¬ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯');
     }
 
     // 2. Fetch variant and check stock
@@ -71,12 +71,12 @@ export class CartService {
       .exec();
 
     if (!variant) {
-      throw new BadRequestException('المتغير غير موجود');
+      throw new BadRequestException('Ø§Ù„Ù…ØªØºÙŠØ± ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯');
     }
 
     // 3. Check stock at variant level
     if (!product.isUnlimitedStock && variant.stock < quantity) {
-      throw new BadRequestException('الكمية غير متوفرة');
+      throw new BadRequestException('Ø§Ù„ÙƒÙ…ÙŠØ© ØºÙŠØ± Ù…ØªÙˆÙØ±Ø©');
     }
 
     // 4. Calculate price from variant
@@ -110,7 +110,7 @@ export class CartService {
       if (existingItem) {
         const newTotalQty = existingItem.quantity + quantity;
         if (!product.isUnlimitedStock && variant.stock < newTotalQty) {
-          throw new BadRequestException('الكمية غير كافية');
+          throw new BadRequestException('Ø§Ù„ÙƒÙ…ÙŠØ© ØºÙŠØ± ÙƒØ§ÙÙŠØ©');
         }
         existingItem.quantity = newTotalQty;
       } else {

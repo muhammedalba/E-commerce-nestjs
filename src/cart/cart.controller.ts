@@ -8,7 +8,9 @@ import {
   Req,
   UseGuards,
   HttpStatus,
+  UseInterceptors,
 } from '@nestjs/common';
+import { CacheTTL } from '@nestjs/cache-manager';
 import { CartService } from './cart.service';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
@@ -23,18 +25,26 @@ import {
   ApiOkResponse,
 } from '@nestjs/swagger';
 import { Cart } from './shared/schemas/cart.schema';
+import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
+import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 
 @ApiTags('Cart')
 @Controller('cart')
 @UseGuards(AuthGuard)
 @ApiBearerAuth()
+@UseInterceptors(ClearCacheInterceptor)
 export class CartController {
   constructor(private readonly cartService: CartService) {}
 
   @Get()
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(10000) // 10 seconds
   @ApiOperation({ summary: "Get the user's cart" })
   @ApiOkResponse({ description: 'Cart retrieved successfully.', type: Cart })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized.',
+  })
   async getCart(@Req() req: { user: JwtPayload }) {
     return await this.cartService.getCart(req.user.user_id);
   }
@@ -42,9 +52,18 @@ export class CartController {
   @Post('add')
   @ApiOperation({ summary: 'Add an item to the cart' })
   @ApiBody({ type: CreateCartDto })
-  @ApiOkResponse({ description: 'Item added to cart successfully.', type: Cart })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request. Invalid input data.' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Unauthorized.' })
+  @ApiOkResponse({
+    description: 'Item added to cart successfully.',
+    type: Cart,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Bad Request. Invalid input data.',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized.',
+  })
   async addItem(
     @Req() req: { user: JwtPayload },
     @Body() createCartDto: CreateCartDto,
@@ -54,9 +73,19 @@ export class CartController {
 
   @Delete('remove/:productId')
   @ApiOperation({ summary: 'Remove an item from the cart' })
-  @ApiParam({ name: 'productId', description: 'ID of the product to remove', type: String })
-  @ApiOkResponse({ description: 'Item removed from cart successfully.', type: Cart })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Unauthorized.' })
+  @ApiParam({
+    name: 'productId',
+    description: 'ID of the product to remove',
+    type: String,
+  })
+  @ApiOkResponse({
+    description: 'Item removed from cart successfully.',
+    type: Cart,
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized.',
+  })
   removeItem(
     @Req() req: { user: JwtPayload },
     @Param('productId') productId: string,
@@ -67,7 +96,10 @@ export class CartController {
   @Delete('clear')
   @ApiOperation({ summary: 'Clear the entire cart' })
   @ApiOkResponse({ description: 'Cart cleared successfully.', type: Cart })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized.',
+  })
   clearCart(@Req() req: { user: JwtPayload }) {
     return this.cartService.clearCart(req.user.user_id);
   }

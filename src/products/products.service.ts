@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { CreateProductDto } from './shared/dto/create-product.dto';
 import { UpdateProductDto } from './shared/dto/update-product.dto';
 import { MulterFilesType } from 'src/shared/utils/interfaces/fileInterface';
-import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
+import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { ProductQueryService } from './services/products-query.service';
 import { ProductMutationService } from './services/products-mutation.service';
@@ -10,7 +10,7 @@ import { ProductsStatistics } from './products-helper/products-statistics.servic
 import { VariantFilterParams } from './shared/utils/variant-query-builder';
 
 /**
- * Facade service — delegates to specialized sub-services.
+ * Facade service â€” delegates to specialized sub-services.
  * Keeps the Controller contract unchanged while the internal
  * implementation is cleanly separated by responsibility.
  */
@@ -22,17 +22,17 @@ export class ProductsService {
     private readonly productsStatistics: ProductsStatistics,
   ) {}
 
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   //  STATISTICS
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   async Products_statistics(startDate?: string, endDate?: string) {
     return this.productsStatistics.Products_statistics(startDate, endDate);
   }
 
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   //  READ OPERATIONS (delegated to QueryService)
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   async findAll(queryString: QueryString, allLangs: boolean = false) {
     return this.queryService.findAll(queryString, allLangs);
@@ -43,9 +43,7 @@ export class ProductsService {
     variantFilters: VariantFilterParams,
     allLangs: boolean = false,
   ) {
-
-
-    return  this.queryService.findAllWithFilters(
+    return this.queryService.findAllWithFilters(
       queryString,
       variantFilters,
       allLangs,
@@ -56,9 +54,9 @@ export class ProductsService {
     return this.queryService.findOne(idParamDto, allLangs);
   }
 
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   //  WRITE OPERATIONS (delegated to MutationService)
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   async create(
     createProductDto: CreateProductDto,
@@ -70,7 +68,7 @@ export class ProductsService {
   ) {
     return this.mutationService.create(createProductDto, files);
   }
- 
+
   async update(
     idParamDto: IdParamDto,
     updateProductDto: UpdateProductDto,

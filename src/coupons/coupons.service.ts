@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { CreateCouponDto } from './shared/dto/create-coupon.dto';
 import { UpdateCouponDto } from './shared/dto/update-coupon.dto';
-import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
+import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { BaseService } from 'src/shared/utils/service/base.service';
 import { InjectModel } from '@nestjs/mongoose';
 import { Coupon, CouponDocument } from './shared/Schemas/coupons.schema';
 import { Model } from 'mongoose';
-import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
-import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
+import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
+import { FileUploadService } from 'src/file-upload/file-upload.service';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 
 @Injectable()

@@ -39,9 +39,7 @@ export class OrderHelperService {
   ) {}
 
   private getCurrentLang(): string {
-    return (
-      I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar'
-    );
+    return I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
   }
 
   /**
@@ -73,7 +71,10 @@ export class OrderHelperService {
       title: string;
       sku: string;
     }> = [];
-    const unAvailableProducts: Array<{ productId: string; variantId?: string }> = [];
+    const unAvailableProducts: Array<{
+      productId: string;
+      variantId?: string;
+    }> = [];
     let totalPrice = 0;
     let totalQuantity = 0;
 

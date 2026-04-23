@@ -1,5 +1,6 @@
 import { Query, Types } from 'mongoose';
 import { QueryString } from './interfaces/queryInterface';
+import { searchStrategies } from './strategies/search.strategy';
 
 export class ApiFeatures<T> {
   private mongooseQuery: Query<T[], T>;
@@ -26,7 +27,7 @@ export class ApiFeatures<T> {
 
     const allowedFilters = [
       'category',
-      'supCategories',
+      'SubCategories',
       'brand',
       'supplier',
       'isUnlimitedStock',
@@ -52,7 +53,6 @@ export class ApiFeatures<T> {
     // 1️⃣ دعم pricerange[min] و pricerange[max]
     // -----------------------------------------
     for (const key in queryObj) {
-
       const match = key.match(/^pricerange\[(min|max)\]$/i);
       if (match) {
         const type = match[1]; // min أو max
@@ -120,8 +120,6 @@ export class ApiFeatures<T> {
     return this;
   }
 
-
-
   sort() {
     const sortParam = this.queryString?.sort;
     if (sortParam) {
@@ -166,72 +164,8 @@ export class ApiFeatures<T> {
         .trim()
         .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-      let query: object;
-      switch (modelName) {
-        case 'Product':
-          query = {
-            $or: [
-              { 'title.en': { $regex: keyword, $options: 'i' } },
-              { 'title.ar': { $regex: keyword, $options: 'i' } },
-              { 'description.en': { $regex: keyword, $options: 'i' } },
-              { 'description.ar': { $regex: keyword, $options: 'i' } },
-            ],
-          };
-          break;
-        case 'Carousel':
-          query = {
-            $or: [
-              { 'description.en': { $regex: keyword, $options: 'i' } },
-              { 'description.ar': { $regex: keyword, $options: 'i' } },
-            ],
-          };
-          break;
-        case 'User':
-          query = {
-            $or: [
-              { 'name.en': { $regex: keyword, $options: 'i' } },
-              { 'name.ar': { $regex: keyword, $options: 'i' } },
-              { email: { $regex: keyword, $options: 'i' } },
-            ],
-          };
-          break;
-        case 'PromoBanner':
-          query = {
-            $or: [
-              { 'text.en': { $regex: keyword, $options: 'i' } },
-              { 'text.ar': { $regex: keyword, $options: 'i' } },
-            ],
-          };
-          break;
-        case 'Supplier':
-          query = {
-            $or: [
-              { name: { $regex: keyword, $options: 'i' } },
-              { email: { $regex: keyword, $options: 'i' } },
-            ],
-          };
-          break;
-        case 'Order':
-          query = {
-            $or: [
-              {
-                'shippingAddress.firstName': { $regex: keyword, $options: 'i' },
-              },
-              {
-                'shippingAddress.lastName': { $regex: keyword, $options: 'i' },
-              },
-            ],
-          };
-          break;
-        default:
-          query = {
-            $or: [
-              { 'name.en': { $regex: keyword, $options: 'i' } },
-              { 'name.ar': { $regex: keyword, $options: 'i' } },
-            ],
-          };
-          break;
-      }
+      const strategy = searchStrategies[modelName] || searchStrategies.default;
+      const query = strategy(keyword);
 
       this.mongooseQuery = this.mongooseQuery.find(query);
     }

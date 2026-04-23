@@ -10,7 +10,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Category } from 'src/categories/shared/schemas/category.schema';
 import { Exists } from 'src/shared/utils/decorators/exists.decorator';
 
-export class CreateSupCategoryDto {
+export class CreateSubCategoryDto {
 
   @IsDefined()
   @Type(() => FieldLocalizeDto)

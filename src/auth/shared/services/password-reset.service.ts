@@ -6,12 +6,12 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as crypto from 'crypto';
-import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
+import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { EmailService } from 'src/email/email.service';
-import { ForgotPasswordDto } from '../Dto/forgotPassword.dto.';
-import { resetCodeDto } from '../Dto/resetCode.dto';
-import { LoginUserDto } from '../Dto/login.dto';
-import { tokenService } from 'src/auth/shared/services/token.service';
+import { ForgotPasswordDto } from '../dto/forgotPassword.dto.';
+import { resetCodeDto } from '../dto/resetCode.dto';
+import { LoginUserDto } from '../dto/login.dto';
+import { TokenService } from 'src/auth/shared/services/token.service';
 import { User } from '../schema/user.schema';
 
 @Injectable()
@@ -19,7 +19,7 @@ export class PasswordResetService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     private readonly emailService: EmailService,
-    private readonly tokenService: tokenService,
+    private readonly tokenService: TokenService,
     private readonly i18n: CustomI18nService,
   ) {}
 

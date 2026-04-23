@@ -6,9 +6,9 @@ import {
 } from '@nestjs/common';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
+import { FileUploadService } from 'src/file-upload/file-upload.service';
 
-import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
+import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 
 import { EmailService } from 'src/email/email.service';
 import { RefreshToken } from '../schema/refresh-token.schema';
@@ -16,13 +16,13 @@ import { UpdateUserDto } from 'src/users/shared/dto/update-user.dto';
 import { JwtService } from '@nestjs/jwt';
 import { CookieService } from './cookie.service';
 import { Request, Response } from 'express';
-import { tokenService } from 'src/auth/shared/services/token.service';
+import { TokenService } from 'src/auth/shared/services/token.service';
 import { User } from '../schema/user.schema';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { JwtPayload } from '../types/jwt-payload.interface';
 
 @Injectable()
-export class userProfileService {
+export class UserProfileService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(RefreshToken.name)
@@ -32,7 +32,7 @@ export class userProfileService {
     private readonly emailService: EmailService,
     private readonly jwtService: JwtService,
     private readonly cookieService: CookieService,
-    private readonly tokenService: tokenService,
+    private readonly tokenService: TokenService,
   ) {}
   async getMe(user_id: string): Promise<any> {
     // 1) get user from database
@@ -83,7 +83,7 @@ export class userProfileService {
     if (file) {
       const avatarPath = await this.fileUploadService.updateFile(
         file,
-        'users',
+        User.name,
         user,
       );
       // 4) update user avatar
@@ -201,7 +201,7 @@ export class userProfileService {
       decoded_access_token = await this.jwtService.verifyAsync<JwtPayload>(
         access_token,
         {
-          ignoreExpiration: true, // تجاهل انتهاء الصلاحية
+          ignoreExpiration: true, // Ã˜ÂªÃ˜Â¬Ã˜Â§Ã™â€¡Ã™â€ž Ã˜Â§Ã™â€ Ã˜ÂªÃ™â€¡Ã˜Â§Ã˜Â¡ Ã˜Â§Ã™â€žÃ˜ÂµÃ™â€žÃ˜Â§Ã˜Â­Ã™Å Ã˜Â©
         },
       );
       // console.log(decoded_access_token, 'decoded_access_token');

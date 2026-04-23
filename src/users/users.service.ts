@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
+import { FileUploadService } from 'src/file-upload/file-upload.service';
 import { CreateUserDto } from './shared/dto/create-user.dto';
 import { UpdateUserDto } from './shared/dto/update-user.dto';
-import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
+import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { BaseService } from 'src/shared/utils/service/base.service';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
-import { IdParamDto } from './shared/dto/id-param.dto';
+import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { User, UserDocument } from 'src/auth/shared/schema/user.schema';
 import { UsersStatistics } from './users-helper/users-statistics.service';
 
@@ -38,8 +38,6 @@ export class UsersService extends BaseService<UserDocument> {
   async getUsers(QueryString: QueryString): Promise<any> {
     return await this.findAllDoc(User.name, QueryString);
   }
-
-
 
   async findOne(idParamDto: IdParamDto) {
     return await this.findOneDoc(idParamDto, '-__v');

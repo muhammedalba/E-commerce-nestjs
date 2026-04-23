@@ -18,7 +18,7 @@ import { CreateProductDto } from './shared/dto/create-product.dto';
 import { UpdateProductDto } from './shared/dto/update-product.dto';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ParseFileFieldsPipe } from 'src/shared/files/ParseFileFieldsPipe';
-import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
+import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { MaxFileCount } from 'src/shared/files/constants/file-count.constants';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { Roles } from 'src/auth/shared/decorators/roles.decorator';
@@ -27,11 +27,13 @@ import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 import { MulterFilesType } from 'src/shared/utils/interfaces/fileInterface';
 import { ParseBodyJsonInterceptor } from 'src/shared/interceptors/parse-body-json.interceptor';
-import { ProductsCacheInterceptor } from './shared/interceptors/products-cache.interceptor';
+import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
+import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 
 @Controller('products')
+@UseInterceptors(ClearCacheInterceptor)
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) { }
+  constructor(private readonly productsService: ProductsService) {}
 
   private static readonly imageSize = [
     { name: 'imageCover', maxCount: MaxFileCount.iMAGE_COVER },
@@ -39,14 +41,14 @@ export class ProductsController {
     { name: 'infoProductPdf', maxCount: 1 },
   ];
 
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   //  Statistics (cached 5 minutes)
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Get('statistics')
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
-  @UseInterceptors(ProductsCacheInterceptor)
+  @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(300_000) // 5 minutes
   async Products_statistics(
     @Query('startDate') startDate?: string,
@@ -55,9 +57,9 @@ export class ProductsController {
     return await this.productsService.Products_statistics(startDate, endDate);
   }
 
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   //  CREATE PRODUCT + VARIANTS (Transaction)
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Post()
   @Roles(roles.ADMIN)
@@ -66,7 +68,7 @@ export class ProductsController {
     FileFieldsInterceptor(ProductsController.imageSize),
     new ParseBodyJsonInterceptor(
       ['title', 'description', 'variants', 'allowedAttributes'],
-      ['supCategories'],
+      ['SubCategories'],
     ),
   )
   async create(
@@ -102,12 +104,12 @@ export class ProductsController {
     );
   }
 
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   //  GET ALL PRODUCTS (cached 60 seconds)
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Get()
-  @UseInterceptors(ProductsCacheInterceptor)
+  @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(60_000) // 60 seconds
   findAll(
     @Query() queryString: QueryString,
@@ -122,8 +124,6 @@ export class ProductsController {
     @Query('sold_min') soldMin?: string,
     @Query('sold_max') soldMax?: string,
     @Query('skuSearch') skuSearch?: string,
-
-
   ) {
     const returnAllLangs = allLangs === 'true';
 
@@ -162,12 +162,12 @@ export class ProductsController {
     return this.productsService.findAll(queryString, returnAllLangs);
   }
 
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   //  GET PRODUCT BY ID (cached 120 seconds)
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Get(':id')
-  @UseInterceptors(ProductsCacheInterceptor)
+  @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(120_000) // 120 seconds
   findOne(
     @Param() idParamDto: IdParamDto,
@@ -177,9 +177,9 @@ export class ProductsController {
     return this.productsService.findOne(idParamDto, returnAllLangs);
   }
 
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   //  UPDATE PRODUCT + VARIANTS (Transaction)
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
@@ -188,7 +188,7 @@ export class ProductsController {
     FileFieldsInterceptor(ProductsController.imageSize),
     new ParseBodyJsonInterceptor(
       ['title', 'description', 'variants', 'allowedAttributes'],
-      ['supCategories'],
+      ['SubCategories'],
     ),
   )
   async update(
@@ -218,9 +218,9 @@ export class ProductsController {
     );
   }
 
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   //  SOFT DELETE PRODUCT
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
@@ -229,9 +229,9 @@ export class ProductsController {
     return this.productsService.remove(idParamDto);
   }
 
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   //  HARD DELETE (permanently, admin-only)
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
@@ -240,9 +240,9 @@ export class ProductsController {
     return this.productsService.hardRemove(idParamDto);
   }
 
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   //  RESTORE soft-deleted product
-  // ──────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)

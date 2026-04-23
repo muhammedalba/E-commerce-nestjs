@@ -1,9 +1,8 @@
-import { User } from 'src/auth/shared/schema/user.schema';
+import { UserDocument } from 'src/auth/shared/schema/user.schema';
 
 declare global {
   namespace Express {
-    interface Request {
-      user?: User;
-    }
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+    interface User extends UserDocument {}
   }
 }

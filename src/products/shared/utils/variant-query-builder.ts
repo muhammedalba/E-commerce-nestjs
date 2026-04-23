@@ -28,9 +28,10 @@ export function buildVariantFilter(
   // 1. Color (String match, sanitized regex)
   if (params.color) {
     const colors = params.color.split(',').map((c) => c.trim());
-    vFilter['attributes.color'] = colors.length > 1
-      ? { $in: colors.map((c) => new RegExp(c, 'i')) }
-      : { $regex: new RegExp(params.color, 'i') };
+    vFilter['attributes.color'] =
+      colors.length > 1
+        ? { $in: colors.map((c) => new RegExp(c, 'i')) }
+        : { $regex: new RegExp(params.color, 'i') };
   }
 
   // 2. Weight (Numeric Range + Unit check)

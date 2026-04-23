@@ -52,7 +52,11 @@ export class IsLessThanPriceConstraint implements ValidatorConstraintInterface {
   validate(priceAfterDiscount: number, args: ValidationArguments) {
     const object = args.object as any;
     if (object.price === undefined || object.price === null) return true; // Ignored if price is not provided
-    return typeof priceAfterDiscount === 'number' && typeof object.price === 'number' && priceAfterDiscount < object.price;
+    return (
+      typeof priceAfterDiscount === 'number' &&
+      typeof object.price === 'number' &&
+      priceAfterDiscount < object.price
+    );
   }
 
   defaultMessage(args: ValidationArguments) {

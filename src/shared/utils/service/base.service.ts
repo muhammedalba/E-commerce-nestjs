@@ -6,13 +6,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Model } from 'mongoose';
-import { CustomI18nService } from '../i18n/costum-i18n-service';
+import { CustomI18nService } from '../i18n/custom-i18n.service';
 import { ApiFeatures } from '../ApiFeatures';
 import { QueryString } from '../interfaces/queryInterface';
-import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
+import { FileUploadService } from 'src/file-upload/file-upload.service';
 import { MulterFileType } from '../interfaces/fileInterface';
 import { I18nContext, TranslateOptions } from 'nestjs-i18n';
-import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
+import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { I18nHelper } from '../i18n/i18n-helper';
 //
 interface FileSchema {
@@ -56,17 +56,7 @@ export class BaseService<T> {
   private t(key: string, option?: TranslateOptions): string {
     return this.i18n.translate(key, option);
   }
-  // This method is used to localize the document
-  localize(data: T | T[]): T | T[] {
-    const toJSONLocalizedOnly = this.model.schema.methods
-      ?.toJSONLocalizedOnly as ((data: T | T[], lang: string) => T) | undefined;
 
-    const localizedDoc =
-      typeof toJSONLocalizedOnly === 'function'
-        ? toJSONLocalizedOnly(data as T, this.getCurrentLang())
-        : data;
-    return localizedDoc;
-  }
   // This method is used to handle the file upload
   private async handleFileUpload(
     file: MulterFileType,
@@ -136,9 +126,9 @@ export class BaseService<T> {
       newDocFilter = newDoc as unknown as T;
     }
 
-    const localizedDoc = this.localize(newDocFilter);
 
-    return  I18nHelper.localize(newDocFilter);
+
+    return I18nHelper.localize(newDocFilter);
   }
   async findAllDoc(
     modelName: string,
@@ -170,7 +160,7 @@ export class BaseService<T> {
       throw new BadRequestException(this.t('exception.NOT_FOUND'));
     }
 
-    const localizedDoc = allLangs ? data : this.localize(data);
+
     return {
       results: data.length,
       pagination: features.getPagination(),
@@ -200,9 +190,9 @@ export class BaseService<T> {
       );
     }
 
-    const finalDoc = allLangs ? doc : (this.localize(doc as any) as T);
 
-    return  I18nHelper.localize(doc, allLangs);
+
+    return I18nHelper.localize(doc, allLangs);
   }
 
   async updateOneDoc(
@@ -261,7 +251,7 @@ export class BaseService<T> {
     if (filePath && updatedData) {
       updatedData[fileFieldName] = `${process.env.BASE_URL}${filePath}`;
     }
-    return updatedData ?  I18nHelper.localize(updatedData) : null;
+    return updatedData ? I18nHelper.localize(updatedData) : null;
   }
   async deleteOneDoc(idParamDto: IdParamDto, selected: string): Promise<void> {
     // 1) check if id is valid ObjectId or slug

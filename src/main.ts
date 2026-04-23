@@ -1,6 +1,7 @@
 import { useContainer } from 'class-validator';
 import * as cookieParser from 'cookie-parser';
 import { NestFactory } from '@nestjs/core';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { I18nValidationPipe } from 'nestjs-i18n';
 import { AllExceptionsFilter } from './shared/filters/all-exceptions.filter';
@@ -11,13 +12,15 @@ import { Request, Response, NextFunction } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  // security headers
+  app.use(helmet());
   // to use class-validator in DTOs
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
   // prefix for all routes
   app.setGlobalPrefix('api/v1');
   // cookie parser
   app.use(cookieParser());
-// redirect to api/v1
+  // redirect to api/v1
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (req.path === '/') {
       return res.redirect('/api/v1');

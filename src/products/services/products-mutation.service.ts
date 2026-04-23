@@ -8,8 +8,6 @@ import {
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Connection, Model, Types } from 'mongoose';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { Product, ProductDocument } from '../shared/schemas/Product.schema';
@@ -17,10 +15,10 @@ import {
   ProductVariant,
   ProductVariantDocument,
 } from '../shared/schemas/ProductVariant.schema';
-import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
+import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { CreateProductDto } from '../shared/dto/create-product.dto';
 import { UpdateProductDto } from '../shared/dto/update-product.dto';
-import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
+import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { MulterFilesType } from 'src/shared/utils/interfaces/fileInterface';
 import { VariantChangedEvent } from '../products-helper/aggregation-sync.service';
 
@@ -44,33 +42,17 @@ export class ProductMutationService {
     @InjectModel(ProductVariant.name)
     private readonly variantModel: Model<ProductVariantDocument>,
     @InjectConnection() private readonly connection: Connection,
-    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
     private readonly fileService: ProductFileService,
     private readonly skuService: ProductSkuService,
     private readonly queryService: ProductQueryService,
     private readonly i18n: CustomI18nService,
     private readonly eventEmitter: EventEmitter2,
-  ) { }
+  ) {}
 
-  // ──────────────────────────────────────────────────────
-  //  CACHE INVALIDATION
-  // ──────────────────────────────────────────────────────
 
-  /**
-   * Clears the entire in-memory cache store.
-   * Called after every mutation (create/update/delete/restore).
-   */
-  private async invalidateCache(): Promise<void> {
-    try {
-      await this.cacheManager.clear();
-    } catch {
-      // Silently ignore cache errors — they shouldn't block mutations
-    }
-  }
-
-  // ──────────────────────────────────────────────────────
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   //  CREATE PRODUCT (Transaction)
-  // ──────────────────────────────────────────────────────
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
   async create(
     createProductDto: CreateProductDto,
@@ -81,7 +63,6 @@ export class ProductMutationService {
     },
   ) {
     const { variants, ...productData } = createProductDto;
-
 
     // 1) Validate attributes
     this.skuService.validateVariantAttributes(
@@ -127,10 +108,9 @@ export class ProductMutationService {
           doc.sku = await this.skuService.ensureUnique(doc.sku);
         }
       }
-      const createdVariants = await this.variantModel.insertMany(
-        variantDocs,
-        { session },
-      );
+      const createdVariants = await this.variantModel.insertMany(variantDocs, {
+        session,
+      });
 
       await session.commitTransaction();
 
@@ -141,14 +121,12 @@ export class ProductMutationService {
       );
 
       // Invalidate cache
-      await this.invalidateCache();
+  
 
       // Prepare response
       const baseUrl = process.env.BASE_URL || '';
       newProduct.imageCover = `${baseUrl}${productData.imageCover}`;
-      newProduct.images = newProduct.images?.map(
-        (img) => `${baseUrl}${img}`,
-      );
+      newProduct.images = newProduct.images?.map((img) => `${baseUrl}${img}`);
       newProduct.infoProductPdf = productData.infoProductPdf
         ? `${baseUrl}${productData.infoProductPdf}`
         : undefined;
@@ -159,7 +137,10 @@ export class ProductMutationService {
       };
     } catch (error: any) {
       await session.abortTransaction();
-      this.logger.error('Transaction Error (create product)', error?.stack || error);
+      this.logger.error(
+        'Transaction Error (create product)',
+        error?.stack || error,
+      );
       throw new InternalServerErrorException(
         this.i18n.translate('exception.ERROR_SAVE'),
       );
@@ -168,9 +149,9 @@ export class ProductMutationService {
     }
   }
 
-  // ──────────────────────────────────────────────────────
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   //  UPDATE PRODUCT (Transaction)
-  // ──────────────────────────────────────────────────────
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
   async update(
     idParamDto: IdParamDto,
@@ -186,13 +167,14 @@ export class ProductMutationService {
     // 1) Fetch existing product
     const doc = await this.productModel
       .findById(idParamDto.id)
-      .select('infoProductPdf imageCover images supCategories slug allowedAttributes ').populate('variants', 'attributes')
+      .select(
+        'infoProductPdf imageCover images SubCategories slug allowedAttributes ',
+      )
+      .populate('variants', 'attributes')
       .lean();
 
     if (!doc) {
-      throw new BadRequestException(
-        this.i18n.translate('exception.NOT_FOUND'),
-      );
+      throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }
 
     // 2) Handle slug change
@@ -205,19 +187,21 @@ export class ProductMutationService {
       );
     }
     // 3) Validate variants against (new or existing) allowedAttributes
-    const effectiveAllowedAttributes = updateProductDto.allowedAttributes || doc.allowedAttributes || [];
-    
+    const effectiveAllowedAttributes =
+      updateProductDto.allowedAttributes || doc.allowedAttributes || [];
+
     if (variantOps?.create && variantOps.create.length > 0) {
       // Get current variants with their attributes to check for "Simple" variant count
-      const existingSimpleCount = doc.variants?.filter(v => 
-        !v.attributes || Object.keys(v.attributes).length === 0
-      ).length || 0;
+      const existingSimpleCount =
+        doc.variants?.filter(
+          (v) => !v.attributes || Object.keys(v.attributes).length === 0,
+        ).length || 0;
 
       this.skuService.validateVariantAttributes(
         variantOps.create,
         effectiveAllowedAttributes,
         doc?.variants?.length || 0,
-        existingSimpleCount
+        existingSimpleCount,
       );
 
       const newBaseSlug = productData.slug || doc.slug;
@@ -239,18 +223,23 @@ export class ProductMutationService {
 
     // 4) If allowedAttributes are changing, validate all EXISTING variants that aren't being updated/deleted
     if (updateProductDto.allowedAttributes) {
-      const variantsToValidate = (doc.variants as any[])?.filter(v => {
-        const isBeingUpdated = variantOps?.update?.some(u => String(u._id) === String(v._id));
-        const isBeingDeleted = variantOps?.delete?.some(d => String(d) === String(v._id));
-        return !isBeingUpdated && !isBeingDeleted;
-      }) || [];
+      const variantsToValidate =
+        (doc.variants as any[])?.filter((v) => {
+          const isBeingUpdated = variantOps?.update?.some(
+            (u) => String(u._id) === String(v._id),
+          );
+          const isBeingDeleted = variantOps?.delete?.some(
+            (d) => String(d) === String(v._id),
+          );
+          return !isBeingUpdated && !isBeingDeleted;
+        }) || [];
 
       if (variantsToValidate.length > 0) {
         this.skuService.validateVariantAttributes(
-          variantsToValidate as any[],
+          variantsToValidate,
           updateProductDto.allowedAttributes,
           0, // we don't care about count here
-          0  // we just want to ensure schema compliance
+          0, // we just want to ensure schema compliance
         );
       }
     }
@@ -272,14 +261,15 @@ export class ProductMutationService {
     try {
       // Update product base fields
       if (updateProductDto.allowedAttributes) {
-        (productData as any).allowedAttributes = updateProductDto.allowedAttributes;
+        (productData as any).allowedAttributes =
+          updateProductDto.allowedAttributes;
       }
       const hasProductUpdates = Object.keys(productData).length > 0;
       let updatedProduct: ProductDocument | null = null;
 
       if (hasProductUpdates) {
         updatedProduct = await this.productModel.findByIdAndUpdate(
-          idParamDto.id, 
+          idParamDto.id,
           { $set: productData },
           { new: true, runValidators: true, session },
         );
@@ -299,7 +289,7 @@ export class ProductMutationService {
         if (variantOps.create && variantOps.create.length > 0) {
           const newVariants = variantOps.create.map((v) => ({
             ...v,
-            productId: updatedProduct!._id,
+            productId: updatedProduct._id,
           }));
 
           for (const varDoc of newVariants) {
@@ -362,7 +352,7 @@ export class ProductMutationService {
       );
 
       // Invalidate cache
-      await this.invalidateCache();
+  
 
       // Fetch full updated state
       const finalVariants = await this.variantModel
@@ -375,7 +365,10 @@ export class ProductMutationService {
       };
     } catch (error: any) {
       await session.abortTransaction();
-      this.logger.error('Transaction Error (update product)', error?.stack || error);
+      this.logger.error(
+        'Transaction Error (update product)',
+        error?.stack || error,
+      );
 
       if (
         error instanceof BadRequestException ||
@@ -398,9 +391,9 @@ export class ProductMutationService {
     }
   }
 
-  // ──────────────────────────────────────────────────────
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   //  SOFT DELETE PRODUCT (Transaction)
-  // ──────────────────────────────────────────────────────
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
   async remove(idParamDto: IdParamDto) {
     const doc = await this.productModel
@@ -409,9 +402,7 @@ export class ProductMutationService {
       .lean();
 
     if (!doc) {
-      throw new BadRequestException(
-        this.i18n.translate('exception.NOT_FOUND'),
-      );
+      throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }
 
     const session = await this.connection.startSession();
@@ -435,12 +426,15 @@ export class ProductMutationService {
       await session.commitTransaction();
 
       // Invalidate cache
-      await this.invalidateCache();
+  
 
       return { message: 'Product and variants soft-deleted successfully' };
-    } catch (error) {
+    } catch (error: any) {
       await session.abortTransaction();
-      this.logger.error('Transaction Error (delete product)',  error);
+      this.logger.error(
+        'Transaction Error (delete product)',
+        error?.stack || error,
+      );
       throw new InternalServerErrorException(
         this.i18n.translate('exception.ERROR_DELETE'),
       );
@@ -449,9 +443,9 @@ export class ProductMutationService {
     }
   }
 
-  // ──────────────────────────────────────────────────────
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   //  HARD DELETE (admin-only)
-  // ──────────────────────────────────────────────────────
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
   async hardRemove(idParamDto: IdParamDto) {
     const doc = await this.productModel
@@ -473,21 +467,21 @@ export class ProductMutationService {
       await this.fileService.deleteProductFiles(doc);
 
       // Hard delete variants first, then product
-      await this.variantModel.deleteMany(
-        { productId: doc._id },
-        { session },
-      );
+      await this.variantModel.deleteMany({ productId: doc._id }, { session });
       await this.productModel.findByIdAndDelete(doc._id, { session });
 
       await session.commitTransaction();
 
       // Invalidate cache
-      await this.invalidateCache();
+  
 
       return { message: 'Product and variants permanently deleted' };
-    } catch (error) {
+    } catch (error: any) {
       await session.abortTransaction();
-      this.logger.error('Transaction Error (hard delete)',  error);
+      this.logger.error(
+        'Transaction Error (hard delete)',
+        error?.stack || error,
+      );
       throw new InternalServerErrorException(
         this.i18n.translate('exception.ERROR_DELETE'),
       );
@@ -496,9 +490,9 @@ export class ProductMutationService {
     }
   }
 
-  // ──────────────────────────────────────────────────────
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
   //  RESTORE PRODUCT (undo soft delete)
-  // ──────────────────────────────────────────────────────
+  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
   async restore(idParamDto: IdParamDto) {
     const session = await this.connection.startSession();
@@ -524,14 +518,14 @@ export class ProductMutationService {
       await session.commitTransaction();
 
       // Invalidate cache
-      await this.invalidateCache();
+  
 
       const variants = await this.variantModel
         .find({ productId: product._id })
         .lean();
 
       return {
-        product:  I18nHelper.localize(product),
+        product: I18nHelper.localize(product),
         // product: this.queryService.localize(product),
         variants,
       };

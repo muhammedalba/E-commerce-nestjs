@@ -1,49 +1,50 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { CreateSupCategoryDto } from './shared/dto/create-sup-category.dto';
-import { UpdateSupCategoryDto } from './shared/dto/update-sup-category.dto';
+import { CreateSubCategoryDto } from './shared/dto/create-sub-category.dto';
+import { UpdateSubCategoryDto } from './shared/dto/update-sub-category.dto';
 import {
-  SupCategory,
-  SupCategoryDocument,
-} from './shared/schemas/sup-category.schema';
+  SubCategory,
+  SubCategoryDocument,
+} from './shared/schemas/sub-category.schema';
 import { BaseService } from 'src/shared/utils/service/base.service';
-import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
-import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
-import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
-import { SupCategoriesStatistics } from './shared/sup-categories-helper/sup-categories-statistics.service';
+
+import { SubCategoriesStatistics } from './shared/sub-categories-helper/sub-categories-statistics.service';
+import { FileUploadService } from 'src/file-upload/file-upload.service';
+import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
+import { IdParamDto } from 'src/shared/dto/id-param.dto';
 
 @Injectable()
-export class SupCategoryService extends BaseService<SupCategoryDocument> {
+export class SubCategoryService extends BaseService<SubCategoryDocument> {
   constructor(
-    @InjectModel(SupCategory.name)
-    private supCategoryModel: Model<SupCategoryDocument>,
+    @InjectModel(SubCategory.name)
+    private SubCategoryModel: Model<SubCategoryDocument>,
     protected readonly fileUploadService: FileUploadService,
     protected readonly i18n: CustomI18nService,
-    protected readonly supCategoriesStatistics: SupCategoriesStatistics,
+    protected readonly SubCategoriesStatistics: SubCategoriesStatistics,
   ) {
-    super(supCategoryModel, i18n, fileUploadService);
+    super(SubCategoryModel, i18n, fileUploadService);
   }
 
   // ------------ =============================== ---------- //
   // ------------ ======  GET SUP CATEGORIES STATISTICS  ====== ---------- //
   // ------------ =============================== ---------- //
   async findStatistics() {
-    return await this.supCategoriesStatistics.supCategoriesStatistics();
+    return await this.SubCategoriesStatistics.SubCategoriesStatistics();
   }
 
   // ------------ =============================== ---------- //
   // ------------ ======  CREATE SUP CATEGORY  ====== ---------- //
   // ------------ =============================== ---------- //
-  async create(createSupCategoryDto: CreateSupCategoryDto): Promise<any> {
+  async create(createSubCategoryDto: CreateSubCategoryDto): Promise<any> {
     return await this.createOneDoc(
-      createSupCategoryDto,
+      createSubCategoryDto,
       undefined,
-      SupCategory.name,
+      SubCategory.name,
       {
         checkField: 'name.en',
-        fieldValue: createSupCategoryDto.name.en,
+        fieldValue: createSubCategoryDto.name.en,
       },
     );
   }
@@ -53,7 +54,7 @@ export class SupCategoryService extends BaseService<SupCategoryDocument> {
   // ------------ =============================== ---------- //
   async findAll(queryString: QueryString, allLangs: boolean) {
     return await this.findAllDoc(
-      SupCategory.name,
+      SubCategory.name,
       queryString,
       {
         path: 'category',
@@ -75,14 +76,14 @@ export class SupCategoryService extends BaseService<SupCategoryDocument> {
   // ------------ =============================== ---------- //
   async update(
     idParamDto: IdParamDto,
-    updateCategoryDto: UpdateSupCategoryDto,
+    updateCategoryDto: UpdateSubCategoryDto,
   ): Promise<any> {
     const selectedFields = 'image';
     return await this.updateOneDoc(
       idParamDto,
       updateCategoryDto,
       undefined,
-      SupCategory.name,
+      SubCategory.name,
       selectedFields,
       {
         checkField: 'name.en',

@@ -12,6 +12,7 @@ import {
   IsBoolean,
   ArrayMinSize,
 } from 'class-validator';
+import { i18nValidationMessage } from 'nestjs-i18n';
 import { Transform, Type } from 'class-transformer';
 
 export class ProductAttributeDefinitionDto {
@@ -42,7 +43,7 @@ import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
 import { CreateVariantDto } from './variant.dto';
 import { Exists } from 'src/shared/utils/decorators/exists.decorator';
 import { Category } from 'src/categories/shared/schemas/category.schema';
-import { SupCategory } from 'src/sup-category/shared/schemas/sup-category.schema';
+import { SubCategory } from 'src/sub-category/shared/schemas/sub-category.schema';
 import { Brand } from 'src/brands/shared/schemas/brand.schema';
 import { Supplier } from 'src/supplier/shared/schema/Supplier.schema';
 
@@ -95,17 +96,21 @@ export class CreateProductDto {
   category!: string;
 
   @Transform(({ value }) => {
-    const rawIds = Array.isArray(value) ? value : (value ? [value] : []);
-    return [...new Set(rawIds.filter((id) => typeof id === 'string' && id.length > 0))];
+    const rawIds = Array.isArray(value) ? value : value ? [value] : [];
+    return [
+      ...new Set(
+        rawIds.filter((id) => typeof id === 'string' && id.length > 0),
+      ),
+    ];
   })
   @IsArray()
   @IsMongoId({
     each: true,
-    message: 'كل عنصر في supCategories يجب أن يكون MongoId',
+    message: i18nValidationMessage('validation.IS_MONGO_ID'),
   })
   @IsOptional()
-  @Exists(SupCategory.name)
-  supCategories?: string[];
+  @Exists(SubCategory.name)
+  SubCategories?: string[];
 
   @IsOptional()
   @IsMongoId()

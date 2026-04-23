@@ -18,7 +18,7 @@ interface I18nValidationError {
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
-  constructor(@Inject(I18nService) private readonly i18n: I18nService) { }
+  constructor(@Inject(I18nService) private readonly i18n: I18nService) {}
 
   async catch(exception: unknown, host: ArgumentsHost): Promise<void> {
     const ctx = host.switchToHttp();
@@ -43,7 +43,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
     // Special handling for I18nValidationException
     if (exception instanceof I18nValidationException) {
       status = HttpStatus.BAD_REQUEST;
-      const validationErrors = (exception.errors as I18nValidationError[]) ?? [];
+      const validationErrors =
+        (exception.errors as I18nValidationError[]) ?? [];
       const translatedErrors =
         await this.extractValidationMessages(validationErrors);
       message = 'Validation failed';

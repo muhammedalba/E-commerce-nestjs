@@ -4,18 +4,18 @@ import { Model } from 'mongoose';
 import * as crypto from 'crypto';
 import { Response } from 'express';
 
-import { tokenService } from 'src/auth/shared/services/token.service';
+import { TokenService } from 'src/auth/shared/services/token.service';
 import { CookieService } from 'src/auth/shared/services/cookie.service';
-import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
+import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { User } from 'src/auth/shared/schema/user.schema';
 import { OAuthUser } from 'src/auth/shared/types/oauth-user.interface';
 
 @Injectable()
-export class googleService {
+export class GoogleService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     private readonly i18n: CustomI18nService,
-    private readonly tokenService: tokenService,
+    private readonly tokenService: TokenService,
     private readonly cookieService: CookieService,
   ) {}
 

@@ -4,13 +4,13 @@ import { UpdateCategoryDto } from './shared/dto/update-category.dto';
 import { Category, CategoryDocument } from './shared/schemas/category.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
-import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
+import { FileUploadService } from 'src/file-upload/file-upload.service';
+import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { BaseService } from 'src/shared/utils/service/base.service';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
-import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
-import { CategoriesStatistics } from './Categories-helper/categories-statistics.service';
+import { IdParamDto } from 'src/shared/dto/id-param.dto';
+import { CategoriesStatistics } from './categories-helper/categories-statistics.service';
 
 @Injectable()
 export class CategoriesService extends BaseService<CategoryDocument> {
@@ -37,7 +37,7 @@ export class CategoriesService extends BaseService<CategoryDocument> {
     createCategoryDto: CreateCategoryDto,
     file: MulterFileType,
   ): Promise<any> {
-    return await this.createOneDoc(createCategoryDto, file, 'categories', {
+    return await this.createOneDoc(createCategoryDto, file, Category.name, {
       fileFieldName: 'image',
       checkField: 'name.en',
       fieldValue: createCategoryDto.name.en,
@@ -56,7 +56,7 @@ export class CategoriesService extends BaseService<CategoryDocument> {
     data: Category[];
   }> {
     const populate = {
-      path: 'supCategories',
+      path: 'SubCategories',
       select: 'name slug',
     };
     return await this.findAllDoc(
@@ -87,7 +87,7 @@ export class CategoriesService extends BaseService<CategoryDocument> {
       idParamDto,
       updateCategoryDto,
       file,
-      'categories',
+      Category.name,
       selectedFields,
       {
         checkField: 'name.en',

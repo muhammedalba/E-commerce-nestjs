@@ -171,7 +171,9 @@ export class ProductsStatistics {
           { $match: { isDeleted: { $ne: true } } },
           {
             $group: {
-              _id: { $cond: [{ $gt: ['$variantCount', 1] }, 'variable', 'simple'] },
+              _id: {
+                $cond: [{ $gt: ['$variantCount', 1] }, 'variable', 'simple'],
+              },
               count: { $sum: 1 },
             },
           },
@@ -194,10 +196,17 @@ export class ProductsStatistics {
               as: 'categoryInfo',
             },
           },
-          { $unwind: { path: '$categoryInfo', preserveNullAndEmptyArrays: true } },
+          {
+            $unwind: {
+              path: '$categoryInfo',
+              preserveNullAndEmptyArrays: true,
+            },
+          },
           {
             $project: {
-              categoryName: { $ifNull: [`$categoryInfo.name.${lang}`, 'Uncategorized'] },
+              categoryName: {
+                $ifNull: [`$categoryInfo.name.${lang}`, 'Uncategorized'],
+              },
               count: 1,
             },
           },
@@ -212,7 +221,9 @@ export class ProductsStatistics {
           },
           {
             $group: {
-              _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+              _id: {
+                $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+              },
               count: { $sum: 1 },
             },
           },
@@ -220,7 +231,7 @@ export class ProductsStatistics {
         ]),
       ]);
 
-      const composition = (statusCounts as any[]).reduce<Record<string, number>>(
+      const composition = statusCounts.reduce<Record<string, number>>(
         (acc, curr) => {
           acc[curr._id] = curr.count;
           return acc;
@@ -228,12 +239,12 @@ export class ProductsStatistics {
         {},
       );
 
-      const categoryDistribution = (categoryDistributionRaw as any[]).map((entry) => ({
+      const categoryDistribution = categoryDistributionRaw.map((entry) => ({
         name: entry.categoryName,
         value: entry.count,
       }));
 
-      const last30DaysProducts = (last30DaysRaw as any[]).map((entry) => ({
+      const last30DaysProducts = last30DaysRaw.map((entry) => ({
         date: entry._id,
         count: entry.count,
       }));
@@ -262,8 +273,9 @@ export class ProductsStatistics {
           dailyNewProducts,
           last30DaysProducts,
           composition: {
-            simple: (compositionRaw as any[]).find(c => c._id === 'simple')?.count || 0,
-            variable: (compositionRaw as any[]).find(c => c._id === 'variable')?.count || 0,
+            simple: compositionRaw.find((c) => c._id === 'simple')?.count || 0,
+            variable:
+              compositionRaw.find((c) => c._id === 'variable')?.count || 0,
           },
           categoryDistribution,
           topProducts: topProductsRaw,
@@ -272,9 +284,15 @@ export class ProductsStatistics {
           inventoryStats: variantStats[0]
             ? {
                 ...variantStats[0],
-                stockHealth: totalProducts > 0 
-                  ? ((totalProducts - (lowStockCount > totalProducts ? totalProducts : lowStockCount)) / totalProducts) * 100 
-                  : 0
+                stockHealth:
+                  totalProducts > 0
+                    ? ((totalProducts -
+                        (lowStockCount > totalProducts
+                          ? totalProducts
+                          : lowStockCount)) /
+                        totalProducts) *
+                      100
+                    : 0,
               }
             : {
                 totalVariants: 0,

@@ -10,10 +10,10 @@ import {
   ProductVariant,
   ProductVariantSchema,
 } from 'src/products/shared/schemas/ProductVariant.schema';
-import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
+import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { Order, OrderSchema } from './shared/schemas/Order.schema';
 import { AuthModule } from 'src/auth/auth.module';
-import { FileUploadDiskStorageModule } from 'src/file-upload-in-diskStorage/file-upload.module';
+import { FileUploadDiskStorageModule } from 'src/file-upload/file-upload.module';
 import {
   Coupon,
   CouponSchema,

@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { CreateBrandDto } from './shared/dto/create-brand.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import { FileUploadService } from 'src/file-upload-in-diskStorage/file-upload.service';
+import { FileUploadService } from 'src/file-upload/file-upload.service';
 import { Brand, BrandDocument } from './shared/schemas/brand.schema';
 import { Model } from 'mongoose';
-import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
+import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
-import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
+import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { UpdateBrandDto } from './shared/dto/update-brand.dto';
 import { BaseService } from 'src/shared/utils/service/base.service';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';

@@ -13,6 +13,7 @@ import {
   Query,
   UploadedFiles,
 } from '@nestjs/common';
+import { CacheTTL } from '@nestjs/cache-manager';
 import { OrderService } from './order.service';
 import { CreateOrderDto } from './shared/dto/create-order.dto';
 import { UpdateOrderDto } from './shared/dto/update-order.dto';
@@ -25,11 +26,13 @@ import {
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { createParseFilePipe } from 'src/shared/files/files-validation-factory';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
-import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
+import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { Roles } from 'src/auth/shared/decorators/roles.decorator';
 import { roles } from 'src/auth/shared/enums/role.enum';
 import { ParseFileFieldsPipe } from 'src/shared/files/ParseFileFieldsPipe';
 import { RoleGuard } from 'src/auth/shared/guards/role.guard';
+import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
+import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 
 import {
   ApiTags,
@@ -44,6 +47,7 @@ import {
 @ApiTags('Order')
 @Controller('order')
 @UseGuards(AuthGuard)
+@UseInterceptors(ClearCacheInterceptor)
 export class OrderController {
   constructor(private readonly orderService: OrderService) {}
   private static readonly imageSize = [
@@ -52,6 +56,8 @@ export class OrderController {
     { name: 'DeliveryReceiptImage', maxCount: 1 },
   ];
   @Get('statistics')
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(300000) // 5 minutes
   @ApiOperation({ summary: 'Get order statistics (Admin only)' })
   @ApiResponse({
     status: 200,
@@ -109,6 +115,8 @@ export class OrderController {
     return await this.orderService.applyCoupon(req.user.user_id, dto);
   }
   @Get()
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(30000) // 30 seconds (orders change frequently)
   @ApiOperation({ summary: 'Get all orders for the authenticated user' })
   @ApiResponse({ status: 200, description: 'Orders retrieved successfully.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
@@ -141,6 +149,8 @@ export class OrderController {
   }
 
   @Get(':id')
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(60000) // 60 seconds
   @ApiOperation({ summary: 'Get an order by ID' })
   @ApiParam({ name: 'id', description: 'ID of the order to retrieve' })
   @ApiResponse({ status: 200, description: 'Order retrieved successfully.' })

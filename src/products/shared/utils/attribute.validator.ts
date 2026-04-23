@@ -56,7 +56,9 @@ export function validateAttributes(
   // 2. Validate each provided attribute against definitions
   for (const key of attrsKeys) {
     // console.log(key);
-    const def = allowedAttributes.find((a) => a.name.trim().toLowerCase() === key.trim().toLowerCase());
+    const def = allowedAttributes.find(
+      (a) => a.name.trim().toLowerCase() === key.trim().toLowerCase(),
+    );
     if (!def) {
       throw new BadRequestException(
         `Attribute "${key}" is not allowed for this product. Allowed: ${allowedAttributes.map((a) => a.name).join(', ')}`,
@@ -70,7 +72,7 @@ export function validateAttributes(
         throw new BadRequestException(`Attribute "${key}" must be a string`);
       }
       // Check enum if provided
-      if (def.allowedValues && def.allowedValues.length > 0) {   
+      if (def.allowedValues && def.allowedValues.length > 0) {
         if (!def.allowedValues.includes(value.trim().toLowerCase())) {
           throw new BadRequestException(
             `Invalid value "${value}" for attribute "${key}". Allowed: ${def.allowedValues.join(', ')}`,

@@ -76,7 +76,8 @@ export function generateDeterministicSku(
     .update(hashString)
     .digest('hex')
     .substring(0, 4)
-    .toUpperCase().trim();
+    .toUpperCase()
+    .trim();
 
   return [prefix, humanReadable, shortHash].filter(Boolean).join('-');
 }
@@ -99,10 +100,12 @@ export async function ensureUniqueSku(
   let attempts = 0;
 
   while (attempts < maxAttempts) {
-    const exists = await model.exists({
-      sku,
-      isDeleted: { $in: [true, false] } // Bypass soft-delete hook
-    }).lean();
+    const exists = await model
+      .exists({
+        sku,
+        isDeleted: { $in: [true, false] }, // Bypass soft-delete hook
+      })
+      .lean();
     if (!exists) {
       return sku;
     }

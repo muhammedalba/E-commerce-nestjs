@@ -3,12 +3,12 @@ import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import { v4 as uuidv4 } from 'uuid';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
+import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { RefreshToken } from 'src/auth/shared/schema/refresh-token.schema';
 import { JwtPayload } from '../types/jwt-payload.interface';
 
 @Injectable()
-export class tokenService {
+export class TokenService {
   constructor(
     @InjectModel(RefreshToken.name)
     private RefreshTokenModel: Model<RefreshToken>,

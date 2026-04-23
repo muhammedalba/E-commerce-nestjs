@@ -11,20 +11,24 @@ import {
   Patch,
   UseGuards,
 } from '@nestjs/common';
+import { CacheTTL } from '@nestjs/cache-manager';
 import { BrandsService } from './brands.service';
 import { CreateBrandDto } from './shared/dto/create-brand.dto';
 import { UpdateBrandDto } from './shared/dto/update-brand.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { createParseFilePipe } from 'src/shared/files/files-validation-factory';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
-import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
+import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { Roles } from 'src/auth/shared/decorators/roles.decorator';
 import { roles } from 'src/auth/shared/enums/role.enum';
 import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
+import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
+import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 
 @Controller('brands')
+@UseInterceptors(ClearCacheInterceptor)
 export class BrandsController {
   constructor(private readonly brandsService: BrandsService) {}
   // ------------ =============================== ---------- //
@@ -46,6 +50,8 @@ export class BrandsController {
   // ------------ =============================== ---------- //
   @Get()
   @Roles(roles.USER, roles.ADMIN, roles.MANAGER)
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(60000) // 60 seconds
   async findAll(
     @Query() queryString: QueryString,
     @Query('all_langs') allLangs?: string,
@@ -59,6 +65,8 @@ export class BrandsController {
   @Get('statistics')
   @Roles(roles.ADMIN, roles.MANAGER)
   @UseGuards(AuthGuard, RoleGuard)
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(300000) // 5 minutes
   async BrandsStatistics() {
     return await this.brandsService.BrandsStatistics();
   }
@@ -66,6 +74,8 @@ export class BrandsController {
   // ------------ ======  get brand by id  ====== ---------- //
   // ------------ =============================== ---------- //
   @Get(':id')
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(60000) // 60 seconds
   async findOne(
     @Param() idParamDto: IdParamDto,
     @Query('all_langs') allLangs?: string,

@@ -1,12 +1,7 @@
 import { Transform, TransformFnParams } from 'class-transformer';
 import { IsNotEmpty, IsString, Length } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
 
 export class FieldLocalizeDto {
-  @ApiProperty({
-    description: 'Arabic localized string',
-    example: 'مرحباً',
-  })
   @IsNotEmpty({ message: 'validation.NOT_EMPTY' })
   @IsString({ message: 'validation.NOT_EMPTY' })
   @Length(3, 2000, {
@@ -17,10 +12,6 @@ export class FieldLocalizeDto {
   })
   ar!: string;
 
-  @ApiProperty({
-    description: 'English localized string',
-    example: 'Hello',
-  })
   @IsString({ message: 'validation.NOT_EMPTY' })
   @IsNotEmpty({ message: 'validation.NOT_EMPTY' })
   @Transform(({ value }: TransformFnParams) => {

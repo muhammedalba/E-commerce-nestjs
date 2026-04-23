@@ -5,7 +5,7 @@ import { CartService } from './cart.service';
 import { CartController } from './cart.controller';
 import { Cart, CartSchema } from './shared/schemas/cart.schema';
 import { AuthModule } from 'src/auth/auth.module';
-import { CustomI18nService } from 'src/shared/utils/i18n/costum-i18n-service';
+import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import {
   Product,
   ProductSchema,

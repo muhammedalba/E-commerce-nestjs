@@ -1,5 +1,5 @@
-import { I18nContext } from "nestjs-i18n";
-import { Types } from "mongoose";
+import { I18nContext } from 'nestjs-i18n';
+import { Types } from 'mongoose';
 
 export class I18nHelper {
   static getCurrentLang(): string {
@@ -27,22 +27,37 @@ export class I18nHelper {
       }
 
       // 4. تحويل Mongoose Document إلى Object بسيط
-      let raw = obj.toObject ? obj.toObject() : { ...obj };
+      const raw = obj.toObject ? obj.toObject() : { ...obj };
 
       // 5. ترجمة الحقول النصية المباشرة (name, title, description, etc.)
       const translatableFields = ['name', 'title', 'description', 'text'];
       translatableFields.forEach((field) => {
-        if (raw[field] && typeof raw[field] === 'object' && !Array.isArray(raw[field])) {
+        if (
+          raw[field] &&
+          typeof raw[field] === 'object' &&
+          !Array.isArray(raw[field])
+        ) {
           // التأكد أن الكائن يحتوي على مفاتيح لغات وليس كائناً عادياً
           if (raw[field][lang] || raw[field]['en'] || raw[field]['ar']) {
-            raw[field] = raw[field][lang] || raw[field]['en'] || raw[field]['ar'] || raw[field];
+            raw[field] =
+              raw[field][lang] ||
+              raw[field]['en'] ||
+              raw[field]['ar'] ||
+              raw[field];
           }
         }
       });
 
       // 6. ترجمة الحقول المتداخلة (Recursive) أياً كان نوعها (Object أو Array)
-      // أضفنا supCategories هنا ليتم فحصها كـ Array of Objects
-      const nestedFields = ['category', 'brand', 'supplier', 'supCategories', 'product', 'variants'];
+      // أضفنا SubCategories هنا ليتم فحصها كـ Array of Objects
+      const nestedFields = [
+        'category',
+        'brand',
+        'supplier',
+        'SubCategories',
+        'product',
+        'variants',
+      ];
       nestedFields.forEach((key) => {
         if (raw[key]) {
           raw[key] = translate(raw[key]);
@@ -52,6 +67,8 @@ export class I18nHelper {
       return raw;
     };
 
-    return Array.isArray(data) ? data.map((item) => translate(item)) : translate(data);
+    return Array.isArray(data)
+      ? data.map((item) => translate(item))
+      : translate(data);
   }
 }

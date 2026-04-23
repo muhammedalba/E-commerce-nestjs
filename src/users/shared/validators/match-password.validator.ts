@@ -4,6 +4,7 @@ import {
   ValidationArguments,
 } from 'class-validator';
 import { CreateUserDto } from '../dto/create-user.dto';
+import { i18nValidationMessage } from 'nestjs-i18n';
 
 @ValidatorConstraint({ name: 'MatchPassword', async: false })
 export class MatchPasswordValidator implements ValidatorConstraintInterface {
@@ -22,7 +23,7 @@ export class MatchPasswordValidator implements ValidatorConstraintInterface {
     );
   }
 
-  defaultMessage(): string {
-    return 'تأكيد كلمة المرور غير مطابق';
+  defaultMessage(args: ValidationArguments): string {
+    return i18nValidationMessage('validation.MATCH_PASSWORD')(args);
   }
 }

@@ -4,7 +4,7 @@ import { Category } from 'src/categories/shared/schemas/category.schema';
 import { generateUniqueSlug } from 'src/shared/utils/slug.util';
 
 @Schema({ timestamps: true })
-export class SupCategory {
+export class SubCategory {
   @Prop({
     type: Object,
     i18n: true,
@@ -23,25 +23,25 @@ export class SupCategory {
   })
   category!: Types.ObjectId;
 }
-export const SupCategorySchema = SchemaFactory.createForClass(SupCategory);
-export type SupCategoryDocument = HydratedDocument<SupCategory>;
+export const SubCategorySchema = SchemaFactory.createForClass(SubCategory);
+export type SubCategoryDocument = HydratedDocument<SubCategory>;
 
 //update , findOne and findAll
 // this will be used to generate the slug
-SupCategorySchema.pre('save', async function (next) {
+SubCategorySchema.pre('save', async function (next) {
   if (this.isModified('name') && this.name) {
     const nameValue =
       typeof this.name === 'object'
         ? this.name.en?.trim() || this.name.ar?.trim() || ''
         : this.name.trim();
     // generate a unique slug
-    const model = this.constructor as unknown as Model<SupCategory>;
+    const model = this.constructor as unknown as Model<SubCategory>;
     this.slug = await generateUniqueSlug(nameValue, model); 
   }
   next();
 });
 // this will be used to generate the slug
-SupCategorySchema.pre('findOneAndUpdate', async function (this: any, next) {
+SubCategorySchema.pre('findOneAndUpdate', async function (this: any, next) {
   const update = this.getUpdate();
   if (update && typeof update === 'object' && '$set' in update) {
     if (update?.$set?.name) {
@@ -49,7 +49,7 @@ SupCategorySchema.pre('findOneAndUpdate', async function (this: any, next) {
       const nameValue: string =
         typeof name === 'object' ? name.en || name.ar || '' : name;
       //
-      const model = this.model as Model<SupCategory>;
+      const model = this.model as Model<SubCategory>;
       // generate a unique slug
       const newSlug = await generateUniqueSlug(nameValue, model);
       update.slug = newSlug;

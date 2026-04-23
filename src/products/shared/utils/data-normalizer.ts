@@ -48,7 +48,7 @@ export function normalizeAttributes(
   const normalized: Record<string, unknown> = {};
 
   for (const [rawKey, value] of Object.entries(attributes)) {
-    const key = normalizeAttributeName(rawKey); //e.g " color " -> "color" 
+    const key = normalizeAttributeName(rawKey); //e.g " color " -> "color"
     if (!key) continue; // skip empty keys
 
     if (isMeasuredAttribute(value)) {

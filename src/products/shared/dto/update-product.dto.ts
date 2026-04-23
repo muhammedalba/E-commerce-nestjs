@@ -14,7 +14,7 @@ import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
 import { VariantOperationsDto } from './variant.dto';
 import { ProductAttributeDefinitionDto } from './create-product.dto';
 import { Exists } from 'src/shared/utils/decorators/exists.decorator';
-import { SupCategory } from 'src/sup-category/shared/schemas/sup-category.schema';
+import { SubCategory } from 'src/sub-category/shared/schemas/sub-category.schema';
 import { Category } from 'src/categories/shared/schemas/category.schema';
 import { Brand } from 'src/brands/shared/schemas/brand.schema';
 import { Supplier } from 'src/supplier/shared/schema/Supplier.schema';
@@ -59,13 +59,17 @@ export class UpdateProductDto {
   category?: string;
   @IsOptional()
   @Transform(({ value }) => {
-    const rawIds = Array.isArray(value) ? value : (value ? [value] : []);
-    return [...new Set(rawIds.filter((id) => typeof id === 'string' && id.length > 0))];
+    const rawIds = Array.isArray(value) ? value : value ? [value] : [];
+    return [
+      ...new Set(
+        rawIds.filter((id) => typeof id === 'string' && id.length > 0),
+      ),
+    ];
   })
   @IsArray()
   @IsMongoId({ each: true })
-  @Exists(SupCategory.name)
-  supCategories?: string[];
+  @Exists(SubCategory.name)
+  SubCategories?: string[];
 
   @IsMongoId()
   @IsOptional()
@@ -99,12 +103,10 @@ export class UpdateProductDto {
   @IsOptional()
   rating?: number;
 
-
   @IsNumber()
   @IsOptional()
   @Type(() => Number)
   ratingsQuantity?: number;
-
 
   @IsNumber()
   @Min(0)

@@ -7,7 +7,6 @@ import { generateUniqueSlug } from 'src/shared/utils/slug.util';
 export class Brand {
   @Prop({
     type: Object,
-    i18n: true,
   })
   name!: string | { en?: string; ar?: string };
 

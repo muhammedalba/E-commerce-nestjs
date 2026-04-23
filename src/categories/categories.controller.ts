@@ -11,20 +11,24 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { CacheTTL } from '@nestjs/cache-manager';
 import { CreateCategoryDto } from './shared/dto/create-category.dto';
 import { UpdateCategoryDto } from './shared/dto/update-category.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { createParseFilePipe } from 'src/shared/files/files-validation-factory';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
-import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
+import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { CategoriesService } from './categories.service';
 import { Roles } from 'src/auth/shared/decorators/roles.decorator';
 import { roles } from 'src/auth/shared/enums/role.enum';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { RoleGuard } from 'src/auth/shared/guards/role.guard';
+import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
+import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 
 @Controller('categories')
+@UseInterceptors(ClearCacheInterceptor)
 export class CategoriesController {
   constructor(private readonly categoryService: CategoriesService) {}
 
@@ -34,6 +38,8 @@ export class CategoriesController {
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
   @Get('statistics')
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(300000) // 5 minutes
   async Categories_statistics() {
     return await this.categoryService.Categories_statistics();
   }
@@ -57,6 +63,8 @@ export class CategoriesController {
   // ------------ ======  get all categories   ====== ---------- //
   // ------------ =============================== ---------- //
   @Get()
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(60000) // 60 seconds
   async findAll(
     @Query() queryString: QueryString,
     @Query('all_langs') allLangs?: string,
@@ -69,6 +77,8 @@ export class CategoriesController {
   // ------------ ======  get category by id   ====== ---------- //
   // ------------ =============================== ---------- //
   @Get(':id')
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(60000) // 60 seconds
   async findOne(
     @Param() idParamDto: IdParamDto,
     @Query('all_langs') allLangs?: string,

@@ -8,20 +8,25 @@ import {
   Delete,
   UseGuards,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
-import { SupCategoryService } from './sup-category.service';
-import { CreateSupCategoryDto } from './shared/dto/create-sup-category.dto';
-import { UpdateSupCategoryDto } from './shared/dto/update-sup-category.dto';
+import { CacheTTL } from '@nestjs/cache-manager';
+import { SubCategoryService } from './sub-category.service';
+import { CreateSubCategoryDto } from './shared/dto/create-sub-category.dto';
+import { UpdateSubCategoryDto } from './shared/dto/update-sub-category.dto';
 import { Roles } from 'src/auth/shared/decorators/roles.decorator';
 import { roles } from 'src/auth/shared/enums/role.enum';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { RoleGuard } from 'src/auth/shared/guards/role.guard';
-import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
+import { IdParamDto } from 'src/shared/dto/id-param.dto';
+import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
+import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 
-@Controller('sup-category')
-export class SupCategoryController {
-  constructor(private readonly supCategoryService: SupCategoryService) {}
+@Controller('sub-category')
+@UseInterceptors(ClearCacheInterceptor)
+export class SubCategoryController {
+  constructor(private readonly SubCategoryService: SubCategoryService) {}
 
   // ------------ =============================== ---------- //
   // ------------ ======  CREATE SUP CATEGORY  ====== ---------- //
@@ -30,9 +35,9 @@ export class SupCategoryController {
   @UseGuards(AuthGuard, RoleGuard)
   @Post()
   create(
-    @Body() createSupCategoryDto: CreateSupCategoryDto,
+    @Body() createSubCategoryDto: CreateSubCategoryDto,
   ) {
-    return this.supCategoryService.create(createSupCategoryDto);
+    return this.SubCategoryService.create(createSubCategoryDto);
   }
 
   // ------------ =============================== ---------- //
@@ -40,12 +45,14 @@ export class SupCategoryController {
   // ------------ =============================== ---------- //
   @Get()
   @Roles(roles.ADMIN, roles.MANAGER, roles.USER)
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(60000) // 60 seconds
   findAll(
     @Query() queryString: QueryString,
     @Query('all_langs') allLangs?: string,
   ) {
     const returnAllLangs = allLangs === 'true';
-    return this.supCategoryService.findAll(queryString, returnAllLangs);
+    return this.SubCategoryService.findAll(queryString, returnAllLangs);
   }
 
   // ------------ =============================== ---------- //
@@ -54,20 +61,24 @@ export class SupCategoryController {
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
   @Get('statistics')
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(300000) // 5 minutes
   findStatistics() {
-    return this.supCategoryService.findStatistics();
+    return this.SubCategoryService.findStatistics();
   }
 
   // ------------ =============================== ---------- //
   // ------------ ======  GET SUP CATEGORY BY ID  ====== ---------- //
   // ------------ =============================== ---------- //
   @Get(':id')
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(60000) // 60 seconds
   findOne(
     @Param() idParamDto: IdParamDto,
     @Query('all_langs') allLangs?: string,
   ) {
     const returnAllLangs = allLangs === 'true';
-    return this.supCategoryService.findOne(idParamDto, returnAllLangs);
+    return this.SubCategoryService.findOne(idParamDto, returnAllLangs);
   }
 
   // ------------ =============================== ---------- //
@@ -78,9 +89,9 @@ export class SupCategoryController {
   @Patch(':id')
   update(
     @Param() idParamDto: IdParamDto,
-    @Body() updateSupCategoryDto: UpdateSupCategoryDto,
+    @Body() updateSubCategoryDto: UpdateSubCategoryDto,
   ) {
-    return this.supCategoryService.update(idParamDto, updateSupCategoryDto);
+    return this.SubCategoryService.update(idParamDto, updateSubCategoryDto);
   }
 
   // ------------ =============================== ---------- //
@@ -90,6 +101,6 @@ export class SupCategoryController {
   @UseGuards(AuthGuard, RoleGuard)
   @Delete(':id')
   remove(@Param() idParamDto: IdParamDto) {
-    return this.supCategoryService.remove(idParamDto);
+    return this.SubCategoryService.remove(idParamDto);
   }
 }

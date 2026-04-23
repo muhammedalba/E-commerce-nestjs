@@ -12,13 +12,14 @@ import {
   UseGuards,
   BadRequestException,
 } from '@nestjs/common';
+import { CacheTTL } from '@nestjs/cache-manager';
 import { CarouselService } from './carousel.service';
 import { CreateCarouselDto } from './shared/dto/create-carousel.dto';
 import { UpdateCarouselDto } from './shared/dto/update-carousel.dto';
 
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
-import { IdParamDto } from 'src/users/shared/dto/id-param.dto';
+import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { ParseFileFieldsPipe } from 'src/shared/files/ParseFileFieldsPipe';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { Roles } from 'src/auth/shared/decorators/roles.decorator';
@@ -27,11 +28,14 @@ import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { Request } from 'express';
 import { MaxFileCount } from 'src/shared/files/constants/file-count.constants';
+import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
+import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 type file = Request['file'];
 
 @Controller('carousel')
 @Roles(roles.ADMIN)
 @UseGuards(AuthGuard, RoleGuard)
+@UseInterceptors(ClearCacheInterceptor)
 export class CarouselController {
   constructor(private readonly carouselService: CarouselService) {}
   static readonly imageSize = [
@@ -78,6 +82,8 @@ export class CarouselController {
   // ------------ =============================== ---------- //
   @Get()
   @Roles(roles.USER, roles.ADMIN, roles.MANAGER)
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(60000) // 60 seconds
   async findAll(
     @Query() queryString: QueryString,
     @Query('all_langs') allLangs?: string,
@@ -89,6 +95,8 @@ export class CarouselController {
   // ------------ ======  GET CAROUSEL BY ID   ====== ---------- //
   // ------------ =============================== ---------- //
   @Get(':id')
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(60000) // 60 seconds
   async findOne(
     @Param() idParamDto: IdParamDto,
     @Query('all_langs') allLangs?: string,
