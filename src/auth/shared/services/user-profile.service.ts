@@ -7,10 +7,11 @@ import {
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { FileUploadService } from 'src/file-upload/file-upload.service';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 
-import { EmailService } from 'src/email/email.service';
 import { RefreshToken } from '../schema/refresh-token.schema';
 import { UpdateUserDto } from 'src/users/shared/dto/update-user.dto';
 import { JwtService } from '@nestjs/jwt';
@@ -24,12 +25,12 @@ import { JwtPayload } from '../types/jwt-payload.interface';
 @Injectable()
 export class UserProfileService {
   constructor(
+    @InjectQueue('mail-queue') private readonly mailQueue: Queue,
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(RefreshToken.name)
     private RefreshTokenModel: Model<RefreshToken>,
     private readonly i18n: CustomI18nService,
     private readonly fileUploadService: FileUploadService,
-    private readonly emailService: EmailService,
     private readonly jwtService: JwtService,
     private readonly cookieService: CookieService,
     private readonly tokenService: TokenService,
@@ -130,15 +131,17 @@ export class UserProfileService {
       await this.RefreshTokenModel.deleteOne({
         userId: user_id,
       }).lean();
-      // 5) send email to user
-      await this.emailService.send_reset_password_success(
-        user.email,
-        user.name,
-        `${process.env.BASE_URL}/auth/login`,
-        `${process.env.BASE_URL}/auth/login`,
-        'Password reset successfully',
-      );
+      
+      // 5) Send email to user via Background Job (Queue)
+      await this.mailQueue.add('send-reset-success', {
+        email: user.email,
+        name: user.name,
+        supportLink: `${process.env.BASE_URL}/auth/login`,
+        loginLink: `${process.env.BASE_URL}/auth/login`,
+        message: 'Password reset successfully',
+      });
     } catch {
+      // It will only fail if Redis is down, not if SMTP fails
       throw new BadGatewayException(
         this.i18n.translate('exception.EMAIL_SEND_FAILED'),
       );

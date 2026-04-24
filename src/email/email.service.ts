@@ -17,11 +17,15 @@ export class EmailService {
     name: string,
     code: string,
     subject: string,
+    lang?: string,
   ): Promise<void> {
-    const lang = I18nContext.current()?.lang ?? process.env.DEFAULT_LANG;
+    const resolvedLang = lang ?? I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
+    const template = `verify-code-${resolvedLang}`;
+    console.log(`📧 Attempting to send [sendRandomCode] to: ${to} | Lang: ${resolvedLang} | Template: ${template}`);
+    
     await this.mailerService.sendMail({
       to,
-      template: `verify-code-${lang}`,
+      template,
       subject,
       context: {
         name,
@@ -29,19 +33,23 @@ export class EmailService {
       },
     });
   }
+
   async send_reset_password_success(
     to: string,
     name: string,
     supportLink: string,
     loginLink: string,
     subject: string,
+    lang?: string,
   ): Promise<void> {
-    const lang = I18nContext.current()?.lang ?? process.env.DEFAULT_LANG;
+    const resolvedLang = lang ?? I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
+    const template = `reset-pass-${resolvedLang}`;
+    console.log(`📧 Attempting to send [send_reset_password_success] to: ${to} | Lang: ${resolvedLang} | Template: ${template}`);
 
     await this.mailerService.sendMail({
       to,
       subject,
-      template: `reset-pass-${lang}`,
+      template,
       context: {
         name,
         supportLink,
@@ -71,14 +79,17 @@ export class EmailService {
     }[],
 
     subject: string,
+    lang?: string,
   ): Promise<void> {
-    const lang = I18nContext.current()?.lang ?? process.env.DEFAULT_LANG;
+    const resolvedLang = lang ?? I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
     const adminEmail = process.env.ADMIN_EMAIL;
+    const template = `new-admin-order-${resolvedLang}`;
+    console.log(`📧 Attempting to send [new_admin_order] to Admin: ${adminEmail} | Lang: ${resolvedLang} | Template: ${template}`);
 
     await this.mailerService.sendMail({
       to: adminEmail,
       subject,
-      template: `new-admin-order-${lang}`,
+      template,
       context: {
         adminName,
         customerName,

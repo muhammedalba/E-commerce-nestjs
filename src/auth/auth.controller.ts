@@ -182,3 +182,4 @@ export class AuthController {
     return await this.authService.changeMyPassword(request, UpdateUserDto);
   }
 }
+

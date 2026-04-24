@@ -21,6 +21,7 @@ import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
+import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 
 @Controller('coupons')
 @Roles(roles.ADMIN)
@@ -32,6 +33,7 @@ export class CouponsController {
   // ------------ ======  CREATE COUPON   ====== ---------- //
   // ------------ =============================== ---------- //
   @Post()
+  @ClearCache('coupons')
   create(@Body() createCouponDto: CreateCouponDto) {
     return this.couponsService.create(createCouponDto);
   }
@@ -57,6 +59,7 @@ export class CouponsController {
   // ------------ ======  UPDATE COUPON   ====== ---------- //
   // ------------ =============================== ---------- //
   @Patch(':id')
+  @ClearCache('coupons')
   update(
     @Param() idParamDto: IdParamDto,
     @Body() updateCouponDto: UpdateCouponDto,
@@ -67,6 +70,7 @@ export class CouponsController {
   // ------------ ======  DELETE COUPON   ====== ---------- //
   // ------------ =============================== ---------- //
   @Delete(':id')
+  @ClearCache('coupons')
   remove(@Param() idParamDto: IdParamDto) {
     return this.couponsService.remove(idParamDto);
   }

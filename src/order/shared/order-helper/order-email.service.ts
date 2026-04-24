@@ -1,7 +1,8 @@
 import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
 import { Types } from 'mongoose';
-import { I18nService } from 'nestjs-i18n';
-import { EmailService } from 'src/email/email.service';
+import { I18nContext, I18nService } from 'nestjs-i18n';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { HydratedDocument } from 'mongoose';
 import { Order } from '../schemas/Order.schema';
 
@@ -33,7 +34,7 @@ export class OrderEmailService {
   private readonly logger = new Logger(OrderEmailService.name);
 
   constructor(
-    private readonly emailService: EmailService,
+    @InjectQueue('mail-queue') private readonly mailQueue: Queue,
     private readonly i18n: I18nService,
   ) {}
 
@@ -42,16 +43,16 @@ export class OrderEmailService {
     validatedItems: ValidatedItem[],
     user_email: string,
   ) {
+    const lang = I18nContext.current()?.lang || process.env.DEFAULT_LANGUAGE || 'ar';
     try {
-      await this.emailService.new_admin_order(
-        process.env.APP_NAME || 'admin',
-        user_email,
-        order.createdAt ? order.createdAt.toISOString() : '',
-        order.totalPriceAfterDiscount?.toString() ??
-          order.totalPrice.toString(),
-        `${process.env.BASE_URL}/api/v1/order/${order._id?.toString() ?? ''}`,
-        order._id?.toString() ?? '',
-        validatedItems.map((item) => ({
+      await this.mailQueue.add('new-admin-order', {
+        appName: process.env.APP_NAME || 'admin',
+        email: user_email,
+        date: order.createdAt ? order.createdAt.toISOString() : '',
+        amount: order.totalPriceAfterDiscount?.toString() ?? order.totalPrice.toString(),
+        url: `${process.env.BASE_URL}/api/v1/order/${order._id?.toString() ?? ''}`,
+        orderId: order._id?.toString() ?? '',
+        orderDetails: validatedItems.map((item) => ({
           product: {
             id: item.product.id.toString(),
             title: item.product.title,
@@ -64,10 +65,12 @@ export class OrderEmailService {
             item.totalPrice?.toString() ??
             (item.variant.price * item.quantity).toString(),
         })),
-        this.i18n.translate('email.NEW_ORDER_SUBJECT', {
+        subject: this.i18n.translate('email.NEW_ORDER_SUBJECT', {
           args: { name: 'codeProps' },
+          lang,
         }),
-      );
+        lang,
+      });
     } catch (err) {
       this.logger.error('Failed to send order email', err);
       throw new BadGatewayException(

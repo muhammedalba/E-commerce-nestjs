@@ -15,7 +15,6 @@ import {
   buildVariantFilter,
   VariantFilterParams,
 } from '../shared/utils/variant-query-builder';
-import { I18nHelper } from 'src/shared/utils/i18n/i18n-helper';
 
 @Injectable()
 export class ProductQueryService {
@@ -31,9 +30,6 @@ export class ProductQueryService {
   //  1. HELPERS (Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜Â§Ã˜Â¹Ã˜Â¯Ã˜Â§Ã˜Âª)
   // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
-  private getCurrentLang(): string {
-    return I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
-  }
 
   // public localize(data: any, allLangs: boolean = false) {
   //   if (allLangs) return data;
@@ -160,7 +156,7 @@ export class ProductQueryService {
       total,
       pagination,
       // data: this.localize(data, allLangs),
-      data: I18nHelper.localize(data, allLangs),
+      data: this.i18n.localize(data, allLangs),
     };
   }
 
@@ -233,6 +229,6 @@ export class ProductQueryService {
       .lean();
 
     // return { product: this.localize(product, allLangs), variants };
-    return { product: I18nHelper.localize(product, allLangs), variants };
+    return { product: this.i18n.localize(product, allLangs), variants };
   }
 }

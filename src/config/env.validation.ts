@@ -51,23 +51,32 @@ class EnvironmentVariables {
   @IsString()
   @IsOptional()
   DEFAULT_LANGUAGE: string = 'ar';
-  
+
   @IsString()
-  EMAIL_HOST!: string;
+  MAIL_HOST!: string;
   @IsNumber()
   EMAIL_PORT!: number;
   @IsEmail()
-  EMAIL_USER!: string;
+  MAIL_USERNAME!: string;
   @IsString()
-  EMAIL_PASS!: string;
+  MAIL_PASSWORD!: string;
   @IsEmail()
-  EMAIL_FROM!: string;
+  MAIL_FROM_ADDRESS!: string;
   @IsEmail()
   ADMIN_EMAIL!: string;
   @IsUrl({ require_tld: false }) // require_tld: false للسماح بـ localhost
   SUPPORT_LINK!: string;
   @IsUrl({ require_tld: false })
   LOGIN_LINK!: string;
+
+  @IsString()
+  REDIS_URL!: string;
+
+  @IsNumber()
+  MAIL_RETRY_ATTEMPTS!: number;
+
+  @IsNumber()
+  MAIL_RETRY_DELAY!: number;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

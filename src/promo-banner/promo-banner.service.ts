@@ -14,7 +14,6 @@ import { PromoBannerDto } from './shared/dto/promo-banner.dto';
 import { UpdatePromoBannerDto } from './shared/dto/updatepromo_banner.dto';
 import { ApiFeatures } from 'src/shared/utils/ApiFeatures';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
-import { I18nHelper } from 'src/shared/utils/i18n/i18n-helper';
 
 @Injectable()
 export class PromoBannerService {
@@ -31,7 +30,7 @@ export class PromoBannerService {
     if (!promo) {
       throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
     }
-    return I18nHelper.localize(promo);
+    return this.i18n.localize(promo);
   }
 
   async findAllDoc(
@@ -57,7 +56,7 @@ export class PromoBannerService {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }
 
-    return I18nHelper.localize(data, allLangs);
+    return this.i18n.localize(data, allLangs);
   }
   //
   async getBanner(id: string, allLangs: boolean = false): Promise<any> {
@@ -65,13 +64,13 @@ export class PromoBannerService {
     if (!promo) {
       throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
     }
-    return I18nHelper.localize(promo, allLangs);
+    return this.i18n.localize(promo, allLangs);
   }
   async createBanner(
     promoBannerDto: PromoBannerDto,
   ): Promise<{ data: PromoBanner; status: string }> {
     const data = await this.promoBannerModel.create(promoBannerDto);
-    return I18nHelper.localize(data);
+    return this.i18n.localize(data);
   }
 
   async update(
@@ -86,7 +85,7 @@ export class PromoBannerService {
     if (!banner) {
       throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
     }
-    return I18nHelper.localize(banner);
+    return this.i18n.localize(banner);
   }
   async deleteBanner(id: string): Promise<void> {
     await this.promoBannerModel.findByIdAndDelete(id);

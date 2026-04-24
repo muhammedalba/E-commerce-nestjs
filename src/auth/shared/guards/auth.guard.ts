@@ -30,7 +30,7 @@ export class AuthGuard implements CanActivate {
     //2) Extract the token from the request header
 
     const token = this.extractTokenFromHeader(request);
-
+    
     if (!token) {
       throw new UnauthorizedException(
         this.i18n.translate('exception.NOT_LOGGED'),

@@ -22,6 +22,7 @@ import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
+import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 
 @Controller('sub-category')
 @UseInterceptors(ClearCacheInterceptor)
@@ -33,6 +34,7 @@ export class SubCategoryController {
   // ------------ =============================== ---------- //
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
+  @ClearCache('sub-category')
   @Post()
   create(
     @Body() createSubCategoryDto: CreateSubCategoryDto,
@@ -86,6 +88,7 @@ export class SubCategoryController {
   // ------------ =============================== ---------- //
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
+  @ClearCache('sub-category')
   @Patch(':id')
   update(
     @Param() idParamDto: IdParamDto,
@@ -99,6 +102,7 @@ export class SubCategoryController {
   // ------------ =============================== ---------- //
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
+  @ClearCache('sub-category')
   @Delete(':id')
   remove(@Param() idParamDto: IdParamDto) {
     return this.SubCategoryService.remove(idParamDto);

@@ -7,7 +7,6 @@ import { I18nValidationPipe } from 'nestjs-i18n';
 import { AllExceptionsFilter } from './shared/filters/all-exceptions.filter';
 import { TransformInterceptor } from './shared/interceptors/transform.interceptor';
 import { I18nService } from 'nestjs-i18n';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Request, Response, NextFunction } from 'express';
 
 async function bootstrap() {
@@ -36,13 +35,12 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
-  // to translate the class-validator errors
-  // app.useGlobalFilters(new I18nValidationExceptionFilter());
   // handle all exceptions
   app.useGlobalFilters(new AllExceptionsFilter(app.get(I18nService)));
 
   // standardize the response
   app.useGlobalInterceptors(new TransformInterceptor(app.get(I18nService)));
+  // enable cors
   app.enableCors({
     origin: [
       'http://localhost:3000',
@@ -53,18 +51,6 @@ async function bootstrap() {
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'x-lang'],
   });
-
-  if (process.env.NODE_ENV == 'production') {
-    const config = new DocumentBuilder()
-      .setTitle('E-commerce API')
-      .setDescription('The E-commerce API description')
-      .setVersion('1.0')
-      .addTag('E-commerce')
-      .addBearerAuth()
-      .build();
-    const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('api', app, document);
-  }
 
   await app.listen(process.env.PORT ?? 4000);
 }

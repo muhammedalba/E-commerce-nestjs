@@ -26,6 +26,7 @@ import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
+import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 
 @Controller('brands')
 @UseInterceptors(ClearCacheInterceptor)
@@ -35,6 +36,7 @@ export class BrandsController {
   // ------------ ======  create brand   ====== ---------- //
   // ------------ =============================== ---------- //
   @Post()
+  @ClearCache('brands')
   @Roles(roles.ADMIN, roles.MANAGER)
   @UseGuards(AuthGuard, RoleGuard)
   @UseInterceptors(FileInterceptor('image'))
@@ -87,6 +89,7 @@ export class BrandsController {
   // ------------ ======  update brand   ====== ---------- //
   // ------------ =============================== ---------- //
   @Patch(':id')
+  @ClearCache('brands')
   @Roles(roles.ADMIN, roles.MANAGER)
   @UseGuards(AuthGuard, RoleGuard)
   @UseInterceptors(FileInterceptor('image'))
@@ -106,6 +109,7 @@ export class BrandsController {
   // ------------ ======  delete brand   ====== ---------- //
   // ------------ =============================== ---------- //
   @Delete(':id')
+  @ClearCache('brands')
   @Roles(roles.ADMIN, roles.MANAGER)
   @UseGuards(AuthGuard, RoleGuard)
   async remove(@Param() idParamDto: IdParamDto) {

@@ -15,7 +15,6 @@ import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { Request } from 'express';
-import { I18nHelper } from 'src/shared/utils/i18n/i18n-helper';
 type file = Request['file'];
 @Injectable()
 export class CarouselService extends BaseService<CarouselDocument> {
@@ -76,7 +75,7 @@ export class CarouselService extends BaseService<CarouselDocument> {
       newDoc.carouselLg = `${baseUrl}${createCarouselDto.carouselLg}`;
 
       //7) return the localized document
-      return I18nHelper.localize(newDoc);
+      return this.i18n.localize(newDoc);
       // return this.localize(newDoc);
     } catch (error) {
       this.logger.error('Error saving carousel', error);
@@ -178,7 +177,7 @@ export class CarouselService extends BaseService<CarouselDocument> {
       { new: true, runValidators: true },
     );
 
-    return updatedDoc ? I18nHelper.localize(updatedDoc) : [];
+    return updatedDoc ? this.i18n.localize(updatedDoc) : [];
   }
 
   // ------------ =============================== ---------- //

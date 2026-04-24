@@ -7,7 +7,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as crypto from 'crypto';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
-import { EmailService } from 'src/email/email.service';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { ForgotPasswordDto } from '../dto/forgotPassword.dto.';
 import { resetCodeDto } from '../dto/resetCode.dto';
 import { LoginUserDto } from '../dto/login.dto';
@@ -18,7 +19,7 @@ import { User } from '../schema/user.schema';
 export class PasswordResetService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
-    private readonly emailService: EmailService,
+    @InjectQueue('mail-queue') private readonly mailQueue: Queue,
     private readonly tokenService: TokenService,
     private readonly i18n: CustomI18nService,
   ) {}
@@ -73,12 +74,13 @@ export class PasswordResetService {
 
     // 3 ) send email with code
     try {
-      await this.emailService.sendRandomCode(
-        user.email,
-        user.name,
-        resetCode.toString(),
-        this.i18n.translate('email.VERIFY_CODE_SUBJECT'),
-      );
+      await this.mailQueue.add('send-random-code', {
+        email: user.email,
+        name: user.name,
+        code: resetCode.toString(),
+        subject: this.i18n.translate('email.VERIFY_CODE_SUBJECT'),
+        lang: this.i18n.getLang(),
+      });
     } catch {
       user.passwordResetCode = undefined;
       user.passwordResetExpires = undefined;
@@ -163,13 +165,14 @@ export class PasswordResetService {
     const Tokens = await this.tokenService.generate_Tokens(userId, '5h');
     // 5) send email to user
     try {
-      await this.emailService.send_reset_password_success(
-        user.email,
-        user.name,
-        `${process.env.BASE_URL}/auth/login`,
-        `${process.env.BASE_URL}/auth/login`,
-        this.i18n.translate('success.SUCCESS_RESET_PASSWORD'),
-      );
+      await this.mailQueue.add('send-reset-success', {
+        email: user.email,
+        name: user.name,
+        supportLink: `${process.env.BASE_URL}/auth/login`,
+        loginLink: `${process.env.BASE_URL}/auth/login`,
+        message: this.i18n.translate('success.SUCCESS_RESET_PASSWORD'),
+        lang: this.i18n.getLang(),
+      });
     } catch {
       throw new BadGatewayException(
         this.i18n.translate('exception.EMAIL_SEND_FAILED'),

@@ -13,7 +13,6 @@ import { FileUploadService } from 'src/file-upload/file-upload.service';
 import { MulterFileType } from '../interfaces/fileInterface';
 import { I18nContext, TranslateOptions } from 'nestjs-i18n';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
-import { I18nHelper } from '../i18n/i18n-helper';
 //
 interface FileSchema {
   avatar?: string;
@@ -30,12 +29,6 @@ export class BaseService<T> {
     protected readonly i18n: CustomI18nService,
     protected readonly fileUploadService: FileUploadService,
   ) {}
-  // This method is used to get the current language from the request context
-  private getCurrentLang(): string {
-    const lang =
-      I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
-    return lang;
-  }
   // This method is used to get the default file path based on the model name '/uploads/users/avatar.png'
   private getDefaultFilePath = (modelName: string): string =>
     `/${process.env.UPLOADS_FOLDER}/${modelName}/${modelName === 'users' ? 'avatar.png' : 'default.png'}`;
@@ -128,7 +121,7 @@ export class BaseService<T> {
 
 
 
-    return I18nHelper.localize(newDocFilter);
+    return this.i18n.localize(newDocFilter);
   }
   async findAllDoc(
     modelName: string,
@@ -164,7 +157,7 @@ export class BaseService<T> {
     return {
       results: data.length,
       pagination: features.getPagination(),
-      data: I18nHelper.localize(data, allLangs),
+      data: this.i18n.localize(data, allLangs),
       // data: localizedDoc as T[],
     };
   }
@@ -192,7 +185,7 @@ export class BaseService<T> {
 
 
 
-    return I18nHelper.localize(doc, allLangs);
+    return this.i18n.localize(doc, allLangs);
   }
 
   async updateOneDoc(
@@ -251,7 +244,7 @@ export class BaseService<T> {
     if (filePath && updatedData) {
       updatedData[fileFieldName] = `${process.env.BASE_URL}${filePath}`;
     }
-    return updatedData ? I18nHelper.localize(updatedData) : null;
+    return updatedData ? this.i18n.localize(updatedData) : null;
   }
   async deleteOneDoc(idParamDto: IdParamDto, selected: string): Promise<void> {
     // 1) check if id is valid ObjectId or slug

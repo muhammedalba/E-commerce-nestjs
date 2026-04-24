@@ -63,8 +63,8 @@ DATABASE_URL=your_database_url
 JWT_SECRET=your_jwt_secret
 UPLOADS_PATH=uploads/
 CORS_ORIGIN=your_frontend_url
-EMAIL_USER=your_email_user
-EMAIL_PASS=your_email_password
+MAIL_USERNAME=your_MAIL_USERNAME
+MAIL_PASSWORD=your_MAIL_PASSWORDword
 ```
 
 ## Project Structure

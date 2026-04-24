@@ -26,6 +26,7 @@ import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
+import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 
 @Controller('categories')
 @UseInterceptors(ClearCacheInterceptor)
@@ -49,6 +50,7 @@ export class CategoriesController {
   // ------------ =============================== ---------- //
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
+  @ClearCache('categories')
   @Post()
   @UseInterceptors(FileInterceptor('image'))
   async create(
@@ -92,6 +94,7 @@ export class CategoriesController {
   // ------------ =============================== ---------- //
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
+  @ClearCache('categories')
   @Patch(':id')
   @UseInterceptors(FileInterceptor('image'))
   async update(
@@ -112,6 +115,7 @@ export class CategoriesController {
   // ------------ =============================== ---------- //
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
+  @ClearCache('categories')
   @Delete(':id')
   async remove(@Param() idParamDto: IdParamDto) {
     return await this.categoryService.deleteOne(idParamDto);

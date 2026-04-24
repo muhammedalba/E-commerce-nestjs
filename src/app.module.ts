@@ -2,10 +2,12 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { BullModule } from '@nestjs/bullmq';
+import { Redis } from 'ioredis';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { validateEnv } from './config/env.validation';
 import { AuthModule } from './auth/auth.module';
 import { BrandsModule } from './brands/brands.module';
@@ -42,11 +44,27 @@ import { CacheModule } from '@nestjs/cache-manager';
     CacheModule.register({
       isGlobal: true,
     }),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => {
+        const redisUrl = config.get<string>('REDIS_URL');
+        return {
+          connection: new Redis(redisUrl!, {
+            // ضروري لـ Upstash لتخطي أخطاء التحقق من شهادات SSL
+            tls: redisUrl?.startsWith('rediss://') ? { rejectUnauthorized: false } : undefined,
+            maxRetriesPerRequest: null,
+            enableReadyCheck: false,
+          }),
+        };
+      },
+      inject: [ConfigService],
+    }),
     EventEmitterModule.forRoot(),
     I18nConfig,
-    MongooseConfig,
-    StaticConfig,
+    MongooseConfig, 
+    StaticConfig, 
     JwtConfig,
+    
     AuthModule,
     UsersModule,
     BrandsModule,
@@ -71,4 +89,4 @@ import { CacheModule } from '@nestjs/cache-manager';
     CustomI18nValidationExceptionFilter,
   ],
 })
-export class AppModule {}
+export class AppModule { }
