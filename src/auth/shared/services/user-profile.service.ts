@@ -46,10 +46,7 @@ export class UserProfileService {
         this.i18n.translate('exception.USER_NOT_FOUND'),
       );
     }
-    return {
-      status: 'success',
-      data: user,
-    };
+    return user;
   }
   async updateMe(
     user_id: string,
@@ -104,11 +101,7 @@ export class UserProfileService {
       )
       .select('-__v');
 
-    return {
-      status: 'success',
-      message: this.i18n.translate('success.updated_SUCCESS'),
-      data: updatedUser,
-    };
+    return updatedUser;
   }
   async changeMyPassword(
     user_id: string,
@@ -151,11 +144,7 @@ export class UserProfileService {
       );
     }
 
-    return {
-      status: 'success',
-      message: this.i18n.translate('success.updated_SUCCESS'),
-      data: user,
-    };
+    return  user;
   }
   async refreshToken(req: Request, res: Response) {
     const cookies = req.cookies as {
@@ -201,7 +190,7 @@ export class UserProfileService {
       decoded_access_token = await this.jwtService.verifyAsync<JwtPayload>(
         access_token,
         {
-          ignoreExpiration: true, // Ã˜ÂªÃ˜Â¬Ã˜Â§Ã™â€¡Ã™â€ž Ã˜Â§Ã™â€ Ã˜ÂªÃ™â€¡Ã˜Â§Ã˜Â¡ Ã˜Â§Ã™â€žÃ˜ÂµÃ™â€žÃ˜Â§Ã˜Â­Ã™Å Ã˜Â©
+          ignoreExpiration: true,
         },
       );
       // console.log(decoded_access_token, 'decoded_access_token');
@@ -223,9 +212,7 @@ export class UserProfileService {
     this.cookieService.setCookies(res, new_Tokens);
 
     return {
-      status: 'success',
       message: this.i18n.translate('success.updated_REFRESH_SUCCESS'),
-      data: {},
       access_token: new_Tokens.access_token,
     };
   }

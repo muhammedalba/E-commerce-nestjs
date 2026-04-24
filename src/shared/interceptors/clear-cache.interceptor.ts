@@ -32,7 +32,7 @@ export class ClearCacheInterceptor implements NestInterceptor {
             const store = (this.cacheManager as any).store;
 
             // Get all keys and filter by resource prefix
-            if (typeof store.keys === 'function') {
+            if (store && typeof store.keys === 'function') {
               const keys: string[] = await store.keys();
               const keysToDelete = keys.filter((key) =>
                 key.startsWith(`${resource}:`),

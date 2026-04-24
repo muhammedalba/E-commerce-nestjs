@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 export const JwtConfig = JwtModule.registerAsync({
   imports: [],
   useFactory: (configService: ConfigService) => ({
-    secret: configService.get('jwt_Access_hToken_secret'),
+    secret: configService.get<string>('JWT_SECRET_KEY')!,
   }),
   inject: [ConfigService],
   global: true,

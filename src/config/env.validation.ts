@@ -1,9 +1,11 @@
 import { plainToInstance } from 'class-transformer';
 import {
+  IsEmail,
   IsEnum,
   IsNumber,
   IsOptional,
   IsString,
+  IsUrl,
   validateSync,
 } from 'class-validator';
 
@@ -32,7 +34,7 @@ class EnvironmentVariables {
   CLIENT_URL!: string;
 
   @IsString()
-  jwt_Access_hToken_secret!: string;
+  JWT_SECRET_KEY!: string;
 
   @IsString()
   @IsOptional()
@@ -49,6 +51,23 @@ class EnvironmentVariables {
   @IsString()
   @IsOptional()
   DEFAULT_LANGUAGE: string = 'ar';
+  
+  @IsString()
+  EMAIL_HOST!: string;
+  @IsNumber()
+  EMAIL_PORT!: number;
+  @IsEmail()
+  EMAIL_USER!: string;
+  @IsString()
+  EMAIL_PASS!: string;
+  @IsEmail()
+  EMAIL_FROM!: string;
+  @IsEmail()
+  ADMIN_EMAIL!: string;
+  @IsUrl({ require_tld: false }) // require_tld: false للسماح بـ localhost
+  SUPPORT_LINK!: string;
+  @IsUrl({ require_tld: false })
+  LOGIN_LINK!: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {
