@@ -26,7 +26,7 @@ export class CategoriesService extends BaseService<CategoryDocument> {
   // ------------ =============================== ---------- //
   // ------------ ======  categories statistics  ====== ---------- //
   // ------------ =============================== ---------- //
-  async Categories_statistics() {
+  async categories_statistics() {
     return await this.categoriesStatistics.categoriesStatistics();
   }
 

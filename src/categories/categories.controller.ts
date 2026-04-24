@@ -41,8 +41,8 @@ export class CategoriesController {
   @Get('statistics')
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(300000) // 5 minutes
-  async Categories_statistics() {
-    return await this.categoryService.Categories_statistics();
+  async categories_statistics() {
+    return await this.categoryService.categories_statistics();
   }
 
   // ------------ =============================== ---------- //
