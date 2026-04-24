@@ -55,7 +55,7 @@ class EnvironmentVariables {
   @IsString()
   MAIL_HOST!: string;
   @IsNumber()
-  EMAIL_PORT!: number;
+  MAIL_PORT!: number;
   @IsEmail()
   MAIL_USERNAME!: string;
   @IsString()

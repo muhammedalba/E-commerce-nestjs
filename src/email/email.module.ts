@@ -14,7 +14,7 @@ import { MailProcessor } from './mail.processor';
       useFactory: (config: ConfigService) => ({
         transport: {
           host: config.get<string>('MAIL_HOST'),
-          port: Number(config.get<string>('EMAIL_PORT')),
+          port: Number(config.get<string>('MAIL_PORT')),
           secure: false,
           auth: {
             user: config.get<string>('MAIL_USERNAME'),
