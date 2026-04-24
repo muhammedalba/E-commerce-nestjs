@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CreateUserDto } from 'src/users/shared/dto/create-user.dto';
-import { ForgotPasswordDto } from './shared/dto/forgotPassword.dto.';
-import { LoginUserDto } from './shared/dto/login.dto';
-import { resetCodeDto } from './shared/dto/resetCode.dto';
+import { ForgotPasswordDto } from './shared/dto/forgot-password.dto';
+import { LoginUserDto } from './shared/dto/login-user.dto';
+import { ResetCodeDto } from './shared/dto/reset-code.dto';
 import { UpdateUserDto } from 'src/users/shared/dto/update-user.dto';
 import { Request, Response } from 'express';
 import { PasswordResetService } from './shared/services/password-reset.service';
@@ -109,7 +109,7 @@ export class AuthService {
   /* ------------ =============================== ---------- */
   /* ------------ ======  VERIFY PASS RESET CODE  ====== ---------- */
   /* ------------ =============================== ---------- */
-  async verify_Pass_Reset_Code(resetCode: resetCodeDto): Promise<any> {
+  async verify_Pass_Reset_Code(resetCode: ResetCodeDto): Promise<any> {
     return await this.passwordResetService.verify_Pass_Reset_Code(resetCode);
   }
 

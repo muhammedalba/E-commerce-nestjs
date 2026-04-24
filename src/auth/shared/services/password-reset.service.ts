@@ -9,9 +9,9 @@ import * as crypto from 'crypto';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { ForgotPasswordDto } from '../dto/forgotPassword.dto.';
-import { resetCodeDto } from '../dto/resetCode.dto';
-import { LoginUserDto } from '../dto/login.dto';
+import { ForgotPasswordDto } from '../dto/forgot-password.dto';
+import { ResetCodeDto } from '../dto/reset-code.dto';
+import { LoginUserDto } from '../dto/login-user.dto';
 import { TokenService } from 'src/auth/shared/services/token.service';
 import { User } from '../schema/user.schema';
 
@@ -101,7 +101,7 @@ export class PasswordResetService {
     };
   }
 
-  async verify_Pass_Reset_Code(resetCode: resetCodeDto) {
+  async verify_Pass_Reset_Code(resetCode: ResetCodeDto) {
     //1)  get user based on reset code
     const hashedResetCode = crypto
       .createHash('sha256')

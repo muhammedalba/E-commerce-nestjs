@@ -7,7 +7,7 @@ import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { CategoriesController } from './categories.controller';
 import { CategoriesService } from './categories.service';
 import { AuthModule } from 'src/auth/auth.module';
-import { CategoriesStatistics } from './categories-helper/categories-statistics.service';
+import { CategoriesStatisticsService } from './categories-helper/categories-statistics.service';
 
 @Module({
   imports: [
@@ -23,7 +23,7 @@ import { CategoriesStatistics } from './categories-helper/categories-statistics.
     ]),
   ],
   controllers: [CategoriesController],
-  providers: [CategoriesService, CustomI18nService, CategoriesStatistics],
+  providers: [CategoriesService, CustomI18nService, CategoriesStatisticsService],
   exports: [MongooseModule],
 })
 export class CategoriesModule {}

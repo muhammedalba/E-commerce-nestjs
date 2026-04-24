@@ -1,7 +1,7 @@
 import { Transform } from 'class-transformer';
 import { IsNotEmpty, IsString, Length } from 'class-validator';
 
-export class resetCodeDto {
+export class ResetCodeDto {
   @IsNotEmpty({
     message: 'reset code is required',
   })

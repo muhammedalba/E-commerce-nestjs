@@ -75,8 +75,7 @@ export class AuthGuard implements CanActivate {
       }
     }
 
-    // @ts-expect-error We are injecting the payload into the request object
-    request['user'] = payload;
+    (request as any).user = payload;
 
     return true;
   }

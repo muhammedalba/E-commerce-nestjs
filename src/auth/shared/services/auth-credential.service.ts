@@ -11,7 +11,7 @@ import { FileUploadService } from 'src/file-upload/file-upload.service';
 import * as bcrypt from 'bcrypt';
 import { RefreshToken } from '../schema/refresh-token.schema';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
-import { LoginUserDto } from '../dto/login.dto';
+import { LoginUserDto } from '../dto/login-user.dto';
 import { CookieService } from './cookie.service';
 import { TokenService } from './token.service';
 import { User } from '../schema/user.schema';

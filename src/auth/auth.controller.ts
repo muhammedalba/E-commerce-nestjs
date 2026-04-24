@@ -17,10 +17,10 @@ import { AuthService } from './auth.service';
 import { CreateUserDto } from 'src/users/shared/dto/create-user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { createParseFilePipe } from 'src/shared/files/files-validation-factory';
-import { LoginUserDto } from './shared/dto/login.dto';
+import { LoginUserDto } from './shared/dto/login-user.dto';
 import { AuthGuard } from './shared/guards/auth.guard';
-import { ForgotPasswordDto } from './shared/dto/forgotPassword.dto.';
-import { resetCodeDto } from './shared/dto/resetCode.dto';
+import { ForgotPasswordDto } from './shared/dto/forgot-password.dto';
+import { ResetCodeDto } from './shared/dto/reset-code.dto';
 import { UpdateUserDto } from 'src/users/shared/dto/update-user.dto';
 import { Request, Response } from 'express';
 import { GoogleAuthGuard } from './oauth2/guards/GoogleAuthGuard';
@@ -51,7 +51,7 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<any> {
-    const user = req.user;
+    const user = (req as any).user;
     if (!user) {
       throw new BadRequestException('User information is missing.');
     }
@@ -70,7 +70,7 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const user = req.user;
+    const user = (req as any).user;
     if (!user) {
       throw new BadRequestException('User information is missing.');
     }
@@ -154,7 +154,7 @@ export class AuthController {
   /* ------------ ======  VERIFY PASS RESET CODE  ====== ---------- */
   /* ------------ =============================== ---------- */
   @Post('verify-Pass-Reset-Code')
-  async verify_Pass_Reset_Code(@Body() code: resetCodeDto): Promise<any> {
+  async verify_Pass_Reset_Code(@Body() code: ResetCodeDto): Promise<any> {
     return this.authService.verify_Pass_Reset_Code(code);
   }
   /* ------------ =============================== ---------- */
