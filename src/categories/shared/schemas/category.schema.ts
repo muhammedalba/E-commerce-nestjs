@@ -1,8 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Model } from 'mongoose';
 import { generateUniqueSlug } from 'src/shared/utils/slug.util';
+import { SubCategory } from 'src/sub-category/shared/schemas/sub-category.schema';
 
-@Schema({ timestamps: true })
+@Schema({
+  timestamps: true, toJSON: { virtuals: true },
+  toObject: { virtuals: true },
+})
 export class Category {
   @Prop({
     type: Object,
@@ -30,8 +34,7 @@ CategorySchema.virtual('SubCategories', {
   localField: '_id',
   foreignField: 'category',
 });
-CategorySchema.set('toObject', { virtuals: true });
-CategorySchema.set('toJSON', { virtuals: true });
+
 
 //update , findOne and findAll
 // this will be used to update the image url

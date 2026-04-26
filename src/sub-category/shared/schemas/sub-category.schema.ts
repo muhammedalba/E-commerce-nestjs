@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Model, Types } from 'mongoose';
+import * as mongoose from 'mongoose';
 import { Category } from 'src/categories/shared/schemas/category.schema';
 import { generateUniqueSlug } from 'src/shared/utils/slug.util';
 
@@ -17,7 +18,7 @@ export class SubCategory {
   })
   slug?: string;
   @Prop({
-    type: Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: Category.name,
     required: true,
   })
