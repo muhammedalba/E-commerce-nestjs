@@ -48,7 +48,7 @@ export class AuthCredentialService {
       );
     }
 
-    let filePath = `/${process.env.UPLOADS_FOLDER}/users/avatar.png`;
+    let filePath = `/${process.env.UPLOADS_FOLDER}/${User.name}/avatar.png`;
     if (file) {
       try {
         filePath = await this.fileUploadService.saveFileToDisk(file, User.name);

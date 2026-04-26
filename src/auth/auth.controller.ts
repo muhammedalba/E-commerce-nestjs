@@ -37,13 +37,13 @@ import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.inter
 @Controller('auth')
 @UseInterceptors(ClearCacheInterceptor)
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
   // ------------ =============================== ---------- //
   // ------------ ======  GOOGLE AUTH  ====== ---------- //
   // ------------ =============================== ---------- //
   @Get('google')
   @UseGuards(GoogleAuthGuard)
-  googleAuth() {}
+  googleAuth() { }
 
   @Get('google/redirect')
   @UseGuards(GoogleAuthGuard)
@@ -62,7 +62,7 @@ export class AuthController {
   // ------------ =============================== ---------- //
   @Get('facebook')
   @UseGuards(FacebookAuthGuard)
-  facebookLogin() {}
+  facebookLogin() { }
 
   @Get('facebook/redirect')
   @UseGuards(FacebookAuthGuard)
@@ -161,6 +161,7 @@ export class AuthController {
   /* ------------ ======  UPDATE ME  ====== ---------- */
   /* ------------ =============================== ---------- */
   @Put('updateMe')
+  @UseInterceptors(FileInterceptor('avatar'))
   @UseGuards(AuthGuard)
   async updateMe(
     @Req() request: { user: JwtPayload },
@@ -168,6 +169,9 @@ export class AuthController {
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], false))
     file: MulterFileType,
   ): Promise<any> {
+    console.log(request);
+    console.log(UpdateUserDto);
+    console.log(file);
     return await this.authService.updateMe(request, UpdateUserDto, file);
   }
   /* ------------ =============================== ---------- */
