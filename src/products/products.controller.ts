@@ -63,7 +63,7 @@ export class ProductsController {
   // ----------------------------------------------------------------------------------------------------------------------------
 
   @Post()
-  @ClearCache('products')
+  @ClearCache('products') 
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
   @UseInterceptors(

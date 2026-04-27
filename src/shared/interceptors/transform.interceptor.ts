@@ -113,7 +113,6 @@ export class TransformInterceptor<T> implements NestInterceptor<
         return {
           ...baseResponse,
           message: finalMessage,
-          totalCount: meta?.total,
           data,
           meta,
         } as ApiResponse<T>;

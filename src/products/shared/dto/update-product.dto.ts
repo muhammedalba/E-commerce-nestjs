@@ -71,7 +71,7 @@ export class UpdateProductDto {
   @Exists(SubCategory.name)
   SubCategories?: string[];
 
-  @IsMongoId()
+  @IsMongoId() 
   @IsOptional()
   @Exists(Brand.name)
   brand?: string;

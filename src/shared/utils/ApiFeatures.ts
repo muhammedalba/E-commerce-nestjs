@@ -69,8 +69,24 @@ export class ApiFeatures<T> {
 
         delete queryObj[key];
       }
-    }
 
+      // Handle ID array filters (category, brand, supplier, SubCategories)
+      const idFields = ['category', 'brand', 'supplier', 'subcategories'];
+      const currentKey = key.toLowerCase();
+      if (idFields.includes(currentKey)) {
+        const val = queryObj[key];
+        if (typeof val === 'string' && val.length > 0) {
+          const ids = val.split(',').filter(id => /^[0-9a-fA-F]{24}$/.test(id.trim()));
+          if (ids.length > 0) {
+            // Use the original key name or the specific SubCategories if it matches
+            const fieldName = currentKey === 'subcategories' ? 'SubCategories' : key;
+            mongoQuery[fieldName] = { $in: ids.map(id => new Types.ObjectId(id.trim())) };
+          }
+        }
+        delete queryObj[key];
+      }
+    }
+ 
     // -----------------------------------------------------
     // 2️⃣ فلاتر operators مثل: field[gte], field[lte], field[in]
     // -----------------------------------------------------
@@ -88,7 +104,11 @@ export class ApiFeatures<T> {
 
         const value = queryObj[key];
         if (operator === 'in' || operator === 'nin') {
-          mongoQuery[field][`$${operator}`] = value.split(',');
+          const values = value.split(',');
+          // Cast to ObjectId if they look like IDs
+          mongoQuery[field][`$${operator}`] = values.map(v => 
+            /^[0-9a-fA-F]{24}$/.test(v.trim()) ? new Types.ObjectId(v.trim()) : v.trim()
+          );
         } else {
           const num = Number(value);
           if (!isNaN(num)) {
@@ -115,7 +135,7 @@ export class ApiFeatures<T> {
         }
       }
     }
-
+    console.log('Final Mongo Query:', JSON.stringify(mongoQuery, null, 2));
     this.mongooseQuery = this.mongooseQuery.find(mongoQuery);
     return this;
   }
@@ -183,6 +203,7 @@ export class ApiFeatures<T> {
       currentPage: page,
       limit,
       numberOfPages: Math.ceil(totalDocuments / limit),
+      totalResults: totalDocuments,
     };
 
     if (endIndex < totalDocuments) {

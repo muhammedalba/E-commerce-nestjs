@@ -62,7 +62,7 @@ export class Product {
     ref: Category.name,
     required: false,
   })
-  category?: Types.ObjectId;
+  category?: Types.ObjectId; 
 
   @Prop({
     type: [{ type: Types.ObjectId, ref: SubCategory.name, required: true }],
@@ -189,7 +189,8 @@ ProductSchema.index({ slug: 1 }, { unique: true });
 ProductSchema.index({ category: 1, 'priceRange.min': 1 }); // Enhanced compound filter
 ProductSchema.index({ brand: 1 });
 ProductSchema.index({ supplier: 1 });
-ProductSchema.index({ isDeleted: 1, disabled: 1 });
+ProductSchema.index({ isDeleted: 1, disabled: 1, isFeatured: 1 });
+ProductSchema.index({ 'priceRange.min': 1 });
 
 // ─── Auto-exclude soft-deleted documents ─────────────────
 ProductSchema.pre('find', function () {

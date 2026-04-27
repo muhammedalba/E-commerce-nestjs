@@ -11,8 +11,28 @@ import { Request, Response, NextFunction } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  // allowed origins
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://10.5.50.6:3000',
+    'http://172.20.10.7:3000',
+    process.env.CLIENT_URL,
+  ]
   // security headers
   app.use(helmet());
+
+  // allow specific origins to access uploads
+  app.use('/uploads', (req: Request, res: Response, next: NextFunction) => {
+    const allowedOriginsFilter = allowedOrigins.filter((o): o is string => !!o);
+    const origin = req.headers.origin || req.headers.referer;
+    const isAllowed = allowedOriginsFilter.some(allowed => origin?.startsWith(allowed));
+
+    if (isAllowed) {
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    }
+    next();
+  });
+
   // to use class-validator in DTOs
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
   // prefix for all routes
@@ -42,12 +62,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new TransformInterceptor(app.get(I18nService)));
   // enable cors
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'http://10.5.50.6:3000',
-      'http://172.20.10.7:3000',
-      process.env.CLIENT_URL,
-    ],
+    origin: allowedOrigins,
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'x-lang'],
   });
