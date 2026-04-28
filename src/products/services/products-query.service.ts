@@ -26,59 +26,6 @@ export class ProductQueryService {
     private readonly i18n: CustomI18nService,
   ) {}
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-  //  1. HELPERS (Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜Â§Ã˜Â¹Ã˜Â¯Ã˜Â§Ã˜Âª)
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-
-
-  // public localize(data: any, allLangs: boolean = false) {
-  //   if (allLangs) return data;
-  //   const lang = this.getCurrentLang();
-  //   const translate = (obj: any) => {
-  //     if (!obj) return obj;
-  //     const raw = obj.toObject ? obj.toObject() : obj;
-  //     return {
-  //       ...raw,
-  //       title: raw.title?.[lang] || raw.title,
-  //       description: raw.description?.[lang] || raw.description,
-  //       category: raw.category ? { ...raw.category, name: raw.category.name?.[lang] || raw.category.name } : raw.category,
-  //       brand: raw.brand ? { ...raw.brand, name: raw.brand.name?.[lang] || raw.brand.name } : raw.brand,
-  //     };
-  //   };
-  //   return Array.isArray(data) ? data.map(translate) : translate(data);
-  // }
-
-  // /**
-  //  * Ã˜Â¨Ã™â€ Ã˜Â§Ã˜Â¡ Ã™ÂÃ™â€žÃ˜ÂªÃ˜Â± Ã˜Â§Ã™â€žÃ™â€¦Ã˜ÂªÃ˜ÂºÃ™Å Ã˜Â±Ã˜Â§Ã˜Âª Ã˜Â¨Ã™â€ Ã˜Â§Ã˜Â¡Ã™â€¹ Ã˜Â¹Ã™â€žÃ™â€° skuSearch Ã™Ë†Ã˜Â®Ã˜ÂµÃ˜Â§Ã˜Â¦Ã˜Âµ Ã˜Â§Ã™â€žÃ™â€¦Ã˜ÂªÃ˜ÂºÃ™Å Ã˜Â± Ã˜Â§Ã™â€žÃ˜Â£Ã˜Â®Ã˜Â±Ã™â€°
-  //  */
-  // private buildVariantFilter(vParams: VariantFilterParams, skuSearch?: string): Record<string, any> {
-  //   const filter: Record<string, any> = { isDeleted: false, isActive: true };
-  //   console.log("build Variant Filter", vParams, skuSearch);
-  //   // Ã˜Â§Ã™â€žÃ˜Â¨Ã˜Â­Ã˜Â« Ã˜Â¹Ã™â€  SKU Ã˜Â¨Ã˜Â´Ã™Æ’Ã™â€ž Ã˜ÂµÃ˜Â±Ã™Å Ã˜Â­ Ã˜Â¨Ã™â€ Ã˜Â§Ã˜Â¡Ã™â€¹ Ã˜Â¹Ã™â€žÃ™â€° Ã˜Â®Ã˜Â·Ã˜ÂªÃ™Æ’
-  //   if (skuSearch) {
-  //     filter.sku = { $regex: skuSearch, $options: 'i' };
-  //   }
-
-  //   // Ã™ÂÃ™â€žÃ˜ÂªÃ˜Â±Ã˜Â© Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â¨Ã™Å Ã˜Â¹Ã˜Â§Ã˜Âª Ã˜Â¹Ã™â€žÃ™â€° Ã™â€¦Ã˜Â³Ã˜ÂªÃ™Ë†Ã™â€° Ã˜Â§Ã™â€žÃ™â€¦Ã˜ÂªÃ˜ÂºÃ™Å Ã˜Â± (sold)
-  //   if (vParams.soldMin) filter.sold = { $gte: Number(vParams.soldMin) };
-  //   if (vParams.soldMax) filter.sold = { $lte: Number(vParams.soldMax) };
-  //   // Ã™ÂÃ™â€žÃ˜ÂªÃ˜Â±Ã˜Â© Ã˜Â§Ã™â€žÃ˜Â³Ã™â€¦Ã˜Â§Ã˜Âª (Attributes)
-  //   if (vParams.color) {
-  //     const colors = vParams.color.split(',').map((c) => c.trim());
-  //     filter['attributes.color'] = colors.length > 1
-  //       ? { $in: colors.map((c) => new RegExp(c, 'i')) }
-  //       : { $regex: new RegExp(vParams.color, 'i') };
-  //   }
-
-  //   // Ã™ÂÃ™â€žÃ˜ÂªÃ˜Â±Ã˜Â© Ã˜Â§Ã™â€žÃ™Ë†Ã˜Â²Ã™â€  Ã™Ë†Ã˜Â§Ã™â€žÃ˜Â­Ã˜Â¬Ã™â€¦
-  //   if (vParams.weightMin !== undefined || vParams.weightMax !== undefined) {
-  //     filter['attributes.weight.value'] = { $ne: null };
-  //     if (vParams.weightMin !== undefined) filter['attributes.weight.value'].$gte = vParams.weightMin;
-  //     if (vParams.weightMax !== undefined) filter['attributes.weight.value'].$lte = vParams.weightMax;
-  //   }
-  //   console.log("buildVariantFilter", filter);
-  //   return filter;
-  // }
 
   /**
    * Ã˜Â§Ã™â€žÃ˜ÂªÃ˜Â­Ã™â€šÃ™â€š Ã™â€¦Ã™â€¦Ã˜Â§ Ã˜Â¥Ã˜Â°Ã˜Â§ Ã™Æ’Ã˜Â§Ã™â€  Ã˜Â§Ã™â€žÃ˜Â·Ã™â€žÃ˜Â¨ Ã™Å Ã˜ÂªÃ˜Â·Ã™â€žÃ˜Â¨ Ã™ÂÃ˜Â­Ã˜Âµ Ã˜Â¬Ã˜Â¯Ã™Ë†Ã™â€ž Ã˜Â§Ã™â€žÃ™â€¦Ã˜ÂªÃ˜ÂºÃ™Å Ã˜Â±Ã˜Â§Ã˜Âª
