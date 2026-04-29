@@ -33,7 +33,7 @@ export class ApiFeatures<T> {
       'isUnlimitedStock',
       'stockSummary',
       'isFeatured',
-      'disabled',
+      'isActive',
       'isDeleted',
       'rating',
       'ratingsQuantity',
@@ -42,7 +42,6 @@ export class ApiFeatures<T> {
       'name',
       'user',
       'email',
-      'isActive',
       'priceRange', // مهم
       'totalSold',
     ];

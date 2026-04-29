@@ -94,7 +94,7 @@ export class UpdateProductDto {
   @IsBoolean()
   @Transform(({ value }) => value === 'true' || value === true)
   @IsOptional()
-  disabled?: boolean;
+  isActive?: boolean;
 
   // ─── Ratings ───────────────────────────────────────────
   @IsNumber()

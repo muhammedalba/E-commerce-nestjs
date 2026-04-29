@@ -169,13 +169,13 @@ ProductVariantSchema.index({ 'attributes.color': 1, price: 1 });
 
 // ─── Auto-exclude soft-deleted variants ──────────────────
 ProductVariantSchema.pre('find', function () {
-  if (!this.getFilter().isDeleted) {
+  if (this.getFilter().isDeleted === undefined) {
     this.where({ isDeleted: { $ne: true } });
   }
 });
 
 ProductVariantSchema.pre('findOne', function () {
-  if (!this.getFilter().isDeleted) {
+  if (this.getFilter().isDeleted === undefined) {
     this.where({ isDeleted: { $ne: true } });
   }
 });

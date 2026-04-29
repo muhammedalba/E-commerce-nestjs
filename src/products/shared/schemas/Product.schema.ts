@@ -92,9 +92,10 @@ export class Product {
 
   @Prop({
     type: Boolean,
-    default: false,
+    default: true,
+    required: false,
   })
-  disabled!: boolean;
+  isActive!: boolean;
 
   @Prop({
     type: Boolean,
@@ -189,13 +190,16 @@ ProductSchema.index({ slug: 1 }, { unique: true });
 ProductSchema.index({ category: 1, 'priceRange.min': 1 }); // Enhanced compound filter
 ProductSchema.index({ brand: 1 });
 ProductSchema.index({ supplier: 1 });
-ProductSchema.index({ isDeleted: 1, disabled: 1, isFeatured: 1 });
+ProductSchema.index({ isDeleted: 1, isActive: 1, isFeatured: 1 });
 ProductSchema.index({ 'priceRange.min': 1 });
 
 // ─── Auto-exclude soft-deleted documents ─────────────────
 ProductSchema.pre('find', function () {
   if (!this.getFilter().isDeleted) {
     this.where({ isDeleted: { $ne: true } });
+  }
+  if (!this.getFilter().isActive) {
+    this.where({ isActive: { $ne: true } });
   }
 });
 

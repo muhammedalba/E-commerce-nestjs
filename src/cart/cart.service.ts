@@ -52,11 +52,11 @@ export class CartService {
     let cart = await this.cartModel.findOne({ user: userId });
 
     const product = await this.ProductModel.findById(productId)
-      .select('isUnlimitedStock disabled')
+      .select('isUnlimitedStock isActive')
       .lean()
       .exec();
 
-    if (!product || product.disabled) {
+    if (!product || !product.isActive) {
       throw new BadRequestException('Ø§Ù„Ù…Ù†ØªØ¬ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯');
     }
 

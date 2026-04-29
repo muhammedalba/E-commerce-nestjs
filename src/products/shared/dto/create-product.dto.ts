@@ -136,7 +136,7 @@ export class CreateProductDto {
   @IsBoolean()
   @Transform(({ value }) => value === 'true' || value === true)
   @IsOptional()
-  disabled?: boolean;
+  isActive?: boolean;
 
   // ─── Ratings (aggregated) ──────────────────────────────  @ApiPropertyOptional({
 

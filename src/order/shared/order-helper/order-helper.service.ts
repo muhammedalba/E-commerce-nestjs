@@ -91,10 +91,10 @@ export class OrderHelperService {
       // Fetch product
       const product = await this.productModel
         .findById(item.productId)
-        .select('title isUnlimitedStock disabled brand category imageCover')
+        .select('title isUnlimitedStock isActive brand category imageCover')
         .exec();
 
-      if (!product || product.disabled) {
+      if (!product || !product.isActive) {
         unAvailableProducts.push({ productId: item.productId.toString() });
         continue;
       }
