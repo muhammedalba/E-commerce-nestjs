@@ -195,16 +195,17 @@ ProductSchema.index({ 'priceRange.min': 1 });
 
 // ─── Auto-exclude soft-deleted documents ─────────────────
 ProductSchema.pre('find', function () {
+  
   if (!this.getFilter().isDeleted) {
     this.where({ isDeleted: { $ne: true } });
   }
-  if (!this.getFilter().isActive) {
-    this.where({ isActive: { $ne: true } });
+  if (this.getFilter().isActive === undefined) {  
+    this.where({ isActive: { $ne: false } });
   }
 });
 
 ProductSchema.pre('findOne', function () {
-  if (!this.getFilter().isDeleted) {
+  if (!this.getFilter().isDeleted) { 
     this.where({ isDeleted: { $ne: true } });
   }
 });

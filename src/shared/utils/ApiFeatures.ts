@@ -134,7 +134,6 @@ export class ApiFeatures<T> {
         }
       }
     }
-    console.log('Final Mongo Query:', JSON.stringify(mongoQuery, null, 2));
     this.mongooseQuery = this.mongooseQuery.find(mongoQuery);
     return this;
   }
@@ -144,11 +143,12 @@ export class ApiFeatures<T> {
     if (sortParam) {
       // split by comma and filter out empty fields
       const sortBy = sortParam
-        .split(',')
-        .map((field) => field.trim())
-        .filter((field) => field !== '')
-        .join(' '); // Mongoose expects space-separated fields
+      .split(',')
+      .map((field) => field.trim())
+      .filter((field) => field !== '')
+      .join(' '); // Mongoose expects space-separated fields
       if (sortBy) {
+
         this.mongooseQuery = this.mongooseQuery.sort(sortBy);
       } else {
         // fallback default sort
