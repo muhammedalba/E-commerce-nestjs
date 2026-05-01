@@ -5,8 +5,13 @@ import { Product } from './Product.schema';
 // ─── Valid Units Enum ────────────────────────────────────
 export enum MeasurementUnit {
   KG = 'kg',
+  G = 'g',
+  LB = 'lb',
+  OZ = 'oz',
   LTR = 'ltr',
+  L = 'l',
   ML = 'ml',
+  GAL = 'gal',
   MM = 'mm',
   CM = 'cm',
   M = 'm',
@@ -28,7 +33,7 @@ export class VariantComponent {
     type: String,
     required: true,
     lowercase: true,
-    enum: Object.values(MeasurementUnit),
+    // enum: Object.values(MeasurementUnit),
   })
   unit!: string; // e.g. "kg"
 }

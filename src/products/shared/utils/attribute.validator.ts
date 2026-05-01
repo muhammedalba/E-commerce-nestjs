@@ -73,7 +73,10 @@ export function validateAttributes(
       }
       // Check enum if provided
       if (def.allowedValues && def.allowedValues.length > 0) {
-        if (!def.allowedValues.includes(value.trim().toLowerCase())) {
+        const normalizedAllowed = def.allowedValues.map((v) =>
+          v.trim().toLowerCase(),
+        );
+        if (!normalizedAllowed.includes(value.trim().toLowerCase())) {
           throw new BadRequestException(
             `Invalid value "${value}" for attribute "${key}". Allowed: ${def.allowedValues.join(', ')}`,
           );
@@ -92,7 +95,10 @@ export function validateAttributes(
       }
       // Check allowed units if provided
       if (def.allowedUnits && def.allowedUnits.length > 0) {
-        if (!def.allowedUnits.includes(value.unit.trim().toLowerCase())) {
+        const normalizedUnits = def.allowedUnits.map((u) =>
+          u.trim().toLowerCase(),
+        );
+        if (!normalizedUnits.includes(value.unit.trim().toLowerCase())) {
           throw new BadRequestException(
             `Invalid unit "${value.unit}" for attribute "${key}". Allowed: ${def.allowedUnits.join(', ')}`,
           );

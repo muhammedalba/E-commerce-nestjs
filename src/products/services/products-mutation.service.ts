@@ -211,10 +211,11 @@ export class ProductMutationService {
     }
 
     if (variantOps?.update && variantOps.update.length > 0) {
-      this.skuService.validateVariantAttributes(
-        variantOps.update as any[],
-        effectiveAllowedAttributes,
-      );
+      // Update payloads only carry {_id, price, sku, stock, isActive, components}.
+      // They never include `attributes` (those are immutable after creation).
+      // Running validateVariantAttributes here would mis-classify every updated
+      // variant as a "Simple Variant" and throw when editing 2+ variants at once.
+      // We only normalise the SKU — no attribute validation needed.
       for (const v of variantOps.update) {
         if (v.sku) v.sku = v.sku.toUpperCase();
       }

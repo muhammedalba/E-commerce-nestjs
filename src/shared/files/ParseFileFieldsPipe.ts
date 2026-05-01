@@ -59,10 +59,11 @@ export class ParseFileFieldsPipe implements PipeTransform {
           for (const validator of validators) {
             const isValid = await validator.isValid(file);
             if (!isValid) {
-              const message = `File validation failed.`;
+              const validatorName = validator.constructor.name;
+              const message = `${config.name}:${file.originalname} failed ${validatorName} validation`;
 
               throw new UnprocessableEntityException(message);
-            }
+            } 
           }
         }
       }

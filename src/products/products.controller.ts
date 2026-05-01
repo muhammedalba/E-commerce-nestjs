@@ -79,7 +79,7 @@ export class ProductsController {
     @UploadedFiles(
       new ParseFileFieldsPipe(
         '1MB',
-        ['png', 'jpeg', 'webp', 'pdf'],
+        ['png','jpeg', 'webp', 'pdf'],
         [
           { name: 'imageCover', required: true },
           { name: 'images', required: false },
