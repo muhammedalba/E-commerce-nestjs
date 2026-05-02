@@ -5,7 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Model } from 'mongoose';
+import { Model, Types, isValidObjectId } from 'mongoose';
 import { CustomI18nService } from '../i18n/custom-i18n.service';
 import { ApiFeatures } from '../ApiFeatures';
 import { QueryString } from '../interfaces/queryInterface';
@@ -28,7 +28,7 @@ export class BaseService<T> {
     protected readonly model: Model<T>,
     protected readonly i18n: CustomI18nService,
     protected readonly fileUploadService: FileUploadService,
-  ) {}
+  ) { }
   // This method is used to get the default file path based on the model name '/uploads/users/avatar.png'
   private getDefaultFilePath = (modelName: string): string =>
     `/${process.env.UPLOADS_FOLDER}/${modelName}/${modelName === 'users' ? 'avatar.png' : 'default.png'}`;
@@ -38,11 +38,30 @@ export class BaseService<T> {
     field: string,
     value: string,
     excludeId?: string,
-  ): Promise<boolean> {
-    const query: Record<string, any> = { [field]: value.trim() };
-    if (excludeId) query._id = { $ne: excludeId };
+  ): Promise<void> {
+    const query: Record<string, any> = {
+      [field]: value.trim()
+    };
+    if (excludeId) {
+      const idToExclude = isValidObjectId(excludeId)
+        ? new Types.ObjectId(excludeId)
+        : excludeId;
+      query._id = { $ne: idToExclude };
+    }
     const result = await this.model.exists(query);
-    return !!result;
+
+    if (result) {
+      console.log("result EXISTS", result);
+      const exceptionKey =
+        this.model.modelName === 'User'
+          ? 'exception.EMAIL_EXISTS'
+          : 'exception.NAME_EXISTS';
+      throw new BadRequestException(this.t(exceptionKey));
+    }
+    console.log("result not EXISTS", result);
+
+    return;
+
   }
 
   // This method is used to get the current language
@@ -65,7 +84,7 @@ export class BaseService<T> {
       // If a document is provided, update the file; otherwise, save a new file
       return doc
         ? ((await this.fileUploadService.updateFile(file, modelName, doc)) ??
-            this.getDefaultFilePath(modelName))
+          this.getDefaultFilePath(modelName))
         : await this.fileUploadService.saveFileToDisk(file, modelName);
     } catch (error) {
       this.logger.error('File upload failed', error);
@@ -87,16 +106,9 @@ export class BaseService<T> {
   ): Promise<T> {
     const { fileFieldName = 'avatar', checkField, fieldValue } = options || {};
 
-    if (
-      checkField &&
-      fieldValue &&
-      (await this.isFieldTaken(checkField, fieldValue))
-    ) {
-      const exceptionKey =
-        modelName === 'users'
-          ? 'exception.EMAIL_EXISTS'
-          : 'exception.NAME_EXISTS';
-      throw new BadRequestException(this.t(exceptionKey));
+    // isFieldTaken throws BadRequestException directly if field is taken
+    if (checkField && fieldValue) {
+      await this.isFieldTaken(checkField, fieldValue);
     }
 
     const filePath = await this.handleFileUpload(file, modelName);
@@ -146,8 +158,8 @@ export class BaseService<T> {
 
     const data = populate
       ? await features
-          .getQuery()
-          .populate({ path: populate.path, select: populate.select })
+        .getQuery()
+        .populate({ path: populate.path, select: populate.select })
       : await features.getQuery();
     if (!data) {
       throw new BadRequestException(this.t('exception.NOT_FOUND'));
@@ -173,9 +185,9 @@ export class BaseService<T> {
     const doc = isObjectId
       ? await this.model.findById(idParamDto.id).select(selected).exec()
       : await this.model
-          .findOne({ slug: idParamDto.id })
-          .select(selected)
-          .exec();
+        .findOne({ slug: idParamDto.id })
+        .select(selected)
+        .exec();
 
     if (!doc) {
       throw new NotFoundException(
@@ -205,26 +217,19 @@ export class BaseService<T> {
   ): Promise<T | null> {
     const { fileFieldName = 'avatar', checkField, fieldValue } = options || {};
     //1) check  doc if found
+    // Always include _id so that excludeId works correctly in isFieldTaken
     const doc = (await this.model
       .findById(idParamDto.id)
-      .select(selectedFields)
+      .select(`${selectedFields} _id`)
       .exec()) as FileSchema;
 
     if (!doc) {
       throw new NotFoundException(this.t('exception.NOT_FOUND'));
     }
+    console.log("before check");
     //2) check if email already exists
-    if (
-      checkField &&
-      fieldValue &&
-      (await this.isFieldTaken(checkField, fieldValue, doc._id.toString()))
-    ) {
-      const exceptionKey =
-        modelName === 'users'
-          ? 'exception.EMAIL_EXISTS'
-          : 'exception.NAME_EXISTS';
-      throw new BadRequestException(this.t(exceptionKey));
-    }
+    if (checkField && fieldValue) await this.isFieldTaken(checkField, fieldValue, doc._id)
+    console.log("after check");
 
     // 3) update doc ( avatar image ) if new file is provided
     let filePath: string | undefined;
@@ -246,6 +251,10 @@ export class BaseService<T> {
     }
     return updatedData ? this.i18n.localize(updatedData) : null;
   }
+
+
+
+  // delete doc 
   async deleteOneDoc(idParamDto: IdParamDto, selected: string): Promise<void> {
     // 1) check if id is valid ObjectId or slug
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto.id);

@@ -37,7 +37,7 @@ SubCategorySchema.pre('save', async function (next) {
         : this.name.trim();
     // generate a unique slug
     const model = this.constructor as unknown as Model<SubCategory>;
-    this.slug = await generateUniqueSlug(nameValue, model); 
+    this.slug = await generateUniqueSlug(nameValue, model);
   }
   next();
 });
@@ -52,7 +52,11 @@ SubCategorySchema.pre('findOneAndUpdate', async function (this: any, next) {
       //
       const model = this.model as Model<SubCategory>;
       // generate a unique slug
-      const newSlug = await generateUniqueSlug(nameValue, model);
+      // Extract current document _id to exclude it from slug uniqueness check
+      const conditions = this.getQuery();
+      const excludeId = conditions._id ?? conditions.id ?? undefined;
+      // generate a unique slug (excluding current doc so its own slug isn't flagged)
+      const newSlug = await generateUniqueSlug(nameValue, model, excludeId);
       update.slug = newSlug;
       this.setUpdate(update);
     }
