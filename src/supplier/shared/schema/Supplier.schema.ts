@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
-import slugify from 'slugify';
+import { HydratedDocument, Model, Types } from 'mongoose';
+import { generateUniqueSlug } from 'src/shared/utils/slug.util';
+
 
 @Schema({ timestamps: true })
 export class Supplier {
@@ -52,12 +53,21 @@ export type SupplierDocument = HydratedDocument<Supplier>;
 export const SupplierSchema = SchemaFactory.createForClass(Supplier);
 
 //create
-SupplierSchema.pre('findOneAndUpdate', function (this: any, next) {
+SupplierSchema.pre('findOneAndUpdate', async function (this: any, next) {
   const update = this.getUpdate();
   if (update && typeof update === 'object' && '$set' in update) {
     // Check if the name field is being updated
     if (update?.$set?.name && typeof update.$set.name === 'string') {
-      update.$set.slug = slugify(update.$set.name, { lower: true });
+      const nameValue: string = update.$set.name;
+      const model = this.model as Model<Supplier>;
+      // generate a unique slug
+      // Extract current document _id to exclude it from slug uniqueness check
+      const conditions = this.getQuery();
+      const excludeId = conditions._id ?? conditions.id ?? undefined;
+      // generate a unique slug (excluding current doc so its own slug isn't flagged)
+      const newSlug = await generateUniqueSlug(nameValue, model, excludeId);
+      update.slug = newSlug;
+      this.setUpdate(update);
     }
   }
 
