@@ -39,7 +39,7 @@ export class ProductAttributeDefinitionDto {
   allowedValues?: string[];
 }
 
-import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
+import { FieldLocalizeDto, ArrayLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
 import { CreateVariantDto } from './variant.dto';
 import { Exists } from 'src/shared/utils/decorators/exists.decorator';
 import { Category } from 'src/categories/shared/schemas/category.schema';
@@ -73,6 +73,11 @@ export class CreateProductDto {
   @Type(() => FieldLocalizeDto)
   @ValidateNested()
   description!: FieldLocalizeDto;
+
+  @IsOptional()
+  @Type(() => ArrayLocalizeDto)
+  @ValidateNested()
+  uses?: ArrayLocalizeDto;
 
   // ─── Media ─────────────────────────────────────────────
 

@@ -10,7 +10,7 @@ import {
   IsBoolean,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
+import { FieldLocalizeDto, ArrayLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
 import { VariantOperationsDto } from './variant.dto';
 import { ProductAttributeDefinitionDto } from './create-product.dto';
 import { Exists } from 'src/shared/utils/decorators/exists.decorator';
@@ -34,6 +34,11 @@ export class UpdateProductDto {
   @Type(() => FieldLocalizeDto)
   @ValidateNested()
   description?: FieldLocalizeDto;
+
+  @IsOptional()
+  @Type(() => ArrayLocalizeDto)
+  @ValidateNested()
+  uses?: ArrayLocalizeDto;
 
   // ─── Media ─────────────────────────────────────────────
   @IsOptional()

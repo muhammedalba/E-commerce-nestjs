@@ -39,6 +39,13 @@ export class Product {
   })
   description!: string | { en?: string; ar?: string };
 
+  @Prop({
+    type: Object,
+    required: false,
+    default: { en: [], ar: [] },
+  })
+  uses?: { en: string[]; ar: string[] };
+
   // ─── Media ─────────────────────────────────────────────
   @Prop({
     type: String,

@@ -69,7 +69,7 @@ export class ProductsController {
   @UseInterceptors(
     FileFieldsInterceptor(ProductsController.imageSize),
     new ParseBodyJsonInterceptor(
-      ['title', 'description', 'variants', 'allowedAttributes'],
+      ['title', 'description', 'variants', 'allowedAttributes', 'uses'],
       ['SubCategories'],
     ),
   )
@@ -190,7 +190,7 @@ export class ProductsController {
   @UseInterceptors(
     FileFieldsInterceptor(ProductsController.imageSize),
     new ParseBodyJsonInterceptor(
-      ['title', 'description', 'variants', 'allowedAttributes'],
+      ['title', 'description', 'variants', 'allowedAttributes', 'uses'],
       ['SubCategories'],
     ),
   )
