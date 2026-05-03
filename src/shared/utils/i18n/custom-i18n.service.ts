@@ -42,7 +42,7 @@ export class CustomI18nService {
       const raw = obj.toObject ? obj.toObject() : { ...obj };
 
       // 5. ترجمة الحقول النصية المباشرة (name, title, description, etc.)
-      const translatableFields = ['name', 'title', 'description', 'text'];
+      const translatableFields = ['name', 'title', 'description', 'text','uses'];
       translatableFields.forEach((field) => {
         if (
           raw[field] &&

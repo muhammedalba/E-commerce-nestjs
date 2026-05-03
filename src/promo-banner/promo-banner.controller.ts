@@ -18,18 +18,28 @@ import { UpdatePromoBannerDto } from './shared/dto/updatepromo_banner.dto';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
+import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 
 @Controller('promo-banner')
 @UseInterceptors(ClearCacheInterceptor)
 export class PromoBannerController {
-  constructor(private readonly promoBannerService: PromoBannerService) {}
+  constructor(private readonly promoBannerService: PromoBannerService) { }
 
+
+  // ------------------------------------------------------
+  // ---------------- get active banners ------------------
+  // ------------------------------------------------------
   @Get('active')
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(60000) // 60 seconds
   async getActiveBanner(): Promise<any> {
     return await this.promoBannerService.getActiveBanner();
   }
+
+
+  // ------------------------------------------------------
+  // ---------------- get all banners ----------------------
+  // ------------------------------------------------------
   @Get()
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(60000) // 60 seconds
@@ -38,7 +48,6 @@ export class PromoBannerController {
     @Query('all_langs') allLangs?: string,
   ): Promise<{
     data: PromoBanner[];
-    status: string;
     results: number;
     pagination: any;
   }> {
@@ -48,6 +57,12 @@ export class PromoBannerController {
       returnAllLangs,
     );
   }
+
+
+  // ------------------------------------------------------
+  // ---------------- get banner by id ----------------------
+  // ------------------------------------------------------
+
   @Get(':id')
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(60000) // 60 seconds
@@ -61,13 +76,27 @@ export class PromoBannerController {
       returnAllLangs,
     );
   }
+
+
+  // ------------------------------------------------------
+  // ---------------- create banner -----------------------
+  // ------------------------------------------------------
+
   @Post()
+  @ClearCache('promo-banner')
   async createBanner(
     @Body() promoBannerDto: PromoBannerDto,
-  ): Promise<{ data: PromoBanner; status: string }> {
+  ): Promise<{ data: PromoBanner}> {   
     return await this.promoBannerService.createBanner(promoBannerDto);
   }
+
+
+  // -------------------------------------------------------
+  // ---------------- update banner -----------------------
+  // ------------------------------------------------------
+
   @Patch(':id')
+  @ClearCache('promo-banner')
   async update(
     @Param() idParamDto: IdParamDto,
     @Body() updatePromoBannerDto: UpdatePromoBannerDto,
@@ -77,8 +106,12 @@ export class PromoBannerController {
       updatePromoBannerDto,
     );
   }
+  // ------------------------------------------------------
+  // ---------------- delete banner ------------------
+  // ------------------------------------------------------
 
   @Delete(':id')
+  @ClearCache('promo-banner')
   async deleteBanner(@Param() idParamDto: IdParamDto) {
     return await this.promoBannerService.deleteBanner(idParamDto.id);
   }

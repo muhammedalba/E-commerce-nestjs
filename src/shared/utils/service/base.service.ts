@@ -90,7 +90,10 @@ export class BaseService<T> {
       );
     }
   }
-
+  // ====================================== create one doc ======================================
+  // fileFieldName : name of the field in the model that will store the file path
+  // checkField : field to check if it already exists
+  // fieldValue : value of the field to check
   async createOneDoc(
     CreateDataDto: { [key: string]: any },
     file: MulterFileType,
@@ -132,6 +135,9 @@ export class BaseService<T> {
 
     return this.i18n.localize(newDocFilter);
   }
+  // ====================================== find all docs ======================================
+  // populate : object that contains the path and select fields
+  // allLangs : boolean that indicates whether to return all languages or not
   async findAllDoc(
     modelName: string,
     QueryString: QueryString,
@@ -170,7 +176,10 @@ export class BaseService<T> {
       data: this.i18n.localize(data, allLangs)
     };
   }
-
+// ====================================== find one doc ======================================
+// idParamDto : object that contains the id
+// selected : string that contains the fields to select
+// allLangs : boolean that indicates whether to return all languages or not
   async findOneDoc(
     idParamDto: IdParamDto,
     selected: string,
@@ -196,7 +205,13 @@ export class BaseService<T> {
 
     return this.i18n.localize(doc, allLangs);
   }
-
+// ====================================== update one doc ======================================
+// idParamDto : object that contains the id
+// UpdateDataDto : object that contains the data to update
+// file : file to update
+// modelName : name of the model
+// selectedFields : string that contains the fields to select
+// options : object that contains the file field name and check field and field value
   async updateOneDoc(
     idParamDto: IdParamDto,
     UpdateDataDto: {
@@ -246,9 +261,9 @@ export class BaseService<T> {
     return updatedData ? this.i18n.localize(updatedData) : null;
   }
 
-
-
-  // delete doc 
+// ====================================== delete one doc ======================================
+// idParamDto : object that contains the id
+// selected : string that contains the fields to select
   async deleteOneDoc(idParamDto: IdParamDto, selected: string): Promise<void> {
     // 1) check if id is valid ObjectId or slug
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto.id);
