@@ -52,7 +52,15 @@ export class Supplier {
 export type SupplierDocument = HydratedDocument<Supplier>;
 export const SupplierSchema = SchemaFactory.createForClass(Supplier);
 
-//create
+// ─── Auto-exclude soft-deleted documents ─────────────────
+SupplierSchema.pre(['find', 'countDocuments'], function () {
+  if (this.getFilter().isActive === undefined) {
+    this.where({ isActive: { $ne: false } });
+  }
+});
+
+
+//  update, findByIdAndUpdate ,findOne
 SupplierSchema.pre('findOneAndUpdate', async function (this: any, next) {
   const update = this.getUpdate();
   if (update && typeof update === 'object' && '$set' in update) {

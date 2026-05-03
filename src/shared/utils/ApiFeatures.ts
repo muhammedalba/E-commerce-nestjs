@@ -44,6 +44,7 @@ export class ApiFeatures<T> {
       'email',
       'priceRange', // مهم
       'totalSold',
+      'active',
     ];
 
     const mongoQuery: Record<string, any> = {};
@@ -85,7 +86,7 @@ export class ApiFeatures<T> {
         delete queryObj[key];
       }
     }
- 
+
     // -----------------------------------------------------
     // 2️⃣ فلاتر operators مثل: field[gte], field[lte], field[in]
     // -----------------------------------------------------
@@ -105,7 +106,7 @@ export class ApiFeatures<T> {
         if (operator === 'in' || operator === 'nin') {
           const values = value.split(',');
           // Cast to ObjectId if they look like IDs
-          mongoQuery[field][`$${operator}`] = values.map(v => 
+          mongoQuery[field][`$${operator}`] = values.map(v =>
             /^[0-9a-fA-F]{24}$/.test(v.trim()) ? new Types.ObjectId(v.trim()) : v.trim()
           );
         } else {
@@ -143,10 +144,10 @@ export class ApiFeatures<T> {
     if (sortParam) {
       // split by comma and filter out empty fields
       const sortBy = sortParam
-      .split(',')
-      .map((field) => field.trim())
-      .filter((field) => field !== '')
-      .join(' '); // Mongoose expects space-separated fields
+        .split(',')
+        .map((field) => field.trim())
+        .filter((field) => field !== '')
+        .join(' '); // Mongoose expects space-separated fields
       if (sortBy) {
 
         this.mongooseQuery = this.mongooseQuery.sort(sortBy);
@@ -182,10 +183,8 @@ export class ApiFeatures<T> {
       const keyword = this.queryString.keywords
         .trim()
         .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
       const strategy = searchStrategies[modelName] || searchStrategies.default;
       const query = strategy(keyword);
-
       this.mongooseQuery = this.mongooseQuery.find(query);
     }
 

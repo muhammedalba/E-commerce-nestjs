@@ -69,7 +69,7 @@ export class Product {
     ref: Category.name,
     required: false,
   })
-  category?: Types.ObjectId; 
+  category?: Types.ObjectId;
 
   @Prop({
     type: [{ type: Types.ObjectId, ref: SubCategory.name, required: true }],
@@ -202,17 +202,17 @@ ProductSchema.index({ 'priceRange.min': 1 });
 
 // ─── Auto-exclude soft-deleted documents ─────────────────
 ProductSchema.pre('find', function () {
-  
+
   if (!this.getFilter().isDeleted) {
     this.where({ isDeleted: { $ne: true } });
   }
-  if (this.getFilter().isActive === undefined) {  
+  if (this.getFilter().isActive === undefined) {
     this.where({ isActive: { $ne: false } });
   }
 });
 
 ProductSchema.pre('findOne', function () {
-  if (!this.getFilter().isDeleted) { 
+  if (!this.getFilter().isDeleted) {
     this.where({ isDeleted: { $ne: true } });
   }
 });

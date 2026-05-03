@@ -61,6 +61,18 @@ export class Coupon {
 export const CouponSchema = SchemaFactory.createForClass(Coupon);
 export type CouponDocument = HydratedDocument<Coupon>;
 
+// ─── Auto-exclude soft-deleted documents ─────────────────
+CouponSchema.pre(['find', 'countDocuments'], function () {
+  if (this.getFilter().active === undefined) {
+    this.where({ active: { $ne: false } });
+  }
+});
+
+
+
+
+
+
 CouponSchema.pre('save', function (next) {
   if (this.isModified('name') && this.name) {
     const baseSlug = slugify(this.name.trim(), { lower: true, strict: true });

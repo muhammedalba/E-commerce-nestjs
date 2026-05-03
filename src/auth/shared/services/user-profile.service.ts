@@ -169,7 +169,6 @@ export class UserProfileService {
       .select('refresh_Token expiryDate')
       .lean()
       .exec();
-    // console.log(tokenDoc, 'tokenDoc from db');
 
     if (!tokenDoc) {
       throw new UnauthorizedException(
@@ -196,7 +195,6 @@ export class UserProfileService {
           ignoreExpiration: true,
         },
       );
-      // console.log(decoded_access_token, 'decoded_access_token');
     } catch {
       throw new BadRequestException(
         this.i18n.translate('exception.TOKEN_INVALID'),

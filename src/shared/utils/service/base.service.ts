@@ -51,15 +51,12 @@ export class BaseService<T> {
     const result = await this.model.exists(query);
 
     if (result) {
-      console.log("result EXISTS", result);
       const exceptionKey =
         this.model.modelName === 'User'
           ? 'exception.EMAIL_EXISTS'
           : 'exception.NAME_EXISTS';
       throw new BadRequestException(this.t(exceptionKey));
     }
-    console.log("result not EXISTS", result);
-
     return;
 
   }
@@ -148,13 +145,14 @@ export class BaseService<T> {
     pagination: any;
     data: T[];
   }> {
-    const total = await this.model.countDocuments();
     const features = new ApiFeatures(this.model.find(), QueryString)
       .filter()
-      .search(modelName)
-      .sort()
-      .limitFields()
-      .paginate(total);
+      .search(modelName);
+
+    const filter = features.getQuery().getFilter();
+    const total = await this.model.countDocuments(filter);
+
+    features.sort().limitFields().paginate(total);
 
     const data = populate
       ? await features
@@ -169,8 +167,7 @@ export class BaseService<T> {
     return {
       results: data.length,
       pagination: features.getPagination(),
-      data: this.i18n.localize(data, allLangs),
-      // data: localizedDoc as T[],
+      data: this.i18n.localize(data, allLangs)
     };
   }
 
@@ -226,11 +223,8 @@ export class BaseService<T> {
     if (!doc) {
       throw new NotFoundException(this.t('exception.NOT_FOUND'));
     }
-    console.log("before check");
     //2) check if email already exists
     if (checkField && fieldValue) await this.isFieldTaken(checkField, fieldValue, doc._id)
-    console.log("after check");
-
     // 3) update doc ( avatar image ) if new file is provided
     let filePath: string | undefined;
     if (file) {

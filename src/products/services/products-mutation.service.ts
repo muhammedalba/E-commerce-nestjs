@@ -70,7 +70,7 @@ export class ProductMutationService {
     );
     // 2) Generate slug
     productData.slug = await generateUniqueSlug(
-      productData.title.en,
+      productData.title?.en,
       this.productModel,
       undefined,
       this.i18n.translate('exception.NAME_EXISTS'),

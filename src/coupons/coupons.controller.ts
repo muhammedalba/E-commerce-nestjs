@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   UseInterceptors,
+  Query,
 } from '@nestjs/common';
 import { CacheTTL } from '@nestjs/cache-manager';
 import { CouponsService } from './coupons.service';
@@ -28,7 +29,7 @@ import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 @UseGuards(AuthGuard, RoleGuard)
 @UseInterceptors(ClearCacheInterceptor)
 export class CouponsController {
-  constructor(private readonly couponsService: CouponsService) {}
+  constructor(private readonly couponsService: CouponsService) { }
   // ------------ =============================== ---------- //
   // ------------ ======  CREATE COUPON   ====== ---------- //
   // ------------ =============================== ---------- //
@@ -43,7 +44,7 @@ export class CouponsController {
   @Get()
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(60000) // 60 seconds
-  findAll(@Param() queryString: QueryString) {
+  findAll(@Query() queryString: QueryString) {
     return this.couponsService.findAll(queryString);
   }
   // ------------ =============================== ---------- //

@@ -26,6 +26,7 @@ import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
+import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 
 @Controller('supplier')
 @Roles(roles.ADMIN)
@@ -45,7 +46,9 @@ export class SupplierController {
   // ------------ =============================== ---------- //
   // ------------ ======  CREATE SUPPLIER   ====== ---------- //
   // ------------ =============================== ---------- //
+  // ------------ =============================== ---------- //
   @Post()
+  @ClearCache('supplier')
   @UseInterceptors(FileInterceptor('avatar'))
   create(
     @Body() createSupplierDto: CreateSupplierDto,
@@ -75,7 +78,9 @@ export class SupplierController {
   // ------------ =============================== ---------- //
   // ------------ ======  UPDATE SUPPLIER  ====== ---------- //
   // ------------ =============================== ---------- //
+  // ------------ =============================== ---------- //
   @Patch(':id')
+  @ClearCache('supplier')
   @UseInterceptors(FileInterceptor('avatar'))
   update(
     @Param() id: IdParamDto,
@@ -88,7 +93,9 @@ export class SupplierController {
   // ------------ =============================== ---------- //
   // ------------ ======  DELETE SUPPLIER  ====== ---------- //
   // ------------ =============================== ---------- //
+  // ------------ =============================== ---------- //
   @Delete(':id')
+  @ClearCache('supplier')
   remove(@Param() id: IdParamDto) {
     return this.supplierService.delete_Supplier(id);
   }

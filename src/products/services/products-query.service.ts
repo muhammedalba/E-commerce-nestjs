@@ -34,7 +34,6 @@ export class ProductQueryService {
     vParams: VariantFilterParams,
     skuSearch?: string,
   ): boolean {
-    // console.log("shouldQueryVariants", vParams, skuSearch);
     return !!(
       skuSearch ||
       vParams.color ||
@@ -58,12 +57,12 @@ export class ProductQueryService {
     productIds?: Types.ObjectId[],
   ) {
     const filter: any = productIds ? { _id: { $in: productIds } } : {};
-    const baseQuery = this.productModel.find(filter).select('-__v');
+    const baseQuery = this.productModel.find(filter);
 
-    // ApiFeatures Ã˜Â³Ã™Å Ã˜Â¹Ã˜Â§Ã™â€žÃ˜Â¬ keywords (Ã˜Â§Ã™â€žÃ˜Â¨Ã˜Â­Ã˜Â« Ã˜Â§Ã™â€žÃ˜Â¹Ã˜Â§Ã™â€¦) Ã™Ë† totalSold (Ã™ÂÃ™â€žÃ˜ÂªÃ˜Â±Ã˜Â© Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â¨Ã™Å Ã˜Â¹Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¬Ã™â€¦Ã˜Â§Ã™â€žÃ™Å Ã˜Â©)
+    // ApiFeatures Ã˜Â³Ã™Å Ã˜Â¹Ã˜Â§Ã™â€žÃ˜Â¬ keywords (Ã˜Â§Ã™â€žÃ˜Â¨Ã˜Â­Ã˜Â« Ã˜Â§Ã™â€žÃ˜Â¹Ã˜Â§Ã™â€¦) Ã™Ë† totalSold (Ã™Â Ã™â€žÃ˜ÂªÃ˜Â±Ã˜Â© Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â¨Ã™Å Ã˜Â¹Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¬Ã™â€¦Ã˜Â§Ã™â€žÃ™Å Ã˜Â©)
     const features = new ApiFeatures(baseQuery, queryString)
       .filter()
-      .search('Product');
+      .search(Product.name);
 
     const total = await this.productModel.countDocuments(
       features.getQuery().getFilter(),

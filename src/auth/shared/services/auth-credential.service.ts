@@ -61,7 +61,10 @@ export class AuthCredentialService {
     }
     createUserDto.avatar = filePath;
     createUserDto.role = roles.USER;
-    const newUser = await this.userModel.create(createUserDto);
+    const newUser = await this.userModel.create({
+      ...createUserDto,
+      lastLogin: new Date(),
+    });
 
     const userId = {
       user_id: newUser._id.toString(),
@@ -102,6 +105,11 @@ export class AuthCredentialService {
         this.i18n.translate('exception.INVALID_LOGIN'),
       );
     }
+
+    // Update lastLogin field
+    await this.userModel.findByIdAndUpdate(user._id, {
+      $set: { lastLogin: new Date() },
+    });
 
     const userId = {
       user_id: user._id.toString(),

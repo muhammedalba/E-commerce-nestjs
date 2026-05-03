@@ -15,9 +15,14 @@ export const searchStrategies: Record<string, (keyword: string) => object> = {
   }),
   User: (keyword: string) => ({
     $or: [
-      { 'name.en': { $regex: keyword, $options: 'i' } },
-      { 'name.ar': { $regex: keyword, $options: 'i' } },
+      { name: { $regex: keyword, $options: 'i' } },
       { email: { $regex: keyword, $options: 'i' } },
+    ],
+  }),
+  Coupon: (keyword: string) => ({
+    $or: [
+      { name: { $regex: keyword, $options: 'i' } },
+      { code: { $regex: keyword, $options: 'i' } },
     ],
   }),
   PromoBanner: (keyword: string) => ({

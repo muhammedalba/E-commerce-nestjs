@@ -3,12 +3,12 @@ import {
   Get,
   Post,
   Param,
+  Patch,
   Delete,
   UseInterceptors,
   UploadedFile,
   Body,
   UseGuards,
-  Put,
   Query,
 } from '@nestjs/common';
 import { CacheTTL } from '@nestjs/cache-manager';
@@ -27,13 +27,14 @@ import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
+import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 
 @Controller('users')
 @Roles(roles.ADMIN)
 @UseGuards(AuthGuard, RoleGuard)
 @UseInterceptors(ClearCacheInterceptor)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
   /* ------------ =============================== ---------- */
   /* ------------ ======  GET USERS STATISTICS  ====== ------- */
   /* ------------ =============================== ---------- */
@@ -50,6 +51,7 @@ export class UsersController {
   /* ------------ ======  CREATE USER  ====== ---------------- */
   /* ------------ =============================== ---------- */
   @Post('create-user')
+  @ClearCache('users')
   @UseInterceptors(FileInterceptor('avatar'))
   createUser(
     @Body()
@@ -80,22 +82,24 @@ export class UsersController {
   /* ------------ =============================== ---------- */
   /* ------------ ======  UPDATE USER  ====== ---------------- */
   /* ------------ =============================== ---------- */
-  @Put(':id')
+  @Patch(':id')
+  @ClearCache('users')
   @UseInterceptors(FileInterceptor('avatar'))
   update_user(
-    @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
+    @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], false))
     file: MulterFileType,
     @Param()
-    IdParamDto: IdParamDto,
+    idParamDto: IdParamDto,
     @Body()
-    UpdateUserDto: UpdateUserDto,
+    updateUserDto: UpdateUserDto,
   ) {
-    return this.usersService.update_user(IdParamDto, UpdateUserDto, file);
+    return this.usersService.update_user(idParamDto, updateUserDto, file);
   }
   /* ------------ =============================== ---------- */
   /* ------------ ======  DELETE USER  ====== ---------------- */
   /* ------------ =============================== ---------- */
   @Delete(':id')
+  @ClearCache('users')
   delete_user(@Param() idParamDto: IdParamDto) {
     return this.usersService.delete_user(idParamDto);
   }

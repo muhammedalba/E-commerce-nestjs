@@ -169,9 +169,6 @@ export class AuthController {
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], false))
     file: MulterFileType,
   ): Promise<any> {
-    console.log(request);
-    console.log(UpdateUserDto);
-    console.log(file);
     return await this.authService.updateMe(request, UpdateUserDto, file);
   }
   /* ------------ =============================== ---------- */

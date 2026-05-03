@@ -55,7 +55,6 @@ export function validateAttributes(
 
   // 2. Validate each provided attribute against definitions
   for (const key of attrsKeys) {
-    // console.log(key);
     const def = allowedAttributes.find(
       (a) => a.name.trim().toLowerCase() === key.trim().toLowerCase(),
     );

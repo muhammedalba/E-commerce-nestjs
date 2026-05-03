@@ -42,6 +42,7 @@ export class GoogleService {
         password: randomPassword,
         avatar: picture,
         provider: 'google',
+        lastLogin: new Date(),
       });
       const userId = {
         user_id: newUser._id.toString(),
@@ -64,6 +65,9 @@ export class GoogleService {
         email: user.email,
       };
       Tokens = await this.tokenService.generate_Tokens(userId, '1h');
+      await this.userModel.findByIdAndUpdate(user._id, {
+        $set: { lastLogin: new Date() },
+      });
       this.cookieService.setCookies(
         res,
         Tokens,
