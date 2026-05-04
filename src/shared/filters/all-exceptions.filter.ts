@@ -75,12 +75,38 @@ export class AllExceptionsFilter implements ExceptionFilter {
       if (error.constraints) {
         for (const key in error.constraints) {
           const constraintValue = error.constraints[key];
-          const translated = await this.i18n.translate(constraintValue);
-          if (typeof translated === 'string') {
-            messages.push(translated.replace(/\{property\}/g, propertyPath));
+
+          // nestjs-i18n serializes validation messages as:
+          // "translation.KEY|{\"value\":\"...\",\"constraints\":[...]}"
+          // We must split on '|' to get the key and args separately.
+          const pipeIndex = constraintValue.indexOf('|');
+          let translationKey: string;
+          let translationArgs: Record<string, unknown> = {};
+
+          if (pipeIndex !== -1) {
+            translationKey = constraintValue.substring(0, pipeIndex);
+            try {
+              translationArgs = JSON.parse(
+                constraintValue.substring(pipeIndex + 1),
+              );
+            } catch {
+              translationArgs = {};
+            }
           } else {
-            messages.push(String(translated));
+            // Plain key with no args (e.g. from a manual throw)
+            translationKey = constraintValue;
           }
+
+          // Add property name into args so {property} placeholder works
+          translationArgs['property'] = propertyPath;
+
+          const translated = await this.i18n.translate(translationKey, {
+            args: translationArgs,
+          });
+
+          messages.push(
+            typeof translated === 'string' ? translated : String(translated),
+          );
         }
       }
       if (error.children && error.children.length > 0) {

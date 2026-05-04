@@ -34,12 +34,12 @@ export class UserProfileService {
     private readonly jwtService: JwtService,
     private readonly cookieService: CookieService,
     private readonly tokenService: TokenService,
-  ) {}
+  ) { }
   async getMe(user_id: string): Promise<any> {
     // 1) get user from database
     const user = await this.userModel
       .findById(user_id)
-      .select('-__v -role -slug -password')
+      .select('isActive name avatar email phone role slug lastLogin')
       .lean()
       .exec();
     if (!user) {
@@ -47,6 +47,11 @@ export class UserProfileService {
         this.i18n.translate('exception.USER_NOT_FOUND'),
       );
     }
+    // 1.5) modify the avatar url because its the 'init' in schema can't get the url if we use lean() in query
+    if (user && user.avatar && !user.avatar.startsWith('http')) {
+      user.avatar = `${process.env.BASE_URL}${user.avatar}`;
+    }
+
     return user;
   }
   async updateMe(
@@ -54,14 +59,21 @@ export class UserProfileService {
     updateUserDto: UpdateUserDto,
     file: MulterFileType,
   ): Promise<any> {
+
+
     //1) check if user exists
     const user = await this.userModel
       .findById(user_id)
-      .select('avatar email')
+      .select('avatar email isActive')
       .lean();
     if (!user) {
       throw new BadRequestException(
         this.i18n.translate('exception.USER_NOT_FOUND'),
+      );
+    }
+    if (!user.isActive) {
+      throw new BadRequestException(
+        this.i18n.translate('exception.ACCOUNT_BLOCKED'),
       );
     }
     // 2) check if email is in use
@@ -86,8 +98,13 @@ export class UserProfileService {
       );
       // 4) update user avatar
       updateUserDto.avatar = avatarPath;
+    } else {
+      updateUserDto.avatar = user.avatar;
     }
-    // 4) update user in the database
+    if (!updateUserDto.phone) {
+      updateUserDto.phone = user.phone;
+    }
+    // 4) update user in the database 
     const updatedUser = await this.userModel
       .findByIdAndUpdate(
         { _id: user._id },
@@ -95,12 +112,13 @@ export class UserProfileService {
           $set: {
             name: updateUserDto.name,
             email: updateUserDto.email,
+            phone: updateUserDto.phone !== undefined ? updateUserDto.phone : user.phone,
             avatar: updateUserDto.avatar,
           },
         },
         { new: true, runValidators: true },
       )
-      .select('-__v');
+      .select('name avatar phone email role slug lastLogin');
 
     return updatedUser;
   }
@@ -131,7 +149,7 @@ export class UserProfileService {
       await this.RefreshTokenModel.deleteOne({
         userId: user_id,
       }).lean();
-      
+
       // 5) Send email to user via Background Job (Queue)
       await this.mailQueue.add('send-reset-success', {
         email: user.email,
@@ -147,7 +165,7 @@ export class UserProfileService {
       );
     }
 
-    return  user;
+    return user;
   }
   async refreshToken(req: Request, res: Response) {
     const cookies = req.cookies as {
