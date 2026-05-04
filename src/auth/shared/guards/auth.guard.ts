@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   CanActivate,
   ExecutionContext,
   Injectable,
@@ -22,7 +23,7 @@ export class AuthGuard implements CanActivate {
     @InjectModel(User.name) private AuthModule: Model<User>,
     private readonly i18n: CustomI18nService,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     //1) Extract the request from the context
@@ -30,7 +31,7 @@ export class AuthGuard implements CanActivate {
     //2) Extract the token from the request header
 
     const token = this.extractTokenFromHeader(request);
-    
+
     if (!token) {
       throw new UnauthorizedException(
         this.i18n.translate('exception.NOT_LOGGED'),
@@ -50,7 +51,7 @@ export class AuthGuard implements CanActivate {
     const tokenIssuedAt = payload.iat;
     //) get the user from the database
     const user = await this.AuthModule.findById(payload.user_id)
-      .select('passwordChangeAt')
+      .select('passwordChangeAt isActive')
       .lean()
       .exec();
     if (!user) {
@@ -58,6 +59,11 @@ export class AuthGuard implements CanActivate {
         this.i18n.translate('exception.USER_NOT_FOUND', {
           args: { variable: payload.email },
         }),
+      );
+    }
+    if (!user.isActive) {
+      throw new BadRequestException(
+        this.i18n.translate('exception.ACCOUNT_BLOCKED'),
       );
     }
     if (user.passwordChangeAt) {

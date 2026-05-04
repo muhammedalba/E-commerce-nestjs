@@ -22,7 +22,7 @@ export class PasswordResetService {
     @InjectQueue('mail-queue') private readonly mailQueue: Queue,
     private readonly tokenService: TokenService,
     private readonly i18n: CustomI18nService,
-  ) {}
+  ) { }
 
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
     // 1 ) get user by email
@@ -31,7 +31,7 @@ export class PasswordResetService {
         email: forgotPasswordDto.email,
       })
       .select(
-        'email name passwordResetCode passwordResetExpires verificationCode   lastEmailAttemptAt',
+        'email name passwordResetCode passwordResetExpires verificationCode   lastEmailAttemptAt isActive',
       )
       .exec();
     if (!user) {
@@ -39,6 +39,12 @@ export class PasswordResetService {
         this.i18n.translate('exception.USER_NOT_FOUND', {
           args: { variable: 'email' },
         }),
+      );
+    }
+    
+    if (!user.isActive) {
+      throw new BadRequestException(
+        this.i18n.translate('exception.ACCOUNT_BLOCKED'),
       );
     }
     //1.1) Check if it has been 10 minutes since your last submission.

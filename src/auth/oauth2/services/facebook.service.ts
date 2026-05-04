@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as crypto from 'crypto';
@@ -24,7 +24,7 @@ export class FacebookService {
     // 1) check user is use
     const user = await this.userModel
       .findOne({ email: email })
-      .select('name role email avatar')
+      .select('name role email avatar isActive')
       .lean();
 
     let Tokens: { refresh_Token: string; access_token: string };
@@ -65,12 +65,17 @@ export class FacebookService {
         access_token: Tokens.access_token,
       };
     } else {
+      if (!user.isActive) {
+        throw new BadRequestException(
+          this.i18n.translate('exception.ACCOUNT_BLOCKED'),
+        );
+      }
       const userId = {
         user_id: user._id.toString(),
         role: user.role || 'user',
         email: user.email,
       };
-      Tokens = await this.tokenService.generate_Tokens(userId, '1h');
+      Tokens = await this.tokenService.generate_Tokens(userId);
       await this.userModel.findByIdAndUpdate(user._id, {
         $set: { lastLogin: new Date() },
       });

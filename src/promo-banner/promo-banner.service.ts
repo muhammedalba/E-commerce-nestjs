@@ -86,8 +86,8 @@ export class PromoBannerService {
 
     // check if there is active banner 
     if (promoBannerDto.isActive === true) {
-      const activeBanner = await this.promoBannerModel.findOne({ isActive: true }).exec();
-      if (activeBanner) {
+      const isBannerExist = await this.promoBannerModel.exists({ isActive: true });
+      if (isBannerExist) {
         throw new BadRequestException(this.i18n.translate('exception.ACTIVE_BANNER_ALREADY_EXISTS'));
       }
     }
@@ -103,28 +103,30 @@ export class PromoBannerService {
     id: string,
     promoBannerDto: UpdatePromoBannerDto,
   ): Promise<{ data: PromoBanner; status: string }> {
-    // find banner by id
+    // 1)get the banner
     const banner = await this.promoBannerModel.findById(id).exec();
     if (!banner) {
       throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
     }
 
-    // if update active status and there is another active banner
-    if (banner.isActive !== promoBannerDto.isActive) {
-      const activeBanner = await this.promoBannerModel.findOne({ isActive: true, _id: { $ne: id } }).exec();
-      if (activeBanner) {
+    // 2) check if the banner is active
+    if (promoBannerDto.isActive === true && banner.isActive !== true) {
+      const isAnotherActive = await this.promoBannerModel.exists({
+        isActive: true,
+        _id: { $ne: id }
+      });
+
+      if (isAnotherActive) {
         throw new BadRequestException(this.i18n.translate('exception.ACTIVE_BANNER_ALREADY_EXISTS'));
       }
     }
 
-    const updatedBanner = await this.promoBannerModel.findByIdAndUpdate(
-      id,
-      { $set: promoBannerDto },
-      { new: true, runValidators: true },
-    );
-    if (!updatedBanner) {
-      throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
-    }
+    // 3) update the fields directly on the document that we fetched
+    Object.assign(banner, promoBannerDto);
+
+    // 4) save the document (Mongoose will automatically run the validators when using save)
+    const updatedBanner = await banner.save();
+
     return this.i18n.localize(updatedBanner);
   }
 

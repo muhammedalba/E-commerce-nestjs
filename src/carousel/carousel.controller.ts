@@ -30,6 +30,7 @@ import { Request } from 'express';
 import { MaxFileCount } from 'src/shared/files/constants/file-count.constants';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
+import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 type file = Request['file'];
 
 @Controller('carousel')
@@ -37,7 +38,7 @@ type file = Request['file'];
 @UseGuards(AuthGuard, RoleGuard)
 @UseInterceptors(ClearCacheInterceptor)
 export class CarouselController {
-  constructor(private readonly carouselService: CarouselService) {}
+  constructor(private readonly carouselService: CarouselService) { }
   static readonly imageSize = [
     { name: 'carouselSm', maxCount: MaxFileCount.CAROUSEl },
     { name: 'carouselMd', maxCount: MaxFileCount.CAROUSEl },
@@ -47,6 +48,7 @@ export class CarouselController {
   // ------------ ======  CREATE CAROUSEL   ====== ---------- //
   // ------------ =============================== ---------- //
   @Post()
+  @ClearCache('carousel')
   @UseInterceptors(FileFieldsInterceptor(CarouselController.imageSize))
   async create(
     @Body()
@@ -108,6 +110,7 @@ export class CarouselController {
   // ------------ ======  UPDATE CAROUSEL   ====== ---------- //
   // ------------ =============================== ---------- //
   @Patch(':id')
+  @ClearCache('carousel')
   @UseInterceptors(FileFieldsInterceptor(CarouselController.imageSize))
   async update(
     @UploadedFiles(
@@ -139,6 +142,7 @@ export class CarouselController {
   // ------------ ======  DELETE CAROUSEL   ====== ---------- //
   // ------------ =============================== ---------- //
   @Delete(':id')
+  @ClearCache('carousel')
   async remove(@Param() idParamDto: IdParamDto): Promise<void> {
     return await this.carouselService.remove(idParamDto);
   }

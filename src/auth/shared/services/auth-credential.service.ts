@@ -90,13 +90,19 @@ export class AuthCredentialService {
     const { email, password } = loginUserDto;
     const user = await this.userModel
       .findOne({ email })
-      .select('password email role avatar name ')
+      .select('password email role avatar name isActive')
       .lean()
       .exec();
 
     if (!user) {
       throw new BadRequestException(
         this.i18n.translate('exception.INVALID_LOGIN'),
+      );
+    }
+
+    if (!user.isActive) {
+      throw new BadRequestException(
+        this.i18n.translate('exception.ACCOUNT_BLOCKED'),
       );
     }
     const isMatch = await bcrypt.compare(password, user.password);

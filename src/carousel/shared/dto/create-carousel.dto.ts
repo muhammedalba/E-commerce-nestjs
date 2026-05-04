@@ -15,6 +15,10 @@ export class CreateCarouselDto {
   description!: FieldLocalizeDto;
 
   @IsOptional()
+  @IsString({ message: 'validation.IS_String' })
+  slug?: string;
+
+  @IsOptional()
   @IsBoolean()
   @Transform(({ value }) => value === 'true' || value === true)
   isActive?: boolean;
