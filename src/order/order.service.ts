@@ -33,8 +33,8 @@ export class OrderService {
   ) {}
   private readonly logger = new Logger(OrderService.name);
 
-  async OrdersStatistics() {
-    return await this.ordersStatisticsService.OrdersStatistics();
+  async OrdersStatistics(startDate?: string, endDate?: string) {
+    return await this.ordersStatisticsService.OrdersStatistics(startDate, endDate);
   }
 
   async applyCoupon(userId: string, dto: CreateOrderDto) {

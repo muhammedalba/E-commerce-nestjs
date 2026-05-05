@@ -43,8 +43,11 @@ export class UsersController {
   @Get('statistics')
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(300000) // 5 minutes
-  async get_users_statistics(): Promise<any> {
-    return await this.usersService.get_users_statistics();
+  async get_users_statistics(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ): Promise<any> {
+    return await this.usersService.get_users_statistics(startDate, endDate);
   }
 
   /* ------------ =============================== ---------- */

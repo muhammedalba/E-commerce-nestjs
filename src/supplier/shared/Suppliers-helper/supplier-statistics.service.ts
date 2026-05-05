@@ -21,7 +21,7 @@ export class SupplierStatistics {
     const suppliersByStatus = await this.supplierModel.aggregate([
       {
         $group: {
-          _id: '$status',
+          _id: '$isActive',
           count: { $sum: 1 },
         },
       },

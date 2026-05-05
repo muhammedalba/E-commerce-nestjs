@@ -22,8 +22,8 @@ export class UsersService extends BaseService<UserDocument> {
   ) {
     super(userModel, i18n, fileUploadService);
   }
-  async get_users_statistics() {
-    return await this.usersStatistics.users_statistics();
+  async get_users_statistics(startDate?: string, endDate?: string) {
+    return await this.usersStatistics.users_statistics(startDate, endDate);
   }
   async createUser(
     CreateUserDto: CreateUserDto,

@@ -11,7 +11,7 @@ export class SubCategoriesStatistics {
   ) {}
 
   async SubCategoriesStatistics() {
-    const totalCategories = await this.SubCategoryModel.countDocuments();
-    return { status: 'success', data: totalCategories };
+    const totalSubCategories = await this.SubCategoryModel.countDocuments();
+    return { status: 'success', data: totalSubCategories };
   }
 }

@@ -24,6 +24,7 @@ import { OrderEmailService } from './shared/order-helper/order-email.service';
 import { CouponHelperService } from './shared/order-helper/coupon.helper';
 import { ProductHelperService } from './shared/order-helper/product.helper';
 import { OrdersStatisticsService } from './shared/order-helper/order-statistics.service';
+import { MarketingStatisticsService } from './shared/order-helper/marketing-statistics.service';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { OrdersStatisticsService } from './shared/order-helper/order-statistics.
   controllers: [OrderController],
   providers: [
     OrderService,
+    MarketingStatisticsService,
     CustomI18nService,
     OrderHelperService,
     OrderEmailService,

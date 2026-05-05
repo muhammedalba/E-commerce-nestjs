@@ -34,26 +34,63 @@ import { RoleGuard } from 'src/auth/shared/guards/role.guard';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
+import { MarketingStatisticsService } from './shared/order-helper/marketing-statistics.service';
 
 
 @Controller('order')
 @UseGuards(AuthGuard)
 @UseInterceptors(ClearCacheInterceptor)
 export class OrderController {
-  constructor(private readonly orderService: OrderService) {}
+  constructor(
+    private readonly orderService: OrderService,
+    private readonly marketingStatisticsService: MarketingStatisticsService,
+  ) {}
+  
+  // Image size static 
   private static readonly imageSize = [
     { name: 'transferReceiptImg', maxCount: 1 },
     { name: 'InvoicePdf', maxCount: 1 },
     { name: 'DeliveryReceiptImage', maxCount: 1 },
   ];
+
+// =======================================================================================
+// ========================================= ORDER STATISTICS=============================
+// =======================================================================================
   @Get('statistics')
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(300000) // 5 minutes
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
-  async OrdersStatistics() {
-    return await this.orderService.OrdersStatistics();
+  async OrdersStatistics(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return await this.orderService.OrdersStatistics(startDate, endDate);
   }
+
+// ========================================================================================
+// =========================================  MARKETING STATISTICS ========================
+// ========================================================================================
+  @Get('marketing-statistics')
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(300000) // 5 minutes
+  @Roles(roles.ADMIN)
+  @UseGuards(AuthGuard, RoleGuard)
+  async MarketingStatistics(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return await this.marketingStatisticsService.getMarketingStatistics(startDate, endDate);
+  }
+
+
+
+
+
+// ========================================================================================
+// =========================================  PAYMENT BY BANK TRANSFER =============================
+// ========================================================================================
+
   @Post('PaymentByBankTransfer')
   @ClearCache('order')
   @UseInterceptors(FileInterceptor('transferReceiptImg'))
@@ -72,6 +109,9 @@ export class OrderController {
   }
   // This endpoint is used to apply a coupon to an order
 
+// ========================================================================================
+// =========================================  APPLY COUPON ================================
+// ========================================================================================
   @Post('applyCoupon')
   @ClearCache('order')
   async applyCoupon(
@@ -80,6 +120,10 @@ export class OrderController {
   ) {
     return await this.orderService.applyCoupon(req.user.user_id, dto);
   }
+  
+// ========================================================================================
+// =========================================  GET ALL ORDERS =============================
+// ========================================================================================
   @Get()
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(30000) // 30 seconds (orders change frequently)
@@ -87,6 +131,9 @@ export class OrderController {
     return this.orderService.findAll(req.user, queryString);
   }
 
+// ========================================================================================
+// =========================================  FIND ONE ORDER ==============================
+// ========================================================================================
   @Get(':id')
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(60000) // 60 seconds
@@ -94,6 +141,9 @@ export class OrderController {
     return await this.orderService.findOne(idParamDto.id);
   }
 
+// ========================================================================================
+// =========================================  UPDATE ORDER ================================
+// ========================================================================================
   @Patch(':id')
   @ClearCache('order')
   @Roles(roles.ADMIN, roles.MANAGER)
@@ -121,6 +171,9 @@ export class OrderController {
     return await this.orderService.update(idParamDto, updateOrderDto, files);
   }
 
+// ========================================================================================
+// =========================================  DELETE ORDER ================================
+// ========================================================================================
   @Delete(':id')
   @ClearCache('order')
   @Roles(roles.ADMIN, roles.MANAGER)
