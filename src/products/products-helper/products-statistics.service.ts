@@ -6,12 +6,14 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { Product } from '../shared/schemas/Product.schema';
 import { ProductVariant } from '../shared/schemas/ProductVariant.schema';
+import { OrdersStatisticsService } from 'src/order/shared/order-helper/order-statistics.service';
 import { I18nContext } from 'nestjs-i18n';
 
 @Injectable()
 export class ProductsStatistics {
   constructor(
     @InjectModel(ProductVariant.name) private readonly VariantModel: Model<ProductVariant>,
+    private readonly ordersStatisticsService: OrdersStatisticsService,
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
     @InjectModel(Product.name) private readonly ProductModel: Model<Product>,
@@ -83,42 +85,86 @@ export class ProductsStatistics {
   // --- دوال Aggregation المنفصلة للتنظيم ---
 
   private async getTopProducts(start: Date, end: Date, lang: string) {
-    return this.VariantModel.aggregate([
+    // 1. Get Top Selling IDs and Quantities from Orders module (Clean Architecture approach)
+    const topSales = await this.ordersStatisticsService.getTopSellingProductIds(start, end, 5);
+
+    if (!topSales || topSales.length === 0) {
+      return [];
+    }
+
+    const productIds = topSales.map(item => item.productId);
+
+    // 2. Fetch the product details and current stock variants using Product/Variant models
+    // Since topSales has the object IDs, we need to map them back correctly.
+    // We can use an aggregation on VariantModel or ProductModel, but since we just need simple data,
+    // we can do a lookup or parallel queries. For performance, let's just use a clean aggregation 
+    // filtered by the specific IDs.
+    const enrichedProducts = await this.ProductModel.aggregate([
       {
         $match: {
-          isDeleted: { $ne: true },
-          // ملاحظة: هنا نفترض وجود تاريخ لكل عملية بيع أو تحديث
-          // إذا كان لديك جدول Orders سيكون أدق، ولكن هنا نستخدم createdAt للـ variant
-          createdAt: { $gte: start, $lte: end }
+          _id: { $in: productIds } // Note: we assume productIds are ObjectIds already depending on schema, but they might need conversion
         }
       },
-      {
-        $group: {
-          _id: '$productId',
-          totalSold: { $sum: '$sold' },
-          stockValue: { $sum: { $multiply: ['$price', '$stock'] } },
-        }
-      },
-      { $sort: { totalSold: -1 } },
-      { $limit: 5 },
       {
         $lookup: {
-          from: 'products',
+          from: 'productvariants',
           localField: '_id',
-          foreignField: '_id',
-          as: 'product'
+          foreignField: 'productId',
+          as: 'variants'
         }
       },
-      { $unwind: '$product' },
       {
         $project: {
-          name: `$product.title.${lang}`,
-          totalSold: 1,
-          stockValue: 1,
-          brandId: '$product.brand' // سنحتاجه للربط
+          _id: 1,
+          title: 1,
+          imageCover: 1,
+          priceRange: 1,
+          stockSummary: 1,
+          ratingsAverage: 1,
+          ratingsQuantity: 1,
+          isActive: 1,
+          isFeatured: 1,
+          isUnlimitedStock: 1,
+          variantCount: 1,
+          brandId: '$brand',
+          stockValue: {
+            $reduce: {
+              input: '$variants',
+              initialValue: 0,
+              in: {
+                $add: [
+                  '$$value',
+                  { $multiply: [{ $ifNull: ['$$this.price', 0] }, { $ifNull: ['$$this.stock', 0] }] }
+                ]
+              }
+            }
+          }
         }
       }
     ]);
+
+    // 3. Merge in-memory to preserve the exact sort order of topSales
+    return topSales.map(sale => {
+      const productDetail = enrichedProducts.find(p => String(p._id) === String(sale.productId));
+      return {
+        _id: sale.productId,
+        totalSold: sale.totalSold,
+        // Include UI needed fields:
+        title: productDetail?.title || { en: 'Unknown', ar: 'مجهول' },
+        imageCover: productDetail?.imageCover ? (productDetail.imageCover.startsWith('http') ? productDetail.imageCover : `${process.env.BASE_URL || ''}${productDetail.imageCover}`) : undefined,
+        priceRange: productDetail?.priceRange,
+        stockSummary: productDetail?.stockSummary,
+        ratingsAverage: productDetail?.ratingsAverage,
+        ratingsQuantity: productDetail?.ratingsQuantity,
+        isActive: productDetail?.isActive,
+        isFeatured: productDetail?.isFeatured,
+        isUnlimitedStock: productDetail?.isUnlimitedStock,
+        variantCount: productDetail?.variantCount,
+        // Backend specific stats:
+        stockValue: productDetail?.stockValue || 0,
+        brandId: productDetail?.brandId || null
+      };
+    });
   }
 
   private async getBrandPerformance(lang: string) {

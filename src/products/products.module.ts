@@ -23,6 +23,7 @@ import {
   Category,
   CategorySchema,
 } from 'src/categories/shared/schemas/category.schema';
+import { OrderModule } from 'src/order/order.module';
 import {
   SubCategory,
   SubCategorySchema,
@@ -76,6 +77,7 @@ import { ProductSkuService } from './services/products-sku.service';
       },
     ]),
     AuthModule,
+    OrderModule,
   ],
   controllers: [ProductsController],
   providers: [

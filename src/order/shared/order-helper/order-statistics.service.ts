@@ -11,6 +11,36 @@ export class OrdersStatisticsService {
     @InjectModel(Order.name) private readonly OrderModel: Model<Order>,
   ) {}
 
+  // دالة مساعدة لجلب أفضل المنتجات مبيعاً لتستخدمها موديولات أخرى (Clean Architecture)
+  async getTopSellingProductIds(start: Date, end: Date, limit: number = 5): Promise<{ productId: string, totalSold: number }[]> {
+    const excludedStatuses = ['canceled', 'returned', 'failed', 'refunded'];
+    return this.OrderModel.aggregate([
+      { 
+        $match: { 
+          createdAt: { $gte: start, $lte: end },
+          status: { $nin: excludedStatuses },
+          isDeleted: { $ne: true }
+        } 
+      },
+      { $unwind: '$items' },
+      {
+        $group: {
+          _id: '$items.productId',
+          totalSold: { $sum: '$items.quantity' },
+        },
+      },
+      { $sort: { totalSold: -1 } },
+      { $limit: limit },
+      {
+        $project: {
+          _id: 0,
+          productId: '$_id',
+          totalSold: 1
+        }
+      }
+    ]);
+  }
+
   async OrdersStatistics(startDate?: string, endDate?: string) {
     try {
       const lang = I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';

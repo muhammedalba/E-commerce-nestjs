@@ -49,8 +49,8 @@ export class ProductsController {
   @Get('statistics')
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
-  @UseInterceptors(CustomCacheInterceptor)
-  @CacheTTL(300_000) // 5 minutes
+  // @UseInterceptors(CustomCacheInterceptor)
+  // @CacheTTL(300_000) // 5 minutes
   async Products_statistics(
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,

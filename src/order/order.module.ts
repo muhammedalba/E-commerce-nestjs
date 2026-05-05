@@ -49,5 +49,6 @@ import { MarketingStatisticsService } from './shared/order-helper/marketing-stat
     ProductHelperService,
     OrdersStatisticsService,
   ],
+  exports: [OrdersStatisticsService],
 })
 export class OrderModule {}
