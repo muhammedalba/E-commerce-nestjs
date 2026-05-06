@@ -130,7 +130,7 @@ export class Product {
     type: Number,
     min: 0,
     max: 5,
-    default: 0,
+    default:2,
   })
   ratingsAverage!: number;
 

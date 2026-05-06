@@ -33,6 +33,7 @@ import {
 import { JwtPayload } from './shared/types/jwt-payload.interface';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
+import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 
 @Controller('auth')
 @UseInterceptors(ClearCacheInterceptor)
@@ -163,6 +164,7 @@ export class AuthController {
   @Put('updateMe')
   @UseInterceptors(FileInterceptor('avatar'))
   @UseGuards(AuthGuard)
+  @ClearCache("me-profile")
   async updateMe(
     @Req() request: { user: JwtPayload },
     @Body() UpdateUserDto: UpdateUserDto,
