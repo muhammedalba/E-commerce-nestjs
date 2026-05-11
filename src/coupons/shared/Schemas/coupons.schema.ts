@@ -68,11 +68,6 @@ CouponSchema.pre(['find', 'countDocuments'], function () {
   }
 });
 
-
-
-
-
-
 CouponSchema.pre('save', function (next) {
   if (this.isModified('name') && this.name) {
     const baseSlug = slugify(this.name.trim(), { lower: true, strict: true });

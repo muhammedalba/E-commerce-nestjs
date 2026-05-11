@@ -34,7 +34,7 @@ import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 @UseGuards(AuthGuard, RoleGuard)
 @UseInterceptors(ClearCacheInterceptor)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) { }
+  constructor(private readonly usersService: UsersService) {}
   /* ------------ =============================== ---------- */
   /* ------------ ======  GET USERS STATISTICS  ====== ------- */
   /* ------------ =============================== ---------- */

@@ -1,15 +1,15 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { CreateOrderDto } from './shared/dto/create-order.dto';
 import { UpdateOrderDto } from './shared/dto/update-order.dto';
-import { Model } from 'mongoose';
-import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types, Connection } from 'mongoose';
+import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Order } from './shared/schemas/Order.schema';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { FileUploadService } from 'src/file-upload/file-upload.service';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { OrderHelperService } from './shared/order-helper/order-helper.service';
 import { OrderEmailService } from './shared/order-helper/order-email.service';
-import { CouponHelperService } from './shared/order-helper/coupon.helper';
+import { CouponHelperService } from '../coupons/shared/coupon.helper';
 import { ProductHelperService } from './shared/order-helper/product.helper';
 import { ApiFeatures } from 'src/shared/utils/ApiFeatures';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
@@ -17,6 +17,9 @@ import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { OrdersStatisticsService } from './shared/order-helper/order-statistics.service';
 import { User } from 'src/auth/shared/schema/user.schema';
+import { CheckoutService } from '../checkout/checkout.service';
+import { AuditService } from '../audit/audit.service';
+import { AuditAction } from '../audit/shared/schema/audit-log.schema';
 
 @Injectable()
 export class OrderService {
@@ -30,15 +33,17 @@ export class OrderService {
     private readonly productHelperService: ProductHelperService,
     private readonly couponHelperService: CouponHelperService,
     private readonly ordersStatisticsService: OrdersStatisticsService,
+    private readonly checkoutService: CheckoutService,
+    private readonly auditService: AuditService,
+    @InjectConnection() private readonly connection: Connection,
   ) {}
   private readonly logger = new Logger(OrderService.name);
 
   async OrdersStatistics(startDate?: string, endDate?: string) {
-    return await this.ordersStatisticsService.OrdersStatistics(startDate, endDate);
-  }
-
-  async applyCoupon(userId: string, dto: CreateOrderDto) {
-    return await this.couponHelperService.applyCoupon(userId, dto);
+    return await this.ordersStatisticsService.OrdersStatistics(
+      startDate,
+      endDate,
+    );
   }
 
   async PaymentByBankTransfer(
@@ -47,100 +52,23 @@ export class OrderService {
     dto: CreateOrderDto,
     file: MulterFileType,
   ) {
-    //1) check order items is validate
-    const {
-      validatedItems,
-      totalPrice,
-      totalQuantity,
-      updatedProducts,
-      unAvailableProducts,
-    } = await this.orderHelperService.validateOrderItems(dto.items);
-    //1.1) Build order items with variant info
-    const productItemsId = validatedItems.map((item) => ({
-      productId: item.product.id.toString(),
-      variantId: item.variant.id.toString(),
-      quantity: item.quantity,
-      totalPrice: item.totalPrice ?? 0,
-      sku: item.variant.sku,
-      attributes: item.variant.attributes,
-    }));
-    // 2) if coupon is exist apply
-    const { discountAmount, totalPriceAfterDiscount, couponDetails } =
-      await this.couponHelperService.applyCouponIfAvailable(
-        dto.couponCode,
-        userId,
-        totalPrice,
-      );
-    // 3) handel file
+    // 1) Handle file upload
+    let transferReceiptImg: string | undefined;
     if (file) {
-      const filePath = await this.fileUploadService.saveFileToDisk(
+      transferReceiptImg = await this.fileUploadService.saveFileToDisk(
         file,
         'orders',
       );
-      dto.transferReceiptImg = filePath;
     }
-    // 4) create new order
-    const newOrder = {
-      user: userId,
-      items: productItemsId,
-      totalPrice,
-      totalPriceAfterDiscount,
-      totalQuantity,
-      transferReceiptImg: dto.transferReceiptImg,
-      isCheckedOut: true,
-      paymentMethod: 'bankTransfer',
-      shippingAddress: { ...dto.shippingAddress },
-      shippingMethod: dto.shippingMethod || 'default',
-      couponCode: dto.couponCode || undefined,
-      discountAmount: dto.couponCode ? discountAmount : undefined,
-      checkedOutAt: Date.now(),
-      paymentStatus: 'paid',
-    };
-    const order = await this.OrderModel.create(newOrder);
-    // 5) If there is a coupon used, record it and the user's record in the database.
-    if (couponDetails) {
-      await this.couponHelperService.markCouponAsUsed(
-        couponDetails.CouponId,
-        userId,
-      );
-    }
-    // 6) Modify the number of products and sales of sold products
-    await this.productHelperService.updateProductStats(validatedItems);
-    // 6.1) update user
-    await this.UserModel.findByIdAndUpdate(userId, { $inc: { totalOrder: 1 } });
-    // 7) send email to admin (you have new order)
-    await this.orderEmailService.sendOrderEmail(
-      order,
-      validatedItems,
-      user_email,
-    );
 
-    return {
-      success: 'success',
-      message: this.i18n.translate('success.ORDER_CREATED_SUCCESSFULLY'),
-      ...(couponDetails && { couponDetails }),
-      totalPrice,
-      data: order,
-      updatedProducts: {
-        message: this.i18n.translate(
-          'exception.coupon.SOME_PRODUCTS_HAVE_LESS_QUANTITY',
-        ),
-        data: updatedProducts,
-      },
-      ...(unAvailableProducts && {
-        unAvailableProducts: {
-          message: this.i18n.translate(
-            'exception.coupon.INVALID_SOME_PRODUCTS',
-          ),
-          data: unAvailableProducts,
-        },
-      }),
-    };
+    // 2) Delegate to the new enterprise placeOrder method
+    // This ensures all tax, shipping, and payment fee calculations are consistent
+    return await this.placeOrder(userId, user_email, dto, transferReceiptImg);
   }
 
   async findAll(user: JwtPayload, queryString: QueryString) {
     queryString.fields =
-      'totalPrice totalQuantity totalPriceAfterDiscount couponCode discountAmount paymentStatus isCheckedOut status paymentMethod ';
+      'totalPrice totalQuantity grandTotal couponCode discountAmount paymentStatus isCheckedOut status paymentMethodId shippingAmount taxAmount paymentFees ';
     if (user.role.toLocaleLowerCase() !== 'admin') {
       queryString = { ...queryString, user: user.user_id };
     }
@@ -267,6 +195,126 @@ export class OrderService {
           err,
         );
       }
+    }
+  }
+
+  /* ================================================ */
+  /*  PLACE ORDER - New Enterprise Logic              */
+  /* ================================================ */
+  async placeOrder(
+    userId: string,
+    userEmail: string,
+    dto: CreateOrderDto,
+    transferReceiptImg?: string,
+  ) {
+    const session = await this.connection.startSession();
+    session.startTransaction();
+
+    try {
+      // 1) Get Checkout Preview (Validation & Calculation)
+      const checkoutPreview = await this.checkoutService.getCheckoutPreview(
+        {
+          items: dto.items as any,
+          cityId: dto.cityId,
+          paymentMethodId: dto.paymentMethodId,
+          shippingProviderId: dto.shippingProviderId,
+          couponCode: dto.couponCode,
+        },
+        userId,
+      );
+
+      // 2) Validate stock and items (Reuse existing helper if possible, or use logic from checkout)
+      // Note: CheckoutService already validated product existence and prices.
+      // We still need to decrement stock.
+      const { validatedItems } =
+        await this.orderHelperService.validateOrderItems(dto.items);
+
+      // 3) Create Order Document
+      const newOrder = new this.OrderModel({
+        user: userId,
+        items: dto.items,
+        shippingAddress: dto.shippingAddress,
+
+        // Enterprise Commerce Fields
+        shippingProviderId: new Types.ObjectId(
+          checkoutPreview.delivery.providerId,
+        ),
+        shippingRateId: new Types.ObjectId(checkoutPreview.delivery.rateId),
+        paymentMethodId: new Types.ObjectId(dto.paymentMethodId),
+
+        shippingAmount: checkoutPreview.summary.shippingCost,
+        taxAmount: checkoutPreview.summary.taxAmount,
+        paymentFees: checkoutPreview.summary.paymentFees,
+        totalPrice: checkoutPreview.summary.subtotal,
+        discountAmount: checkoutPreview.summary.discount,
+        grandTotal: checkoutPreview.summary.total,
+        currency: checkoutPreview.summary.currency,
+
+        status: 'pending',
+        paymentStatus: 'pending',
+        isCheckedOut: true,
+        checkedOutAt: new Date(),
+        checkoutSummary: checkoutPreview,
+        notes: dto.notes,
+        transferReceiptImg: transferReceiptImg || dto.transferReceiptImg,
+      });
+
+      const savedOrder = await newOrder.save({ session });
+
+      // 5) If there is a coupon used, record it and the user's record in the database.
+      if (checkoutPreview.couponDetails) {
+        await this.couponHelperService.markCouponAsUsed(
+          checkoutPreview.couponDetails.CouponId,
+          userId,
+        );
+      }
+
+      // 6) Update user total orders count
+      await this.UserModel.findByIdAndUpdate(
+        userId,
+        { $inc: { totalOrder: 1 } },
+        { session },
+      );
+
+      // 7) Clear User Cart (Assuming CartModule is available)
+      // TODO: Implement cart clearing if cart service is injected
+
+      // 8) Audit Log
+      await this.auditService.log(
+        {
+          action: AuditAction.ORDER_PLACED,
+          module: 'ORDER',
+          userId,
+          userEmail,
+          newData: savedOrder.toObject(),
+          previousData: {},
+        },
+        session,
+      );
+
+      // 7) Send Email
+      await this.orderEmailService.sendOrderEmail(
+        savedOrder,
+        validatedItems,
+        userEmail,
+      );
+
+      await session.commitTransaction();
+      return {
+        success: true,
+        message: this.i18n.translate('success.ORDER_CREATED_SUCCESSFULLY'),
+        orderId: savedOrder._id,
+        data: savedOrder,
+      };
+    } catch (error: any) {
+      await session.abortTransaction();
+      this.logger.error(
+        `Order Placement Failed: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    } finally {
+      session.endSession();
     }
   }
 }

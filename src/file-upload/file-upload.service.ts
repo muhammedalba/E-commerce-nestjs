@@ -5,6 +5,7 @@ import * as sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { Request } from 'express';
+import * as path from 'path'; //
 
 interface FileSchema {
   avatar?: string;
@@ -14,6 +15,8 @@ interface FileSchema {
   carouselSm?: string;
   carouselMd?: string;
   carouselLg?: string;
+  logo?: string | null;
+  favicon?: string | null;
   transferReceiptImg?: string;
   InvoicePdf?: string;
 }
@@ -22,53 +25,115 @@ type filesType = Request['files'];
 @Injectable()
 export class FileUploadService {
   private readonly logger = new Logger(FileUploadService.name);
+  private readonly IMAGE_FORMAT = process.env.IMAGE_FORMAT || 'webp';
+  private readonly IMAGE_QUALITY = parseInt(process.env.IMAGE_QUALITY || '80');
 
-  async saveFileToDisk(
-    file: MulterFileType,
-    modelName: string,
-  ): Promise<string> {
-    // 1) check file if it not exists
+
+
+  // ===========================================================
+  // =============  SAVE IMAGE PDF OR FILE TO DISK =============
+  // ===========================================================
+
+  // async saveFileToDisk(
+  //   file: MulterFileType,
+  //   modelName: string,
+  // ): Promise<string> {
+  //   // 1) check file if it not exists
+  //   if (!file?.buffer) {
+  //     return '';
+  //   }
+
+  //   // 2) if exists
+  //   try {
+  //     const uploadsDir = process.env.UPLOADS_FOLDER || 'uploads';
+  //     // 1) add path to the file
+  //     const destinationPath = `./${uploadsDir}/${modelName}`;
+  //     // 1) generate a unique filename
+  //     const timestamp = Date.now();
+  //     const ext = extname(file.originalname).toLowerCase();
+  //     // Use the centralized format for images, keep .pdf as is
+  //     const finalExt = ext === '.pdf' ? '.pdf' : `.${this.IMAGE_FORMAT}`;
+  //     const filename = `${file.fieldname}-${timestamp}-${uuidv4()}${finalExt}`;
+  //     const outputPath = `${destinationPath}/${filename}`;
+  //     //2) Check if the destination directory exists, and create it if not.
+  //     await fs.promises.mkdir(destinationPath, { recursive: true });
+  //     if (ext === '.pdf') {
+  //       // const filePath = path.join(uploadsDir, `${outputPath}`);
+
+  //       // Save the PDF file directly
+  //       fs.writeFileSync(outputPath, file.buffer);
+  //       // await writeFile(outputPath, file.buffer);
+  //       const file_path = outputPath.startsWith('.')
+  //         ? outputPath.slice(1)
+  //         : outputPath;
+  //       return file_path;
+  //     }
+
+  //     //3) resize the image and save it to disk
+
+
+  //     await this.processAndSaveImage(file, outputPath);
+  //     // await writeFile(outputPath, file.buffer);
+  //     const file_path = outputPath.startsWith('.')
+  //       ? outputPath.slice(1)
+  //       : outputPath;
+  //     return file_path;
+  //   } catch (error) {
+  //     this.logger.error('Error saving file to disk', error);
+  //     throw new InternalServerErrorException('Failed to save file to disk');
+  //   }
+  // }
+
+
+  // ... (داخل الكلاس الخاص بك)
+
+  async saveFileToDisk(file: MulterFileType, modelName: string): Promise<string> {
+    // 1) التحقق من وجود بيانات الملف
     if (!file?.buffer) {
       return '';
     }
 
-    // 2) if exists
     try {
-      const uploadsDir = process.env.UPLOADS_DIRECTORY || 'uploads';
-      // 1) add path to the file
-      const destinationPath = `./${uploadsDir}/${modelName}`;
-      // 1) generate a unique filename
-      const timestamp = Date.now();
-      const ext = extname(file.originalname);
-      const safeExt = ext.length > 0 ? ext : '.png';
-      const filename = `${file.fieldname}-${timestamp}-${uuidv4()}${safeExt}`;
-      const outputPath = `${destinationPath}/${filename}`;
-      //2) Check if the destination directory exists, and create it if not.
-      await fs.promises.mkdir(destinationPath, { recursive: true });
-      if (ext === '.pdf') {
-        // const filePath = path.join(uploadsDir, `${outputPath}`);
+      const uploadsDir = process.env.UPLOADS_FOLDER || 'uploads';
 
-        // Save the PDF file directly
-        fs.writeFileSync(outputPath, file.buffer);
-        // await writeFile(outputPath, file.buffer);
-        const file_path = outputPath.startsWith('.')
-          ? outputPath.slice(1)
-          : outputPath;
-        return file_path;
+      // بناء المسار المطلق بشكل آمن متوافق مع كافة أنظمة التشغيل
+      const destinationPath = path.join(process.cwd(), uploadsDir, modelName);
+
+      // إنشاء اسم الملف
+      const timestamp = Date.now();
+      const ext = path.extname(file.originalname).toLowerCase();
+      const finalExt = ext === '.pdf' ? '.pdf' : `.${this.IMAGE_FORMAT}`;
+      const filename = `${file.fieldname}-${timestamp}-${uuidv4()}${finalExt}`;
+
+      // المسار النهائي الذي سيتم حفظ الملف فيه
+      const outputPath = path.join(destinationPath, filename);
+
+      // 2) إنشاء المجلد إن لم يكن موجوداً
+      await fs.promises.mkdir(destinationPath, { recursive: true });
+
+      // 3) معالجة الملف وحفظه (بدون حظر الـ Event Loop)
+      if (ext === '.pdf') {
+        // ✅ تم استخدام writeFile بدلاً من writeFileSync
+        await fs.promises.writeFile(outputPath, file.buffer);
+      } else {
+        // معالجة الصور
+        await this.processAndSaveImage(file, outputPath);
       }
 
-      //3) resize the image and save it to disk
-      await this.processAndSaveImage(file, outputPath);
-      // await writeFile(outputPath, file.buffer);
-      const file_path = outputPath.startsWith('.')
-        ? outputPath.slice(1)
-        : outputPath;
-      return file_path;
+      // 4) تجهيز المسار العام (Public Path) للإرجاع
+      // استخدمنا path.posix.join لضمان أن الرابط يستخدم '/' دائماً (حتى في ويندوز) للروابط
+      const publicPath = path.posix.join('/', uploadsDir, modelName, filename);
+
+      return publicPath; // النتيجة: /uploads/ModelName/filename.pdf
+
     } catch (error) {
-      this.logger.error('Error saving file to disk', error);
+      this.logger.error(`Error saving file ${file.originalname} to disk`, error);
       throw new InternalServerErrorException('Failed to save file to disk');
     }
   }
+  // ===========================================================
+  // =============  SAVE IMAGES TO DISK =============
+  // ===========================================================
   async saveFilesToDisk(
     files: filesType,
     destinationPath: string,
@@ -89,6 +154,10 @@ export class FileUploadService {
       throw new InternalServerErrorException('Failed to save files to disk');
     }
   }
+
+  // ===========================================================
+  // =============  UPDATE FILE TO DISK =============
+  // ===========================================================
   async updateFile(
     file: MulterFileType,
     modelName: string,
@@ -96,7 +165,8 @@ export class FileUploadService {
     old_Path?: string,
   ) {
     // 1) add path to the file
-    const destinationPath = `./${process.env.UPLOADS_FOLDER}/${modelName}`;
+    const uploadsDir = process.env.UPLOADS_FOLDER || 'uploads';
+    const destinationPath = `./${uploadsDir}/${modelName}`;
     // 2) check if file exists
     let old_File_Path: string | null;
     const imagePath =
@@ -109,6 +179,8 @@ export class FileUploadService {
       doc.InvoicePdf ||
       doc.carouselSm ||
       doc.carouselMd ||
+      doc.logo ||
+      doc.favicon ||
       doc.carouselLg;
 
     if (doc && imagePath) {
@@ -116,7 +188,6 @@ export class FileUploadService {
     } else {
       old_File_Path = null;
     }
-
     try {
       const file_path = await this.saveFileToDisk(file, modelName);
       // Check if file exists before trying to update it.
@@ -128,34 +199,63 @@ export class FileUploadService {
       this.logger.error(`Error updating file ${destinationPath}`, error);
     }
   }
+
+  // ===========================================================
+  // =============  DELETE FILES TO DISK =============
+  // ===========================================================
   async deleteFiles(filePaths: string[]): Promise<[]> {
     await Promise.all(
-      filePaths.map((filePath) => this.deleteFile(`./${filePath}`)),
+      filePaths.map((filePath) => this.deleteFile(filePath)),
     );
     return [];
   }
-  async deleteFile(Path: string): Promise<void> {
-    if (!Path) {
+
+  // ===========================================================
+  // =============  DELETE FILE TO DISK =============
+  // ===========================================================
+  async deleteFile(filePath: string): Promise<void> {
+    // 1. التحقق من وجود مسار
+    if (!filePath) {
       this.logger.warn('No path provided for file deletion.');
       return;
     }
-    // delete avatar file from disk, but not if it's the default avatar image path.
-    if (Path.includes('default.png') || Path.includes('avatar.png')) {
+
+    // 2. حماية الصور الافتراضية
+    if (filePath.includes('default.png') || filePath.includes('avatar.png')) {
       return;
     }
-    // Check if file exists before trying to delete it.
+
     try {
-      await fs.promises.access(Path);
-      await fs.promises.unlink(Path);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-        this.logger.error(`Error deleting file ${Path}`, error);
+      let cleanShortPath = filePath;
+
+      // 3. تنظيف الرابط بشكل احترافي
+      // إذا كان المسار يبدأ بـ http، نستخرج منه المسار فقط بأمان
+      if (filePath.startsWith('http')) {
+        cleanShortPath = new URL(filePath).pathname;
+      } else {
+        // كإجراء احتياطي إذا لم يبدأ بـ http
+        const baseUrl = process.env.BASE_URL || "http://localhost:4000";
+        cleanShortPath = filePath.replace(baseUrl, '');
       }
-      // }
+
+      // 4. بناء المسار المطلق (Absolute Path) بأمان باستخدام path.join
+      // process.cwd() يضمن لك دائماً البدء من المجلد الجذري للمشروع
+      const absolutePath = path.join(process.cwd(), cleanShortPath);
+
+      // 5. التحقق من الملف وحذفه
+      await fs.promises.access(absolutePath);
+      await fs.promises.unlink(absolutePath);
+
+    } catch (error) {
+      // تجاهل خطأ "الملف غير موجود" فقط
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        this.logger.error(`Error deleting file ${filePath}`, error);
+      }
     }
   }
-
-  //
+  // ===========================================================
+  // =============  PROCESS AND SAVE IMAGE TO DISK =============
+  // ===========================================================
   async processAndSaveImage(file: fileType, outputPath: string) {
     let width = 500;
     let height = 500;
@@ -188,6 +288,14 @@ export class FileUploadService {
         width = 1200;
         height = 1024;
         break;
+      case 'logo':
+        width = 500;
+        height = 300;
+        break;
+      case 'favicon':
+        width = 64;
+        height = 64;
+        break;
     }
 
     try {
@@ -202,8 +310,7 @@ export class FileUploadService {
           fit: 'inside',
           withoutEnlargement: true,
         })
-        .toFormat('webp')
-        .webp({ quality: 80 })
+        .toFormat(this.IMAGE_FORMAT as any, { quality: this.IMAGE_QUALITY })
         .toFile(outputPath);
 
       return outputPath;

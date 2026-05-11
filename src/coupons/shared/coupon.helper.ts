@@ -3,15 +3,12 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { I18nService } from 'nestjs-i18n';
 import { Coupon } from 'src/coupons/shared/Schemas/coupons.schema';
-import { OrderHelperService } from './order-helper.service';
-import { CreateOrderDto } from '../dto/create-order.dto';
 
 @Injectable()
 export class CouponHelperService {
   constructor(
     @InjectModel(Coupon.name) private readonly couponModel: Model<Coupon>,
     private readonly i18n: I18nService,
-    private readonly orderHelperService: OrderHelperService,
   ) {}
 
   private validateCoupon(
@@ -154,41 +151,5 @@ export class CouponHelperService {
         },
       )
       .exec();
-  }
-  async applyCoupon(userId: string, dto: CreateOrderDto) {
-    //1) check order items is validate
-    const {
-      validatedItems,
-      totalPrice,
-      totalQuantity,
-      updatedProducts,
-      unAvailableProducts,
-    } = await this.orderHelperService.validateOrderItems(dto.items);
-    // 2) if coupon is exist apply
-    const { discountAmount, totalPriceAfterDiscount, couponDetails } =
-      await this.applyCouponIfAvailable(dto.couponCode, userId, totalPrice);
-
-    return {
-      success: 'success',
-      message: this.i18n.translate('success.APPLY_COUPON_SUCCESS'),
-      data: {
-        items: validatedItems,
-        totalPrice,
-        totalPriceAfterDiscount,
-        discountAmount,
-        totalQuantity,
-        couponDetails,
-      },
-      updatedProducts: {
-        message: this.i18n.translate(
-          'exception.coupon.SOME_PRODUCTS_HAVE_LESS_QUANTITY',
-        ),
-        data: updatedProducts,
-      },
-      unAvailableProducts: {
-        message: this.i18n.translate('exception.coupon.INVALID_SOME_PRODUCTS'),
-        data: unAvailableProducts,
-      },
-    };
   }
 }

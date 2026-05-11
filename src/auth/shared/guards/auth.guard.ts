@@ -23,7 +23,7 @@ export class AuthGuard implements CanActivate {
     @InjectModel(User.name) private AuthModule: Model<User>,
     private readonly i18n: CustomI18nService,
     private jwtService: JwtService,
-  ) { }
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     //1) Extract the request from the context

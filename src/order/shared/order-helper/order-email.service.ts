@@ -43,13 +43,14 @@ export class OrderEmailService {
     validatedItems: ValidatedItem[],
     user_email: string,
   ) {
-    const lang = I18nContext.current()?.lang || process.env.DEFAULT_LANGUAGE || 'ar';
+    const lang =
+      I18nContext.current()?.lang || process.env.DEFAULT_LANGUAGE || 'ar';
     try {
       await this.mailQueue.add('new-admin-order', {
         appName: process.env.APP_NAME || 'admin',
         email: user_email,
         date: order.createdAt ? order.createdAt.toISOString() : '',
-        amount: order.totalPriceAfterDiscount?.toString() ?? order.totalPrice.toString(),
+        amount: order.grandTotal?.toString() ?? order.totalPrice.toString(),
         url: `${process.env.BASE_URL}/api/v1/order/${order._id?.toString() ?? ''}`,
         orderId: order._id?.toString() ?? '',
         orderDetails: validatedItems.map((item) => ({

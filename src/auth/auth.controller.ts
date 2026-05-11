@@ -38,13 +38,13 @@ import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 @Controller('auth')
 @UseInterceptors(ClearCacheInterceptor)
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
   // ------------ =============================== ---------- //
   // ------------ ======  GOOGLE AUTH  ====== ---------- //
   // ------------ =============================== ---------- //
   @Get('google')
   @UseGuards(GoogleAuthGuard)
-  googleAuth() { }
+  googleAuth() {}
 
   @Get('google/redirect')
   @UseGuards(GoogleAuthGuard)
@@ -63,7 +63,7 @@ export class AuthController {
   // ------------ =============================== ---------- //
   @Get('facebook')
   @UseGuards(FacebookAuthGuard)
-  facebookLogin() { }
+  facebookLogin() {}
 
   @Get('facebook/redirect')
   @UseGuards(FacebookAuthGuard)
@@ -164,7 +164,7 @@ export class AuthController {
   @Put('updateMe')
   @UseInterceptors(FileInterceptor('avatar'))
   @UseGuards(AuthGuard)
-  @ClearCache("me-profile")
+  @ClearCache('me-profile')
   async updateMe(
     @Req() request: { user: JwtPayload },
     @Body() UpdateUserDto: UpdateUserDto,
@@ -185,4 +185,3 @@ export class AuthController {
     return await this.authService.changeMyPassword(request, UpdateUserDto);
   }
 }
-

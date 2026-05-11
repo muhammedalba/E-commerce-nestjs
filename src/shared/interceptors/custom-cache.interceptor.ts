@@ -25,6 +25,8 @@ export class CustomCacheInterceptor extends CacheInterceptor {
     const userId = request.user?.user_id || 'guest';
 
     const baseKey = super.trackBy(context);
-    return baseKey ? `${resource}:${baseKey}:lang=${lang}:user=${userId}` : undefined;
+    return baseKey
+      ? `${resource}:${baseKey}:lang=${lang}:user=${userId}`
+      : undefined;
   }
 }

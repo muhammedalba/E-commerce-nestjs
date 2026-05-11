@@ -31,7 +31,7 @@ export class AuthCredentialService {
     private readonly i18n: CustomI18nService,
     private readonly tokenService: TokenService,
     private readonly cookieService: CookieService,
-  ) { }
+  ) {}
 
   async register(
     createUserDto: CreateUserDto,
@@ -48,7 +48,7 @@ export class AuthCredentialService {
       );
     }
 
-    let filePath = `/${process.env.UPLOADS_FOLDER}/${User.name}/avatar.png`;
+    let filePath = `/${process.env.UPLOADS_FOLDER || 'uploads'}/${User.name}/avatar.png`;
     if (file) {
       try {
         filePath = await this.fileUploadService.saveFileToDisk(file, User.name);

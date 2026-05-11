@@ -38,7 +38,7 @@ type file = Request['file'];
 @UseGuards(AuthGuard, RoleGuard)
 @UseInterceptors(ClearCacheInterceptor)
 export class CarouselController {
-  constructor(private readonly carouselService: CarouselService) { }
+  constructor(private readonly carouselService: CarouselService) {}
   static readonly imageSize = [
     { name: 'carouselSm', maxCount: MaxFileCount.CAROUSEl },
     { name: 'carouselMd', maxCount: MaxFileCount.CAROUSEl },

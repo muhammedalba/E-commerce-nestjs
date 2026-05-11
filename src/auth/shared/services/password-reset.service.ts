@@ -22,7 +22,7 @@ export class PasswordResetService {
     @InjectQueue('mail-queue') private readonly mailQueue: Queue,
     private readonly tokenService: TokenService,
     private readonly i18n: CustomI18nService,
-  ) { }
+  ) {}
 
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
     // 1 ) get user by email
@@ -41,7 +41,7 @@ export class PasswordResetService {
         }),
       );
     }
-    
+
     if (!user.isActive) {
       throw new BadRequestException(
         this.i18n.translate('exception.ACCOUNT_BLOCKED'),

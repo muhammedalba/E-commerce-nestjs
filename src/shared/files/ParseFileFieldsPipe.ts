@@ -63,7 +63,7 @@ export class ParseFileFieldsPipe implements PipeTransform {
               const message = `${config.name}:${file.originalname} failed ${validatorName} validation`;
 
               throw new UnprocessableEntityException(message);
-            } 
+            }
           }
         }
       }

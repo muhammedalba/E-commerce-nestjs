@@ -4,7 +4,8 @@ import { generateUniqueSlug } from 'src/shared/utils/slug.util';
 import { SubCategory } from 'src/sub-category/shared/schemas/sub-category.schema';
 
 @Schema({
-  timestamps: true, toJSON: { virtuals: true },
+  timestamps: true,
+  toJSON: { virtuals: true },
   toObject: { virtuals: true },
 })
 export class Category {
@@ -34,7 +35,6 @@ CategorySchema.virtual('SubCategories', {
   localField: '_id',
   foreignField: 'category',
 });
-
 
 //update , findOne and findAll
 // this will be used to update the image url

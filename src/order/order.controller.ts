@@ -36,7 +36,6 @@ import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.inter
 import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 import { MarketingStatisticsService } from './shared/order-helper/marketing-statistics.service';
 
-
 @Controller('order')
 @UseGuards(AuthGuard)
 @UseInterceptors(ClearCacheInterceptor)
@@ -45,17 +44,17 @@ export class OrderController {
     private readonly orderService: OrderService,
     private readonly marketingStatisticsService: MarketingStatisticsService,
   ) {}
-  
-  // Image size static 
+
+  // Image size static
   private static readonly imageSize = [
     { name: 'transferReceiptImg', maxCount: 1 },
     { name: 'InvoicePdf', maxCount: 1 },
     { name: 'DeliveryReceiptImage', maxCount: 1 },
   ];
 
-// =======================================================================================
-// ========================================= ORDER STATISTICS=============================
-// =======================================================================================
+  // =======================================================================================
+  // ========================================= ORDER STATISTICS=============================
+  // =======================================================================================
   @Get('statistics')
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(300000) // 5 minutes
@@ -68,9 +67,9 @@ export class OrderController {
     return await this.orderService.OrdersStatistics(startDate, endDate);
   }
 
-// ========================================================================================
-// =========================================  MARKETING STATISTICS ========================
-// ========================================================================================
+  // ========================================================================================
+  // =========================================  MARKETING STATISTICS ========================
+  // ========================================================================================
   @Get('marketing-statistics')
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(300000) // 5 minutes
@@ -80,16 +79,15 @@ export class OrderController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    return await this.marketingStatisticsService.getMarketingStatistics(startDate, endDate);
+    return await this.marketingStatisticsService.getMarketingStatistics(
+      startDate,
+      endDate,
+    );
   }
 
-
-
-
-
-// ========================================================================================
-// =========================================  PAYMENT BY BANK TRANSFER =============================
-// ========================================================================================
+  // ========================================================================================
+  // =========================================  PAYMENT BY BANK TRANSFER =============================
+  // ========================================================================================
 
   @Post('PaymentByBankTransfer')
   @ClearCache('order')
@@ -107,23 +105,27 @@ export class OrderController {
       file,
     );
   }
-  // This endpoint is used to apply a coupon to an order
 
-// ========================================================================================
-// =========================================  APPLY COUPON ================================
-// ========================================================================================
-  @Post('applyCoupon')
+  // ========================================================================================
+  // =========================================  PLACE ORDER (ENTERPRISE) =====================
+  // ========================================================================================
+  @Post('placeOrder')
   @ClearCache('order')
-  async applyCoupon(
+  async placeOrder(
     @Req() req: { user: JwtPayload },
     @Body() dto: CreateOrderDto,
   ) {
-    return await this.orderService.applyCoupon(req.user.user_id, dto);
+    return await this.orderService.placeOrder(
+      req.user.user_id,
+      req.user.email,
+      dto,
+    );
   }
-  
-// ========================================================================================
-// =========================================  GET ALL ORDERS =============================
-// ========================================================================================
+  // This endpoint is used to apply a coupon to an order
+
+  // ========================================================================================
+  // =========================================  GET ALL ORDERS =============================
+  // ========================================================================================
   @Get()
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(30000) // 30 seconds (orders change frequently)
@@ -131,9 +133,9 @@ export class OrderController {
     return this.orderService.findAll(req.user, queryString);
   }
 
-// ========================================================================================
-// =========================================  FIND ONE ORDER ==============================
-// ========================================================================================
+  // ========================================================================================
+  // =========================================  FIND ONE ORDER ==============================
+  // ========================================================================================
   @Get(':id')
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(60000) // 60 seconds
@@ -141,9 +143,9 @@ export class OrderController {
     return await this.orderService.findOne(idParamDto.id);
   }
 
-// ========================================================================================
-// =========================================  UPDATE ORDER ================================
-// ========================================================================================
+  // ========================================================================================
+  // =========================================  UPDATE ORDER ================================
+  // ========================================================================================
   @Patch(':id')
   @ClearCache('order')
   @Roles(roles.ADMIN, roles.MANAGER)
@@ -171,9 +173,9 @@ export class OrderController {
     return await this.orderService.update(idParamDto, updateOrderDto, files);
   }
 
-// ========================================================================================
-// =========================================  DELETE ORDER ================================
-// ========================================================================================
+  // ========================================================================================
+  // =========================================  DELETE ORDER ================================
+  // ========================================================================================
   @Delete(':id')
   @ClearCache('order')
   @Roles(roles.ADMIN, roles.MANAGER)

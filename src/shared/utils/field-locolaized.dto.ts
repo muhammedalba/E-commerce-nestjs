@@ -1,5 +1,11 @@
 import { Transform, TransformFnParams } from 'class-transformer';
-import { IsNotEmpty, IsString, Length, IsArray, IsOptional } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  Length,
+  IsArray,
+  IsOptional,
+} from 'class-validator';
 
 export class FieldLocalizeDto {
   @IsNotEmpty({ message: 'validation.NOT_EMPTY' })

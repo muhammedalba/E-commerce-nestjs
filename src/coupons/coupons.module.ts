@@ -7,6 +7,8 @@ import { FileUploadDiskStorageModule } from 'src/file-upload/file-upload.module'
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { AuthModule } from 'src/auth/auth.module';
 
+import { CouponHelperService } from './shared/coupon.helper';
+
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Coupon.name, schema: CouponSchema }]),
@@ -14,6 +16,7 @@ import { AuthModule } from 'src/auth/auth.module';
     AuthModule,
   ],
   controllers: [CouponsController],
-  providers: [CouponsService, CustomI18nService],
+  providers: [CouponsService, CustomI18nService, CouponHelperService],
+  exports: [CouponHelperService],
 })
 export class CouponsModule {}

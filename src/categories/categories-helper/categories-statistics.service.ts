@@ -11,6 +11,6 @@ export class CategoriesStatisticsService {
 
   async categoriesStatistics() {
     const totalCategories = await this.CategoryModel.countDocuments();
-    return  totalCategories ;
+    return totalCategories;
   }
 }

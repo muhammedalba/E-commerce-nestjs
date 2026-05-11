@@ -1,0 +1,26 @@
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
+import { Country } from './country.schema';
+
+export type RegionDocument = HydratedDocument<Region>;
+
+@Schema({ timestamps: true })
+export class Region {
+  @Prop({ type: Object, required: true })
+  declare name: { ar: string; en: string };
+
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Country',
+    required: true,
+  })
+  declare country: Country;
+
+  @Prop({ default: true })
+  declare isActive: boolean;
+}
+
+export const RegionSchema = SchemaFactory.createForClass(Region);
+
+RegionSchema.index({ country: 1 });
+RegionSchema.index({ country: 1, isActive: 1 });

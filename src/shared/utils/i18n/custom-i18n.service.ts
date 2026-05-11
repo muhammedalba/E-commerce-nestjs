@@ -4,7 +4,7 @@ import { Types } from 'mongoose';
 
 @Injectable()
 export class CustomI18nService {
-  constructor(private readonly i18n: I18nService) {} 
+  constructor(private readonly i18n: I18nService) {}
 
   translate(key: string, options?: TranslateOptions): string {
     const lang = this.getLang();
@@ -25,7 +25,7 @@ export class CustomI18nService {
     if (allLangs || !data) return data;
     const lang = this.getLang();
 
-   const translate = (obj: any): any => {
+    const translate = (obj: any): any => {
       // 1. إذا كان العنصر ليس كائناً أو كان null
       if (!obj || typeof obj !== 'object') return obj;
 
@@ -42,7 +42,13 @@ export class CustomI18nService {
       const raw = obj.toObject ? obj.toObject() : { ...obj };
 
       // 5. ترجمة الحقول النصية المباشرة (name, title, description, etc.)
-      const translatableFields = ['name', 'title', 'description', 'text','uses'];
+      const translatableFields = [
+        'name',
+        'title',
+        'description',
+        'text',
+        'uses',
+      ];
       translatableFields.forEach((field) => {
         if (
           raw[field] &&

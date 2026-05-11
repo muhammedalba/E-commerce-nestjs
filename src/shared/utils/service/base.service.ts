@@ -28,10 +28,10 @@ export class BaseService<T> {
     protected readonly model: Model<T>,
     protected readonly i18n: CustomI18nService,
     protected readonly fileUploadService: FileUploadService,
-  ) { }
+  ) {}
   // This method is used to get the default file path based on the model name '/uploads/users/avatar.png'
   private getDefaultFilePath = (modelName: string): string =>
-    `/${process.env.UPLOADS_FOLDER}/${modelName}/${modelName === 'users' ? 'avatar.png' : 'default.png'}`;
+    `/${process.env.UPLOADS_FOLDER || 'uploads'}/${modelName}/${modelName === 'users' ? 'avatar.png' : 'default.png'}`;
 
   // This method is used to check if the email is already taken
   protected async isFieldTaken(
@@ -40,7 +40,7 @@ export class BaseService<T> {
     excludeId?: string,
   ): Promise<void> {
     const query: Record<string, any> = {
-      [field]: value.trim()
+      [field]: value.trim(),
     };
     if (excludeId) {
       const idToExclude = isValidObjectId(excludeId)
@@ -58,7 +58,6 @@ export class BaseService<T> {
       throw new BadRequestException(this.t(exceptionKey));
     }
     return;
-
   }
 
   // This method is used to get the current language
@@ -81,7 +80,7 @@ export class BaseService<T> {
       // If a document is provided, update the file; otherwise, save a new file
       return doc
         ? ((await this.fileUploadService.updateFile(file, modelName, doc)) ??
-          this.getDefaultFilePath(modelName))
+            this.getDefaultFilePath(modelName))
         : await this.fileUploadService.saveFileToDisk(file, modelName);
     } catch (error) {
       this.logger.error('File upload failed', error);
@@ -131,8 +130,6 @@ export class BaseService<T> {
       newDocFilter = newDoc as unknown as T;
     }
 
-
-
     return this.i18n.localize(newDocFilter);
   }
   // ====================================== find all docs ======================================
@@ -162,24 +159,23 @@ export class BaseService<T> {
 
     const data = populate
       ? await features
-        .getQuery()
-        .populate({ path: populate.path, select: populate.select })
+          .getQuery()
+          .populate({ path: populate.path, select: populate.select })
       : await features.getQuery();
     if (!data) {
       throw new BadRequestException(this.t('exception.NOT_FOUND'));
     }
 
-
     return {
       results: data.length,
       pagination: features.getPagination(),
-      data: this.i18n.localize(data, allLangs)
+      data: this.i18n.localize(data, allLangs),
     };
   }
-// ====================================== find one doc ======================================
-// idParamDto : object that contains the id
-// selected : string that contains the fields to select
-// allLangs : boolean that indicates whether to return all languages or not
+  // ====================================== find one doc ======================================
+  // idParamDto : object that contains the id
+  // selected : string that contains the fields to select
+  // allLangs : boolean that indicates whether to return all languages or not
   async findOneDoc(
     idParamDto: IdParamDto,
     selected: string,
@@ -191,9 +187,9 @@ export class BaseService<T> {
     const doc = isObjectId
       ? await this.model.findById(idParamDto.id).select(selected).exec()
       : await this.model
-        .findOne({ slug: idParamDto.id })
-        .select(selected)
-        .exec();
+          .findOne({ slug: idParamDto.id })
+          .select(selected)
+          .exec();
 
     if (!doc) {
       throw new NotFoundException(
@@ -201,17 +197,15 @@ export class BaseService<T> {
       );
     }
 
-
-
     return this.i18n.localize(doc, allLangs);
   }
-// ====================================== update one doc ======================================
-// idParamDto : object that contains the id
-// UpdateDataDto : object that contains the data to update
-// file : file to update
-// modelName : name of the model
-// selectedFields : string that contains the fields to select
-// options : object that contains the file field name and check field and field value
+  // ====================================== update one doc ======================================
+  // idParamDto : object that contains the id
+  // UpdateDataDto : object that contains the data to update
+  // file : file to update
+  // modelName : name of the model
+  // selectedFields : string that contains the fields to select
+  // options : object that contains the file field name and check field and field value
   async updateOneDoc(
     idParamDto: IdParamDto,
     UpdateDataDto: {
@@ -239,7 +233,8 @@ export class BaseService<T> {
       throw new NotFoundException(this.t('exception.NOT_FOUND'));
     }
     //2) check if email already exists
-    if (checkField && fieldValue) await this.isFieldTaken(checkField, fieldValue, doc._id)
+    if (checkField && fieldValue)
+      await this.isFieldTaken(checkField, fieldValue, doc._id);
     // 3) update doc ( avatar image ) if new file is provided
     let filePath: string | undefined;
     if (file) {
@@ -261,9 +256,9 @@ export class BaseService<T> {
     return updatedData ? this.i18n.localize(updatedData) : null;
   }
 
-// ====================================== delete one doc ======================================
-// idParamDto : object that contains the id
-// selected : string that contains the fields to select
+  // ====================================== delete one doc ======================================
+  // idParamDto : object that contains the id
+  // selected : string that contains the fields to select
   async deleteOneDoc(idParamDto: IdParamDto, selected: string): Promise<void> {
     // 1) check if id is valid ObjectId or slug
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto.id);

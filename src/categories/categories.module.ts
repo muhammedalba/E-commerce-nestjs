@@ -9,7 +9,6 @@ import { CategoriesService } from './categories.service';
 import { AuthModule } from 'src/auth/auth.module';
 import { CategoriesStatisticsService } from './categories-helper/categories-statistics.service';
 
-
 @Module({
   imports: [
     AuthModule,
@@ -24,7 +23,11 @@ import { CategoriesStatisticsService } from './categories-helper/categories-stat
     ]),
   ],
   controllers: [CategoriesController],
-  providers: [CategoriesService, CustomI18nService, CategoriesStatisticsService],
+  providers: [
+    CategoriesService,
+    CustomI18nService,
+    CategoriesStatisticsService,
+  ],
   exports: [MongooseModule],
 })
 export class CategoriesModule {}

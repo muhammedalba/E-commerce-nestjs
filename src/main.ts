@@ -17,7 +17,7 @@ async function bootstrap() {
     'http://10.5.50.6:3000',
     'http://172.20.10.7:3000',
     process.env.CLIENT_URL,
-  ]
+  ];
   // security headers
   app.use(helmet());
 
@@ -25,7 +25,9 @@ async function bootstrap() {
   app.use('/uploads', (req: Request, res: Response, next: NextFunction) => {
     const allowedOriginsFilter = allowedOrigins.filter((o): o is string => !!o);
     const origin = req.headers.origin || req.headers.referer;
-    const isAllowed = allowedOriginsFilter.some(allowed => origin?.startsWith(allowed));
+    const isAllowed = allowedOriginsFilter.some((allowed) =>
+      origin?.startsWith(allowed),
+    );
 
     if (isAllowed) {
       res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');

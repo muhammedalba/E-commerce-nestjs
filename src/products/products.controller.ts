@@ -1,4 +1,4 @@
- import {
+import {
   Controller,
   Get,
   Post,
@@ -63,7 +63,7 @@ export class ProductsController {
   // ----------------------------------------------------------------------------------------------------------------------------
 
   @Post()
-  @ClearCache('products') 
+  @ClearCache('products')
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
   @UseInterceptors(
@@ -79,7 +79,7 @@ export class ProductsController {
     @UploadedFiles(
       new ParseFileFieldsPipe(
         '1MB',
-        ['png','jpeg', 'webp', 'pdf'],
+        ['png', 'jpeg', 'webp', 'pdf'],
         [
           { name: 'imageCover', required: true },
           { name: 'images', required: false },

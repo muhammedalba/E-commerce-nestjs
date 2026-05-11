@@ -12,15 +12,19 @@ export class OrdersStatisticsService {
   ) {}
 
   // دالة مساعدة لجلب أفضل المنتجات مبيعاً لتستخدمها موديولات أخرى (Clean Architecture)
-  async getTopSellingProductIds(start: Date, end: Date, limit: number = 5): Promise<{ productId: string, totalSold: number }[]> {
+  async getTopSellingProductIds(
+    start: Date,
+    end: Date,
+    limit: number = 5,
+  ): Promise<{ productId: string; totalSold: number }[]> {
     const excludedStatuses = ['canceled', 'returned', 'failed', 'refunded'];
     return this.OrderModel.aggregate([
-      { 
-        $match: { 
+      {
+        $match: {
           createdAt: { $gte: start, $lte: end },
           status: { $nin: excludedStatuses },
-          isDeleted: { $ne: true }
-        } 
+          isDeleted: { $ne: true },
+        },
       },
       { $unwind: '$items' },
       {
@@ -35,21 +39,22 @@ export class OrdersStatisticsService {
         $project: {
           _id: 0,
           productId: '$_id',
-          totalSold: 1
-        }
-      }
+          totalSold: 1,
+        },
+      },
     ]);
   }
 
   async OrdersStatistics(startDate?: string, endDate?: string) {
     try {
-      const lang = I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
+      const lang =
+        I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
       const today = new Date();
-      
+
       // تواريخ ديناميكية
       const start = startDate ? new Date(startDate) : startOfMonth(today);
       const end = endDate ? new Date(endDate) : endOfMonth(today);
-      
+
       // الحالات المستبعدة من الأرباح والمبيعات الحقيقية
       const excludedStatuses = ['canceled', 'returned', 'failed', 'refunded'];
 
@@ -68,7 +73,7 @@ export class OrdersStatisticsService {
         // 2. توزيع الحالات خلال الفترة المحددة
         this.OrderModel.aggregate([
           { $match: { createdAt: { $gte: start, $lte: end } } },
-          { $group: { _id: '$status', count: { $sum: 1 } } }
+          { $group: { _id: '$status', count: { $sum: 1 } } },
         ]),
 
         // 3. عدد طلبات الفترة الحالية
@@ -78,20 +83,20 @@ export class OrdersStatisticsService {
 
         // 4. الإيرادات المالية (للطلبات الناجحة فقط)
         this.OrderModel.aggregate([
-          { 
-            $match: { 
+          {
+            $match: {
               createdAt: { $gte: start, $lte: end },
-              status: { $nin: excludedStatuses } 
-            } 
+              status: { $nin: excludedStatuses },
+            },
           },
           {
             $group: {
               _id: null,
               totalRevenue: { $sum: '$totalPrice' }, // تأكد من اسم حقل السعر في Order
               validOrdersCount: { $sum: 1 },
-              averageOrderValue: { $avg: '$totalPrice' }
-            }
-          }
+              averageOrderValue: { $avg: '$totalPrice' },
+            },
+          },
         ]),
 
         // 5. المبيعات اليومية خلال الفترة
@@ -99,14 +104,16 @@ export class OrdersStatisticsService {
           {
             $match: {
               createdAt: { $gte: start, $lte: end },
-              status: { $nin: excludedStatuses } // اختياري: إذا أردت رسم الطلبات الناجحة فقط
+              status: { $nin: excludedStatuses }, // اختياري: إذا أردت رسم الطلبات الناجحة فقط
             },
           },
           {
             $group: {
-              _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+              _id: {
+                $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+              },
               count: { $sum: 1 },
-              dailyRevenue: { $sum: '$totalPrice' }
+              dailyRevenue: { $sum: '$totalPrice' },
             },
           },
           { $sort: { _id: 1 } },
@@ -114,11 +121,11 @@ export class OrdersStatisticsService {
 
         // 6. أفضل المنتجات مبيعاً (الطلبات الناجحة)
         this.OrderModel.aggregate([
-          { 
-            $match: { 
+          {
+            $match: {
               createdAt: { $gte: start, $lte: end },
-              status: { $nin: excludedStatuses } 
-            } 
+              status: { $nin: excludedStatuses },
+            },
           },
           { $unwind: '$items' },
           {
@@ -131,8 +138,13 @@ export class OrdersStatisticsService {
           { $limit: 5 },
           {
             $addFields: {
-              productIdObj: { 
-                $convert: { input: '$_id', to: 'objectId', onError: null, onNull: null } 
+              productIdObj: {
+                $convert: {
+                  input: '$_id',
+                  to: 'objectId',
+                  onError: null,
+                  onNull: null,
+                },
               },
             },
           },
@@ -151,8 +163,11 @@ export class OrdersStatisticsService {
               productId: '$_id',
               totalQuantity: 1,
               // جلب الاسم باللغة المطلوبة مع الفولباك
-              productName: { 
-                $ifNull: [`$product.title.${lang}`, { $ifNull: ['$product.title.en', 'Unknown Product'] }] 
+              productName: {
+                $ifNull: [
+                  `$product.title.${lang}`,
+                  { $ifNull: ['$product.title.en', 'Unknown Product'] },
+                ],
               },
             },
           },
@@ -160,25 +175,30 @@ export class OrdersStatisticsService {
 
         // 7. أفضل العملاء (بناءً على حجم الإنفاق وليس عدد الطلبات)
         this.OrderModel.aggregate([
-          { 
-            $match: { 
+          {
+            $match: {
               createdAt: { $gte: start, $lte: end },
-              status: { $nin: excludedStatuses } 
-            } 
+              status: { $nin: excludedStatuses },
+            },
           },
           {
             $group: {
               _id: '$user',
               totalOrders: { $sum: 1 },
-              totalSpent: { $sum: '$totalPrice' } // حجم الإنفاق
+              totalSpent: { $sum: '$totalPrice' }, // حجم الإنفاق
             },
           },
           { $sort: { totalSpent: -1 } }, // الترتيب بالإنفاق
           { $limit: 5 },
           {
             $addFields: {
-              userIdObj: { 
-                $convert: { input: '$_id', to: 'objectId', onError: null, onNull: null } 
+              userIdObj: {
+                $convert: {
+                  input: '$_id',
+                  to: 'objectId',
+                  onError: null,
+                  onNull: null,
+                },
               },
             },
           },
@@ -234,13 +254,14 @@ export class OrdersStatisticsService {
             currentPeriodOrders: currentPeriodOrders,
             validOrdersCount: financials.validOrdersCount,
             totalRevenue: financials.totalRevenue,
-            averageOrderValue: Math.round(financials.averageOrderValue * 100) / 100,
+            averageOrderValue:
+              Math.round(financials.averageOrderValue * 100) / 100,
           },
           statusBreakdown,
           dailyOrders,
           topProducts: topProductsRaw,
           topCustomers: topCustomersRaw,
-          dateRange: { start, end }
+          dateRange: { start, end },
         },
       };
     } catch (error) {

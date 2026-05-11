@@ -83,6 +83,15 @@ export class CreateOrderDto {
   @Type(() => OrderAddressDto)
   shippingAddress!: OrderAddressDto;
 
+  @IsMongoId()
+  cityId!: string;
+
+  @IsMongoId()
+  shippingProviderId!: string;
+
+  @IsMongoId()
+  paymentMethodId!: string;
+
   /*— capons —*/
   @IsOptional()
   @IsString()

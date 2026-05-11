@@ -21,7 +21,7 @@ export class PromoBannerService {
     @InjectModel(PromoBanner.name)
     private promoBannerModel: Model<PromoBannerDocument>,
     protected readonly i18n: CustomI18nService,
-  ) { }
+  ) {}
   // ----------------------------------------------------------------
   // -----------------GET ALL BANNERS--------------------------------
   async findAllDoc(
@@ -32,8 +32,6 @@ export class PromoBannerService {
     pagination: any;
     data: PromoBanner[];
   }> {
-
-
     const features = new ApiFeatures(this.promoBannerModel.find(), queryString)
       .filter()
       .search(PromoBanner.name);
@@ -46,11 +44,11 @@ export class PromoBannerService {
     if (!data) {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }
-    console.log('pag', features.getPagination())
+    console.log('pag', features.getPagination());
     return {
       results: data.length,
       pagination: features.getPagination(),
-      data: this.i18n.localize(data, allLangs)
+      data: this.i18n.localize(data, allLangs),
     };
   }
 
@@ -58,7 +56,9 @@ export class PromoBannerService {
   // -----------------GET ACTIVE BANNER--------------------------------
 
   async getActiveBanner(): Promise<any> {
-    const promo = await this.promoBannerModel.findOne({ isActive: true }).exec();
+    const promo = await this.promoBannerModel
+      .findOne({ isActive: true })
+      .exec();
     if (!promo) {
       throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
     }
@@ -83,12 +83,15 @@ export class PromoBannerService {
   async createBanner(
     promoBannerDto: PromoBannerDto,
   ): Promise<{ data: PromoBanner }> {
-
-    // check if there is active banner 
+    // check if there is active banner
     if (promoBannerDto.isActive === true) {
-      const isBannerExist = await this.promoBannerModel.exists({ isActive: true });
+      const isBannerExist = await this.promoBannerModel.exists({
+        isActive: true,
+      });
       if (isBannerExist) {
-        throw new BadRequestException(this.i18n.translate('exception.ACTIVE_BANNER_ALREADY_EXISTS'));
+        throw new BadRequestException(
+          this.i18n.translate('exception.ACTIVE_BANNER_ALREADY_EXISTS'),
+        );
       }
     }
     const data = await this.promoBannerModel.create(promoBannerDto);
@@ -113,11 +116,13 @@ export class PromoBannerService {
     if (promoBannerDto.isActive === true && banner.isActive !== true) {
       const isAnotherActive = await this.promoBannerModel.exists({
         isActive: true,
-        _id: { $ne: id }
+        _id: { $ne: id },
       });
 
       if (isAnotherActive) {
-        throw new BadRequestException(this.i18n.translate('exception.ACTIVE_BANNER_ALREADY_EXISTS'));
+        throw new BadRequestException(
+          this.i18n.translate('exception.ACTIVE_BANNER_ALREADY_EXISTS'),
+        );
       }
     }
 

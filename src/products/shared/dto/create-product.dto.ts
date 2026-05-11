@@ -39,7 +39,10 @@ export class ProductAttributeDefinitionDto {
   allowedValues?: string[];
 }
 
-import { FieldLocalizeDto, ArrayLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
+import {
+  FieldLocalizeDto,
+  ArrayLocalizeDto,
+} from 'src/shared/utils/field-locolaized.dto';
 import { CreateVariantDto } from './variant.dto';
 import { Exists } from 'src/shared/utils/decorators/exists.decorator';
 import { Category } from 'src/categories/shared/schemas/category.schema';

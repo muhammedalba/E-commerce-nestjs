@@ -13,7 +13,7 @@ export class UsersStatistics {
   async users_statistics(startDate?: string, endDate?: string) {
     try {
       const today = new Date();
-      
+
       // 1. التواريخ الديناميكية
       const start = startDate ? new Date(startDate) : startOfMonth(today);
       const end = endDate ? new Date(endDate) : endOfMonth(today);
@@ -44,7 +44,7 @@ export class UsersStatistics {
         this.UserModel.countDocuments({
           createdAt: { $gte: start, $lte: end },
           role: 'user', // تأكد من اسم الـ Role الخاص بالعملاء في نظامك
-          isDeleted: { $ne: true }
+          isDeleted: { $ne: true },
         }),
 
         // الخط الزمني للتسجيلات اليومية للعملاء الجدد (لرسم Chart)
@@ -53,12 +53,14 @@ export class UsersStatistics {
             $match: {
               createdAt: { $gte: start, $lte: end },
               role: 'user', // التركيز على العملاء الجدد فقط
-              isDeleted: { $ne: true }
+              isDeleted: { $ne: true },
             },
           },
           {
             $group: {
-              _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+              _id: {
+                $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+              },
               count: { $sum: 1 },
             },
           },
@@ -70,7 +72,12 @@ export class UsersStatistics {
       const statusBreakdown = statusCounts.reduce<Record<string, number>>(
         (acc, curr) => {
           // التعامل مع القيم المنطقية (true/false) وتحويلها لنصوص لتسهيل قراءتها
-          const statusKey = curr._id === true ? 'active' : curr._id === false ? 'inactive' : String(curr._id);
+          const statusKey =
+            curr._id === true
+              ? 'active'
+              : curr._id === false
+                ? 'inactive'
+                : String(curr._id);
           acc[statusKey] = curr.count;
           return acc;
         },
@@ -102,8 +109,8 @@ export class UsersStatistics {
           statusBreakdown,
           roleBreakdown,
           dailyRegistrations, // مصفوفة جاهزة لرسم المنحنى البياني
-          
-          dateRange: { start, end }
+
+          dateRange: { start, end },
         },
       };
     } catch (error) {

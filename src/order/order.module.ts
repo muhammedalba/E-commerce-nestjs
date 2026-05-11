@@ -21,10 +21,12 @@ import {
 import { EmailModule } from 'src/email/email.module';
 import { OrderHelperService } from './shared/order-helper/order-helper.service';
 import { OrderEmailService } from './shared/order-helper/order-email.service';
-import { CouponHelperService } from './shared/order-helper/coupon.helper';
+import { CouponsModule } from '../coupons/coupons.module';
 import { ProductHelperService } from './shared/order-helper/product.helper';
 import { OrdersStatisticsService } from './shared/order-helper/order-statistics.service';
 import { MarketingStatisticsService } from './shared/order-helper/marketing-statistics.service';
+import { CheckoutModule } from '../checkout/checkout.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [
@@ -37,6 +39,9 @@ import { MarketingStatisticsService } from './shared/order-helper/marketing-stat
       { name: ProductVariant.name, schema: ProductVariantSchema },
     ]),
     EmailModule,
+    CheckoutModule,
+    AuditModule,
+    CouponsModule,
   ],
   controllers: [OrderController],
   providers: [
@@ -45,7 +50,6 @@ import { MarketingStatisticsService } from './shared/order-helper/marketing-stat
     CustomI18nService,
     OrderHelperService,
     OrderEmailService,
-    CouponHelperService,
     ProductHelperService,
     OrdersStatisticsService,
   ],

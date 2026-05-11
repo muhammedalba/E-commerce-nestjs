@@ -19,10 +19,16 @@ export class EmailService {
     subject: string,
     lang?: string,
   ): Promise<void> {
-    const resolvedLang = lang ?? I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
+    const resolvedLang =
+      lang ??
+      I18nContext.current()?.lang ??
+      process.env.DEFAULT_LANGUAGE ??
+      'ar';
     const template = `verify-code-${resolvedLang}`;
-    console.log(`📧 Attempting to send [sendRandomCode] to: ${to} | Lang: ${resolvedLang} | Template: ${template}`);
-    
+    console.log(
+      `📧 Attempting to send [sendRandomCode] to: ${to} | Lang: ${resolvedLang} | Template: ${template}`,
+    );
+
     await this.mailerService.sendMail({
       to,
       template,
@@ -42,9 +48,15 @@ export class EmailService {
     subject: string,
     lang?: string,
   ): Promise<void> {
-    const resolvedLang = lang ?? I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
+    const resolvedLang =
+      lang ??
+      I18nContext.current()?.lang ??
+      process.env.DEFAULT_LANGUAGE ??
+      'ar';
     const template = `reset-pass-${resolvedLang}`;
-    console.log(`📧 Attempting to send [send_reset_password_success] to: ${to} | Lang: ${resolvedLang} | Template: ${template}`);
+    console.log(
+      `📧 Attempting to send [send_reset_password_success] to: ${to} | Lang: ${resolvedLang} | Template: ${template}`,
+    );
 
     await this.mailerService.sendMail({
       to,
@@ -81,10 +93,16 @@ export class EmailService {
     subject: string,
     lang?: string,
   ): Promise<void> {
-    const resolvedLang = lang ?? I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
+    const resolvedLang =
+      lang ??
+      I18nContext.current()?.lang ??
+      process.env.DEFAULT_LANGUAGE ??
+      'ar';
     const adminEmail = process.env.ADMIN_EMAIL;
     const template = `new-admin-order-${resolvedLang}`;
-    console.log(`📧 Attempting to send [new_admin_order] to Admin: ${adminEmail} | Lang: ${resolvedLang} | Template: ${template}`);
+    console.log(
+      `📧 Attempting to send [new_admin_order] to Admin: ${adminEmail} | Lang: ${resolvedLang} | Template: ${template}`,
+    );
 
     await this.mailerService.sendMail({
       to: adminEmail,

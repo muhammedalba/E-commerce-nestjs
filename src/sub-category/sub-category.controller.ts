@@ -36,9 +36,7 @@ export class SubCategoryController {
   @UseGuards(AuthGuard, RoleGuard)
   @ClearCache('sub-category')
   @Post()
-  create(
-    @Body() createSubCategoryDto: CreateSubCategoryDto,
-  ) {
+  create(@Body() createSubCategoryDto: CreateSubCategoryDto) {
     return this.SubCategoryService.create(createSubCategoryDto);
   }
 

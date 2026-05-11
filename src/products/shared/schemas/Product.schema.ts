@@ -130,7 +130,7 @@ export class Product {
     type: Number,
     min: 0,
     max: 5,
-    default:2,
+    default: 2,
   })
   ratingsAverage!: number;
 
@@ -202,7 +202,6 @@ ProductSchema.index({ 'priceRange.min': 1 });
 
 // ─── Auto-exclude soft-deleted documents ─────────────────
 ProductSchema.pre('find', function () {
-
   if (!this.getFilter().isDeleted) {
     this.where({ isDeleted: { $ne: true } });
   }

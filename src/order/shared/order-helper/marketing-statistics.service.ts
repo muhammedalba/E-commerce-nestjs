@@ -17,114 +17,132 @@ export class MarketingStatisticsService {
       const today = new Date();
       const start = startDate ? new Date(startDate) : startOfMonth(today);
       const end = endDate ? new Date(endDate) : endOfMonth(today);
-      
+
       // استبعاد الطلبات الملغاة لتجنب حساب مبيعات أو خصومات وهمية
       // لاحظ استخدام 'cancelled' المطابقة للسكيما الخاصة بك
       const excludedStatuses = ['cancelled', 'failed'];
 
-      const [
-        couponsOverviewRaw,
-        salesBreakdownRaw,
-        topPerformingCouponsRaw
-      ] = await Promise.all([
-        // 1. نظرة عامة على حالة الكوبونات في النظام
-        this.CouponModel.aggregate([
-          {
-            $group: {
-              _id: null,
-              totalCoupons: { $sum: 1 },
-              activeCoupons: {
-                $sum: {
+      const [couponsOverviewRaw, salesBreakdownRaw, topPerformingCouponsRaw] =
+        await Promise.all([
+          // 1. نظرة عامة على حالة الكوبونات في النظام
+          this.CouponModel.aggregate([
+            {
+              $group: {
+                _id: null,
+                totalCoupons: { $sum: 1 },
+                activeCoupons: {
+                  $sum: {
+                    $cond: [
+                      {
+                        $and: [
+                          { $eq: ['$active', true] },
+                          { $gt: ['$expires', today] },
+                        ],
+                      },
+                      1,
+                      0,
+                    ],
+                  },
+                },
+                expiredCoupons: {
+                  $sum: { $cond: [{ $lt: ['$expires', today] }, 1, 0] },
+                },
+              },
+            },
+          ]),
+
+          // 2. تحليل المبيعات: العضوية (بدون كوبون) مقابل التسويقية (بكوبون)
+          this.OrderModel.aggregate([
+            {
+              $match: {
+                createdAt: { $gte: start, $lte: end },
+                status: { $nin: excludedStatuses },
+                isDeleted: { $ne: true },
+              },
+            },
+            {
+              $group: {
+                _id: {
                   $cond: [
-                    { $and: [{ $eq: ['$active', true] }, { $gt: ['$expires', today] }] },
-                    1,
-                    0
-                  ]
-                }
+                    {
+                      $and: [
+                        { $ne: ['$couponCode', null] },
+                        { $ne: ['$couponCode', ''] },
+                      ],
+                    },
+                    'with_coupon',
+                    'organic',
+                  ],
+                },
+                ordersCount: { $sum: 1 },
+                // الإيراد الحقيقي: نأخذ السعر النهائي المعتمد
+                totalRevenue: {
+                  $sum: { $ifNull: ['$grandTotal', '$totalPrice'] },
+                },
+                // إجمالي الأموال المخصومة
+                totalDiscountGiven: {
+                  $sum: { $ifNull: ['$discountAmount', 0] },
+                },
               },
-              expiredCoupons: {
-                $sum: { $cond: [{ $lt: ['$expires', today] }, 1, 0] }
-              }
-            }
-          }
-        ]),
+            },
+          ]),
 
-        // 2. تحليل المبيعات: العضوية (بدون كوبون) مقابل التسويقية (بكوبون)
-        this.OrderModel.aggregate([
-          { 
-            $match: { 
-              createdAt: { $gte: start, $lte: end },
-              status: { $nin: excludedStatuses },
-              isDeleted: { $ne: true }
-            } 
-          },
-          {
-            $group: {
-              _id: { 
-                $cond: [
-                  { $and: [{ $ne: ['$couponCode', null] }, { $ne: ['$couponCode', ''] }] }, 
-                  'with_coupon', 
-                  'organic'
-                ] 
+          // 3. أفضل الكوبونات أداءً وجلباً للإيرادات
+          this.OrderModel.aggregate([
+            {
+              $match: {
+                createdAt: { $gte: start, $lte: end },
+                status: { $nin: excludedStatuses },
+                isDeleted: { $ne: true },
+                couponCode: { $type: 'string', $ne: '' }, // الطلبات التي تحتوي على كود كوبون فعلي
               },
-              ordersCount: { $sum: 1 },
-              // الإيراد الحقيقي: نأخذ السعر بعد الخصم إن وجد، وإلا نأخذ السعر الأساسي
-              totalRevenue: { $sum: { $ifNull: ['$totalPriceAfterDiscount', '$totalPrice'] } },
-              // إجمالي الأموال المخصومة
-              totalDiscountGiven: { $sum: { $ifNull: ['$discountAmount', 0] } }
-            }
-          }
-        ]),
-
-        // 3. أفضل الكوبونات أداءً وجلباً للإيرادات
-        this.OrderModel.aggregate([
-          { 
-            $match: { 
-              createdAt: { $gte: start, $lte: end },
-              status: { $nin: excludedStatuses },
-              isDeleted: { $ne: true },
-              couponCode: { $type: 'string', $ne: '' } // الطلبات التي تحتوي على كود كوبون فعلي
-            } 
-          },
-          {
-            $group: {
-              _id: '$couponCode',
-              usageCount: { $sum: 1 },
-              revenueGenerated: { $sum: { $ifNull: ['$totalPriceAfterDiscount', '$totalPrice'] } },
-              totalDiscounted: { $sum: '$discountAmount' }
-            }
-          },
-          { $sort: { revenueGenerated: -1 } }, // الترتيب حسب أكثر كوبون جلب إيرادات
-          { $limit: 5 },
-          // جلب تفاصيل الكوبون الأصلي من جدول الكوبونات (مثل النوع وقيمة الخصم الأساسية)
-          {
-            $lookup: {
-              from: 'coupons', // تأكد من اسم كولكشن الكوبونات (بالجمع وأحرف صغيرة)
-              localField: '_id',
-              foreignField: 'name',
-              as: 'couponDetails'
-            }
-          },
-          { $unwind: { path: '$couponDetails', preserveNullAndEmptyArrays: true } },
-          {
-            $project: {
-              _id: 0,
-              couponCode: '$_id',
-              usageCount: 1,
-              revenueGenerated: 1,
-              totalDiscounted: 1,
-              couponType: { $ifNull: ['$couponDetails.type', 'unknown'] },
-              baseDiscount: { $ifNull: ['$couponDetails.discount', 0] }
-            }
-          }
-        ])
-      ]);
+            },
+            {
+              $group: {
+                _id: '$couponCode',
+                usageCount: { $sum: 1 },
+                revenueGenerated: {
+                  $sum: { $ifNull: ['$grandTotal', '$totalPrice'] },
+                },
+                totalDiscounted: { $sum: '$discountAmount' },
+              },
+            },
+            { $sort: { revenueGenerated: -1 } }, // الترتيب حسب أكثر كوبون جلب إيرادات
+            { $limit: 5 },
+            // جلب تفاصيل الكوبون الأصلي من جدول الكوبونات (مثل النوع وقيمة الخصم الأساسية)
+            {
+              $lookup: {
+                from: 'coupons', // تأكد من اسم كولكشن الكوبونات (بالجمع وأحرف صغيرة)
+                localField: '_id',
+                foreignField: 'name',
+                as: 'couponDetails',
+              },
+            },
+            {
+              $unwind: {
+                path: '$couponDetails',
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                couponCode: '$_id',
+                usageCount: 1,
+                revenueGenerated: 1,
+                totalDiscounted: 1,
+                couponType: { $ifNull: ['$couponDetails.type', 'unknown'] },
+                baseDiscount: { $ifNull: ['$couponDetails.discount', 0] },
+              },
+            },
+          ]),
+        ]);
 
       // تنسيق مخرجات الكوبونات
       const couponsOverview = couponsOverviewRaw[0] || {
         totalCoupons: 0,
         activeCoupons: 0,
-        expiredCoupons: 0
+        expiredCoupons: 0,
       };
 
       // تنسيق مخرجات المبيعات والتسويق
@@ -133,14 +151,14 @@ export class MarketingStatisticsService {
           acc[curr._id] = {
             orders: curr.ordersCount,
             revenue: curr.totalRevenue,
-            discount: curr.totalDiscountGiven
+            discount: curr.totalDiscountGiven,
           };
           return acc;
         },
-        { 
-          organic: { orders: 0, revenue: 0, discount: 0 }, 
-          with_coupon: { orders: 0, revenue: 0, discount: 0 } 
-        }
+        {
+          organic: { orders: 0, revenue: 0, discount: 0 },
+          with_coupon: { orders: 0, revenue: 0, discount: 0 },
+        },
       );
 
       // إجمالي الخصومات التي تحملها المتجر خلال الفترة
@@ -152,16 +170,15 @@ export class MarketingStatisticsService {
           period: { start, end },
           overview: {
             ...couponsOverview,
-            totalMarketingCost // رقم بالغ الأهمية للمدير المالي
+            totalMarketingCost, // رقم بالغ الأهمية للمدير المالي
           },
           salesBreakdown: {
             organic: salesBreakdown['organic'],
-            marketing: salesBreakdown['with_coupon']
+            marketing: salesBreakdown['with_coupon'],
           },
-          topPerformingCoupons: topPerformingCouponsRaw
-        }
+          topPerformingCoupons: topPerformingCouponsRaw,
+        },
       };
-
     } catch (error) {
       return {
         status: 'error',

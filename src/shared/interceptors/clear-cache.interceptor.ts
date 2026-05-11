@@ -56,7 +56,11 @@ export class ClearCacheInterceptor implements NestInterceptor {
     if (store) {
       // Check if it's a Redis-backed store
       const client = store.client || store._client;
-      if (client && typeof client.keys === 'function' && typeof client.del === 'function') {
+      if (
+        client &&
+        typeof client.keys === 'function' &&
+        typeof client.del === 'function'
+      ) {
         for (const resource of resources) {
           const keys = await client.keys(`${resource}:*`);
           if (keys.length > 0) {
@@ -73,14 +77,17 @@ export class ClearCacheInterceptor implements NestInterceptor {
           const allKeys = await store.keys();
           if (Array.isArray(allKeys)) {
             for (const resource of resources) {
-              const matched = allKeys.filter((k: string) =>
-                typeof k === 'string' && k.startsWith(`${resource}:`),
+              const matched = allKeys.filter(
+                (k: string) =>
+                  typeof k === 'string' && k.startsWith(`${resource}:`),
               );
               for (const key of matched) {
                 await this.cacheManager.del(key);
               }
             }
-            this.logger.log(`🧹 Memory cache cleared for: ${resources.join(', ')}`);
+            this.logger.log(
+              `🧹 Memory cache cleared for: ${resources.join(', ')}`,
+            );
             return;
           }
         } catch {

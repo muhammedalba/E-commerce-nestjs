@@ -76,11 +76,16 @@ export class ApiFeatures<T> {
       if (idFields.includes(currentKey)) {
         const val = queryObj[key];
         if (typeof val === 'string' && val.length > 0) {
-          const ids = val.split(',').filter(id => /^[0-9a-fA-F]{24}$/.test(id.trim()));
+          const ids = val
+            .split(',')
+            .filter((id) => /^[0-9a-fA-F]{24}$/.test(id.trim()));
           if (ids.length > 0) {
             // Use the original key name or the specific SubCategories if it matches
-            const fieldName = currentKey === 'subcategories' ? 'SubCategories' : key;
-            mongoQuery[fieldName] = { $in: ids.map(id => new Types.ObjectId(id.trim())) };
+            const fieldName =
+              currentKey === 'subcategories' ? 'SubCategories' : key;
+            mongoQuery[fieldName] = {
+              $in: ids.map((id) => new Types.ObjectId(id.trim())),
+            };
           }
         }
         delete queryObj[key];
@@ -106,8 +111,10 @@ export class ApiFeatures<T> {
         if (operator === 'in' || operator === 'nin') {
           const values = value.split(',');
           // Cast to ObjectId if they look like IDs
-          mongoQuery[field][`$${operator}`] = values.map(v =>
-            /^[0-9a-fA-F]{24}$/.test(v.trim()) ? new Types.ObjectId(v.trim()) : v.trim()
+          mongoQuery[field][`$${operator}`] = values.map((v) =>
+            /^[0-9a-fA-F]{24}$/.test(v.trim())
+              ? new Types.ObjectId(v.trim())
+              : v.trim(),
           );
         } else {
           const num = Number(value);
@@ -149,7 +156,6 @@ export class ApiFeatures<T> {
         .filter((field) => field !== '')
         .join(' '); // Mongoose expects space-separated fields
       if (sortBy) {
-
         this.mongooseQuery = this.mongooseQuery.sort(sortBy);
       } else {
         // fallback default sort

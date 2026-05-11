@@ -23,8 +23,7 @@ import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 @Controller('promo-banner')
 @UseInterceptors(ClearCacheInterceptor)
 export class PromoBannerController {
-  constructor(private readonly promoBannerService: PromoBannerService) { }
-
+  constructor(private readonly promoBannerService: PromoBannerService) {}
 
   // ------------------------------------------------------
   // ---------------- get active banners ------------------
@@ -35,7 +34,6 @@ export class PromoBannerController {
   async getActiveBanner(): Promise<any> {
     return await this.promoBannerService.getActiveBanner();
   }
-
 
   // ------------------------------------------------------
   // ---------------- get all banners ----------------------
@@ -58,7 +56,6 @@ export class PromoBannerController {
     );
   }
 
-
   // ------------------------------------------------------
   // ---------------- get banner by id ----------------------
   // ------------------------------------------------------
@@ -77,7 +74,6 @@ export class PromoBannerController {
     );
   }
 
-
   // ------------------------------------------------------
   // ---------------- create banner -----------------------
   // ------------------------------------------------------
@@ -86,10 +82,9 @@ export class PromoBannerController {
   @ClearCache('promo-banner')
   async createBanner(
     @Body() promoBannerDto: PromoBannerDto,
-  ): Promise<{ data: PromoBanner}> {   
+  ): Promise<{ data: PromoBanner }> {
     return await this.promoBannerService.createBanner(promoBannerDto);
   }
-
 
   // -------------------------------------------------------
   // ---------------- update banner -----------------------

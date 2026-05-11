@@ -56,4 +56,4 @@ import { MailProcessor } from './mail.processor';
   providers: [EmailService, MailProcessor],
   exports: [EmailService, BullModule],
 })
-export class EmailModule { }
+export class EmailModule {}

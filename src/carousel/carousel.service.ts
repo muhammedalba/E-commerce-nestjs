@@ -41,17 +41,25 @@ export class CarouselService extends BaseService<CarouselDocument> {
       carouselLg: file;
     },
   ) {
-
-    // check if there is active banner 
+    // check if there is active banner
     if (createCarouselDto.isActive) {
-      const isCarouselExist = await this.CarouselModel.exists({ isActive: true });
+      const isCarouselExist = await this.CarouselModel.exists({
+        isActive: true,
+      });
       if (isCarouselExist) {
-        throw new BadRequestException(this.i18n.translate('exception.ALREADY_EXISTS_ACTIVE_CAROUSEL'));
+        throw new BadRequestException(
+          this.i18n.translate('exception.ALREADY_EXISTS_ACTIVE_CAROUSEL'),
+        );
       }
     }
 
     // generate unique slug for description
-    const newSlug = await generateUniqueSlug(createCarouselDto.description?.en, this.CarouselModel,null,this.i18n.translate('exception.NAME_EXISTS'));
+    const newSlug = await generateUniqueSlug(
+      createCarouselDto.description?.en,
+      this.CarouselModel,
+      null,
+      this.i18n.translate('exception.NAME_EXISTS'),
+    );
     createCarouselDto.slug = newSlug;
     //1) check if the files is not empty
     const requiredKeys = ['carouselSm', 'carouselMd', 'carouselLg'] as const;
@@ -207,7 +215,11 @@ export class CarouselService extends BaseService<CarouselDocument> {
     // 1) Find the document
     const carousel = await this.CarouselModel.findById(id).exec();
     if (!carousel) {
-      throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND', { args: { variable: 'Carousel' } }));
+      throw new BadRequestException(
+        this.i18n.translate('exception.NOT_FOUND', {
+          args: { variable: 'Carousel' },
+        }),
+      );
     }
     //  check if there is another active carousel
     if (updateCarouselDto.isActive === true && carousel.isActive !== true) {
@@ -217,14 +229,20 @@ export class CarouselService extends BaseService<CarouselDocument> {
       });
 
       if (isAnotherActive) {
-        throw new BadRequestException(this.i18n.translate('exception.ALREADY_EXISTS_ACTIVE_CAROUSEL'));
+        throw new BadRequestException(
+          this.i18n.translate('exception.ALREADY_EXISTS_ACTIVE_CAROUSEL'),
+        );
       }
     }
 
     // 2) Handle translations for description
     if (updateCarouselDto.description) {
       // generate unique slug for description
-      const newSlug = await generateUniqueSlug(updateCarouselDto.description?.en, this.CarouselModel, id);
+      const newSlug = await generateUniqueSlug(
+        updateCarouselDto.description?.en,
+        this.CarouselModel,
+        id,
+      );
       carousel.slug = newSlug;
       carousel.description = updateCarouselDto.description;
     }
@@ -238,8 +256,6 @@ export class CarouselService extends BaseService<CarouselDocument> {
     const imageFields = ['carouselSm', 'carouselMd', 'carouselLg'] as const;
     const baseUrl = process.env.BASE_URL || '';
 
-
-
     for (const key of imageFields) {
       // Note: files[key] is actually an array because of FileFieldsInterceptor
       const fileArray = (files as any)[key];
@@ -247,7 +263,10 @@ export class CarouselService extends BaseService<CarouselDocument> {
 
       if (file) {
         // Save new file
-        const newPath = await this.fileUploadService.saveFileToDisk(file, Carousel.name);
+        const newPath = await this.fileUploadService.saveFileToDisk(
+          file,
+          Carousel.name,
+        );
 
         // Delete old file
         let oldPath = carousel[key];
@@ -263,7 +282,7 @@ export class CarouselService extends BaseService<CarouselDocument> {
         carousel[key] = newPath;
       } else {
         // If no new file, ensure we don't save the absolute URL back to DB
-        let currentPath = carousel[key];
+        const currentPath = carousel[key];
         if (currentPath && baseUrl && currentPath.startsWith(baseUrl)) {
           carousel[key] = currentPath.replace(baseUrl, '');
         }

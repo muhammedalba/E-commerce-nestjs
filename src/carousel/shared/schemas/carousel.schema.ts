@@ -31,14 +31,14 @@ export class Carousel {
   @Prop({
     required: true,
     type: 'string',
-    default: '/default.png',
+    default: 'default.png',
     trim: true,
   })
   carouselMd?: string;
   @Prop({
     required: true,
     type: 'string',
-    default: '/default.png',
+    default: 'default.png',
     trim: true,
   })
   carouselLg?: string;
@@ -46,15 +46,12 @@ export class Carousel {
 export type CarouselDocument = HydratedDocument<Carousel>;
 export const CarouselSchema = SchemaFactory.createForClass(Carousel);
 
-
-
 // ─── Auto-exclude soft-deleted documents ─────────────────
 CarouselSchema.pre(['find', 'countDocuments'], function () {
   if (this.getFilter().isActive === undefined) {
     this.where({ isActive: { $ne: false } });
   }
 });
-
 
 //update , findOne and findAll add base url to image
 CarouselSchema.post('init', function (doc: HydratedDocument<Carousel>) {

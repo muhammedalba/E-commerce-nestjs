@@ -33,10 +33,7 @@ import { User, UserSchema } from './shared/schema/user.schema';
     PassportModule,
   ],
 
-  exports: [
-    // AuthService
-    MongooseModule,
-  ],
+  exports: [AuthService, MongooseModule, CustomI18nService],
   controllers: [AuthController],
   providers: [
     AuthCredentialService,

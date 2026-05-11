@@ -2,7 +2,6 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Model, Types } from 'mongoose';
 import { generateUniqueSlug } from 'src/shared/utils/slug.util';
 
-
 @Schema({ timestamps: true })
 export class Supplier {
   @Prop({ required: true, unique: true })
@@ -58,7 +57,6 @@ SupplierSchema.pre(['find', 'countDocuments'], function () {
     this.where({ isActive: { $ne: false } });
   }
 });
-
 
 //  update, findByIdAndUpdate ,findOne
 SupplierSchema.pre('findOneAndUpdate', async function (this: any, next) {

@@ -34,7 +34,7 @@ export class UserProfileService {
     private readonly jwtService: JwtService,
     private readonly cookieService: CookieService,
     private readonly tokenService: TokenService,
-  ) { }
+  ) {}
   async getMe(user_id: string): Promise<any> {
     // 1) get user from database
     const user = await this.userModel
@@ -59,8 +59,6 @@ export class UserProfileService {
     updateUserDto: UpdateUserDto,
     file: MulterFileType,
   ): Promise<any> {
-
-
     //1) check if user exists
     const user = await this.userModel
       .findById(user_id)
@@ -104,7 +102,7 @@ export class UserProfileService {
     if (!updateUserDto.phone) {
       updateUserDto.phone = user.phone;
     }
-    // 4) update user in the database 
+    // 4) update user in the database
     const updatedUser = await this.userModel
       .findByIdAndUpdate(
         { _id: user._id },
@@ -112,7 +110,10 @@ export class UserProfileService {
           $set: {
             name: updateUserDto.name,
             email: updateUserDto.email,
-            phone: updateUserDto.phone !== undefined ? updateUserDto.phone : user.phone,
+            phone:
+              updateUserDto.phone !== undefined
+                ? updateUserDto.phone
+                : user.phone,
             avatar: updateUserDto.avatar,
           },
         },

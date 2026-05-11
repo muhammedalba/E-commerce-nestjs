@@ -4,6 +4,7 @@ import {
   ArrayMinSize,
   IsArray,
   IsEnum,
+  IsMongoId,
   IsNumber,
   IsObject,
   IsOptional,
@@ -48,6 +49,10 @@ export class OrderAddressDto {
   @IsString()
   @Length(1, 50)
   city!: string;
+
+  @IsOptional()
+  @IsMongoId()
+  cityId?: string;
 
   @IsOptional()
   @Length(1, 50)

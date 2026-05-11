@@ -23,7 +23,7 @@ export class CouponsService extends BaseService<CouponDocument> {
   // ------------ ======  CREATE COUPON   ====== ---------- //
   // ------------ =============================== ---------- //
   async create(createCouponDto: CreateCouponDto) {
-    return await this.createOneDoc(createCouponDto, undefined,  Coupon.name, {
+    return await this.createOneDoc(createCouponDto, undefined, Coupon.name, {
       checkField: 'name',
       fieldValue: createCouponDto.name,
     });
@@ -32,8 +32,7 @@ export class CouponsService extends BaseService<CouponDocument> {
   // ------------ ======  GET ALL COUPONS  ====== ---------- //
   // ------------ =============================== ---------- //
   async findAll(queryString: QueryString) {
-    
-    return await this.findAllDoc( Coupon.name, queryString, undefined);
+    return await this.findAllDoc(Coupon.name, queryString, undefined);
   }
   // ------------ =============================== ---------- //
   // ------------ ======  GET COUPON BY ID   ====== ---------- //

@@ -12,12 +12,13 @@ import { I18nContext } from 'nestjs-i18n';
 @Injectable()
 export class ProductsStatistics {
   constructor(
-    @InjectModel(ProductVariant.name) private readonly VariantModel: Model<ProductVariant>,
+    @InjectModel(ProductVariant.name)
+    private readonly VariantModel: Model<ProductVariant>,
     private readonly ordersStatisticsService: OrdersStatisticsService,
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
     @InjectModel(Product.name) private readonly ProductModel: Model<Product>,
-  ) { }
+  ) {}
   async Products_statistics(
     startDate?: string,
     endDate?: string,
@@ -71,8 +72,8 @@ export class ProductsStatistics {
           supplierStats,
           categoryStats,
           subcategoryStats,
-          dateRange: { start, end }
-        }
+          dateRange: { start, end },
+        },
       };
 
       await this.cacheManager.set(cacheKey, result, 300_000);
@@ -86,32 +87,36 @@ export class ProductsStatistics {
 
   private async getTopProducts(start: Date, end: Date, lang: string) {
     // 1. Get Top Selling IDs and Quantities from Orders module (Clean Architecture approach)
-    const topSales = await this.ordersStatisticsService.getTopSellingProductIds(start, end, 5);
+    const topSales = await this.ordersStatisticsService.getTopSellingProductIds(
+      start,
+      end,
+      5,
+    );
 
     if (!topSales || topSales.length === 0) {
       return [];
     }
 
-    const productIds = topSales.map(item => item.productId);
+    const productIds = topSales.map((item) => item.productId);
 
     // 2. Fetch the product details and current stock variants using Product/Variant models
     // Since topSales has the object IDs, we need to map them back correctly.
     // We can use an aggregation on VariantModel or ProductModel, but since we just need simple data,
-    // we can do a lookup or parallel queries. For performance, let's just use a clean aggregation 
+    // we can do a lookup or parallel queries. For performance, let's just use a clean aggregation
     // filtered by the specific IDs.
     const enrichedProducts = await this.ProductModel.aggregate([
       {
         $match: {
-          _id: { $in: productIds } // Note: we assume productIds are ObjectIds already depending on schema, but they might need conversion
-        }
+          _id: { $in: productIds }, // Note: we assume productIds are ObjectIds already depending on schema, but they might need conversion
+        },
       },
       {
         $lookup: {
           from: 'productvariants',
           localField: '_id',
           foreignField: 'productId',
-          as: 'variants'
-        }
+          as: 'variants',
+        },
       },
       {
         $project: {
@@ -134,24 +139,35 @@ export class ProductsStatistics {
               in: {
                 $add: [
                   '$$value',
-                  { $multiply: [{ $ifNull: ['$$this.price', 0] }, { $ifNull: ['$$this.stock', 0] }] }
-                ]
-              }
-            }
-          }
-        }
-      }
+                  {
+                    $multiply: [
+                      { $ifNull: ['$$this.price', 0] },
+                      { $ifNull: ['$$this.stock', 0] },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
     ]);
 
     // 3. Merge in-memory to preserve the exact sort order of topSales
-    return topSales.map(sale => {
-      const productDetail = enrichedProducts.find(p => String(p._id) === String(sale.productId));
+    return topSales.map((sale) => {
+      const productDetail = enrichedProducts.find(
+        (p) => String(p._id) === String(sale.productId),
+      );
       return {
         _id: sale.productId,
         totalSold: sale.totalSold,
         // Include UI needed fields:
         title: productDetail?.title || { en: 'Unknown', ar: 'مجهول' },
-        imageCover: productDetail?.imageCover ? (productDetail.imageCover.startsWith('http') ? productDetail.imageCover : `${process.env.BASE_URL || ''}${productDetail.imageCover}`) : undefined,
+        imageCover: productDetail?.imageCover
+          ? productDetail.imageCover.startsWith('http')
+            ? productDetail.imageCover
+            : `${process.env.BASE_URL || ''}${productDetail.imageCover}`
+          : undefined,
         priceRange: productDetail?.priceRange,
         stockSummary: productDetail?.stockSummary,
         ratingsAverage: productDetail?.ratingsAverage,
@@ -162,7 +178,7 @@ export class ProductsStatistics {
         variantCount: productDetail?.variantCount,
         // Backend specific stats:
         stockValue: productDetail?.stockValue || 0,
-        brandId: productDetail?.brandId || null
+        brandId: productDetail?.brandId || null,
       };
     });
   }
@@ -174,15 +190,20 @@ export class ProductsStatistics {
         $group: {
           _id: '$brand',
           productCount: { $sum: 1 },
-        }
+        },
       },
       // 1. تحويل النص إلى ObjectId بأمان لتجنب الأخطاء
       {
         $addFields: {
           brandObjId: {
-            $convert: { input: '$_id', to: 'objectId', onError: null, onNull: null }
-          }
-        }
+            $convert: {
+              input: '$_id',
+              to: 'objectId',
+              onError: null,
+              onNull: null,
+            },
+          },
+        },
       },
       // 2. استخدام الحقل المحول في الـ Lookup
       {
@@ -190,8 +211,8 @@ export class ProductsStatistics {
           from: 'brands', // تأكد أن هذا اسم الكولكشن الفعلي في MongoDB
           localField: 'brandObjId',
           foreignField: '_id',
-          as: 'brandInfo'
-        }
+          as: 'brandInfo',
+        },
       },
       { $unwind: { path: '$brandInfo', preserveNullAndEmptyArrays: true } },
       {
@@ -200,13 +221,13 @@ export class ProductsStatistics {
           brandName: {
             $ifNull: [
               `$brandInfo.name.${lang}`,
-              { $ifNull: ['$brandInfo.name', 'Unknown'] }
-            ]
+              { $ifNull: ['$brandInfo.name', 'Unknown'] },
+            ],
           },
           productCount: 1,
-        }
+        },
       },
-      { $sort: { productCount: -1 } }
+      { $sort: { productCount: -1 } },
     ]);
   }
 
@@ -218,32 +239,37 @@ export class ProductsStatistics {
           from: 'products',
           localField: 'productId',
           foreignField: '_id',
-          as: 'product'
-        }
+          as: 'product',
+        },
       },
       { $unwind: '$product' },
       {
         $group: {
           _id: '$product.supplier',
           totalItems: { $sum: '$stock' },
-          investmentValue: { $sum: { $multiply: ['$price', '$stock'] } }
-        }
+          investmentValue: { $sum: { $multiply: ['$price', '$stock'] } },
+        },
       },
       // تحويل الـ id الخاص بالمورد لـ ObjectId
       {
         $addFields: {
           supplierObjId: {
-            $convert: { input: '$_id', to: 'objectId', onError: null, onNull: null }
-          }
-        }
+            $convert: {
+              input: '$_id',
+              to: 'objectId',
+              onError: null,
+              onNull: null,
+            },
+          },
+        },
       },
       {
         $lookup: {
           from: 'suppliers',
           localField: 'supplierObjId',
           foreignField: '_id',
-          as: 'supplierInfo'
-        }
+          as: 'supplierInfo',
+        },
       },
       { $unwind: { path: '$supplierInfo', preserveNullAndEmptyArrays: true } },
       {
@@ -252,10 +278,10 @@ export class ProductsStatistics {
           supplierId: '$_id',
           supplierName: { $ifNull: ['$supplierInfo.name', 'Direct Sourcing'] },
           totalItems: 1,
-          investmentValue: 1
-        }
+          investmentValue: 1,
+        },
       },
-      { $sort: { investmentValue: -1 } }
+      { $sort: { investmentValue: -1 } },
     ]);
   }
 
@@ -266,7 +292,7 @@ export class ProductsStatistics {
       statusCounts,
       currentPeriodProducts,
       inventoryAndCompositionSummary, // <== الاستعلام الجديد المدمج
-      lowStockCount
+      lowStockCount,
     ] = await Promise.all([
       // إجمالي المنتجات الكلي في النظام
       this.ProductModel.countDocuments(),
@@ -274,7 +300,7 @@ export class ProductsStatistics {
       // تقسيم المنتجات حسب الحالة (نشط / غير نشط) للمنتجات غير المحذوفة
       this.ProductModel.aggregate([
         { $match: { isDeleted: { $ne: true } } },
-        { $group: { _id: '$isActive', count: { $sum: 1 } } }
+        { $group: { _id: '$isActive', count: { $sum: 1 } } },
       ]),
 
       // المنتجات المضافة خلال الفترة المحددة
@@ -290,13 +316,13 @@ export class ProductsStatistics {
             _id: null,
             totalStockSystemWide: { $sum: '$stockSummary' }, // جمع المخزون الكلي سريعاً
             variableCount: {
-              $sum: { $cond: [{ $gt: ['$variantCount', 1] }, 1, 0] }
+              $sum: { $cond: [{ $gt: ['$variantCount', 1] }, 1, 0] },
             },
             simpleCount: {
-              $sum: { $cond: [{ $lte: ['$variantCount', 1] }, 1, 0] }
-            }
-          }
-        }
+              $sum: { $cond: [{ $lte: ['$variantCount', 1] }, 1, 0] },
+            },
+          },
+        },
       ]),
 
       // عدد المتغيرات ذات المخزون المنخفض (أقل من 15)
@@ -304,7 +330,7 @@ export class ProductsStatistics {
       this.VariantModel.countDocuments({
         stock: { $lt: 15 },
         isDeleted: { $ne: true },
-      })
+      }),
     ]);
 
     // تنسيق مخرجات الحالات
@@ -313,14 +339,14 @@ export class ProductsStatistics {
         acc[curr._id] = curr.count;
         return acc;
       },
-      {}
+      {},
     );
 
     // استخراج بيانات المخزون والتكوين بأمان (في حال كانت الداتابيز فارغة)
     const summaryStats = inventoryAndCompositionSummary[0] || {
       totalStockSystemWide: 0,
       variableCount: 0,
-      simpleCount: 0
+      simpleCount: 0,
     };
 
     // تنسيق مخرجات التكوين
@@ -335,7 +361,7 @@ export class ProductsStatistics {
       currentPeriodProducts,
       totalStock: summaryStats.totalStockSystemWide, // <== إضافة إجمالي المخزون للرد
       composition,
-      lowStockCount
+      lowStockCount,
     };
   }
   private async getCategoryDistribution(lang: string) {
@@ -345,9 +371,14 @@ export class ProductsStatistics {
       {
         $addFields: {
           catObjId: {
-            $convert: { input: '$_id', to: 'objectId', onError: null, onNull: null }
-          }
-        }
+            $convert: {
+              input: '$_id',
+              to: 'objectId',
+              onError: null,
+              onNull: null,
+            },
+          },
+        },
       },
       {
         $lookup: {
@@ -364,13 +395,13 @@ export class ProductsStatistics {
           name: {
             $ifNull: [
               `$categoryInfo.name.${lang}`,
-              { $ifNull: ['$categoryInfo.name', 'Uncategorized'] }
-            ]
+              { $ifNull: ['$categoryInfo.name', 'Uncategorized'] },
+            ],
           },
           value: '$count',
         },
       },
-      { $sort: { value: -1 } }
+      { $sort: { value: -1 } },
     ]);
   }
   private async getSubcategoryDistribution(lang: string) {
@@ -383,8 +414,8 @@ export class ProductsStatistics {
       {
         $unwind: {
           path: '$SubCategories', // تأكد من اسم الحقل في سكيما المنتج
-          preserveNullAndEmptyArrays: false // نتجاهل المنتجات التي ليس لها فئة فرعية لأننا حسبناها في الفئات الرئيسية
-        }
+          preserveNullAndEmptyArrays: false, // نتجاهل المنتجات التي ليس لها فئة فرعية لأننا حسبناها في الفئات الرئيسية
+        },
       },
 
       // 3. التجميع والعد بناءً على الـ ID الخاص بالفئة الفرعية
@@ -399,9 +430,14 @@ export class ProductsStatistics {
       {
         $addFields: {
           subCatObjId: {
-            $convert: { input: '$_id', to: 'objectId', onError: null, onNull: null }
-          }
-        }
+            $convert: {
+              input: '$_id',
+              to: 'objectId',
+              onError: null,
+              onNull: null,
+            },
+          },
+        },
       },
 
       // 5. الربط مع جدول الفئات الفرعية لجلب الاسم
@@ -415,7 +451,9 @@ export class ProductsStatistics {
       },
 
       // 6. تفكيك المصفوفة الناتجة عن الربط
-      { $unwind: { path: '$subCategoryInfo', preserveNullAndEmptyArrays: true } },
+      {
+        $unwind: { path: '$subCategoryInfo', preserveNullAndEmptyArrays: true },
+      },
 
       // 7. تشكيل المخرجات النهائية مع دعم تعدد اللغات
       {
@@ -425,8 +463,8 @@ export class ProductsStatistics {
           name: {
             $ifNull: [
               `$subCategoryInfo.name.${lang}`,
-              { $ifNull: ['$subCategoryInfo.name.en', 'Unknown Subcategory'] }
-            ]
+              { $ifNull: ['$subCategoryInfo.name.en', 'Unknown Subcategory'] },
+            ],
           },
           value: '$count',
         },
@@ -436,7 +474,7 @@ export class ProductsStatistics {
       { $sort: { value: -1 } },
 
       // يمكنك إضافة $limit: 10 إذا كان لديك مئات الفئات الفرعية ولا تريد إثقال الواجهة
-      { $limit: 10 }
+      { $limit: 10 },
     ]);
   }
 }

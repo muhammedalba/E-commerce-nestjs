@@ -32,7 +32,13 @@ export class MailProcessor extends WorkerHost {
       }
       case 'send-random-code': {
         const { email, name, code, subject, lang } = job.data;
-        await this.emailService.sendRandomCode(email, name, code, subject, lang);
+        await this.emailService.sendRandomCode(
+          email,
+          name,
+          code,
+          subject,
+          lang,
+        );
         return {};
       }
       case 'new-admin-order': {

@@ -78,7 +78,8 @@ export class ProductFileService {
         files.imageCover[0]
       ) {
         result.imageCover =
-          await this.uploadSingleFile(files.imageCover[0], Product.name) ?? '';
+          (await this.uploadSingleFile(files.imageCover[0], Product.name)) ??
+          '';
       }
 
       if (
@@ -92,7 +93,10 @@ export class ProductFileService {
         );
       }
 
-      result.images = await this.uploadMultipleFiles(files.images, Product.name);
+      result.images = await this.uploadMultipleFiles(
+        files.images,
+        Product.name,
+      );
     } catch {
       throw new InternalServerErrorException(
         this.i18n.translate('exception.ERROR_SAVE'),

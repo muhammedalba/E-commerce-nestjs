@@ -3,6 +3,9 @@ import { Document, Types } from 'mongoose';
 import { OrderItem, OrderItemSchema } from './order-item.schema';
 import { User } from 'src/auth/shared/schema/user.schema';
 import { OrderAddress, OrderAddressSchema } from './order-adress.schema';
+import { ShippingProvider } from 'src/shipping/shared/schema/shipping-provider.schema';
+import { ShippingRate } from 'src/shipping/shared/schema/shipping-rate.schema';
+import { PaymentMethod as NewPaymentMethod } from 'src/payments/shared/schema/payment-method.schema';
 
 @Schema({ timestamps: true })
 export class Order extends Document {
@@ -39,9 +42,6 @@ export class Order extends Document {
   @Prop({ default: 0 })
   totalQuantity!: number;
 
-  @Prop({ min: 0, default: undefined })
-  totalPriceAfterDiscount?: number;
-
   @Prop({ default: false })
   isCheckedOut!: boolean;
 
@@ -51,14 +51,45 @@ export class Order extends Document {
   @Prop({ type: String, default: 'pending' })
   status!: 'pending' | 'processing' | 'completed' | 'cancelled';
 
-  @Prop({ type: String, default: 'bankTransfer' })
-  paymentMethod!: 'cash' | 'creditCard' | 'paypal' | 'bankTransfer';
+  // --- Legacy Fields (Replaced by paymentMethodId and shippingProviderId) ---
+  @Prop({ type: String, required: false })
+  paymentMethod?: string;
 
-  @Prop({ type: String, default: 'default' })
-  shippingMethod!: 'default' | 'express' | 'pickup';
+  @Prop({ type: String, required: false })
+  shippingMethod?: string;
+  // --------------------------------------------------------------------------
 
   @Prop({ type: OrderAddressSchema, required: true })
-  shippingAddress!: OrderAddress; // Array of strings to store address lines
+  shippingAddress!: OrderAddress;
+
+  // --- New Enterprise Commerce Fields ---
+  @Prop({ type: Types.ObjectId, ref: 'ShippingProvider' })
+  shippingProviderId?: Types.ObjectId;
+
+  @Prop({ type: Types.ObjectId, ref: 'ShippingRate' })
+  shippingRateId?: Types.ObjectId;
+
+  @Prop({ type: Types.ObjectId, ref: 'PaymentMethod' })
+  paymentMethodId?: Types.ObjectId;
+
+  @Prop({ default: 0 })
+  shippingAmount!: number;
+
+  @Prop({ default: 0 })
+  taxAmount!: number;
+
+  @Prop({ default: 0 })
+  paymentFees!: number;
+
+  @Prop({ default: 0 })
+  grandTotal!: number; // final amount paid by user
+
+  @Prop({ default: 'SAR' })
+  currency!: string;
+
+  @Prop({ type: Object })
+  checkoutSummary?: any; // Snapshot of the checkout calculation summary
+  // --------------------------------------
 
   @Prop({ type: String, default: undefined })
   couponCode?: string;

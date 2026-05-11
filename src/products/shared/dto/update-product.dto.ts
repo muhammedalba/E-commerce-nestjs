@@ -10,7 +10,10 @@ import {
   IsBoolean,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { FieldLocalizeDto, ArrayLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
+import {
+  FieldLocalizeDto,
+  ArrayLocalizeDto,
+} from 'src/shared/utils/field-locolaized.dto';
 import { VariantOperationsDto } from './variant.dto';
 import { ProductAttributeDefinitionDto } from './create-product.dto';
 import { Exists } from 'src/shared/utils/decorators/exists.decorator';
@@ -76,7 +79,7 @@ export class UpdateProductDto {
   @Exists(SubCategory.name)
   SubCategories?: string[];
 
-  @IsMongoId() 
+  @IsMongoId()
   @IsOptional()
   @Exists(Brand.name)
   brand?: string;
