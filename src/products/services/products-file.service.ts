@@ -217,10 +217,10 @@ export class ProductFileService {
     images?: string[];
   }): Promise<void> {
     if (doc.imageCover) {
-      await this.fileUploadService.deleteFile(`.${doc.imageCover}`);
+      await this.fileUploadService.deleteFile(doc.imageCover);
     }
     if (doc.infoProductPdf) {
-      await this.fileUploadService.deleteFile(`.${doc.infoProductPdf}`);
+      await this.fileUploadService.deleteFile(doc.infoProductPdf);
     }
     if (doc.images && Array.isArray(doc.images)) {
       await this.fileUploadService.deleteFiles(doc.images);

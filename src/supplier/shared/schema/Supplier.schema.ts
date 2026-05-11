@@ -56,6 +56,7 @@ SupplierSchema.pre(['find', 'countDocuments'], function () {
   if (this.getFilter().isActive === undefined) {
     this.where({ isActive: { $ne: false } });
   }
+  
 });
 
 //  update, findByIdAndUpdate ,findOne
@@ -82,9 +83,11 @@ SupplierSchema.pre('findOneAndUpdate', async function (this: any, next) {
 
 //update , findOne and findAll
 SupplierSchema.post('init', function (doc) {
-  if (doc.avatar && doc.name) {
-    if (!doc.avatar.startsWith(process.env.BASE_URL ?? 'http')) {
-      doc.avatar = `${process.env.BASE_URL}${doc.avatar}`;
-    }
+  
+  if (doc.avatar && !doc.avatar.startsWith(process.env.BASE_URL ?? 'http')) {
+    
+    doc.avatar = `${process.env.BASE_URL}${doc.avatar}`;
+    console.log(doc.avatar);  
+
   }
 });

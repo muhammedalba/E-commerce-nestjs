@@ -45,9 +45,6 @@ export class Setting {
   @Prop({ type: Number, default: 1, min: 0 })
   declare exchangeRate: number;
 
-  // إعدادات الشحن المجاني
-  @Prop({ type: Number, default: 0 })
-  declare freeShippingThreshold: number;
 
   // إعدادات SEO
   @Prop({ type: Object, default: { ar: '', en: '' } })
@@ -110,7 +107,9 @@ export class Setting {
     guestCheckout: boolean;
     wishlist: boolean;
   };
-
+  // إعدادات الشحن المجاني
+  @Prop({ type: Number, default: 0 })
+  declare freeShippingThreshold: number;
   // إعدادات الضرائب
   @Prop({ type: Number, default: 0 })
   declare vatRate: number;
@@ -118,9 +117,7 @@ export class Setting {
   @Prop({ type: Boolean, default: false })
   declare taxesIncluded: boolean;
 
-  // إعدادات النظام المتقدمة
-  @Prop({ type: Boolean, default: false })
-  declare debugMode: boolean;
+
 
   @Prop({ type: Number, default: 0 })
   declare minOrderAmount: number;
@@ -141,7 +138,9 @@ export class Setting {
     bankTransfer: boolean;
     cod: boolean;
   };
-
+  // إعدادات النظام المتقدمة
+  @Prop({ type: Boolean, default: false })
+  declare debugMode: boolean;
   // المفقودة المضافة حديثاً
   @Prop({ type: Boolean, default: true })
   declare allowRegistration: boolean;
@@ -179,14 +178,6 @@ const prependBaseUrl = (doc: any) => {
   }
 };
 
-// خطاف بعد البحث (find, findOne)
-// SettingSchema.post('find', function(docs) {
-//   docs.forEach(prependBaseUrl);
-// });
-
-// SettingSchema.post('findOne', function(doc) {
-//   prependBaseUrl(doc);
-// });
 
 // خطاف بعد التحديث (findOneAndUpdate)
 SettingSchema.post('findOneAndUpdate', function (doc) {
