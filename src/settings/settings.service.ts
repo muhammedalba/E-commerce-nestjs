@@ -61,7 +61,6 @@ export class SettingsService {
     const updateData: Record<string, any> = { ...dto };
     const imageFields = ['favicon', 'logo'] as const;
    
-    console.log('files', files);
     // 6. استخدام Promise.all لمعالجة رفع الصور بالتوازي (Parallel) لتحسين السرعة
     await Promise.all(
       imageFields.map(async (key) => {

@@ -13,6 +13,7 @@ import { FileUploadService } from 'src/file-upload/file-upload.service';
 import { MulterFileType } from '../interfaces/fileInterface';
 import { I18nContext, TranslateOptions } from 'nestjs-i18n';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
+import * as path from 'path';
 //
 interface FileSchema {
   avatar?: string;
@@ -28,10 +29,14 @@ export class BaseService<T> {
     protected readonly model: Model<T>,
     protected readonly i18n: CustomI18nService,
     protected readonly fileUploadService: FileUploadService,
-  ) {}
+  ) { }
   // This method is used to get the default file path based on the model name '/uploads/users/avatar.png'
-  private getDefaultFilePath = (modelName: string): string =>
-    `/${process.env.UPLOADS_FOLDER || 'uploads'}/${modelName}/${modelName === 'users' ? 'avatar.png' : 'default.png'}`;
+  private getDefaultFilePath(modelName: string): string {
+    const uploadsDir = process.env.UPLOADS_FOLDER || 'uploads';
+    const defaultImage = modelName === 'users' ? 'avatar.png' : 'default.png';
+
+    return path.posix.join('/', uploadsDir, modelName, defaultImage);
+  }
 
   // This method is used to check if the email is already taken
   protected async isFieldTaken(
@@ -70,6 +75,7 @@ export class BaseService<T> {
     file: MulterFileType,
     modelName: string,
     doc?: FileSchema,
+    oldPath?: string,
   ): Promise<string> {
     // Return default file path if no file is provided
     if (!file) {
@@ -79,8 +85,8 @@ export class BaseService<T> {
     try {
       // If a document is provided, update the file; otherwise, save a new file
       return doc
-        ? ((await this.fileUploadService.updateFile(file, modelName, doc)) ??
-            this.getDefaultFilePath(modelName))
+        ? ((await this.fileUploadService.updateFile(file, modelName, doc, oldPath)) ??
+          this.getDefaultFilePath(modelName))
         : await this.fileUploadService.saveFileToDisk(file, modelName);
     } catch (error) {
       this.logger.error('File upload failed', error);
@@ -94,7 +100,7 @@ export class BaseService<T> {
   // checkField : field to check if it already exists
   // fieldValue : value of the field to check
   async createOneDoc(
-    CreateDataDto: { [key: string]: any },
+    CreateDataDto: Partial<T> | Record<string, any>,
     file: MulterFileType,
     modelName: string,
     options?: {
@@ -112,25 +118,32 @@ export class BaseService<T> {
 
     const filePath = await this.handleFileUpload(file, modelName);
     CreateDataDto[fileFieldName] = filePath;
+    try {
+      const newDoc = await this.model.create(CreateDataDto);
 
-    const newDoc = await this.model.create(CreateDataDto);
+      if (filePath) {
+        (newDoc as any)[fileFieldName] = `${process.env.BASE_URL}${filePath}`;
+      }
 
-    if (filePath) {
-      (newDoc as any)[fileFieldName] = `${process.env.BASE_URL}${filePath}`;
+      // let newDocFilter: T;
+      let newDocFilter = newDoc as any;
+      if (modelName === 'users') {
+        newDocFilter = {
+          ...(newDoc as any).toObject(),
+          password: undefined,
+          __v: undefined,
+        } as T;
+      }
+      return this.i18n.localize(newDocFilter) as T;
+
+      // return this.i18n.localize(newDocFilter);
+    } catch (dbError) {
+      if (filePath && !filePath.includes('default.png') && !filePath.includes('avatar.png')) {
+        this.logger.warn(`DB insertion failed. Rolling back file: ${filePath}`);
+        await this.fileUploadService.deleteFile(filePath).catch(() => { });
+      }
+      throw dbError;
     }
-
-    let newDocFilter: T;
-    if (modelName === 'users') {
-      newDocFilter = {
-        ...(newDoc as any).toObject(),
-        password: undefined,
-        __v: undefined,
-      } as T;
-    } else {
-      newDocFilter = newDoc as unknown as T;
-    }
-
-    return this.i18n.localize(newDocFilter);
   }
   // ====================================== find all docs ======================================
   // populate : object that contains the path and select fields
@@ -159,9 +172,9 @@ export class BaseService<T> {
 
     const data = populate
       ? await features
-          .getQuery()
-          .populate({ path: populate.path, select: populate.select })
-      : await features.getQuery();
+        .getQuery()
+        .populate({ path: populate.path, select: populate.select }).lean()
+      : await features.getQuery().lean();
     if (!data) {
       throw new BadRequestException(this.t('exception.NOT_FOUND'));
     }
@@ -185,11 +198,12 @@ export class BaseService<T> {
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto.id);
     // 1) check  doc if found
     const doc = isObjectId
-      ? await this.model.findById(idParamDto.id).select(selected).exec()
+      ? await this.model.findById(idParamDto.id).select(selected).lean().exec()
       : await this.model
-          .findOne({ slug: idParamDto.id })
-          .select(selected)
-          .exec();
+        .findOne({ slug: idParamDto.id })
+        .select(selected)
+        .lean()
+        .exec();
 
     if (!doc) {
       throw new NotFoundException(
@@ -226,9 +240,9 @@ export class BaseService<T> {
     // Always include _id so that excludeId works correctly in isFieldTaken
     const doc = (await this.model
       .findById(idParamDto.id)
-      .select(`${selectedFields} _id`)
-      .exec()) as FileSchema;
-
+      .select(`${selectedFields} _id ${fileFieldName}`)
+      .lean()
+      .exec()) as any;
     if (!doc) {
       throw new NotFoundException(this.t('exception.NOT_FOUND'));
     }
@@ -236,30 +250,40 @@ export class BaseService<T> {
     if (checkField && fieldValue)
       await this.isFieldTaken(checkField, fieldValue, doc._id);
     // 3) update doc ( avatar image ) if new file is provided
-    let filePath: string | undefined;
+    let newFilePath: string | undefined;
     if (file) {
       // 2) handle file upload
-      filePath = await this.handleFileUpload(file, modelName, doc);
+      const oldPath = doc[fileFieldName] as string | undefined;
+      newFilePath = await this.handleFileUpload(file, modelName, doc, oldPath);
 
-      UpdateDataDto[fileFieldName] = filePath;
+      UpdateDataDto[fileFieldName] = newFilePath;
     }
-    // 5) update doc in the database
-    const updatedData = await this.model.findByIdAndUpdate(
-      { _id: doc._id },
-      { $set: UpdateDataDto },
-      { new: true, runValidators: true },
-    );
-    // 4) optionally add full URL to avatar or image
-    if (filePath && updatedData) {
-      updatedData[fileFieldName] = `${process.env.BASE_URL}${filePath}`;
+    try {
+      // 5) update doc in the database
+      const updatedData = await this.model.findByIdAndUpdate(
+        { _id: doc._id },
+        { $set: UpdateDataDto },
+        { new: true, runValidators: true, lean: true },
+      );
+      // 4) optionally add full URL to avatar or image
+      if (newFilePath && updatedData) {
+        updatedData[fileFieldName] = `${process.env.BASE_URL}${newFilePath}`;
+      }
+      return updatedData ? this.i18n.localize(updatedData) : null;
+    } catch (dbError) {
+      if (newFilePath) {
+        this.logger.warn(`DB update failed. Rolling back file: ${newFilePath}`);
+        await this.fileUploadService.deleteFile(newFilePath).catch(() => { }); // نتجاهل خطأ الحذف بصمت
+      }
+
+      // إعادة رمي الخطأ للـ Controller ليتعامل معه (مثلاً إرسال رسالة للمستخدم)
+      throw dbError;
     }
-    return updatedData ? this.i18n.localize(updatedData) : null;
   }
 
   // ====================================== delete one doc ======================================
   // idParamDto : object that contains the id
-  // selected : string that contains the fields to select
-  async deleteOneDoc(idParamDto: IdParamDto, selected: string): Promise<void> {
+  async deleteOneDoc(idParamDto: IdParamDto, fileFieldName: string = 'avatar'): Promise<void> {
     // 1) check if id is valid ObjectId or slug
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto.id);
     if (!isObjectId) {
@@ -270,19 +294,18 @@ export class BaseService<T> {
     // 1) check  document if found
     const doc = (await this.model
       .findById(idParamDto.id)
-      .select(selected)) as FileSchema | null;
+      .select(`${fileFieldName}`)) as any;
     if (!doc) {
       throw new NotFoundException(this.t('exception.NOT_FOUND'));
     }
     //3) delete  file from disk
 
-    const imagePath = doc.avatar || doc.image || doc.carouselImage;
+    const imagePath = doc[fileFieldName];
     if (imagePath) {
-      const path = `.${imagePath}`;
       try {
-        await this.fileUploadService.deleteFile(path);
+        await this.fileUploadService.deleteFile(imagePath);
       } catch (error) {
-        this.logger.error(`Error deleting file ${path}`, error);
+        this.logger.error(`Error deleting file ${imagePath}`, error);
         throw new BadGatewayException(
           this.t('exception.PROFILE_UPDATE_OLD-IMAGE'),
         );
