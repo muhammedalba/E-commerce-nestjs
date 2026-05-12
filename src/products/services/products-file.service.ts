@@ -147,7 +147,7 @@ export class ProductFileService {
           if (key === 'imageCover' || key === 'infoProductPdf') {
             const oldPath = doc[key];
             if (oldPath) {
-              await this.fileUploadService.deleteFile(`.${oldPath}`);
+              await this.fileUploadService.deleteFile(oldPath);
             }
           }
           (result as any)[key] = newPath;

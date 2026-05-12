@@ -1,13 +1,13 @@
 import {
   BadRequestException,
-  Inject,
+  ConflictException,
   Injectable,
   InternalServerErrorException,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
-import { Connection, Model, Types } from 'mongoose';
+import { AnyBulkWriteOperation, Connection, Model, Types } from 'mongoose';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { Product, ProductDocument } from '../shared/schemas/Product.schema';
@@ -26,6 +26,9 @@ import { ProductFileService } from './products-file.service';
 import { ProductSkuService } from './products-sku.service';
 import { ProductQueryService } from './products-query.service';
 import { generateUniqueSlug } from 'src/shared/utils/slug.util';
+import { sanitizePayload } from 'src/shared/utils/object.utils';
+import { withTransactionRetry } from 'src/shared/utils/database.utils';
+import { handleDuplicateKeyError } from '../products-helper/product-error.utils';
 
 /**
  * Handles all write operations: create, update, delete, restore.
@@ -46,11 +49,15 @@ export class ProductMutationService {
     private readonly queryService: ProductQueryService,
     private readonly i18n: CustomI18nService,
     private readonly eventEmitter: EventEmitter2,
-  ) {}
+  ) { }
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-  //  CREATE PRODUCT (Transaction)
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+
+  /**
+   * 
+   * @param createProductDto 
+   * @param files   @description the file that will uploaded files
+   * @returns    @description the product that will created
+   */
 
   async create(
     createProductDto: CreateProductDto,
@@ -61,94 +68,113 @@ export class ProductMutationService {
     },
   ) {
     const { variants, ...productData } = createProductDto;
+    let uploadedFiles: any = null; // تعريف المتغير هنا ليسهل الوصول إليه في الـ catch
 
-    // 1) Validate attributes
-    this.skuService.validateVariantAttributes(
-      variants,
-      createProductDto.allowedAttributes || [],
-    );
-    // 2) Generate slug
+    // ==========================================
+    // خط الدفاع الأول: العمليات السريعة (Fail-Fast)
+    // ==========================================
+
+    // 1. التحقق من السمات (Attributes)
+    this.skuService.validateVariantAttributes(variants, createProductDto.allowedAttributes || []);
+
+    // 2. توليد Slug والتحقق من الـ SKUs (عمليات سريعة في قاعدة البيانات)
+    // نقوم بها قبل رفع الملفات، لتوفير الباندويث والمساحة إذا كان هناك خطأ
     productData.slug = await generateUniqueSlug(
       productData.title?.en,
       this.productModel,
       undefined,
       this.i18n.translate('exception.NAME_EXISTS'),
     );
-    // 3) Generate & Check SKUs
     await this.skuService.generateAndValidateSkus(variants, productData.slug);
 
-    // 4) Handle file uploads
-    const uploadedFiles = await this.fileService.handleCreateFiles(files);
+    // ==========================================
+    // المرحلة الثانية: العمليات المكلفة (رفع الملفات)
+    // ==========================================
+
+    // 3. الآن فقط نقوم برفع الملفات (لأننا تأكدنا أن البيانات الأساسية سليمة)
+    uploadedFiles = await this.fileService.handleCreateFiles(files);
     Object.assign(productData, uploadedFiles);
 
-    // 5) Start Transaction
+    // ==========================================
+    // المرحلة الثالثة: الحفظ النهائي (Transaction)
+    // ==========================================
+
     const session = await this.connection.startSession();
     session.startTransaction();
 
     try {
-      const [newProduct] = await this.productModel.create(
-        [productData as any],
-        { session },
+      const [newProduct] = await this.productModel.create([productData as any], { session });
+
+      if (!newProduct) throw new InternalServerErrorException('Failed to create product');
+
+      // 4. تجهيز المتغيرات بالتوازي (لأننا فحصنا الـ SKUs مسبقاً)
+      const variantDocs = await Promise.all(
+        variants.map(async (v) => ({
+          ...v,
+          productId: newProduct._id,
+          sku: v.sku ? await this.skuService.ensureUnique(v.sku) : undefined,
+        }))
       );
 
-      if (!newProduct) {
-        throw new InternalServerErrorException('Failed to create product');
-      }
-
-      // Attach productId and ensure unique SKUs
-      const variantDocs = variants.map((v) => ({
-        ...v,
-        productId: newProduct._id,
-      }));
-
-      for (const doc of variantDocs) {
-        if (doc.sku) {
-          doc.sku = await this.skuService.ensureUnique(doc.sku);
-        }
-      }
-      const createdVariants = await this.variantModel.insertMany(variantDocs, {
-        session,
-      });
+      const createdVariants = await this.variantModel.insertMany(variantDocs, { session });
 
       await session.commitTransaction();
+      // 5. الأحداث وتجهيز الرد
+      this.eventEmitter.emit('variant.changed', new VariantChangedEvent(newProduct._id));
 
-      // Emit async event for aggregation
-      this.eventEmitter.emit(
-        'variant.changed',
-        new VariantChangedEvent(newProduct._id),
-      );
-
-      // Invalidate cache
-
-      // Prepare response
       const baseUrl = process.env.BASE_URL || '';
-      newProduct.imageCover = `${baseUrl}${productData.imageCover}`;
-      newProduct.images = newProduct.images?.map((img) => `${baseUrl}${img}`);
-      newProduct.infoProductPdf = productData.infoProductPdf
-        ? `${baseUrl}${productData.infoProductPdf}`
-        : undefined;
+      const productResponse = newProduct.toObject();
+
+      productResponse.imageCover = `${baseUrl}${productResponse.imageCover}`;
+      if (productResponse.images?.length) {
+        productResponse.images = productResponse.images.map((img) => `${baseUrl}${img}`);
+      }
+      if (productResponse.infoProductPdf) {
+        productResponse.infoProductPdf = `${baseUrl}${productResponse.infoProductPdf}`;
+      }
 
       return {
-        product: this.i18n.localize(newProduct),
+        product: this.i18n.localize(productResponse),
         variants: createdVariants,
       };
+
     } catch (error: any) {
+      // تراجع عن عمليات قاعدة البيانات
       await session.abortTransaction();
-      this.logger.error(
-        'Transaction Error (create product)',
-        error?.stack || error,
-      );
-      throw new InternalServerErrorException(
-        this.i18n.translate('exception.ERROR_SAVE'),
-      );
+      this.logger.error('Transaction Error (create product)', error?.stack || error);
+
+      // ==========================================
+      // خط الدفاع الثاني: تنظيف الملفات اليتيمة (Rollback)
+      // ==========================================
+      // إذا تم رفع الملفات لكن حدث خطأ في قاعدة البيانات، نقوم بمسحها
+      if (uploadedFiles) {
+        try {
+          // تأكد من إضافة دالة مثل deleteFiles في fileService الخاص بك
+          await this.fileService.deleteProductFiles(uploadedFiles);
+          this.logger.log('Orphaned files deleted successfully due to transaction failure.');
+        } catch (cleanupError) {
+          this.logger.error('Failed to clean up orphaned files', cleanupError);
+        }
+      }
+
+      if (error.code === 11000) {
+        throw new ConflictException(this.i18n.translate('exception.NAME_EXISTS'));
+      }
+
+      throw new InternalServerErrorException(this.i18n.translate('exception.ERROR_SAVE'));
     } finally {
       session.endSession();
     }
   }
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-  //  UPDATE PRODUCT (Transaction)
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+
+  /*
+   * @description this function will update a product
+   * @param idParamDto @description the id of the product to be updated
+   * @param updateProductDto @description the data of the product to be updated
+   * @param files @description the files of the product to be updated
+   * @returns @description the updated product
+   */
 
   async update(
     idParamDto: IdParamDto,
@@ -159,239 +185,240 @@ export class ProductMutationService {
       images?: MulterFilesType;
     },
   ) {
-    const { variants: variantOps, ...productData } = updateProductDto;
+    // 1. Sanitize Payload (Remove undefined fields/arrays gracefully)
+    const cleanDto = sanitizePayload(updateProductDto);
+    const { variants: variantOps, ...productData } = cleanDto;
 
-    // 1) Fetch existing product
+    // Transformed file tracking for precise rollback
+    let uploadedFiles: any = null;
+
+    // ==========================================
+    // PHASE 1: Fetch Current State
+    // ==========================================
+    // ARCHITECTURAL FIX: Removed .select() to ensure the doc is fully loaded.
+    // This guarantees accurate hydration later for validation, and prevents data-loss scenarios.
+    // Using .lean() here is safe because this snapshot is purely read-only logic evaluation.
     const doc = await this.productModel
       .findById(idParamDto.id)
-      .select(
-        'infoProductPdf imageCover images SubCategories slug allowedAttributes ',
-      )
-      .populate('variants', 'attributes')
+      .populate({
+        path: 'variants',
+        match: { isDeleted: { $ne: true } } // CRITICAL: Consistently ignore soft-deleted variants
+      })
       .lean();
 
     if (!doc) {
-      throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
+      throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
     }
 
-    // 2) Handle slug change
+    const effectiveAllowedAttributes = cleanDto.allowedAttributes || doc.allowedAttributes || [];
+
+    // ==========================================
+    // PHASE 2: In-Memory Validation (Fail-Fast)
+    // ==========================================
+    if (variantOps?.create && variantOps.create.length > 0) {
+      const existingSimpleCount = doc.variants?.filter(
+        (v: any) => !v.attributes || Object.keys(v.attributes).length === 0,
+      ).length || 0;
+
+      this.skuService.validateVariantAttributes(
+        variantOps.create,
+        effectiveAllowedAttributes,
+        doc.variants?.length || 0,
+        existingSimpleCount,
+      );
+    }
+
+    if (cleanDto.allowedAttributes) {
+      const variantsToValidate = (doc.variants as any[])?.filter((v) => {
+        const isBeingUpdated = variantOps?.update?.some((u) => String(u._id) === String(v._id));
+        const isBeingDeleted = variantOps?.delete?.some((d) => String(d) === String(v._id));
+        return !isBeingUpdated && !isBeingDeleted;
+      }) || [];
+
+      if (variantsToValidate.length > 0) {
+        this.skuService.validateVariantAttributes(variantsToValidate, cleanDto.allowedAttributes, 0, 0);
+      }
+    }
+
+    // ==========================================
+    // PHASE 3: DB-Light Logic (Slugs & SKUs)
+    // ==========================================
+    let newBaseSlug = doc.slug;
+    console.log(productData.title);
     if (productData.title) {
-      productData.slug = await generateUniqueSlug(
+      newBaseSlug = await generateUniqueSlug(
         productData.title.en,
         this.productModel,
         doc._id,
         this.i18n.translate('exception.NAME_EXISTS'),
       );
+      productData.slug = newBaseSlug;
     }
-    // 3) Validate variants against (new or existing) allowedAttributes
-    const effectiveAllowedAttributes =
-      updateProductDto.allowedAttributes || doc.allowedAttributes || [];
 
     if (variantOps?.create && variantOps.create.length > 0) {
-      // Get current variants with their attributes to check for "Simple" variant count
-      const existingSimpleCount =
-        doc.variants?.filter(
-          (v) => !v.attributes || Object.keys(v.attributes).length === 0,
-        ).length || 0;
-
-      this.skuService.validateVariantAttributes(
-        variantOps.create,
-        effectiveAllowedAttributes,
-        doc?.variants?.length || 0,
-        existingSimpleCount,
-      );
-
-      const newBaseSlug = productData.slug || doc.slug;
-      await this.skuService.generateAndValidateSkus(
-        variantOps.create,
-        newBaseSlug,
-      );
+      await this.skuService.generateAndValidateSkus(variantOps.create, newBaseSlug);
     }
 
-    if (variantOps?.update && variantOps.update.length > 0) {
-      // Update payloads only carry {_id, price, sku, stock, isActive, components}.
-      // They never include `attributes` (those are immutable after creation).
-      // Running validateVariantAttributes here would mis-classify every updated
-      // variant as a "Simple Variant" and throw when editing 2+ variants at once.
-      // We only normalise the SKU — no attribute validation needed.
-      for (const v of variantOps.update) {
-        if (v.sku) v.sku = v.sku.toUpperCase();
-      }
-    }
-
-    // 4) If allowedAttributes are changing, validate all EXISTING variants that aren't being updated/deleted
-    if (updateProductDto.allowedAttributes) {
-      const variantsToValidate =
-        (doc.variants as any[])?.filter((v) => {
-          const isBeingUpdated = variantOps?.update?.some(
-            (u) => String(u._id) === String(v._id),
-          );
-          const isBeingDeleted = variantOps?.delete?.some(
-            (d) => String(d) === String(v._id),
-          );
-          return !isBeingUpdated && !isBeingDeleted;
-        }) || [];
-
-      if (variantsToValidate.length > 0) {
-        this.skuService.validateVariantAttributes(
-          variantsToValidate,
-          updateProductDto.allowedAttributes,
-          0, // we don't care about count here
-          0, // we just want to ensure schema compliance
-        );
-      }
-    }
-
-    // 4) Handle file uploads
+    // ==========================================
+    // PHASE 4: I/O & File Operations
+    // ==========================================
+    // ARCHITECTURAL NOTE: File uploads intentionally occur BEFORE the transaction retry block.
+    // File I/O is not idempotent. If placed inside the retry block, transient DB failures 
+    // would trigger duplicate file uploads.
     if (files) {
-      const fileUpdates = await this.fileService.handleUpdateFiles(
-        doc,
-        files,
-        updateProductDto.images,
-      );
-      Object.assign(productData, fileUpdates);
+      uploadedFiles = await this.fileService.handleUpdateFiles(doc, files, cleanDto.images);
+      Object.assign(productData, uploadedFiles);
     }
 
-    // 5) Start Transaction
-    const session = await this.connection.startSession();
-    session.startTransaction();
-
+    // ==========================================
+    // PHASE 5: Resilient DB Transaction
+    // ==========================================
     try {
-      // Update product base fields
-      if (updateProductDto.allowedAttributes) {
-        (productData as any).allowedAttributes =
-          updateProductDto.allowedAttributes;
-      }
-      const hasProductUpdates = Object.keys(productData).length > 0;
-      let updatedProduct: ProductDocument | null = null;
+      const updatedProduct = await withTransactionRetry(async (session) => {
 
-      if (hasProductUpdates) {
-        updatedProduct = await this.productModel.findByIdAndUpdate(
-          idParamDto.id,
-          { $set: productData },
-          { new: true, runValidators: true, session },
-        );
-      } else {
-        updatedProduct = await this.productModel
-          .findById(idParamDto.id)
-          .session(session);
-      }
+        // 1. Update Base Product
+        const hasProductUpdates = Object.keys(productData).length > 0;
+        let productResult: any = doc;
 
-      if (!updatedProduct) {
-        throw new NotFoundException('Product not found');
-      }
-
-      // Handle variant operations
-      if (variantOps) {
-        // CREATE new variants
-        if (variantOps.create && variantOps.create.length > 0) {
-          const newVariants = variantOps.create.map((v) => ({
-            ...v,
-            productId: updatedProduct._id,
-          }));
-
-          for (const varDoc of newVariants) {
-            if (varDoc.sku) {
-              varDoc.sku = await this.skuService.ensureUnique(varDoc.sku);
-            }
-          }
-
-          await this.variantModel.insertMany(newVariants, { session });
+        if (hasProductUpdates) {
+          // CRITICAL FIX: Removed .lean() so Mongoose virtuals, getters, and transforms 
+          // (needed by localization decorators/interceptors) remain intact in the response.
+          productResult = await this.productModel.findByIdAndUpdate(
+            idParamDto.id,
+            { $set: productData },
+            { new: true, runValidators: true, session },
+          );
+        } else {
+          productResult = await this.productModel.findById(idParamDto.id).session(session);
         }
 
-        // UPDATE existing variants
-        if (variantOps.update && variantOps.update.length > 0) {
-          for (const variantUpdate of variantOps.update) {
-            const { _id, ...updateData } = variantUpdate;
-            if (updateData.sku) {
-              updateData.sku = updateData.sku.toUpperCase();
+        // 2. Sequential Variant Operations (Prevents MongoDB WriteConflict Error 112)
+        if (variantOps) {
+
+          // A. CREATE Variants
+          if (variantOps.create && variantOps.create.length > 0) {
+            const newVariantsData = await Promise.all(
+              variantOps.create.map(async (v) => ({
+                ...v,
+                productId: productResult._id,
+                sku: v.sku ? await this.skuService.ensureUnique(v.sku) : undefined,
+              }))
+            );
+
+            // ARCHITECTURAL FIX: Explicitly validate before insertMany to guarantee safety.
+            // Note: If schema utilizes complex pre('save') hooks, consider mapping into sequential .save() calls instead.
+            const newVariantDocs = newVariantsData.map((data) => new this.variantModel(data));
+            for (const newDoc of newVariantDocs) {
+              const valErr = newDoc.validateSync();
+              if (valErr) throw new BadRequestException(`Variant validation failed: ${valErr.message}`);
             }
-            await this.variantModel.findOneAndUpdate(
-              { _id, productId: updatedProduct._id },
-              { $set: updateData },
-              { runValidators: true, session },
+            await this.variantModel.insertMany(newVariantsData, { session });
+          }
+
+          // B. UPDATE Variants (BulkWrite with Context-Aware Validation)
+          if (variantOps.update && variantOps.update.length > 0) {
+            const bulkUpdates: AnyBulkWriteOperation<ProductDocument>[] = [];
+
+            for (const variantUpdate of variantOps.update) {
+              const { _id, ...updateData } = variantUpdate;
+              if (updateData.sku) updateData.sku = updateData.sku.toUpperCase();
+
+              // CRITICAL FIX: Document-aware bulk validation
+              // We fetch the original plain object, hydrate it into a Mongoose doc, apply updates, 
+              // and validate. This accurately respects required fields, defaults, and cross-field logic.
+              const originalState = (doc.variants as any[]).find((v: any) => String(v._id) === String(_id));
+              if (!originalState) throw new NotFoundException(`Variant ${_id} not found.`);
+
+              const validationDoc = this.variantModel.hydrate(originalState);
+              validationDoc.set(updateData);
+
+              const validationError = validationDoc.validateSync();
+              if (validationError) {
+                throw new BadRequestException(`Validation failed for variant ${_id}: ${validationError.message}`);
+              }
+
+              bulkUpdates.push({
+                updateOne: {
+                  filter: { _id, productId: productResult._id },
+                  update: { $set: updateData }, // Optimistic Concurrency Note: If updateData includes __v, Mongoose applies it here.
+                },
+              });
+            }
+
+            await this.variantModel.bulkWrite(bulkUpdates, { session });
+          }
+
+          // C. DELETE Variants
+          if (variantOps.delete && variantOps.delete.length > 0) {
+            await this.variantModel.updateMany(
+              { _id: { $in: variantOps.delete }, productId: productResult._id },
+              { $set: { isDeleted: true, deletedAt: new Date() } },
+              { session },
             );
           }
+
+          // D. Integrity Check
+          const remainingCount = await this.variantModel
+            .countDocuments({ productId: productResult._id, isDeleted: { $ne: true } })
+            .session(session);
+
+          if (remainingCount === 0) {
+            throw new BadRequestException('Cannot delete all variants. A product must have at least one active variant.');
+          }
         }
 
-        // DELETE variants (soft delete)
-        if (variantOps.delete && variantOps.delete.length > 0) {
-          await this.variantModel.updateMany(
-            {
-              _id: { $in: variantOps.delete },
-              productId: updatedProduct._id,
-            },
-            { $set: { isDeleted: true, deletedAt: new Date() } },
-            { session },
-          );
-        }
+        return productResult;
+      }, this.connection, this.logger);
 
-        // Ensure at least one active variant remains
-        const remainingCount = await this.variantModel
-          .countDocuments({
-            productId: updatedProduct._id,
-            isDeleted: { $ne: true },
-          })
-          .session(session);
+      // ==========================================
+      // PHASE 6: Events & Final Response
+      // ==========================================
+      // Event emission occurs strictly AFTER transaction commit succeeds
+      this.eventEmitter.emit('variant.changed', new VariantChangedEvent(updatedProduct._id));
 
-        if (remainingCount === 0) {
-          throw new BadRequestException(
-            'Cannot delete all variants. A product must have at least one variant.',
-          );
-        }
-      }
-
-      await session.commitTransaction();
-
-      // Emit event for aggregation sync
-      this.eventEmitter.emit(
-        'variant.changed',
-        new VariantChangedEvent(updatedProduct._id),
-      );
-
-      // Invalidate cache
-
-      // Fetch full updated state
+      // Fetch final hydrated variants (without lean) to support response/localization layers
       const finalVariants = await this.variantModel
-        .find({ productId: updatedProduct._id })
-        .lean();
+        .find({ productId: updatedProduct._id, isDeleted: { $ne: true } });
 
       return {
         product: this.i18n.localize(updatedProduct),
         variants: finalVariants,
       };
-    } catch (error: any) {
-      await session.abortTransaction();
-      this.logger.error(
-        'Transaction Error (update product)',
-        error?.stack || error,
-      );
 
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+    } catch (error: any) {
+      // ==========================================
+      // ROLLBACK & ERROR TRANSLATION
+      // ==========================================
+      // CRITICAL FIX: Only delete the transformed files (uploadedFiles) created during this request.
+      // Never pass raw `files` to cleanup, as it might bypass metadata mapping and delete the wrong assets.
+      if (uploadedFiles) {
+        try {
+          await this.fileService.deleteProductFiles(uploadedFiles);
+          this.logger.log('Rolled back newly uploaded files due to transaction failure.');
+        } catch (cleanupError) {
+          this.logger.error('Failed to cleanup files during update rollback', cleanupError);
+        }
+      }
+
+      this.logger.error('Transaction Error (update product)', error?.stack || error);
+
+      if (error instanceof BadRequestException || error instanceof NotFoundException || error instanceof ConflictException) {
         throw error;
       }
 
       if (error.code === 11000) {
-        throw new BadRequestException(
-          this.i18n.translate('exception.NAME_EXISTS'),
-        );
+        handleDuplicateKeyError(error, this.i18n); // Precise duplicate error translation
       }
 
-      throw new InternalServerErrorException(
-        this.i18n.translate('exception.ERROR_SAVE'),
-      );
-    } finally {
-      session.endSession();
+      throw new InternalServerErrorException(this.i18n.translate('exception.ERROR_SAVE'));
     }
   }
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-  //  SOFT DELETE PRODUCT (Transaction)
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-
+  /*
+ * @description this function will remove a product
+ * @param idParamDto @description the id of the product to be removed
+ * @returns @description the removed product
+ */
   async remove(idParamDto: IdParamDto) {
     const doc = await this.productModel
       .findById(idParamDto.id)
@@ -438,11 +465,11 @@ export class ProductMutationService {
       session.endSession();
     }
   }
-
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-  //  HARD DELETE (admin-only)
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-
+  /*
+   * @description this function will hard remove a product
+   * @param idParamDto @description the id of the product to be hard removed
+   * @returns @description the hard removed product
+   */
   async hardRemove(idParamDto: IdParamDto) {
     const doc = await this.productModel
       .findOne({ _id: idParamDto.id, isDeleted: true })
@@ -485,10 +512,11 @@ export class ProductMutationService {
     }
   }
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-  //  RESTORE PRODUCT (undo soft delete)
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-
+   /*
+   * @description this function will restore a product
+   * @param idParamDto @description the id of the product to be restored
+   * @returns @description the restored product
+   */
   async restore(idParamDto: IdParamDto) {
     const session = await this.connection.startSession();
     session.startTransaction();
@@ -532,3 +560,8 @@ export class ProductMutationService {
     }
   }
 }
+
+
+
+
+
