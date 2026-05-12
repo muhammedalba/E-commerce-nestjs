@@ -3,18 +3,18 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
+import { ConfigService } from '@nestjs/config';
 import { Setting, SettingDocument } from './shared/schema/setting.schema';
 import { UpdateSettingDto } from './shared/dto/update-setting.dto';
 import { FileUploadService } from 'src/file-upload/file-upload.service';
 import { MulterFilesType } from 'src/shared/utils/interfaces/fileInterface';
 
 const SETTINGS_CACHE_KEY = 'settings:global';
-const SETTINGS_DOC_KEY = 'global'; // 1. استخراج الكلمة المفتاحية لتجنب تكرارها
+const SETTINGS_DOC_KEY = 'global'; 
 const SETTINGS_CACHE_TTL = 3600000; // 1 hour in ms
 
 @Injectable()
 export class SettingsService {
-  // 2. إضافة Logger لتسجيل الأخطاء بدلاً من تجاهلها بصمت
   private readonly logger = new Logger(SettingsService.name);
 
   constructor(
@@ -24,6 +24,7 @@ export class SettingsService {
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
 
+    private readonly configService: ConfigService,
     private readonly fileUploadService: FileUploadService,
   ) { }
 
@@ -104,6 +105,9 @@ export class SettingsService {
     // إلغاء الـ Cache لإجبار إعادة جلب البيانات في الطلب القادم
     await this.cacheManager.del(SETTINGS_CACHE_KEY);
 
+    // تنبيه الفرونت إيند بتحديث الكاش الخاص به (ISR)
+    await this.triggerRevalidation('settings');
+
     return updatedDoc as Setting;
   }
 
@@ -128,6 +132,39 @@ export class SettingsService {
    */
   async clearCache(): Promise<{ success: boolean }> {
     await this.cacheManager.del(SETTINGS_CACHE_KEY);
+    await this.triggerRevalidation('settings');
     return { success: true };
+  }
+
+  private async triggerRevalidation(tag: string): Promise<void> {
+    const frontendUrl = this.configService.get<string>('FRONTEND_ORIGIN');
+    const secret = this.configService.get<string>('REVALIDATE_SECRET');
+
+    if (!frontendUrl || !secret) {
+      this.logger.warn('Frontend URL or Revalidate Secret missing in config. Skipping revalidation.');
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${frontendUrl}/api/revalidate?tag=${tag}`,
+        { 
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${secret}`,
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+
+      if (response.ok) {
+        this.logger.log(`[ISR] Successfully triggered revalidation for tag: ${tag}`);
+      } else {
+        const error = await response.text();
+        this.logger.error(`[ISR] Failed to trigger revalidation for tag: ${tag}. Status: ${response.status} - ${error}`);
+      }
+    } catch (err: any) {
+      this.logger.error(`[ISR] Network error while triggering revalidation for tag: ${tag}`, err.stack);
+    }
   }
 }
