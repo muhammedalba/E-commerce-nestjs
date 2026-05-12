@@ -106,7 +106,7 @@ export class SettingsService {
     await this.cacheManager.del(SETTINGS_CACHE_KEY);
 
     // تنبيه الفرونت إيند بتحديث الكاش الخاص به (ISR)
-    await this.triggerRevalidation('settings');
+    await this.triggerRevalidation('settings,public-settings');
 
     return updatedDoc as Setting;
   }
@@ -132,7 +132,7 @@ export class SettingsService {
    */
   async clearCache(): Promise<{ success: boolean }> {
     await this.cacheManager.del(SETTINGS_CACHE_KEY);
-    await this.triggerRevalidation('settings');
+    await this.triggerRevalidation('settings,public-settings');
     return { success: true };
   }
 
