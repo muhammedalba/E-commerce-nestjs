@@ -8,6 +8,7 @@ import {
   Param,
   UseGuards,
   UseInterceptors,
+  Query,
 } from '@nestjs/common';
 import { CacheTTL } from '@nestjs/cache-manager';
 import { TaxesService } from './taxes.service';
@@ -20,6 +21,7 @@ import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
+import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 
 @Controller('taxes')
 @Roles(roles.ADMIN)
@@ -29,13 +31,13 @@ export class TaxesController {
   constructor(private readonly taxesService: TaxesService) {}
 
   /* ================================================ */
-  /*  GET ALL TAXES - Public                           */
+  /*  GET ALL TAXES - Admin Only                       */
   /* ================================================ */
   @Get()
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(3600000) // 1 hour
-  findAll() {
-    return this.taxesService.findAll();
+  findAll(@Query() queryString: QueryString) {
+    return this.taxesService.findAll(queryString);
   }
 
   /* ================================================ */

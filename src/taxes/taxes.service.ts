@@ -4,25 +4,37 @@ import { Model } from 'mongoose';
 import { Tax, TaxDocument } from './shared/schema/tax.schema';
 import { CreateTaxDto, UpdateTaxDto } from './shared/dto/tax.dto';
 import { SettingsService } from '../settings/settings.service';
+import { BaseService } from 'src/shared/utils/service/base.service';
+import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
+import { FileUploadService } from 'src/file-upload/file-upload.service';
+import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
+import { IdParamDto } from 'src/shared/dto/id-param.dto';
 
 @Injectable()
-export class TaxesService {
+export class TaxesService extends BaseService<TaxDocument> {
   constructor(
     @InjectModel(Tax.name)
     private readonly taxModel: Model<TaxDocument>,
     private readonly settingsService: SettingsService,
-  ) {}
+    protected readonly i18n: CustomI18nService,
+    protected readonly fileUploadService: FileUploadService,
+  ) {
+    super(taxModel, i18n, fileUploadService);
+  }
 
   async create(dto: CreateTaxDto): Promise<TaxDocument> {
     return this.taxModel.create(dto);
   }
 
-  async findAll(): Promise<any[]> {
-    return this.taxModel.find().sort({ createdAt: -1 }).lean();
+  async findAll(queryString: QueryString): Promise<any> {
+    return this.findAllDoc(Tax.name, queryString, {
+      path: 'country',
+      select: 'name',
+    });
   }
 
   async findOne(id: string): Promise<any> {
-    const tax = await this.taxModel.findById(id).lean();
+    const tax = await this.taxModel.findById(id).populate('country', 'name').lean();
     if (!tax) throw new NotFoundException('Tax not found');
     return tax;
   }
@@ -58,19 +70,34 @@ export class TaxesService {
   }
 
   /**
-   * حساب الضريبة بناءً على الإعدادات العامة
+   * حساب الضريبة بناءً على الدولة أو الإعدادات العامة
    */
-  async calculateTax(subtotal: number): Promise<{
+  async calculateTax(subtotal: number, countryId?: string): Promise<{
     taxPercentage: number;
     taxAmount: number;
     totalWithTax: number;
     isIncluded: boolean;
   }> {
-    const settings = await this.settingsService.getSettings();
+    let taxPercentage = 0;
+    let isIncluded = false;
+    let foundCountryTax = false;
 
-    // نستخدم القيم من الإعدادات العامة
-    const taxPercentage = settings.vatRate ?? 0;
-    const isIncluded = settings.taxesIncluded ?? false;
+    // 1. إذا تم تمرير دولة، نبحث عن ضريبة مخصصة لها أولاً
+    if (countryId) {
+      const countryTax = await this.taxModel.findOne({ country: countryId, isActive: true }).lean();
+      if (countryTax) {
+        taxPercentage = countryTax.percentage;
+        isIncluded = countryTax.isIncludedInPrice;
+        foundCountryTax = true;
+      }
+    }
+
+    // 2. إذا لم يتم العثور على ضريبة للدولة، نعود للإعدادات العامة (الضريبة الافتراضية)
+    if (!foundCountryTax) {
+      const settings = await this.settingsService.getSettings();
+      taxPercentage = settings.vatRate ?? 0;
+      isIncluded = settings.taxesIncluded ?? false;
+    }
 
     if (taxPercentage <= 0) {
       return {

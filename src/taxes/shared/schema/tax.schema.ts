@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
+import mongoose, { HydratedDocument } from 'mongoose';
+import { Country } from 'src/locations/shared/schema/country.schema';
 
 export type TaxDocument = HydratedDocument<Tax>;
 
@@ -10,6 +11,9 @@ export class Tax {
 
   @Prop({ required: true, default: 15, min: 0, max: 100 })
   declare percentage: number;
+
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Country', required: false })
+  declare country?: Country;
 
   @Prop({ default: '' })
   declare taxNumber: string;
@@ -25,3 +29,6 @@ export class Tax {
 }
 
 export const TaxSchema = SchemaFactory.createForClass(Tax);
+
+// Ensure a country can only have one tax rule (sparse allows multiple nulls for global rules)
+TaxSchema.index({ country: 1 }, { unique: true, sparse: true });

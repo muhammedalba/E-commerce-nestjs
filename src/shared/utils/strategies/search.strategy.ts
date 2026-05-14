@@ -47,6 +47,12 @@ export const searchStrategies: Record<string, (keyword: string) => object> = {
       },
     ],
   }),
+  Tax: (keyword: string) => ({
+    $or: [
+      { name: { $regex: keyword, $options: 'i' } },
+      { taxNumber: { $regex: keyword, $options: 'i' } },
+    ],
+  }),
   default: (keyword: string) => ({
     $or: [
       { 'name.en': { $regex: keyword, $options: 'i' } },

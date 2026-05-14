@@ -3,6 +3,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsMongoId,
   Max,
   Min,
 } from 'class-validator';
@@ -16,6 +17,10 @@ export class CreateTaxDto {
   @Min(0)
   @Max(100)
   declare percentage: number;
+
+  @IsMongoId()
+  @IsOptional()
+  declare country?: string;
 
   @IsString()
   @IsOptional()

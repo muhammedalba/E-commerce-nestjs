@@ -85,8 +85,9 @@ export class CheckoutService {
       shippingCost = 0;
     }
 
-    // 4. حساب الضرائب
-    const taxDetails = await this.taxesService.calculateTax(subtotal);
+    // 6. حساب الضرائب
+    const countryId = (city.country as any)?._id ? (city.country as any)._id.toString() : city.country?.toString();
+    const taxDetails = await this.taxesService.calculateTax(subtotal, countryId);
 
     // 5. التحقق من وسيلة الدفع
     const paymentMethod = await this.paymentsService.findById(
