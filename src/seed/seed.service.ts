@@ -7,6 +7,7 @@ import { ShippingService } from '../shipping/shipping.service';
 import { PaymentsService } from '../payments/payments.service';
 import { TaxesService } from '../taxes/taxes.service';
 import { PaymentType } from '../payments/shared/schema/payment-method.schema';
+import { KSA_DATA } from './ksa-data';
 
 @Injectable()
 export class SeedService {
@@ -101,5 +102,58 @@ export class SeedService {
     } as any);
 
     console.log('✅ Seeding Completed Successfully!');
+  }
+
+  async seedKSA() {
+    console.log('🌱 Starting KSA Regions and Cities Seeding...');
+
+    // Get or create Saudi Arabia
+    let country: any;
+    try {
+      const existing = await this.connection.collection('countries').findOne({ code: 'SA' });
+      if (existing) {
+        country = existing;
+      } else {
+        country = await this.locationsService.createCountry({
+          name: { ar: 'المملكة العربية السعودية', en: 'Saudi Arabia' },
+          code: 'SA',
+          phoneCode: '+966',
+          currency: 'SAR',
+        } as any);
+      }
+    } catch (err: any) {
+      if (err.code === 11000) {
+        country = await this.connection.collection('countries').findOne({ code: 'SA' });
+      } else throw err;
+    }
+
+    for (const regionData of KSA_DATA) {
+      // Find or create Region
+      const regions = await this.locationsService.getRegionsByCountry(country._id.toString());
+      let region = regions.find(r => r.name?.ar === regionData.region.ar);
+      
+      if (!region) {
+        region = await this.locationsService.createRegion({
+          name: regionData.region,
+          country: country._id as any,
+        } as any);
+      }
+
+      // Add Cities
+      for (const cityData of regionData.cities) {
+        const cities = await this.locationsService.getCitiesByRegion(region._id.toString());
+        let city = cities.find(c => c.name?.ar === cityData.ar);
+        
+        if (!city) {
+          await this.locationsService.createCity({
+            name: cityData,
+            region: region._id as any,
+            country: country._id as any,
+            isDeliveryAvailable: true,
+          } as any);
+        }
+      }
+    }
+    console.log('✅ KSA Seeding Completed Successfully!');
   }
 }
