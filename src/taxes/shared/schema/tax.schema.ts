@@ -30,12 +30,21 @@ export class Tax {
 
 export const TaxSchema = SchemaFactory.createForClass(Tax);
 
-// Ensure only one active tax rule per country (or one global active rule)
-// This allows multiple inactive rules for the same country/global but only one active.
+
+// Ensure a country can only have one tax rule (sparse allows multiple nulls for global rules)
+// ضريبة نشطة واحدة فقط لكل دولة
 TaxSchema.index(
   { country: 1 },
   {
     unique: true,
-    partialFilterExpression: { isActive: true },
-  },
+    partialFilterExpression: { country: { $type: 'objectId' }, isActive: true }
+  }
+);
+// اسم فريد للضرائب العالمية النشطة
+TaxSchema.index(
+  { name: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { country: null, isActive: true }
+  }
 );

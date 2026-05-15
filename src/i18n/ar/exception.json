@@ -58,5 +58,7 @@
     "SOME_PRODUCTS_NOT_AVAILABlE": "بعض المنتجات غير متوفرة",
     "ACTIVE_BANNER_ALREADY_EXISTS": "يوجد بانر مفعل بالفعل، يرجى إلغاء تفعيله أولاً",
     "ALREADY_EXISTS_ACTIVE_CAROUSEL": "يوجد شريحة عرض مفعلة بالفعل، يرجى إلغاء تفعيلها أولاً",
-    "COUNTRY_EXISTS": "تم إعداد ضريبة لهذه الدولة مسبقاً"
+    "COUNTRY_EXISTS": "تم إعداد ضريبة لهذه الدولة مسبقاً",
+    "TAX_NAME_EXISTS": "يوجد ضريبة عالمية نشطة بهذا الاسم بالفعل",
+    "TAX_COUNTRY_EXISTS": "يوجد ضريبة نشطة لهذه الدولة بالفعل"
 }

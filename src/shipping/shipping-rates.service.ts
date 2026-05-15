@@ -45,7 +45,11 @@ export class ShippingRatesService extends BaseService<ShippingRateDocument> {
    * @returns The created shipping rate document.
    */
   async createRate(data: CreateShippingRateDto): Promise<ShippingRateDocument> {
-    return this.rateModel.create(data);
+    return this.createOneDoc(data, undefined, ShippingRate.name, {
+      onlyActive: true,
+      fieldValue: data.city,
+      checkField: 'city',
+    });
   }
 
   /**
@@ -102,7 +106,11 @@ export class ShippingRatesService extends BaseService<ShippingRateDocument> {
     id: string,
     data: UpdateShippingRateDto,
   ): Promise<ShippingRateDocument> {
-    const updated = await this.updateOneDoc({ id }, data, undefined, ShippingRate.name, '');
+    const updated = await this.updateOneDoc({ id }, data, undefined, ShippingRate.name, '', {
+      onlyActive: true,
+      fieldValue: data.city,
+      checkField: 'city',
+    });
     return updated as ShippingRateDocument;
   }
 

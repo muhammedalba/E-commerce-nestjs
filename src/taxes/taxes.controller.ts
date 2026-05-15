@@ -41,6 +41,15 @@ export class TaxesController {
   }
 
   /* ================================================ */
+  /*  GET SINGLE TAX - Admin Only                      */
+  /* ================================================ */
+  @Get(':id')
+  @UseInterceptors(CustomCacheInterceptor)
+  findOne(@Param() id: IdParamDto) {
+    return this.taxesService.findOne(id);
+  }
+
+  /* ================================================ */
   /*  CREATE TAX - Admin Only                          */
   /* ================================================ */
   @Post()

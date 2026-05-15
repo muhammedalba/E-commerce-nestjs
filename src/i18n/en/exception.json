@@ -63,5 +63,7 @@
       "INSUFFICIENT_STOCK": "Insufficient stock for the requested item",
       "ACTIVE_BANNER_ALREADY_EXISTS": "An active banner already exists, please deactivate it first",
       "ALREADY_EXISTS_ACTIVE_CAROUSEL": "An active carousel slide already exists, please deactivate it first",
-      "COUNTRY_EXISTS": "A tax rule already exists for this country"
+      "COUNTRY_EXISTS": "A tax rule has already been set for this country",
+      "TAX_NAME_EXISTS": "An active global tax with this name already exists",
+      "TAX_COUNTRY_EXISTS": "An active tax rule for this country already exists"
 }

@@ -76,7 +76,7 @@ export class BaseService<T> {
     if (onlyActive) {
       query.isActive = true;
     }
-    console.log(query);
+
 
     if (excludeId) {
       const idToExclude = isValidObjectId(excludeId)
@@ -85,7 +85,6 @@ export class BaseService<T> {
       query._id = { $ne: idToExclude };
     }
     const result = await this.model.exists(query);
-    console.log(result);
     if (result) {
       const exceptionKey =
         this.model.modelName === 'User'
@@ -103,7 +102,7 @@ export class BaseService<T> {
    * @param option - Translation options (args, etc.).
    * @returns The translated string.
    */
-  private t(key: string, option?: TranslateOptions): string {
+  protected t(key: string, option?: TranslateOptions): string {
     return this.i18n.translate(key, option);
   }
 
