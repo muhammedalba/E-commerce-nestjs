@@ -33,6 +33,7 @@ export class UsersService extends BaseService<UserDocument> {
       fileFieldName: 'avatar',
       checkField: 'email',
       fieldValue: CreateUserDto.email,
+      useDefaultFile: true,
     });
   }
   async getUsers(QueryString: QueryString): Promise<any> {

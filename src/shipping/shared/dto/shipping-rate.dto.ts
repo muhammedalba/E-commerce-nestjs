@@ -1,23 +1,33 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { IsBoolean, IsMongoId, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { Transform } from 'class-transformer';
+import { Exists } from 'src/shared/utils/decorators/exists.decorator';
+import { ShippingProvider } from '../schema/shipping-provider.schema';
+import { Country } from 'src/locations/shared/schema/country.schema';
+import { Region } from 'src/locations/shared/schema/region.schema';
+import { City } from 'src/locations/shared/schema/city.schema';
 
 export class CreateShippingRateDto {
   @IsMongoId()
   @IsNotEmpty()
+  @Exists(ShippingProvider.name)
   provider!: string;
 
   @IsOptional()
   @IsMongoId()
+  @Exists(Country.name)
   country?: string;
 
   @IsOptional()
   @IsMongoId()
+  @Exists(Region.name)
   region?: string;
 
   @IsOptional()
   @IsMongoId()
+  @Exists(City.name)
   city?: string;
+  
   @IsNumber()
   @Min(0)
   @IsNotEmpty()

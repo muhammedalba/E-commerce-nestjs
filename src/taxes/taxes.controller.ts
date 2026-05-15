@@ -54,7 +54,7 @@ export class TaxesController {
   /* ================================================ */
   @Patch(':id')
   @ClearCache('taxes')
-  update(@Param() { id }: IdParamDto, @Body() updateTaxDto: UpdateTaxDto) {
+  update(@Param() id: IdParamDto, @Body() updateTaxDto: UpdateTaxDto) {
     return this.taxesService.update(id, updateTaxDto);
   }
 
@@ -63,7 +63,7 @@ export class TaxesController {
   /* ================================================ */
   @Delete(':id')
   @ClearCache('taxes')
-  remove(@Param() { id }: IdParamDto) {
+  remove(@Param() id: IdParamDto) {
     return this.taxesService.remove(id);
   }
 }

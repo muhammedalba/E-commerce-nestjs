@@ -12,7 +12,7 @@ export class Tax {
   @Prop({ required: true, default: 15, min: 0, max: 100 })
   declare percentage: number;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Country', required: false })
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: Country.name, required: false })
   declare country?: Country;
 
   @Prop({ default: '' })
@@ -30,5 +30,12 @@ export class Tax {
 
 export const TaxSchema = SchemaFactory.createForClass(Tax);
 
-// Ensure a country can only have one tax rule (sparse allows multiple nulls for global rules)
-TaxSchema.index({ country: 1 }, { unique: true, sparse: true });
+// Ensure only one active tax rule per country (or one global active rule)
+// This allows multiple inactive rules for the same country/global but only one active.
+TaxSchema.index(
+  { country: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isActive: true },
+  },
+);

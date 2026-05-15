@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   UploadedFile,
 } from '@nestjs/common';
+import { CacheTTL } from '@nestjs/cache-manager';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ShippingService } from './shipping.service';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
@@ -32,20 +33,27 @@ import {
   UpdateShippingRateDto,
 } from './shared/dto/shipping-rate.dto';
 
+import { ShippingRatesService } from './shipping-rates.service';
+import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
+
 @Controller('shipping')
-@UseInterceptors(ClearCacheInterceptor)
+@UseInterceptors(ClearCacheInterceptor, CustomCacheInterceptor)
 export class ShippingController {
-  constructor(private readonly shippingService: ShippingService) { }
+  constructor(
+    private readonly shippingService: ShippingService,
+    private readonly shippingRatesService: ShippingRatesService,
+  ) { }
 
   /* ================================================ */
   /*  CALCULATE SHIPPING - Public                      */
   /* ================================================ */
   @Get('calculate')
+  @CacheTTL(3600000)
   calculateShipping(
     @Query('cityId') cityId: string,
     @Query('weight') weight: string,
   ) {
-    return this.shippingService.calculateShipping(
+    return this.shippingRatesService.calculateShipping(
       cityId,
       parseFloat(weight) || 1,
     );
@@ -55,6 +63,7 @@ export class ShippingController {
   /*  GET PROVIDERS - Public                           */
   /* ================================================ */
   @Get('providers')
+  @CacheTTL(3600000)
   getProviders(@Query() query: QueryString) {
     return this.shippingService.getProviders(query);
   }
@@ -65,16 +74,18 @@ export class ShippingController {
   @Get('rates')
   @Roles(roles.ADMIN)
   @UseGuards(AuthGuard, RoleGuard)
+  @CacheTTL(3600000)
   getRates(@Query() query: QueryString) {
-    return this.shippingService.getRates(query);
+    return this.shippingRatesService.getRates(query);
   }
 
   /* ================================================ */
   /*  GET RATES BY CITY - Public                       */
   /* ================================================ */
   @Get('rates/:cityId')
+  @CacheTTL(3600000)
   getRatesByCity(@Param('cityId') cityId: string) {
-    return this.shippingService.getRatesByCity(cityId);
+    return this.shippingRatesService.getRatesByCity(cityId);
   }
 
   /* ================================================ */
@@ -112,7 +123,7 @@ export class ShippingController {
   @UseGuards(AuthGuard, RoleGuard)
   @ClearCache('shipping')
   createRate(@Body() body: CreateShippingRateDto) {
-    return this.shippingService.createRate(body);
+    return this.shippingRatesService.createRate(body);
   }
 
   @Patch('rates/:id')
@@ -120,7 +131,7 @@ export class ShippingController {
   @UseGuards(AuthGuard, RoleGuard)
   @ClearCache('shipping')
   updateRate(@Param() { id }: IdParamDto, @Body() body: UpdateShippingRateDto) {
-    return this.shippingService.updateRate(id, body);
+    return this.shippingRatesService.updateRate(id, body);
   }
 
   @Delete('providers/:id')
@@ -136,6 +147,6 @@ export class ShippingController {
   @UseGuards(AuthGuard, RoleGuard)
   @ClearCache('shipping')
   deleteRate(@Param() { id }: IdParamDto) {
-    return this.shippingService.deleteRate(id);
+    return this.shippingRatesService.deleteRate(id);
   }
 }

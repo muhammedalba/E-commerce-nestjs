@@ -13,8 +13,8 @@ export class SeedController {
 
   @Get()
   async seed() {
-    await this.seedService.seedKSA();
-    return { message: 'KSA seeded successfully' };
+    await this.seedService.runSeed();
+    return { message: ' seeded successfully' };
   }
 
   @Get('ksa')

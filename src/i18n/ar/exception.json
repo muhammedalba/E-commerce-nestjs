@@ -57,5 +57,6 @@
     "ERROR_SAVE": "حدث خطأ أثناء حفظ {variable}",
     "SOME_PRODUCTS_NOT_AVAILABlE": "بعض المنتجات غير متوفرة",
     "ACTIVE_BANNER_ALREADY_EXISTS": "يوجد بانر مفعل بالفعل، يرجى إلغاء تفعيله أولاً",
-    "ALREADY_EXISTS_ACTIVE_CAROUSEL": "يوجد شريحة عرض مفعلة بالفعل، يرجى إلغاء تفعيلها أولاً"
+    "ALREADY_EXISTS_ACTIVE_CAROUSEL": "يوجد شريحة عرض مفعلة بالفعل، يرجى إلغاء تفعيلها أولاً",
+    "COUNTRY_EXISTS": "تم إعداد ضريبة لهذه الدولة مسبقاً"
 }

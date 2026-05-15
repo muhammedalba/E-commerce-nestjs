@@ -41,6 +41,7 @@ export class CategoriesService extends BaseService<CategoryDocument> {
       fileFieldName: 'image',
       checkField: 'name.en',
       fieldValue: createCategoryDto.name.en,
+      useDefaultFile: true,
     });
   }
 

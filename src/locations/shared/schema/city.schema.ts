@@ -12,14 +12,14 @@ export class City {
 
   @Prop({
     type: MongooseSchema.Types.ObjectId,
-    ref: 'Country',
+    ref: Country.name,
     required: true,
   })
   declare country: Country;
 
   @Prop({
     type: MongooseSchema.Types.ObjectId,
-    ref: 'Region',
+    ref: Region.name,
     required: true,
   })
   declare region: Region;

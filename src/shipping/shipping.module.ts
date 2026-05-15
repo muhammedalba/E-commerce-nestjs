@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ShippingService } from './shipping.service';
+import { ShippingRatesService } from './shipping-rates.service';
 import { ShippingController } from './shipping.controller';
 import { AuthModule } from '../auth/auth.module';
 import { FileUploadDiskStorageModule } from 'src/file-upload/file-upload.module';
@@ -24,7 +25,7 @@ import {
     FileUploadDiskStorageModule,
   ],
   controllers: [ShippingController],
-  providers: [ShippingService, CustomI18nService],
-  exports: [ShippingService], // يستخدمه CheckoutModule
+  providers: [ShippingService, ShippingRatesService, CustomI18nService],
+  exports: [ShippingService, ShippingRatesService], // يستخدمه CheckoutModule
 })
 export class ShippingModule {}

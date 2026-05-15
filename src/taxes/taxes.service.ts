@@ -10,6 +10,7 @@ import { FileUploadService } from 'src/file-upload/file-upload.service';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 
+
 @Injectable()
 export class TaxesService extends BaseService<TaxDocument> {
   constructor(
@@ -23,7 +24,14 @@ export class TaxesService extends BaseService<TaxDocument> {
   }
 
   async create(dto: CreateTaxDto): Promise<TaxDocument> {
-    return this.taxModel.create(dto);
+    const checkField = dto.country ? 'country' : "name";
+    const fieldValue = dto.country || dto.name;
+    return this.createOneDoc(dto, undefined, Tax.name, {
+      checkField: checkField,
+      fieldValue: fieldValue,
+      useDefaultFile: false,
+      onlyActive: true,
+    });
   }
 
   async findAll(queryString: QueryString): Promise<any> {
@@ -33,23 +41,26 @@ export class TaxesService extends BaseService<TaxDocument> {
     });
   }
 
-  async findOne(id: string): Promise<any> {
-    const tax = await this.taxModel.findById(id).populate('country', 'name').lean();
-    if (!tax) throw new NotFoundException('Tax not found');
-    return tax;
-  }
-
-  async update(id: string, dto: UpdateTaxDto): Promise<TaxDocument> {
-    const updated = await this.taxModel.findByIdAndUpdate(id, dto, {
-      new: true,
+  async findOne(id: IdParamDto): Promise<any> {
+    return this.findOneDoc(id, "-__v", undefined, {
+      path: 'country',
+      select: 'name',
     });
-    if (!updated) throw new NotFoundException('Tax not found');
-    return updated;
   }
 
-  async remove(id: string): Promise<void> {
-    const deleted = await this.taxModel.findByIdAndDelete(id);
-    if (!deleted) throw new NotFoundException('Tax not found');
+  async update(id: IdParamDto, dto: UpdateTaxDto): Promise<TaxDocument> {
+
+    const checkField = dto.country ? 'country' : "name";
+    const fieldValue = dto.country || dto.name;
+    return (await this.updateOneDoc(id, dto, undefined, Tax.name, undefined, {
+      checkField: checkField,
+      fieldValue: fieldValue,
+      onlyActive: true,
+    })) as TaxDocument; 
+  }
+
+  async remove(id: IdParamDto): Promise<void> {
+    await this.deleteOneDoc(id);
   }
 
   /**

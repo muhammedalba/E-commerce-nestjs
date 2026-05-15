@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { LocationsService } from '../locations/locations.service';
 import { ShippingService } from '../shipping/shipping.service';
+import { ShippingRatesService } from '../shipping/shipping-rates.service';
 import { TaxesService } from '../taxes/taxes.service';
 import { PaymentsService } from '../payments/payments.service';
 import { SettingsService } from '../settings/settings.service';
@@ -25,6 +26,7 @@ export class CheckoutService {
   constructor(
     private readonly locationsService: LocationsService,
     private readonly shippingService: ShippingService,
+    private readonly shippingRatesService: ShippingRatesService,
     private readonly taxesService: TaxesService,
     private readonly paymentsService: PaymentsService,
     private readonly settingsService: SettingsService,
@@ -61,7 +63,7 @@ export class CheckoutService {
     }
 
     // 5. حساب الشحن
-    const shippingOptions = await this.shippingService.calculateShipping(
+    const shippingOptions = await this.shippingRatesService.calculateShipping(
       dto.cityId,
       totalWeight,
     );

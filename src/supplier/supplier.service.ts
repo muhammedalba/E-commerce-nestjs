@@ -46,6 +46,7 @@ export class SupplierService extends BaseService<SupplierDocument> {
       fileFieldName: 'avatar',
       checkField: 'name',
       fieldValue: createSupplierDto.name.trim(),
+      useDefaultFile: true,
     });
   }
   // ------------ =============================== ---------- //

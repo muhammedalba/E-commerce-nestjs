@@ -41,6 +41,7 @@ export class BrandsService extends BaseService<BrandDocument> {
       fileFieldName: 'image',
       checkField: 'name.en',
       fieldValue: createBrandDto.name.en,
+      useDefaultFile: true,
     });
   }
 

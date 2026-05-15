@@ -6,6 +6,14 @@ import { Cache } from 'cache-manager';
 import { Country, CountryDocument } from './shared/schema/country.schema';
 import { Region, RegionDocument } from './shared/schema/region.schema';
 import { City, CityDocument } from './shared/schema/city.schema';
+import {
+  CreateCityDto,
+  CreateCountryDto,
+  CreateRegionDto,
+  UpdateCityDto,
+  UpdateCountryDto,
+  UpdateRegionDto,
+} from './shared/dto/index';
 
 const CACHE_TTL = 86400000; // 24 hours
 
@@ -23,91 +31,197 @@ export class LocationsService {
 
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
-  ) {}
+  ) { }
 
-  async createCountry(data: Partial<Country>): Promise<CountryDocument> {
+  // ===========================================================================
+  // COUNTRIES
+  // ===========================================================================
+
+  /**
+   * Creates a new country and invalidates the countries cache.
+   * @param data - The country data
+   * @returns The created country document
+   */
+  async createCountry(data: CreateCountryDto): Promise<CountryDocument> {
     const country = await this.countryModel.create(data);
-    await this.cacheManager.del('locations:countries');
+    await this.invalidateCountriesCache();
     return country;
   }
 
-  async getCountries(): Promise<any[]> {
-    const cacheKey = 'locations:countries';
+  /**
+   * Retrieves all active countries, using cache if available.
+   * @returns Array of active countries
+   */
+  async getCountries(isActive?: boolean): Promise<any[]> {
+    const cacheKey = `locations:countries:${isActive ?? 'all'}`;
     const cached = await this.cacheManager.get<any[]>(cacheKey);
     if (cached) return cached;
 
+    const filter: any = {};
+    if (isActive !== undefined) filter.isActive = isActive;
+
     const countries = await this.countryModel
-      .find({ isActive: true })
+      .find(filter)
       .select('-__v')
+      .sort({ 'name.ar': 1 })
       .lean();
 
     await this.cacheManager.set(cacheKey, countries, CACHE_TTL);
     return countries;
   }
 
+  /**
+   * Helper to invalidate all country-related cache keys.
+   */
+  private async invalidateCountriesCache() {
+    await Promise.all([
+      this.cacheManager.del('locations:countries:all'),
+      this.cacheManager.del('locations:countries:true'),
+      this.cacheManager.del('locations:countries:false'),
+    ]);
+  }
+
+  /**
+   * Updates an existing country and invalidates the countries cache.
+   * @param id - Country ID
+   * @param data - Update data
+   * @returns The updated country document
+   */
   async updateCountry(
     id: string,
-    data: Partial<Country>,
+    data: UpdateCountryDto,
   ): Promise<CountryDocument> {
     const updated = await this.countryModel.findByIdAndUpdate(id, data, {
       new: true,
     });
     if (!updated) throw new NotFoundException('Country not found');
-    await this.cacheManager.del('locations:countries');
+    await this.invalidateCountriesCache();
     return updated;
   }
 
-  async createRegion(data: Partial<Region>): Promise<RegionDocument> {
+  // ===========================================================================
+  // REGIONS
+  // ===========================================================================
+
+  /**
+   * Creates a new region and invalidates the regions cache for its country.
+   * @param data - The region data
+   * @returns The created region document
+   */
+  async createRegion(data: CreateRegionDto): Promise<RegionDocument> {
     const region = await this.regionModel.create(data);
-    await this.cacheManager.del(`locations:regions:${data.country}`);
+    await this.invalidateRegionsCache(data.country.toString());
     return region;
   }
 
-  async getRegionsByCountry(countryId: string): Promise<any[]> {
-    const cacheKey = `locations:regions:${countryId}`;
+  /**
+   * Retrieves all active regions for a specific country, using cache if available.
+   * @param countryId - The ID of the country
+   * @returns Array of active regions
+   */
+  async getRegionsByCountry(countryId: string, isActive?: boolean): Promise<any[]> {
+    const cacheKey = `locations:regions:${countryId}:${isActive ?? 'all'}`;
     const cached = await this.cacheManager.get<any[]>(cacheKey);
     if (cached) return cached;
 
+    const filter: any = { country: countryId };
+    if (isActive !== undefined) filter.isActive = isActive;
+
     const regions = await this.regionModel
-      .find({ country: countryId, isActive: true })
+      .find(filter)
       .select('-__v')
+      .sort({ 'name.ar': 1 })
       .lean();
 
     await this.cacheManager.set(cacheKey, regions, CACHE_TTL);
     return regions;
   }
 
+  /**
+   * Helper to invalidate all region-related cache keys for a country.
+   */
+  private async invalidateRegionsCache(countryId: string) {
+    await Promise.all([
+      this.cacheManager.del(`locations:regions:${countryId}:all`),
+      this.cacheManager.del(`locations:regions:${countryId}:true`),
+      this.cacheManager.del(`locations:regions:${countryId}:false`),
+    ]);
+  }
+
+  /**
+   * Updates an existing region.
+   * @param id - Region ID
+   * @param data - Update data
+   * @returns The updated region document
+   */
   async updateRegion(
     id: string,
-    data: Partial<Region>,
+    data: UpdateRegionDto,
   ): Promise<RegionDocument> {
     const updated = await this.regionModel.findByIdAndUpdate(id, data, {
       new: true,
     });
     if (!updated) throw new NotFoundException('Region not found');
+    if (updated.country) {
+      await this.invalidateRegionsCache(updated.country.toString());
+    }
     return updated;
   }
 
-  async createCity(data: Partial<City>): Promise<CityDocument> {
+  // ===========================================================================
+  // CITIES
+  // ===========================================================================
+
+  /**
+   * Creates a new city and invalidates the cities cache for its region.
+   * @param data - The city data
+   * @returns The created city document
+   */
+  async createCity(data: CreateCityDto): Promise<CityDocument> {
     const city = await this.cityModel.create(data);
-    await this.cacheManager.del(`locations:cities:${data.region}`);
+    await this.invalidateCitiesCache(data.region.toString());
     return city;
   }
 
-  async getCitiesByRegion(regionId: string): Promise<any[]> {
-    const cacheKey = `locations:cities:${regionId}`;
+  /**
+   * Retrieves all active cities for a specific region, using cache if available.
+   * @param regionId - The ID of the region
+   * @returns Array of active cities
+   */
+  async getCitiesByRegion(regionId: string, isActive?: boolean): Promise<any[]> {
+    const cacheKey = `locations:cities:${regionId}:${isActive ?? 'all'}`;
     const cached = await this.cacheManager.get<any[]>(cacheKey);
     if (cached) return cached;
 
+    const filter: any = { region: regionId };
+    if (isActive !== undefined) filter.isActive = isActive;
+
     const cities = await this.cityModel
-      .find({ region: regionId, isActive: true })
+      .find(filter)
       .select('-__v')
+      .sort({ 'name.ar': 1 })
       .lean();
 
     await this.cacheManager.set(cacheKey, cities, CACHE_TTL);
     return cities;
   }
 
+  /**
+   * Helper to invalidate all city-related cache keys for a region.
+   */
+  private async invalidateCitiesCache(regionId: string) {
+    await Promise.all([
+      this.cacheManager.del(`locations:cities:${regionId}:all`),
+      this.cacheManager.del(`locations:cities:${regionId}:true`),
+      this.cacheManager.del(`locations:cities:${regionId}:false`),
+    ]);
+  }
+
+  /**
+   * Retrieves detailed information for a specific city including populated region and country.
+   * @param id - City ID
+   * @returns Detailed city object
+   */
   async getCityById(id: string): Promise<any> {
     const city = await this.cityModel
       .findById(id)
@@ -119,11 +233,20 @@ export class LocationsService {
     return city;
   }
 
-  async updateCity(id: string, data: Partial<City>): Promise<CityDocument> {
+  /**
+   * Updates an existing city.
+   * @param id - City ID
+   * @param data - Update data
+   * @returns The updated city document
+   */
+  async updateCity(id: string, data: UpdateCityDto): Promise<CityDocument> {
     const updated = await this.cityModel.findByIdAndUpdate(id, data, {
       new: true,
     });
     if (!updated) throw new NotFoundException('City not found');
+    if (updated.region) {
+      await this.invalidateCitiesCache(updated.region.toString());
+    }
     return updated;
   }
 }

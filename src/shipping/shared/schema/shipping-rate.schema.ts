@@ -11,18 +11,18 @@ export type ShippingRateDocument = HydratedDocument<ShippingRate>;
 export class ShippingRate {
   @Prop({
     type: MongooseSchema.Types.ObjectId,
-    ref: 'ShippingProvider',
+    ref: ShippingProvider.name,
     required: true,
   })
   declare provider: ShippingProvider;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Country' })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: Country.name })
   declare country: Country;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Region' })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: Region.name })
   declare region: Region;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'City' })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: City.name })
   declare city: City;
 
   @Prop({ required: true })

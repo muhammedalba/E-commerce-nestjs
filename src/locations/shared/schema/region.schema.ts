@@ -11,7 +11,7 @@ export class Region {
 
   @Prop({
     type: MongooseSchema.Types.ObjectId,
-    ref: 'Country',
+    ref: Country.name,
     required: true,
   })
   declare country: Country;

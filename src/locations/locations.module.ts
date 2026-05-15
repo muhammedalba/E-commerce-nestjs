@@ -18,6 +18,6 @@ import { City, CitySchema } from './shared/schema/city.schema';
   ],
   controllers: [LocationsController],
   providers: [LocationsService],
-  exports: [LocationsService], // يستخدمه ShippingModule و CheckoutModule
+  exports: [LocationsService], //used in ShippingModule and CheckoutModule
 })
 export class LocationsModule {}
