@@ -28,7 +28,7 @@ export class Supplier {
   @Prop({
     required: false,
     type: 'string',
-    default: 'default.png',
+    default: 'avatar.png',
     trim: true,
   })
   avatar?: string;
@@ -82,12 +82,9 @@ SupplierSchema.pre('findOneAndUpdate', async function (this: any, next) {
 });
 
 //update , findOne and findAll
-SupplierSchema.post('init', function (doc) {
+// SupplierSchema.post('init', function (doc) {
   
-  if (doc.avatar && !doc.avatar.startsWith(process.env.BASE_URL ?? 'http')) {
-    
-    doc.avatar = `${process.env.BASE_URL}${doc.avatar}`;
-    console.log(doc.avatar);  
-
-  }
-});
+//   if (doc.avatar && !doc.avatar.startsWith(process.env.BASE_URL ?? 'http')) {
+//     doc.avatar = `${process.env.BASE_URL}${doc.avatar}`; 
+//   }
+// });

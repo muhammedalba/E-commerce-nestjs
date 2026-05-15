@@ -49,11 +49,11 @@ export class BaseService<T> {
    */
   private getDefaultFilePath(modelName: string): string {
     const uploadsDir = process.env.UPLOADS_FOLDER || 'uploads';
-    const defaultImage = modelName === 'User' ? 'avatar.png' : 'default.png';
+    const defaultImage = modelName === 'User' || modelName === 'Supplier' ? 'avatar.png' : 'default.png';
 
     return path.posix.join('/', uploadsDir, modelName, defaultImage);
   }
-
+ 
   /**
    * Checks if a specific field value is already taken by another document.
    * 

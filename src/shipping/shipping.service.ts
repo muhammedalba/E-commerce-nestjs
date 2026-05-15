@@ -65,6 +65,7 @@ export class ShippingService extends BaseService<ShippingProviderDocument> {
       fileFieldName: 'logo',
       checkField: 'name',
       fieldValue: data.name,
+      useDefaultFile: true,
     })) as ShippingProviderDocument;
   }
 

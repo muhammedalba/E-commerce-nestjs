@@ -14,7 +14,7 @@ export class ShippingProvider {
   @Prop({ default: '' })
   declare trackingUrl: string;
 
-  @Prop({ default: '' })
+  @Prop({ default: 'default.png' })
   declare logo: string;
 
   @Prop({ default: true })
