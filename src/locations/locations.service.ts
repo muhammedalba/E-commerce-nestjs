@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
+import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { Country, CountryDocument } from './shared/schema/country.schema';
 import { Region, RegionDocument } from './shared/schema/region.schema';
 import { City, CityDocument } from './shared/schema/city.schema';
@@ -31,11 +32,45 @@ export class LocationsService {
 
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
+    private readonly i18n: CustomI18nService,
   ) { }
 
   // ===========================================================================
   // COUNTRIES
   // ===========================================================================
+
+  private async assertCountryNameUnique(
+    nameAr: string,
+    nameEn: string,
+    excludeId?: string,
+  ): Promise<void> {
+    const filter: any = {
+      $or: [{ 'name.ar': nameAr.trim() }, { 'name.en': nameEn.trim() }],
+    };
+    if (excludeId) filter._id = { $ne: excludeId };
+
+    const exists = await this.countryModel.exists(filter);
+    if (exists) {
+      throw new BadRequestException(
+        this.i18n.translate('exception.COUNTRY_NAME_EXISTS'),
+      );
+    }
+  }
+
+  private async assertCountryCodeUnique( 
+    code: string,
+    excludeId?: string,
+  ): Promise<void> {
+    const filter: any = { code: code.trim().toUpperCase() };
+    if (excludeId) filter._id = { $ne: excludeId };
+
+    const exists = await this.countryModel.exists(filter);
+    if (exists) {
+      throw new BadRequestException(
+        this.i18n.translate('exception.COUNTRY_CODE_EXISTS'),
+      );
+    }
+  }
 
   /**
    * Creates a new country and invalidates the countries cache.
@@ -43,6 +78,9 @@ export class LocationsService {
    * @returns The created country document
    */
   async createCountry(data: CreateCountryDto): Promise<CountryDocument> {
+    await this.assertCountryNameUnique(data.name.ar, data.name.en);
+    await this.assertCountryCodeUnique(data.code);
+
     const country = await this.countryModel.create(data);
     await this.invalidateCountriesCache();
     return country;
@@ -91,6 +129,20 @@ export class LocationsService {
     id: string,
     data: UpdateCountryDto,
   ): Promise<CountryDocument> {
+    if (data.name) {
+      const current = await this.countryModel.findById(id).lean();
+      if (!current) throw new NotFoundException('Country not found');
+
+      await this.assertCountryNameUnique(
+        data.name.ar ?? current.name.ar,
+        data.name.en ?? current.name.en,
+        id,
+      );
+    }
+    if (data.code) {
+      await this.assertCountryCodeUnique(data.code, id);
+    }
+
     const updated = await this.countryModel.findByIdAndUpdate(id, data, {
       new: true,
     });
@@ -103,12 +155,38 @@ export class LocationsService {
   // REGIONS
   // ===========================================================================
 
+  private async assertRegionUnique(
+    nameAr: string,
+    nameEn: string,
+    countryId: string,
+    excludeId?: string,
+  ): Promise<void> {
+    const filter: any = {
+      country: countryId,
+      $or: [{ 'name.ar': nameAr.trim() }, { 'name.en': nameEn.trim() }],
+    };
+    if (excludeId) filter._id = { $ne: excludeId };
+
+    const exists = await this.regionModel.exists(filter);
+    if (exists) {
+      throw new BadRequestException(
+        this.i18n.translate('exception.REGION_EXISTS'),
+      );
+    }
+  }
+
   /**
    * Creates a new region and invalidates the regions cache for its country.
    * @param data - The region data
    * @returns The created region document
    */
   async createRegion(data: CreateRegionDto): Promise<RegionDocument> {
+    await this.assertRegionUnique(
+      data.name.ar,
+      data.name.en,
+      data.country.toString(),
+    );
+
     const region = await this.regionModel.create(data);
     await this.invalidateRegionsCache(data.country.toString());
     return region;
@@ -158,6 +236,19 @@ export class LocationsService {
     id: string,
     data: UpdateRegionDto,
   ): Promise<RegionDocument> {
+    if (data.name) {
+      const current = await this.regionModel.findById(id).lean();
+      if (!current) throw new NotFoundException('Region not found');
+
+      const countryId = (data.country ?? current.country).toString();
+      await this.assertRegionUnique(
+        data.name.ar ?? current.name.ar,
+        data.name.en ?? current.name.en,
+        countryId,
+        id,
+      );
+    }
+
     const updated = await this.regionModel.findByIdAndUpdate(id, data, {
       new: true,
     });
@@ -172,12 +263,38 @@ export class LocationsService {
   // CITIES
   // ===========================================================================
 
+  private async assertCityUnique(
+    nameAr: string,
+    nameEn: string,
+    regionId: string,
+    excludeId?: string,
+  ): Promise<void> {
+    const filter: any = {
+      region: regionId,
+      $or: [{ 'name.ar': nameAr.trim() }, { 'name.en': nameEn.trim() }],
+    };
+    if (excludeId) filter._id = { $ne: excludeId };
+
+    const exists = await this.cityModel.exists(filter);
+    if (exists) {
+      throw new BadRequestException(
+        this.i18n.translate('exception.CITY_EXISTS'),
+      );
+    }
+  }
+
   /**
    * Creates a new city and invalidates the cities cache for its region.
    * @param data - The city data
    * @returns The created city document
    */
   async createCity(data: CreateCityDto): Promise<CityDocument> {
+    await this.assertCityUnique(
+      data.name.ar,
+      data.name.en,
+      data.region.toString(),
+    );
+
     const city = await this.cityModel.create(data);
     await this.invalidateCitiesCache(data.region.toString());
     return city;
@@ -240,6 +357,19 @@ export class LocationsService {
    * @returns The updated city document
    */
   async updateCity(id: string, data: UpdateCityDto): Promise<CityDocument> {
+    if (data.name) {
+      const current = await this.cityModel.findById(id).lean();
+      if (!current) throw new NotFoundException('City not found');
+
+      const regionId = (data.region ?? current.region).toString();
+      await this.assertCityUnique(
+        data.name.ar ?? current.name.ar,
+        data.name.en ?? current.name.en,
+        regionId,
+        id,
+      );
+    }
+
     const updated = await this.cityModel.findByIdAndUpdate(id, data, {
       new: true,
     });

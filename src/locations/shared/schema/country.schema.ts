@@ -24,3 +24,5 @@ export class Country {
 export const CountrySchema = SchemaFactory.createForClass(Country);
 
 CountrySchema.index({ isActive: 1 });
+CountrySchema.index({ 'name.ar': 1 }, { unique: true, sparse: true });
+CountrySchema.index({ 'name.en': 1 }, { unique: true, sparse: true });

@@ -42,6 +42,7 @@ export class City {
 
 export const CitySchema = SchemaFactory.createForClass(City);
 
-CitySchema.index({ region: 1 });
 CitySchema.index({ country: 1 });
 CitySchema.index({ region: 1, isDeliveryAvailable: 1, isActive: 1 });
+CitySchema.index({ 'name.ar': 1, region: 1 }, { unique: true, sparse: true });
+CitySchema.index({ 'name.en': 1, region: 1 }, { unique: true, sparse: true });
