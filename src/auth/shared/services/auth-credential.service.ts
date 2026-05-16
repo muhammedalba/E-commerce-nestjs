@@ -15,8 +15,8 @@ import { LoginUserDto } from '../dto/login-user.dto';
 import { CookieService } from './cookie.service';
 import { TokenService } from './token.service';
 import { User } from '../schema/user.schema';
+import { Role } from 'src/roles/shared/schemas/role.schema';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
-import { roles } from '../enums/role.enum';
 import { Response } from 'express';
 
 @Injectable()
@@ -25,13 +25,14 @@ export class AuthCredentialService {
 
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
+    @InjectModel(Role.name) private roleModel: Model<Role>,
     @InjectModel(RefreshToken.name)
     private RefreshTokenModel: Model<RefreshToken>,
     private readonly fileUploadService: FileUploadService,
     private readonly i18n: CustomI18nService,
     private readonly tokenService: TokenService,
     private readonly cookieService: CookieService,
-  ) {}
+  ) { }
 
   async register(
     createUserDto: CreateUserDto,
@@ -60,7 +61,11 @@ export class AuthCredentialService {
       }
     }
     createUserDto.avatar = filePath;
-    createUserDto.role = roles.USER;
+    
+    // Fetch default 'User' role
+    const userRole = await this.roleModel.findOne({ name: 'User' });
+    createUserDto.role = userRole ? userRole._id : undefined;
+
     const newUser = await this.userModel.create({
       ...createUserDto,
       lastLogin: new Date(),
@@ -68,7 +73,8 @@ export class AuthCredentialService {
 
     const userId = {
       user_id: newUser._id.toString(),
-      role: roles.USER.toLocaleLowerCase(),
+      role: 'User',
+      level: userRole ? userRole.level : 1,
       email: newUser.email,
     };
 
@@ -79,6 +85,7 @@ export class AuthCredentialService {
 
     const userWithTokens = {
       ...newUser.toObject(),
+      role: userRole ? userRole.toObject() : undefined,
       access_token: Tokens.access_token,
       password: undefined,
       __v: undefined,
@@ -88,9 +95,10 @@ export class AuthCredentialService {
 
   async login(loginUserDto: LoginUserDto, res: Response): Promise<any> {
     const { email, password } = loginUserDto;
-    const user = await this.userModel
+    const user: any = await this.userModel
       .findOne({ email })
       .select('password email role avatar name isActive')
+      .populate('role')
       .lean()
       .exec();
 
@@ -119,7 +127,8 @@ export class AuthCredentialService {
 
     const userId = {
       user_id: user._id.toString(),
-      role: user.role || 'user',
+      role: user.role?.name || 'User',
+      level: user.role?.level || 0,
       email: user.email,
     };
     const Tokens = await this.tokenService.generate_Tokens(userId);

@@ -12,9 +12,9 @@ import {
 import { CacheTTL } from '@nestjs/cache-manager';
 import { PaymentsService } from './payments.service';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
-import { RoleGuard } from 'src/auth/shared/guards/role.guard';
-import { Roles } from 'src/auth/shared/decorators/roles.decorator';
-import { roles } from 'src/auth/shared/enums/role.enum';
+import { PermissionsGuard } from 'src/roles/shared/guards/permissions.guard';
+import { RequirePermission } from 'src/roles/shared/decorators/require-permission.decorator';
+import { Permissions } from 'src/roles/shared/enums/permissions.enum';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
@@ -39,8 +39,8 @@ export class PaymentsController {
   /*  ADMIN: GET ALL (including inactive)              */
   /* ================================================ */
   @Get('all')
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.VIEW_ORDERS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   findAll() {
     return this.paymentsService.findAll();
   }
@@ -49,8 +49,8 @@ export class PaymentsController {
   /*  CREATE - Admin Only                              */
   /* ================================================ */
   @Post()
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.VIEW_ORDERS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('payments')
   create(@Body() body: any) {
     return this.paymentsService.create(body);
@@ -60,8 +60,8 @@ export class PaymentsController {
   /*  UPDATE - Admin Only                              */
   /* ================================================ */
   @Patch(':id')
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.VIEW_ORDERS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('payments')
   update(@Param() { id }: IdParamDto, @Body() body: any) {
     return this.paymentsService.update(id, body);
@@ -71,8 +71,8 @@ export class PaymentsController {
   /*  DELETE - Admin Only                              */
   /* ================================================ */
   @Delete(':id')
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.VIEW_ORDERS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('payments')
   remove(@Param() { id }: IdParamDto) {
     return this.paymentsService.remove(id);

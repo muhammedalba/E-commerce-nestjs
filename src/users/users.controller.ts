@@ -10,6 +10,7 @@ import {
   Body,
   UseGuards,
   Query,
+  Req,
 } from '@nestjs/common';
 import { CacheTTL } from '@nestjs/cache-manager';
 import { UsersService } from './users.service';
@@ -20,18 +21,17 @@ import { CreateUserDto } from './shared/dto/create-user.dto';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { UpdateUserDto } from './shared/dto/update-user.dto';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
-import { roles } from 'src/auth/shared/enums/role.enum';
-import { RoleGuard } from 'src/auth/shared/guards/role.guard';
-import { Roles } from 'src/auth/shared/decorators/roles.decorator';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
+import { PermissionsGuard } from 'src/roles/shared/guards/permissions.guard';
+import { RequirePermission } from 'src/roles/shared/decorators/require-permission.decorator';
+import { Permissions } from 'src/roles/shared/enums/permissions.enum';
 
 @Controller('users')
-@Roles(roles.ADMIN)
-@UseGuards(AuthGuard, RoleGuard)
+@UseGuards(AuthGuard, PermissionsGuard)
 @UseInterceptors(ClearCacheInterceptor)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
@@ -41,6 +41,7 @@ export class UsersController {
   /* ------------ ======  GET USERS STATISTICS  ====== ------- */
   /* ------------ =============================== ---------- */
   @Get('statistics')
+  @RequirePermission(Permissions.VIEW_USERS)
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(300000) // 5 minutes
   async get_users_statistics(
@@ -54,6 +55,7 @@ export class UsersController {
   /* ------------ ======  CREATE USER  ====== ---------------- */
   /* ------------ =============================== ---------- */
   @Post()
+  @RequirePermission(Permissions.MANAGE_USERS)
   @ClearCache('users')
   @UseInterceptors(FileInterceptor('avatar'))
   createUser(
@@ -61,13 +63,15 @@ export class UsersController {
     CreateUserDto: CreateUserDto,
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], false))
     file: MulterFileType,
+    @Req() req: any,
   ) {
-    return this.usersService.createUser(CreateUserDto, file);
+    return this.usersService.createUser(CreateUserDto, file, req.user);
   }
   /* ------------ =============================== ---------- */
   /* ------------ ======  GET ALL USERS  ====== ---------------- */
   /* ------------ =============================== ---------- */
   @Get()
+  @RequirePermission(Permissions.VIEW_USERS)
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(60000) // 60 seconds
   async getUsers(@Query() QueryDto: QueryString): Promise<any> {
@@ -77,6 +81,7 @@ export class UsersController {
   /* ------------ ======  GET USER BY ID  ====== ---------------- */
   /* ------------ =============================== ---------- */
   @Get(':id')
+  @RequirePermission(Permissions.VIEW_USERS)
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(60000) // 60 seconds
   findOne(@Param() IdParamDto: IdParamDto) {
@@ -86,6 +91,7 @@ export class UsersController {
   /* ------------ ======  UPDATE USER  ====== ---------------- */
   /* ------------ =============================== ---------- */
   @Patch(':id')
+  @RequirePermission(Permissions.MANAGE_USERS)
   @ClearCache('users')
   @UseInterceptors(FileInterceptor('avatar'))
   update_user(
@@ -95,15 +101,17 @@ export class UsersController {
     idParamDto: IdParamDto,
     @Body()
     updateUserDto: UpdateUserDto,
+    @Req() req: any,
   ) {
-    return this.usersService.update_user(idParamDto, updateUserDto, file);
+    return this.usersService.update_user(idParamDto, updateUserDto, file, req.user);
   }
   /* ------------ =============================== ---------- */
   /* ------------ ======  DELETE USER  ====== ---------------- */
   /* ------------ =============================== ---------- */
   @Delete(':id')
+  @RequirePermission(Permissions.MANAGE_USERS)
   @ClearCache('users')
-  delete_user(@Param() idParamDto: IdParamDto) {
-    return this.usersService.delete_user(idParamDto);
+  delete_user(@Param() idParamDto: IdParamDto, @Req() req: any) {
+    return this.usersService.delete_user(idParamDto, req.user);
   }
 }

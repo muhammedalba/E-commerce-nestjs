@@ -43,6 +43,7 @@ export class UserProfileService {
     const user = await this.userModel
       .findById(user_id)
       .select('isActive name avatar email phone role slug lastLogin')
+      .populate('role')
       .lean()
       .exec();
     if (!user) {
@@ -136,7 +137,8 @@ export class UserProfileService {
           },
           { new: true, runValidators: true, lean: true },
         )
-        .select('name avatar phone email role slug lastLogin');
+        .select('name avatar phone email role slug lastLogin')
+        .populate('role');
         // build absolute avatar URL (lean() bypasses Mongoose virtuals/hooks)
         if (updatedUser) {
           updatedUser.avatar = this.fileUploadService.withBaseUrl(updatedUser.avatar) as string;
@@ -260,6 +262,7 @@ export class UserProfileService {
       const userData = {
         user_id: decoded_access_token.user_id,
         role: decoded_access_token.role || 'user',
+        level: decoded_access_token.level || 0,
         email: decoded_access_token.email,
       };
       // generate new access and refresh token and delete old refresh token

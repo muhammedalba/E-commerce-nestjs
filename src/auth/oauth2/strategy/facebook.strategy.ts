@@ -1,4 +1,3 @@
-// auth/strategies/facebook.strategy.ts
 
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';

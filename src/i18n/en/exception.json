@@ -69,5 +69,14 @@
       "COUNTRY_NAME_EXISTS": "A country with this name already exists",
       "COUNTRY_CODE_EXISTS": "A country with this code already exists",
       "REGION_EXISTS": "A region with this name already exists in this country",
-      "CITY_EXISTS": "A city with this name already exists in this region"
+      "CITY_EXISTS": "A city with this name already exists in this region",
+      "FORBIDDEN_PERMISSIONS": "You do not have the required permissions to perform this action",
+      "role": {
+            "CANNOT_CREATE_HIGHER_ROLE": "You cannot create a role with a level higher than or equal to yours",
+            "CANNOT_MODIFY_HIGHER_ROLE": "You cannot modify a role with a level higher than or equal to yours",
+            "CANNOT_RAISE_LEVEL": "You cannot raise this role's level to this degree",
+            "SYSTEM_ROLE_PROTECTED": "This role is system-defined and cannot be modified or deleted",
+            "ROLE_NOT_FOUND": "Role not found",
+            "SUCCESS_DELETE": "Role deleted successfully"
+      }
 }

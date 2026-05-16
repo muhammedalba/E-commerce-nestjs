@@ -22,9 +22,9 @@ import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { ParseFileFieldsPipe } from 'src/shared/files/ParseFileFieldsPipe';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { Roles } from 'src/auth/shared/decorators/roles.decorator';
-import { roles } from 'src/auth/shared/enums/role.enum';
-import { RoleGuard } from 'src/auth/shared/guards/role.guard';
+import { RequirePermission } from 'src/roles/shared/decorators/require-permission.decorator';
+import { Permissions } from 'src/roles/shared/enums/permissions.enum';
+import { PermissionsGuard } from 'src/roles/shared/guards/permissions.guard';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { Request } from 'express';
 import { MaxFileCount } from 'src/shared/files/constants/file-count.constants';
@@ -34,8 +34,6 @@ import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 type file = Request['file'];
 
 @Controller('carousel')
-@Roles(roles.ADMIN)
-@UseGuards(AuthGuard, RoleGuard)
 @UseInterceptors(ClearCacheInterceptor)
 export class CarouselController {
   constructor(private readonly carouselService: CarouselService) {}
@@ -48,6 +46,8 @@ export class CarouselController {
   // ------------ ======  CREATE CAROUSEL   ====== ---------- //
   // ------------ =============================== ---------- //
   @Post()
+  @RequirePermission(Permissions.MANAGE_PROMO_BANNERS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('carousel')
   @UseInterceptors(FileFieldsInterceptor(CarouselController.imageSize))
   async create(
@@ -83,7 +83,6 @@ export class CarouselController {
   // ------------ ======  GET ALL CAROUSEL   ====== ---------- //
   // ------------ =============================== ---------- //
   @Get()
-  @Roles(roles.USER, roles.ADMIN, roles.MANAGER)
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(60000) // 60 seconds
   async findAll(
@@ -110,6 +109,8 @@ export class CarouselController {
   // ------------ ======  UPDATE CAROUSEL   ====== ---------- //
   // ------------ =============================== ---------- //
   @Patch(':id')
+  @RequirePermission(Permissions.MANAGE_PROMO_BANNERS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('carousel')
   @UseInterceptors(FileFieldsInterceptor(CarouselController.imageSize))
   async update(
@@ -142,6 +143,8 @@ export class CarouselController {
   // ------------ ======  DELETE CAROUSEL   ====== ---------- //
   // ------------ =============================== ---------- //
   @Delete(':id')
+  @RequirePermission(Permissions.MANAGE_PROMO_BANNERS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('carousel')
   async remove(@Param() idParamDto: IdParamDto): Promise<void> {
     return await this.carouselService.remove(idParamDto);

@@ -141,6 +141,7 @@ export class PasswordResetService {
     const user = await this.userModel
       .findOne({ email: LoginUserDto.email })
       .select('email avatar role verificationCode passwordResetExpires')
+      .populate('role')
       .exec();
     if (!user) {
       throw new BadRequestException(
@@ -165,7 +166,8 @@ export class PasswordResetService {
     // 4) if everything is ok ,generate token
     const userId = {
       user_id: user._id.toString(),
-      role: user.role || 'user',
+      role: user.role?.name || 'user',
+      level: user.role?.level || 0,
       email: user.email,
     };
     const Tokens = await this.tokenService.generate_Tokens(userId, '5h');

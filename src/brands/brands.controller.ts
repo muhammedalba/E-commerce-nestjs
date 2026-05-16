@@ -19,9 +19,9 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { createParseFilePipe } from 'src/shared/files/files-validation-factory';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
-import { Roles } from 'src/auth/shared/decorators/roles.decorator';
-import { roles } from 'src/auth/shared/enums/role.enum';
-import { RoleGuard } from 'src/auth/shared/guards/role.guard';
+import { RequirePermission } from 'src/roles/shared/decorators/require-permission.decorator';
+import { Permissions } from 'src/roles/shared/enums/permissions.enum';
+import { PermissionsGuard } from 'src/roles/shared/guards/permissions.guard';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
@@ -37,8 +37,8 @@ export class BrandsController {
   // ------------ =============================== ---------- //
   @Post()
   @ClearCache('brands')
-  @Roles(roles.ADMIN, roles.MANAGER)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.MANAGE_BRANDS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @UseInterceptors(FileInterceptor('image'))
   async create(
     @Body() createBrandDto: CreateBrandDto,
@@ -51,7 +51,6 @@ export class BrandsController {
   // ------------ ======  get all brands   ====== ---------- //
   // ------------ =============================== ---------- //
   @Get()
-  @Roles(roles.USER, roles.ADMIN, roles.MANAGER)
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(60000) // 60 seconds
   async findAll(
@@ -65,8 +64,8 @@ export class BrandsController {
   // ------------ ====== get statistics brands  = ---------- //
   // ------------ =============================== ---------- //
   @Get('statistics')
-  @Roles(roles.ADMIN, roles.MANAGER)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.MANAGE_BRANDS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(300000) // 5 minutes
   async BrandsStatistics() {
@@ -90,8 +89,8 @@ export class BrandsController {
   // ------------ =============================== ---------- //
   @Patch(':id')
   @ClearCache('brands')
-  @Roles(roles.ADMIN, roles.MANAGER)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.MANAGE_BRANDS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @UseInterceptors(FileInterceptor('image'))
   async updateBrand(
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp']))
@@ -110,8 +109,8 @@ export class BrandsController {
   // ------------ =============================== ---------- //
   @Delete(':id')
   @ClearCache('brands')
-  @Roles(roles.ADMIN, roles.MANAGER)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.MANAGE_BRANDS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   async remove(@Param() idParamDto: IdParamDto) {
     return await this.brandsService.deleteOne(idParamDto);
   }

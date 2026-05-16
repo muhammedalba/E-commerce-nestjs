@@ -7,8 +7,13 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
+import { PermissionsGuard } from 'src/roles/shared/guards/permissions.guard';
+import { RequirePermission } from 'src/roles/shared/decorators/require-permission.decorator';
+import { Permissions } from 'src/roles/shared/enums/permissions.enum';
 import { CacheTTL } from '@nestjs/cache-manager';
 import { PromoBannerService } from './promo-banner.service';
 import { PromoBanner } from './shared/schema/promo-banner.schema';
@@ -79,6 +84,8 @@ export class PromoBannerController {
   // ------------------------------------------------------
 
   @Post()
+  @RequirePermission(Permissions.MANAGE_PROMO_BANNERS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('promo-banner')
   async createBanner(
     @Body() promoBannerDto: PromoBannerDto,
@@ -91,6 +98,8 @@ export class PromoBannerController {
   // ------------------------------------------------------
 
   @Patch(':id')
+  @RequirePermission(Permissions.MANAGE_PROMO_BANNERS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('promo-banner')
   async update(
     @Param() idParamDto: IdParamDto,
@@ -106,6 +115,8 @@ export class PromoBannerController {
   // ------------------------------------------------------
 
   @Delete(':id')
+  @RequirePermission(Permissions.MANAGE_PROMO_BANNERS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('promo-banner')
   async deleteBanner(@Param() idParamDto: IdParamDto) {
     return await this.promoBannerService.deleteBanner(idParamDto.id);

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { FileUploadDiskStorageModule } from 'src/file-upload/file-upload.module';
@@ -21,12 +21,15 @@ import { FacebookStrategy } from './oauth2/strategy/facebook.strategy';
 import { FacebookAuthGuard } from './oauth2/guards/facebook-auth.guard';
 import { FacebookService } from './oauth2/services/facebook.service';
 import { User, UserSchema } from './shared/schema/user.schema';
+import { Role, RoleSchema } from 'src/roles/shared/schemas/role.schema';
 
+@Global()
 @Module({
   imports: [
     FileUploadDiskStorageModule,
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
+      { name: Role.name, schema: RoleSchema },
       { name: RefreshToken.name, schema: refreshTokenSchema },
     ]),
     EmailModule,

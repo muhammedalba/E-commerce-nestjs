@@ -27,10 +27,10 @@ import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { createParseFilePipe } from 'src/shared/files/files-validation-factory';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
-import { Roles } from 'src/auth/shared/decorators/roles.decorator';
-import { roles } from 'src/auth/shared/enums/role.enum';
+import { RequirePermission } from 'src/roles/shared/decorators/require-permission.decorator';
+import { Permissions } from 'src/roles/shared/enums/permissions.enum';
 import { ParseFileFieldsPipe } from 'src/shared/files/ParseFileFieldsPipe';
-import { RoleGuard } from 'src/auth/shared/guards/role.guard';
+import { PermissionsGuard } from 'src/roles/shared/guards/permissions.guard';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
@@ -58,8 +58,8 @@ export class OrderController {
   @Get('statistics')
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(300000) // 5 minutes
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.VIEW_ORDERS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   async OrdersStatistics(
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
@@ -73,8 +73,8 @@ export class OrderController {
   @Get('marketing-statistics')
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(300000) // 5 minutes
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.VIEW_ORDERS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   async MarketingStatistics(
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
@@ -148,7 +148,8 @@ export class OrderController {
   // ========================================================================================
   @Patch(':id')
   @ClearCache('order')
-  @Roles(roles.ADMIN, roles.MANAGER)
+  @RequirePermission(Permissions.UPDATE_ORDER_STATUS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @UseInterceptors(FileFieldsInterceptor(OrderController.imageSize))
   async update(
     @UploadedFiles(
@@ -178,7 +179,8 @@ export class OrderController {
   // ========================================================================================
   @Delete(':id')
   @ClearCache('order')
-  @Roles(roles.ADMIN, roles.MANAGER)
+  @RequirePermission(Permissions.DELETE_ORDER)
+  @UseGuards(AuthGuard, PermissionsGuard)
   async remove(@Param() idParamDto: IdParamDto) {
     return await this.orderService.remove(idParamDto);
   }

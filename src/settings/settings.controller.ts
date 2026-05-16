@@ -11,9 +11,9 @@ import { CacheTTL } from '@nestjs/cache-manager';
 import { SettingsService } from './settings.service';
 import { UpdateSettingDto } from './shared/dto/update-setting.dto';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
-import { RoleGuard } from 'src/auth/shared/guards/role.guard';
-import { Roles } from 'src/auth/shared/decorators/roles.decorator';
-import { roles } from 'src/auth/shared/enums/role.enum';
+import { PermissionsGuard } from 'src/roles/shared/guards/permissions.guard';
+import { RequirePermission } from 'src/roles/shared/decorators/require-permission.decorator';
+import { Permissions } from 'src/roles/shared/enums/permissions.enum';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
@@ -44,8 +44,8 @@ export class SettingsController {
   /*  UPDATE SETTINGS - Admin Only (للإدمن فقط)       */
   /* ================================================ */
   @Patch()
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.MANAGE_SETTINGS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('settings')
   @UseInterceptors(
     FileFieldsInterceptor(SettingsController.imageSize),
@@ -94,8 +94,8 @@ export class SettingsController {
   /*  CLEAR CACHE - Admin Only                        */
   /* ================================================ */
   @Patch('clear-cache')
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.MANAGE_SETTINGS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   async clearCache() {
     return await this.settingsService.clearCache();
   }

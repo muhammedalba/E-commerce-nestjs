@@ -10,6 +10,7 @@ import {
   IsLowercase,
   IsNumber,
   IsBoolean,
+  IsMongoId,
 } from 'class-validator';
 import { MatchPasswordValidator } from '../validators/match-password.validator';
 import { Transform } from 'class-transformer';
@@ -57,11 +58,7 @@ export class CreateUserDto {
   confirmPassword!: string;
 
   @IsOptional()
-  @IsEnum(roles, {
-    message: i18nValidationMessage('validation.IS_ENUM'),
-  })
-  @IsLowercase()
-  role?: roles;
+  role?: string | any;
 
   @IsOptional()
   avatar?: string;

@@ -9,6 +9,7 @@ import { PaymentsService } from '../payments/payments.service';
 import { TaxesService } from '../taxes/taxes.service';
 import { PaymentType } from '../payments/shared/schema/payment-method.schema';
 import { KSA_DATA } from './ksa-data';
+import { RolesSeederService } from '../roles/services/roles-seeder.service';
 
 @Injectable()
 export class SeedService {
@@ -20,10 +21,14 @@ export class SeedService {
     private readonly shippingRatesService: ShippingRatesService,
     private readonly paymentsService: PaymentsService,
     private readonly taxesService: TaxesService,
+    private readonly rolesSeederService: RolesSeederService,
   ) { }
 
   async runSeed() {
     console.log('🌱 Starting Database Seeding...');
+    
+    // 0. Seed Roles
+    await this.rolesSeederService.seedRoles();
     // 1. Seed Settings
     await this.settingsService.updateSettings({
       siteName: { ar: 'مجرة السماء', en: 'Sky Galaxy' },

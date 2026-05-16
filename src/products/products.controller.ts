@@ -21,10 +21,10 @@ import { ParseFileFieldsPipe } from 'src/shared/files/ParseFileFieldsPipe';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { MaxFileCount } from 'src/shared/files/constants/file-count.constants';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
-import { Roles } from 'src/auth/shared/decorators/roles.decorator';
-import { roles } from 'src/auth/shared/enums/role.enum';
+import { RequirePermission } from 'src/roles/shared/decorators/require-permission.decorator';
+import { Permissions } from 'src/roles/shared/enums/permissions.enum';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
-import { RoleGuard } from 'src/auth/shared/guards/role.guard';
+import { PermissionsGuard } from 'src/roles/shared/guards/permissions.guard';
 import { MulterFilesType } from 'src/shared/utils/interfaces/fileInterface';
 import { ParseBodyJsonInterceptor } from 'src/shared/interceptors/parse-body-json.interceptor';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
@@ -47,8 +47,8 @@ export class ProductsController {
   // ----------------------------------------------------------------------------------------------------------------------------
 
   @Get('statistics')
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.VIEW_PRODUCTS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   // @UseInterceptors(CustomCacheInterceptor)
   // @CacheTTL(300_000) // 5 minutes
   async Products_statistics(
@@ -64,8 +64,8 @@ export class ProductsController {
 
   @Post()
   @ClearCache('products')
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.CREATE_PRODUCT)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @UseInterceptors(
     FileFieldsInterceptor(ProductsController.imageSize),
     new ParseBodyJsonInterceptor(
@@ -183,8 +183,8 @@ export class ProductsController {
   //  UPDATE PRODUCT + VARIANTS (Transaction)
   // ----------------------------------------------------------------------------------------------------------------------------
 
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.UPDATE_PRODUCT)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('products')
   @Patch(':id')
   @UseInterceptors(
@@ -225,8 +225,8 @@ export class ProductsController {
   //  SOFT DELETE PRODUCT
   // ----------------------------------------------------------------------------------------------------------------------------
 
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.DELETE_PRODUCT)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('products')
   @Delete(':id')
   remove(@Param() idParamDto: IdParamDto) {
@@ -237,8 +237,8 @@ export class ProductsController {
   //  HARD DELETE (permanently, admin-only)
   // ----------------------------------------------------------------------------------------------------------------------------
 
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.DELETE_PRODUCT)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('products')
   @Delete(':id/permanent')
   hardRemove(@Param() idParamDto: IdParamDto) {
@@ -249,8 +249,8 @@ export class ProductsController {
   //  RESTORE soft-deleted product
   // ----------------------------------------------------------------------------------------------------------------------------
 
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.UPDATE_PRODUCT)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('products')
   @Patch(':id/restore')
   restore(@Param() idParamDto: IdParamDto) {

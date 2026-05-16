@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Model } from 'mongoose';
+import { HydratedDocument, Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { Exclude } from 'class-transformer';
 
@@ -52,15 +52,9 @@ export class User {
   @Exclude()
   declare password: string;
 
-  @Prop({
-    required: false,
-    lowercase: true,
-    type: 'string',
-    enum: ['user', 'admin', 'manager'],
-    default: 'user',
-  })
+  @Prop({ type: Types.ObjectId, ref: 'Role' })
   @Exclude()
-  declare role: 'user' | 'admin' | 'manager' | undefined;
+  declare role: Types.ObjectId | any;
 
   @Exclude()
   @Prop({

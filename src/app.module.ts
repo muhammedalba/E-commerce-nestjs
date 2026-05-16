@@ -35,6 +35,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { AuditModule } from './audit/audit.module';
 import { CheckoutModule } from './checkout/checkout.module';
 import { SeedModule } from './seed/seed.module';
+import { RolesModule } from './roles/roles.module';
 
 import { MaintenanceGuard } from './shared/guards/maintenance.guard';
 
@@ -85,6 +86,7 @@ import { MaintenanceGuard } from './shared/guards/maintenance.guard';
     AuditModule,
     CheckoutModule,
     SeedModule,
+    RolesModule,
   ],
   controllers: [AppController],
   providers: [

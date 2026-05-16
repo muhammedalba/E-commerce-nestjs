@@ -20,10 +20,10 @@ import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { CategoriesService } from './categories.service';
-import { Roles } from 'src/auth/shared/decorators/roles.decorator';
-import { roles } from 'src/auth/shared/enums/role.enum';
+import { RequirePermission } from 'src/roles/shared/decorators/require-permission.decorator';
+import { Permissions } from 'src/roles/shared/enums/permissions.enum';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
-import { RoleGuard } from 'src/auth/shared/guards/role.guard';
+import { PermissionsGuard } from 'src/roles/shared/guards/permissions.guard';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
@@ -36,8 +36,8 @@ export class CategoriesController {
   // ------------ =============================== ---------- //
   // ------------ ======  get statistics categories  = ---------- //
   // ------------ =============================== ---------- //
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.MANAGE_CATEGORIES)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @Get('statistics')
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(300000) // 5 minutes
@@ -48,8 +48,8 @@ export class CategoriesController {
   // ------------ =============================== ---------- //
   // ------------ ======  CREATE CATEGORY   ====== ---------- //
   // ------------ =============================== ---------- //
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.MANAGE_CATEGORIES)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('categories')
   @Post()
   @UseInterceptors(FileInterceptor('image'))
@@ -92,8 +92,8 @@ export class CategoriesController {
   // ------------ =============================== ---------- //
   // ------------ ======  update category   ====== ---------- //
   // ------------ =============================== ---------- //
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.MANAGE_CATEGORIES)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('categories')
   @Patch(':id')
   @UseInterceptors(FileInterceptor('image'))
@@ -113,8 +113,8 @@ export class CategoriesController {
   // ------------ =============================== ---------- //
   // ------------ ======  delete category   ====== ---------- //
   // ------------ =============================== ---------- //
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.MANAGE_CATEGORIES)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('categories')
   @Delete(':id')
   async remove(@Param() idParamDto: IdParamDto) {

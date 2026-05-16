@@ -15,9 +15,9 @@ import { CacheTTL } from '@nestjs/cache-manager';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ShippingService } from './shipping.service';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
-import { RoleGuard } from 'src/auth/shared/guards/role.guard';
-import { Roles } from 'src/auth/shared/decorators/roles.decorator';
-import { roles } from 'src/auth/shared/enums/role.enum';
+import { PermissionsGuard } from 'src/roles/shared/guards/permissions.guard';
+import { RequirePermission } from 'src/roles/shared/decorators/require-permission.decorator';
+import { Permissions } from 'src/roles/shared/enums/permissions.enum';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
@@ -72,8 +72,8 @@ export class ShippingController {
   /*  GET ALL RATES - Admin                          */
   /* ================================================ */
   @Get('rates')
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.MANAGE_SHIPPING)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @CacheTTL(3600000)
   getRates(@Query() query: QueryString) {
     return this.shippingRatesService.getRates(query);
@@ -92,8 +92,8 @@ export class ShippingController {
   /*  ADMIN ENDPOINTS                                  */
   /* ================================================ */
   @Post('providers')
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.MANAGE_SHIPPING)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('shipping')
   @UseInterceptors(FileInterceptor('logo'))
   createProvider(
@@ -105,8 +105,8 @@ export class ShippingController {
   }
 
   @Patch('providers/:id')
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.MANAGE_SHIPPING)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('shipping')
   @UseInterceptors(FileInterceptor('logo'))
   updateProvider(
@@ -119,32 +119,32 @@ export class ShippingController {
   }
 
   @Post('rates')
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.MANAGE_SHIPPING)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('shipping')
   createRate(@Body() body: CreateShippingRateDto) {
     return this.shippingRatesService.createRate(body);
   }
 
   @Patch('rates/:id')
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.MANAGE_SHIPPING)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('shipping')
   updateRate(@Param() { id }: IdParamDto, @Body() body: UpdateShippingRateDto) {
     return this.shippingRatesService.updateRate(id, body);
   }
 
   @Delete('providers/:id')
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.MANAGE_SHIPPING)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('shipping')
   deleteProvider(@Param() { id }: IdParamDto) {
     return this.shippingService.deleteProvider(id);
   }
 
   @Delete('rates/:id')
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.MANAGE_SHIPPING)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('shipping')
   deleteRate(@Param() { id }: IdParamDto) {
     return this.shippingRatesService.deleteRate(id);

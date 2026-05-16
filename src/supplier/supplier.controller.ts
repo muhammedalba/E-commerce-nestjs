@@ -15,10 +15,10 @@ import { CacheTTL } from '@nestjs/cache-manager';
 import { SupplierService } from './supplier.service';
 import { CreateSupplierDto } from './shared/dto/create-supplier.dto';
 import { UpdateSupplierDto } from './shared/dto/update-supplier.dto';
-import { Roles } from 'src/auth/shared/decorators/roles.decorator';
-import { roles } from 'src/auth/shared/enums/role.enum';
+import { RequirePermission } from 'src/roles/shared/decorators/require-permission.decorator';
+import { Permissions } from 'src/roles/shared/enums/permissions.enum';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
-import { RoleGuard } from 'src/auth/shared/guards/role.guard';
+import { PermissionsGuard } from 'src/roles/shared/guards/permissions.guard';
 import { createParseFilePipe } from 'src/shared/files/files-validation-factory';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -29,8 +29,8 @@ import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.inter
 import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 
 @Controller('supplier')
-@Roles(roles.ADMIN)
-@UseGuards(AuthGuard, RoleGuard)
+@RequirePermission(Permissions.MANAGE_USERS)
+@UseGuards(AuthGuard, PermissionsGuard)
 @UseInterceptors(ClearCacheInterceptor)
 export class SupplierController {
   constructor(private readonly supplierService: SupplierService) {}

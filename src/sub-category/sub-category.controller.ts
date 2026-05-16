@@ -14,10 +14,10 @@ import { CacheTTL } from '@nestjs/cache-manager';
 import { SubCategoryService } from './sub-category.service';
 import { CreateSubCategoryDto } from './shared/dto/create-sub-category.dto';
 import { UpdateSubCategoryDto } from './shared/dto/update-sub-category.dto';
-import { Roles } from 'src/auth/shared/decorators/roles.decorator';
-import { roles } from 'src/auth/shared/enums/role.enum';
+import { RequirePermission } from 'src/roles/shared/decorators/require-permission.decorator';
+import { Permissions } from 'src/roles/shared/enums/permissions.enum';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
-import { RoleGuard } from 'src/auth/shared/guards/role.guard';
+import { PermissionsGuard } from 'src/roles/shared/guards/permissions.guard';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
@@ -32,8 +32,8 @@ export class SubCategoryController {
   // ------------ =============================== ---------- //
   // ------------ ======  CREATE SUP CATEGORY  ====== ---------- //
   // ------------ =============================== ---------- //
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.MANAGE_CATEGORIES)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('sub-category')
   @Post()
   create(@Body() createSubCategoryDto: CreateSubCategoryDto) {
@@ -44,7 +44,6 @@ export class SubCategoryController {
   // ------------ ======  GET ALL SUP CATEGORIES ====== ---------- //
   // ------------ =============================== ---------- //
   @Get()
-  @Roles(roles.ADMIN, roles.MANAGER, roles.USER)
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(60000) // 60 seconds
   findAll(
@@ -58,8 +57,8 @@ export class SubCategoryController {
   // ------------ =============================== ---------- //
   // ------------ ======  GET ALL SUP CATEGORIES STATISTICS ====== ---------- //
   // ------------ =============================== ---------- //
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.MANAGE_CATEGORIES)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @Get('statistics')
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(300000) // 5 minutes
@@ -84,8 +83,8 @@ export class SubCategoryController {
   // ------------ =============================== ---------- //
   // ------------ ======  UPDATE SUP CATEGORY  ====== ---------- //
   // ------------ =============================== ---------- //
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.MANAGE_CATEGORIES)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('sub-category')
   @Patch(':id')
   update(
@@ -98,8 +97,8 @@ export class SubCategoryController {
   // ------------ =============================== ---------- //
   // ------------ ======  DELETE SUP CATEGORY  ====== ---------- //
   // ------------ =============================== ---------- //
-  @Roles(roles.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  @RequirePermission(Permissions.MANAGE_CATEGORIES)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('sub-category')
   @Delete(':id')
   remove(@Param() idParamDto: IdParamDto) {

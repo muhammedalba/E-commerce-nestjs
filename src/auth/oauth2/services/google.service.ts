@@ -8,12 +8,14 @@ import { TokenService } from 'src/auth/shared/services/token.service';
 import { CookieService } from 'src/auth/shared/services/cookie.service';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { User } from 'src/auth/shared/schema/user.schema';
+import { Role } from 'src/roles/shared/schemas/role.schema';
 import { OAuthUser } from 'src/auth/shared/types/oauth-user.interface';
 
 @Injectable()
 export class GoogleService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
+    @InjectModel(Role.name) private roleModel: Model<Role>,
     private readonly i18n: CustomI18nService,
     private readonly tokenService: TokenService,
     private readonly cookieService: CookieService,
@@ -26,6 +28,7 @@ export class GoogleService {
     const user = await this.userModel
       .findOne({ email: email })
       .select('name role email avatar isActive')
+      .populate('role')
       .lean();
 
     let Tokens: { refresh_Token: string; access_token: string };
@@ -35,18 +38,23 @@ export class GoogleService {
       const randomPassword = crypto.randomBytes(16).toString('hex');
       // const hashed = await bcrypt.hash(randomPassword, 10);
 
-      // 2) create user
+      // 2) Fetch the default 'User' role
+      const userRole = await this.roleModel.findOne({ name: 'User' });
+
+      // 3) create user
       const newUser = await this.userModel.create({
         email: email,
         name: name,
         password: randomPassword,
         avatar: picture,
         provider: 'google',
+        role: userRole ? userRole._id : undefined,
         lastLogin: new Date(),
       });
       const userId = {
         user_id: newUser._id.toString(),
-        role: 'user',
+        role: 'User',
+        level: userRole ? userRole.level : 1,
         email: newUser.email,
       };
       // 3) generate access token
@@ -66,7 +74,8 @@ export class GoogleService {
       }
       const userId = {
         user_id: user._id.toString(),
-        role: user.role || 'user',
+        role: user.role?.name || 'user',
+        level: user.role?.level || 0,
         email: user.email,
       };
       Tokens = await this.tokenService.generate_Tokens(userId);
