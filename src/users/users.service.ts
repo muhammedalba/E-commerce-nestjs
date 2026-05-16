@@ -14,6 +14,7 @@ import { UsersStatistics } from './users-helper/users-statistics.service';
 
 @Injectable()
 export class UsersService extends BaseService<UserDocument> {
+  protected slugSourceField = 'name';
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     protected readonly fileUploadService: FileUploadService,

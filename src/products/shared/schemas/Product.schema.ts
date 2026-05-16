@@ -1,11 +1,11 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Type } from 'class-transformer';
+import { IsDefined, IsOptional, ValidateNested } from 'class-validator';
 import { HydratedDocument } from 'mongoose';
 import { Types } from 'mongoose';
-import { Brand } from 'src/brands/shared/schemas/brand.schema';
-import { Category } from 'src/categories/shared/schemas/category.schema';
-import { SubCategory } from 'src/sub-category/shared/schemas/sub-category.schema';
-import { Supplier } from 'src/supplier/shared/schema/Supplier.schema';
 import { ProductVariant } from './ProductVariant.schema';
+import { MODEL_NAMES } from 'src/shared/constants/models.constants';
+import { FieldLocalizeDto, ArrayLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
 
 @Schema({
   timestamps: true,
@@ -16,100 +16,103 @@ export class Product {
   // ─── Localized Fields ──────────────────────────────────
   @Prop({
     type: Object,
-    trim: true,
-    required: [true, 'product title required'],
-    minlength: 3,
-    maxlength: 70,
+    required: true,
   })
-  title!: string | { en: string; ar: string };
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => FieldLocalizeDto)
+  declare title: FieldLocalizeDto;
 
   @Prop({
     type: String,
     required: true,
     lowercase: true,
   })
-  slug!: string;
+  declare slug: string ;
 
   @Prop({
     type: Object,
-    trim: true,
-    required: [true, 'product description required'],
-    minlength: 15,
-    maxlength: 2000,
+    required: true,
   })
-  description!: string | { en?: string; ar?: string };
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => FieldLocalizeDto)
+  declare description: FieldLocalizeDto;
 
   @Prop({
     type: Object,
     required: false,
     default: { en: [], ar: [] },
   })
-  uses?: { en: string[]; ar: string[] };
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ArrayLocalizeDto)
+  declare uses: ArrayLocalizeDto | undefined;
 
   // ─── Media ─────────────────────────────────────────────
   @Prop({
     type: String,
     required: [true, 'product imageCover is required'],
   })
-  imageCover!: string;
+  declare imageCover: string;
 
   @Prop({
     type: [String],
   })
-  images?: string[];
+  declare images: string[] | undefined;
 
   @Prop({
     type: String,
   })
-  infoProductPdf?: string;
+  declare infoProductPdf: string | undefined;
 
   // ─── Classification ────────────────────────────────────
   @Prop({
     type: Types.ObjectId,
-    ref: Category.name,
+    ref: MODEL_NAMES.CATEGORY,
     required: false,
   })
-  category?: Types.ObjectId;
+  declare category: Types.ObjectId | undefined;
 
   @Prop({
-    type: [{ type: Types.ObjectId, ref: SubCategory.name, required: true }],
+    type: [{ type: Types.ObjectId, ref: MODEL_NAMES.SUB_CATEGORY, required: true }],
   })
-  SubCategories!: Types.ObjectId[];
-
-  @Prop({
-    type: Types.ObjectId,
-    ref: Brand.name,
-    required: false,
-  })
-  brand?: Types.ObjectId;
+  declare SubCategories: Types.ObjectId[];
 
   @Prop({
     type: Types.ObjectId,
-    ref: Supplier.name,
+    ref: MODEL_NAMES.BRAND,
     required: false,
   })
-  supplier?: Types.ObjectId;
+  declare brand: Types.ObjectId | undefined;
+
+  @Prop({
+    type: Types.ObjectId,
+    ref: MODEL_NAMES.SUPPLIER,
+    required: false,
+  })
+  declare supplier: Types.ObjectId | undefined;
 
   // ─── Flags ─────────────────────────────────────────────
   @Prop({
     type: Boolean,
     default: true,
   })
-  isUnlimitedStock!: boolean;
+  declare isUnlimitedStock: boolean;
 
   @Prop({
     type: Boolean,
     default: true,
     required: false,
   })
-  isActive!: boolean;
+  declare isActive: boolean;
 
   @Prop({
     type: Boolean,
     default: false,
     required: false,
   })
-  isFeatured?: boolean;
+  declare isFeatured: boolean | undefined;
 
   // ─── Ratings (aggregated, computed from reviews) ───────
   @Prop({
@@ -118,13 +121,13 @@ export class Product {
     max: 5,
     default: 1,
   })
-  rating?: number;
+  declare rating: number | undefined;
 
   @Prop({
     type: Number,
     default: 0,
   })
-  ratingsQuantity?: number;
+  declare ratingsQuantity: number | undefined;
 
   @Prop({
     type: Number,
@@ -132,20 +135,20 @@ export class Product {
     max: 5,
     default: 2,
   })
-  ratingsAverage!: number;
+  declare ratingsAverage: number;
 
   @Prop({
     type: Number,
     default: 0,
   })
-  totalSold!: number;
+  declare totalSold: number;
 
   // ─── Attribute Versioning & Definitions ────────────────
   @Prop({ type: Number, default: 1 })
-  allowedAttributesVersion!: number;
+  declare allowedAttributesVersion: number;
 
   @Prop({ type: [Object], default: [] })
-  allowedAttributes!: Array<{
+  declare allowedAttributes: Array<{
     name: string;
     type: 'string' | 'number';
     required?: boolean;
@@ -157,13 +160,13 @@ export class Product {
 
   // ─── Aggregated Variant Statistics ───────────────────────
   @Prop({ type: Object, default: { min: 0, max: 0 } })
-  priceRange!: { min: number; max: number };
+  declare priceRange: { min: number; max: number };
 
   @Prop({ type: Number, default: 0 })
-  stockSummary!: number;
+  declare stockSummary: number;
 
   @Prop({ type: Number, default: 0 })
-  variantCount!: number;
+  declare variantCount: number;
 
   // ─── Soft Delete ───────────────────────────────────────
   @Prop({
@@ -171,22 +174,22 @@ export class Product {
     default: false,
     index: true,
   })
-  isDeleted!: boolean;
+  declare isDeleted: boolean;
 
   @Prop({
     type: Date,
     default: null,
   })
-  deletedAt?: Date;
+  declare deletedAt: Date | undefined;
 
   // ─── Virtuals (TypeScript types) ────────────────────────
-  variants?: ProductVariant[];
+  declare variants: ProductVariant[] | undefined;
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);
 
 ProductSchema.virtual('variants', {
-  ref: 'ProductVariant',
+  ref: MODEL_NAMES.PRODUCT_VARIANT,
   localField: '_id',
   foreignField: 'productId',
 });
@@ -223,24 +226,24 @@ ProductSchema.pre('countDocuments', function () {
 });
 
 // ─── URL Prefix for Media Fields ─────────────────────────
-ProductSchema.post('init', function (doc: HydratedDocument<Product>) {
-  const hasTranslatedDescription =
-    doc?.title &&
-    typeof doc.title === 'object' &&
-    Object.values(doc.title).some(
-      (value) => typeof value === 'string' && value.trim() !== '',
-    );
+// ProductSchema.post('init', function (doc: HydratedDocument<Product>) {
+//   const hasTranslatedDescription =
+//     doc?.title &&
+//     typeof doc.title === 'object' &&
+//     Object.values(doc.title).some(
+//       (value) => typeof value === 'string' && value.trim() !== '',
+//     );
 
-  const baseUrl = process.env.BASE_URL ?? '';
+//   const baseUrl = process.env.BASE_URL ?? '';
 
-  if (hasTranslatedDescription) {
-    ['imageCover', 'infoProductPdf'].forEach((key) => {
-      const path = doc[key as keyof Product];
-      if (typeof path === 'string' && !path.startsWith(baseUrl)) {
-        doc[key] = `${baseUrl}${path}`;
-      }
-    });
-    const paths = doc?.images?.map((key) => `${baseUrl}${key}`);
-    doc.images = paths;
-  }
-});
+//   if (hasTranslatedDescription) {
+//     ['imageCover', 'infoProductPdf'].forEach((key) => {
+//       const path = doc[key as keyof Product];
+//       if (typeof path === 'string' && !path.startsWith(baseUrl)) {
+//         doc[key] = `${baseUrl}${path}`;
+//       }
+//     });
+//     const paths = doc?.images?.map((key) => `${baseUrl}${key}`);
+//     doc.images = paths;
+//   }
+// });

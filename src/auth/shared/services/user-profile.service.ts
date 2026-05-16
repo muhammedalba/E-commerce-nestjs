@@ -50,10 +50,8 @@ export class UserProfileService {
         this.i18n.translate('exception.USER_NOT_FOUND'),
       );
     }
-    // 1.5) modify the avatar url because its the 'init' in schema can't get the url if we use lean() in query
-    if (user && user.avatar && !user.avatar.startsWith('http')) {
-      user.avatar = `${process.env.BASE_URL}${user.avatar}`;
-    }
+    // 1.5) build absolute avatar URL (lean() bypasses Mongoose virtuals/hooks)
+    user.avatar = this.fileUploadService.withBaseUrl(user.avatar) as string;
 
     return user;
   }
@@ -139,7 +137,10 @@ export class UserProfileService {
           { new: true, runValidators: true, lean: true },
         )
         .select('name avatar phone email role slug lastLogin');
-
+        // build absolute avatar URL (lean() bypasses Mongoose virtuals/hooks)
+        if (updatedUser) {
+          updatedUser.avatar = this.fileUploadService.withBaseUrl(updatedUser.avatar) as string;
+        }
       return updatedUser;
     }
     catch (error) {

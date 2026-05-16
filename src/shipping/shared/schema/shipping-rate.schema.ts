@@ -4,6 +4,7 @@ import { ShippingProvider } from './shipping-provider.schema';
 import { Country } from 'src/locations/shared/schema/country.schema';
 import { Region } from 'src/locations/shared/schema/region.schema';
 import { City } from 'src/locations/shared/schema/city.schema';
+import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 
 export type ShippingRateDocument = HydratedDocument<ShippingRate>;
 
@@ -11,18 +12,18 @@ export type ShippingRateDocument = HydratedDocument<ShippingRate>;
 export class ShippingRate {
   @Prop({
     type: MongooseSchema.Types.ObjectId,
-    ref: ShippingProvider.name,
+    ref: MODEL_NAMES.SHIPPING_PROVIDER,
     required: true,
   })
   declare provider: ShippingProvider;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: Country.name })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: MODEL_NAMES.COUNTRY })
   declare country: Country;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: Region.name })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: MODEL_NAMES.REGION })
   declare region: Region;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: City.name })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: MODEL_NAMES.CITY })
   declare city: City;
 
   @Prop({ required: true })

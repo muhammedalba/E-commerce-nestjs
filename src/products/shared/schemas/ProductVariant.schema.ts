@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
 import { Product } from './Product.schema';
+import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 
 // ─── Valid Units Enum ────────────────────────────────────
 export enum MeasurementUnit {
@@ -24,10 +25,10 @@ export enum MeasurementUnit {
 @Schema({ _id: false })
 export class VariantComponent {
   @Prop({ type: String, required: true, trim: true })
-  name!: string; // e.g. "A", "B"
+  declare name: string; // e.g. "A", "B"
 
   @Prop({ type: Number, required: true })
-  value!: number; // e.g. 20
+  declare value: number; // e.g. 20
 
   @Prop({
     type: String,
@@ -35,7 +36,7 @@ export class VariantComponent {
     lowercase: true,
     // enum: Object.values(MeasurementUnit),
   })
-  unit!: string; // e.g. "kg"
+  declare unit: string; // e.g. "kg"
 }
 
 export const VariantComponentSchema =
@@ -50,11 +51,11 @@ export class ProductVariant {
   // ─── Parent Reference ──────────────────────────────────
   @Prop({
     type: Types.ObjectId,
-    ref: Product.name,
+    ref: MODEL_NAMES.PRODUCT,
     required: true,
     index: true,
   })
-  productId!: Types.ObjectId;
+  declare productId: Types.ObjectId;
 
   // ─── SKU & Barcode ─────────────────────────────────────
   @Prop({
@@ -63,13 +64,13 @@ export class ProductVariant {
     uppercase: true,
     trim: true,
   })
-  sku!: string;
+  declare sku: string;
 
   @Prop({
     type: String,
     trim: true,
   })
-  barcode?: string;
+  declare barcode: string | undefined;
 
   // ─── Pricing ───────────────────────────────────────────
   @Prop({
@@ -78,14 +79,14 @@ export class ProductVariant {
     min: 0,
     max: 200000,
   })
-  price!: number;
+  declare price: number;
 
   @Prop({
     type: Number,
     min: 0,
     max: 200000,
   })
-  priceAfterDiscount?: number;
+  declare priceAfterDiscount: number | undefined;
 
   // ─── Stock ─────────────────────────────────────────────
   @Prop({
@@ -94,14 +95,14 @@ export class ProductVariant {
     default: 0,
     min: 0,
   })
-  stock!: number;
+  declare stock: number;
 
   @Prop({
     type: Number,
     default: 0,
     min: 0,
   })
-  sold!: number;
+  declare sold: number;
 
   // ─── Dynamic Attributes ────────────────────────────────
   // Fully dynamic object. Examples:
@@ -113,14 +114,14 @@ export class ProductVariant {
     type: Object,
     default: {},
   })
-  attributes!: Record<string, unknown>;
+  declare attributes: Record<string, unknown>;
 
   // ─── Multi-Component Products (A+B) ────────────────────
   @Prop({
     type: [VariantComponentSchema],
     default: [],
   })
-  components!: VariantComponent[];
+  declare components: VariantComponent[];
 
   // ─── Variant Label (auto-generated or manual) ──────────
   // e.g. "20 KG + 4.8 LTR (A+B)" or "Red / 500ml"
@@ -128,20 +129,20 @@ export class ProductVariant {
     type: String,
     trim: true,
   })
-  label?: string;
+  declare label: string | undefined;
 
   // ─── Variant-Specific Image (optional) ─────────────────
   @Prop({
     type: String,
   })
-  image?: string;
+  declare image: string | undefined;
 
   // ─── Status ────────────────────────────────────────────
   @Prop({
     type: Boolean,
     default: true,
   })
-  isActive!: boolean;
+  declare isActive: boolean;
 
   // ─── Soft Delete ───────────────────────────────────────
   @Prop({
@@ -149,13 +150,13 @@ export class ProductVariant {
     default: false,
     index: true,
   })
-  isDeleted!: boolean;
+  declare isDeleted: boolean;
 
   @Prop({
     type: Date,
     default: null,
   })
-  deletedAt?: Date;
+  declare deletedAt: Date | undefined;
 }
 
 export const ProductVariantSchema =

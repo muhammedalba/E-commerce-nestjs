@@ -19,6 +19,9 @@ export class ShippingProvider {
 
   @Prop({ default: true })
   declare isActive: boolean;
+
+  @Prop({ type: 'string', trim: true, lowercase: true })
+  declare slug: string;
 }
 
 export const ShippingProviderSchema =

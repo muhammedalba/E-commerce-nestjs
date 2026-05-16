@@ -1,0 +1,17 @@
+export const MODEL_NAMES = {
+  CATEGORY: 'Category',
+  SUB_CATEGORY: 'SubCategory',
+  BRAND: 'Brand',
+  PRODUCT: 'Product',
+  PRODUCT_VARIANT: 'ProductVariant',
+  USER: 'User',
+  SUPPLIER: 'Supplier',
+  COUPON: 'Coupon',
+  CAROUSEL: 'Carousel',
+  COUNTRY: 'Country',
+  REGION: 'Region',
+  CITY: 'City',
+  SHIPPING_PROVIDER: 'ShippingProvider',
+  SHIPPING_RATE: 'ShippingRate',
+  PAYMENT_METHOD: 'PaymentMethod',
+} as const;

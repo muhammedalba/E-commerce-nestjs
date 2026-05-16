@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { Request } from 'express';
 import * as path from 'path';
+import { withBaseUrl as _withBaseUrl } from 'src/shared/utils/with-base-url.util';
 
 type filesType = Request['files'];
 
@@ -98,6 +99,23 @@ export class FileUploadService {
       this.logger.error(`Error updating file for model ${modelName}`, error);
       throw new InternalServerErrorException('Failed to update file');
     }
+  }
+
+  // ===========================================================
+  // =============  PREPEND BASE URL TO FILE PATH ==============
+  // ===========================================================
+  /**
+   * Delegates to the shared `withBaseUrl` utility.
+   * Accepts a single path or an array of paths.
+   *
+   * @see src/shared/utils/with-base-url.util.ts
+   */
+  withBaseUrl(filePath: string | null | undefined): string | null | undefined;
+  withBaseUrl(filePaths: (string | null | undefined)[]): (string | null | undefined)[];
+  withBaseUrl(
+    input: string | null | undefined | (string | null | undefined)[],
+  ): string | null | undefined | (string | null | undefined)[] {
+    return _withBaseUrl(input as any);
   }
 
   // ===========================================================

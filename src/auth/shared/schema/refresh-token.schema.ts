@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { HydratedDocument } from 'mongoose';
+import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 
 @Schema({ timestamps: true })
 export class RefreshToken {
@@ -9,19 +10,19 @@ export class RefreshToken {
     unique: true,
     required: true,
   })
-  refresh_Token!: string;
+  declare refresh_Token: string;
   @Prop({
     type: mongoose.Types.ObjectId,
     required: true,
-    ref: 'User',
+    ref: MODEL_NAMES.USER,
   })
-  userId?: string;
+  declare userId: string;
 
   @Prop({
     required: true,
     type: Date,
   })
-  expiryDate!: Date;
+  declare expiryDate: Date;
 }
 export type refreshTokenDocument = HydratedDocument<RefreshToken>;
 export const refreshTokenSchema = SchemaFactory.createForClass(RefreshToken);

@@ -6,20 +6,20 @@ export class Carousel {
   @Prop({
     type: Object,
   })
-  description!: string | { en?: string; ar?: string };
+  declare description: string | { en?: string; ar?: string };
   @Prop({
     type: 'string',
     trim: true,
     lowercase: true,
   })
-  slug?: string;
+  declare slug: string;
 
   @Prop({
     required: false,
     type: Boolean,
     default: false,
   })
-  isActive?: boolean;
+  declare isActive: boolean;
 
   @Prop({
     required: true,
@@ -27,21 +27,21 @@ export class Carousel {
     default: 'default.png',
     trim: true,
   })
-  carouselSm?: string;
+  declare carouselSm: string;
   @Prop({
     required: true,
     type: 'string',
     default: 'default.png',
     trim: true,
   })
-  carouselMd?: string;
+  declare carouselMd: string;
   @Prop({
     required: true,
     type: 'string',
     default: 'default.png',
     trim: true,
   })
-  carouselLg?: string;
+  declare carouselLg: string;
 }
 export type CarouselDocument = HydratedDocument<Carousel>;
 export const CarouselSchema = SchemaFactory.createForClass(Carousel);
@@ -54,28 +54,28 @@ CarouselSchema.pre(['find', 'countDocuments'], function () {
 });
 
 //update , findOne and findAll add base url to image
-CarouselSchema.post('init', function (doc: HydratedDocument<Carousel>) {
-  const hasTranslatedDescription =
-    doc?.description &&
-    typeof doc.description === 'object' &&
-    Object.values(doc.description).some(
-      (value) => typeof value === 'string' && value.trim() !== '',
-    );
+// CarouselSchema.post('init', function (doc: HydratedDocument<Carousel>) {
+//   const hasTranslatedDescription =
+//     doc?.description &&
+//     typeof doc.description === 'object' &&
+//     Object.values(doc.description).some(
+//       (value) => typeof value === 'string' && value.trim() !== '',
+//     );
 
-  const baseUrl = process.env.BASE_URL ?? '';
+//   const baseUrl = process.env.BASE_URL ?? '';
 
-  if (hasTranslatedDescription) {
-    const keys: Array<'carouselMd' | 'carouselSm' | 'carouselLg'> = [
-      'carouselMd',
-      'carouselSm',
-      'carouselLg',
-    ];
+//   if (hasTranslatedDescription) {
+//     const keys: Array<'carouselMd' | 'carouselSm' | 'carouselLg'> = [
+//       'carouselMd',
+//       'carouselSm',
+//       'carouselLg',
+//     ];
 
-    keys.forEach((key) => {
-      const path = doc[key];
-      if (typeof path === 'string' && !path.startsWith(baseUrl)) {
-        doc[key] = `${baseUrl}${path}`;
-      }
-    });
-  }
-});
+//     keys.forEach((key) => {
+//       const path = doc[key];
+//       if (typeof path === 'string' && !path.startsWith(baseUrl)) {
+//         doc[key] = `${baseUrl}${path}`;
+//       }
+//     });
+//   }
+// });

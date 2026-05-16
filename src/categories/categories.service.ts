@@ -14,6 +14,7 @@ import { CategoriesStatisticsService } from './categories-helper/categories-stat
 
 @Injectable()
 export class CategoriesService extends BaseService<CategoryDocument> {
+  protected slugSourceField = 'name';
   constructor(
     @InjectModel(Category.name) private categoryModel: Model<CategoryDocument>,
     protected readonly fileUploadService: FileUploadService,

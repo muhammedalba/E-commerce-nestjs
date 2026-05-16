@@ -1,5 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Type } from 'class-transformer';
+import { IsDefined, ValidateNested } from 'class-validator';
 import { HydratedDocument } from 'mongoose';
+import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
 
 export type SettingDocument = HydratedDocument<Setting>;
 
@@ -14,10 +17,16 @@ export class Setting {
     required: true,
     default: { ar: 'متجري', en: 'My Store' },
   })
-  declare siteName: { ar: string; en: string };
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => FieldLocalizeDto)
+  declare siteName: FieldLocalizeDto;
 
-  @Prop({ type: Object, default: { ar: '', en: '' } })
-  declare siteDescription: { ar: string; en: string };
+  @Prop({ type: Object, required: true, default: { ar: '', en: '' } })
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => FieldLocalizeDto)
+  declare siteDescription: FieldLocalizeDto;
 
   @Prop({
     required: false,
@@ -47,11 +56,17 @@ export class Setting {
 
 
   // إعدادات SEO
-  @Prop({ type: Object, default: { ar: '', en: '' } })
-  declare metaTitle: { ar: string; en: string };
+  @Prop({ type: Object, required: true, default: { ar: '', en: '' } })
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => FieldLocalizeDto)
+  declare metaTitle: FieldLocalizeDto;
 
-  @Prop({ type: Object, default: { ar: '', en: '' } })
-  declare metaDescription: { ar: string; en: string };
+  @Prop({ type: Object, required: true, default: { ar: '', en: '' } })
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => FieldLocalizeDto)
+  declare metaDescription: FieldLocalizeDto;
 
   @Prop({ type: String, default: '' })
   declare googleAnalyticsId: string;
@@ -159,7 +174,10 @@ export class Setting {
     type: Object,
     default: { ar: 'الموقع قيد الصيانة', en: 'Site under maintenance' },
   })
-  declare maintenanceMessage: { ar: string; en: string };
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => FieldLocalizeDto)
+  declare maintenanceMessage: FieldLocalizeDto;
 }
 
 export const SettingSchema = SchemaFactory.createForClass(Setting);

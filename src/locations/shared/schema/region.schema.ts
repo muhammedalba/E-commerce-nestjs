@@ -1,20 +1,27 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
+import { Type } from 'class-transformer';
+import { IsDefined, ValidateNested } from 'class-validator';
+import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
 import { Country } from './country.schema';
+import { MODEL_NAMES } from 'src/shared/constants/models.constants';
+import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
 
 export type RegionDocument = HydratedDocument<Region>;
 
 @Schema({ timestamps: true })
 export class Region {
   @Prop({ type: Object, required: true })
-  declare name: { ar: string; en: string };
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => FieldLocalizeDto)
+  declare name: FieldLocalizeDto;
 
   @Prop({
     type: MongooseSchema.Types.ObjectId,
-    ref: Country.name,
+    ref: MODEL_NAMES.COUNTRY,
     required: true,
   })
-  declare country: Country;
+  declare country: Types.ObjectId;
 
   @Prop({ default: true })
   declare isActive: boolean;

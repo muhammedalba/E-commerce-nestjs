@@ -2,8 +2,6 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { Exclude } from 'class-transformer';
-import slugify from 'slugify';
-import { generateUniqueSlug } from 'src/shared/utils/slug.util';
 
 @Schema({ timestamps: true })
 export class User {
@@ -15,14 +13,15 @@ export class User {
     minlength: [4, 'name must be a least 4 characters'],
     maxlength: [30, 'name must be a maximum of 30 characters'],
   })
-  name!: string;
+  declare name: string;
 
   @Prop({
     type: 'string',
     trim: true,
     lowercase: true,
+    index: true,
   })
-  slug?: string;
+  declare slug: string | undefined;
 
   @Prop({
     required: true,
@@ -31,7 +30,7 @@ export class User {
     isEmail: true,
     unique: true,
   })
-  email!: string;
+  declare email: string;
 
   @Prop({
     required: false,
@@ -40,7 +39,7 @@ export class User {
     minlength: [10, 'phone must be a least 10 characters'],
     maxlength: [18, 'phone must be a maximum of 18 characters'],
   })
-  phone?: string;
+  declare phone: string | undefined;
 
   @Prop({
     required: true,
@@ -51,7 +50,7 @@ export class User {
     select: false,
   })
   @Exclude()
-  password!: string;
+  declare password: string;
 
   @Prop({
     required: false,
@@ -61,7 +60,7 @@ export class User {
     default: 'user',
   })
   @Exclude()
-  role?: 'user' | 'admin' | 'manager';
+  declare role: 'user' | 'admin' | 'manager' | undefined;
 
   @Exclude()
   @Prop({
@@ -69,41 +68,41 @@ export class User {
     type: Boolean,
     default: undefined,
   })
-  verificationCode?: boolean;
+  declare verificationCode: boolean | undefined;
 
   @Prop({
     required: false,
     type: Number,
     default: undefined,
   })
-  passwordResetExpires?: number;
+  declare passwordResetExpires: number | undefined;
 
   @Prop({ type: Date, default: null })
-  lastEmailAttemptAt?: Date;
+  declare lastEmailAttemptAt: Date | undefined;
 
   @Prop({ type: Date, default: null })
-  lastLogin?: Date;
+  declare lastLogin: Date | undefined;
 
   @Prop({
     required: false,
     type: Number,
     default: 0,
   })
-  totalOrder?: number;
+  declare totalOrder: number | undefined;
 
   @Prop({
     required: false,
     type: 'string',
     default: undefined,
   })
-  passwordResetCode?: string;
+  declare passwordResetCode: string | undefined;
 
   @Prop({
     required: false,
     type: 'date',
     default: undefined,
   })
-  passwordChangeAt?: Date;
+  declare passwordChangeAt: Date | undefined;
 
   @Prop({
     required: false,
@@ -111,7 +110,7 @@ export class User {
     default: 'default.png',
     trim: true,
   })
-  avatar?: string;
+  declare avatar: string | undefined;
 
   @Prop({
     required: false,
@@ -119,14 +118,14 @@ export class User {
     default: 'auth',
     trim: true,
   })
-  provider?: string;
+  declare provider: string | undefined;
 
   @Prop({
     required: false,
     type: Boolean,
     default: true,
   })
-  isActive?: boolean;
+  declare isActive: boolean | undefined;
 }
 export type UserDocument = HydratedDocument<User>;
 export const UserSchema = SchemaFactory.createForClass(User);
@@ -138,12 +137,7 @@ UserSchema.pre(['find', 'countDocuments'], function () {
 });
 // Hook for hashing password before saving
 UserSchema.pre('save', async function (next) {
-  // if (this.isModified('name') && this.name) {
-  //   const nameValue = this.name.trim();
-  //   // generate a unique slug
-  //   const model = this.constructor as Model<User>;
-  //   this.slug = await generateUniqueSlug(nameValue, model);
-  // }
+
   if (!this.isModified('password')) return next();
 
   if (typeof this.password === 'string') {
@@ -159,19 +153,7 @@ UserSchema.pre('save', async function (next) {
 UserSchema.pre('findOneAndUpdate', async function (next) {
   const update = this.getUpdate();
   if (update && typeof update === 'object' && '$set' in update) {
-    // Check if the name field is being updated
-    // if (update?.$set?.name && typeof update.$set.name === 'string') {
-    //   const nameValue: string = update.$set.name;
-    //   //
-    //   const model = this.model as Model<User>;
-    //   // Extract current document _id to exclude it from slug uniqueness check
-    //   const conditions = this.getQuery();
-    //   const excludeId = conditions._id ?? conditions.id ?? undefined;
-    //   // generate a unique slug (excluding current doc so its own slug isn't flagged)
-    //   const newSlug = await generateUniqueSlug(nameValue, model, excludeId);
-    //   update.slug = newSlug;
-    //   this.setUpdate(update);
-    // }
+
     // Check if the password field is being updated
     if (update?.$set?.password && typeof update.$set.password === 'string') {
       const saltOrRounds = process.env.saltOrRounds || '10';
@@ -188,10 +170,10 @@ UserSchema.pre('findOneAndUpdate', async function (next) {
 });
 
 //update , findOne and findAll
-UserSchema.post('init', function (doc) {
-  if (doc.avatar && doc.name) {
-    if (!doc.avatar.startsWith(process.env.BASE_URL ?? 'http')) {
-      doc.avatar = `${process.env.BASE_URL}${doc.avatar}`;
-    }
-  }
-});
+// UserSchema.post('init', function (doc) {
+//   if (doc.avatar && doc.name) {
+//     if (!doc.avatar.startsWith(process.env.BASE_URL ?? 'http')) {
+//       doc.avatar = `${process.env.BASE_URL}${doc.avatar}`;
+//     }
+//   }
+// });

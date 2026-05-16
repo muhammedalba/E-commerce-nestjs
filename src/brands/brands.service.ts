@@ -14,6 +14,7 @@ import { BrandsStatistics } from './shared/brands-helper/brands-statistics.servi
 
 @Injectable()
 export class BrandsService extends BaseService<BrandDocument> {
+  protected slugSourceField = 'name';
   constructor(
     @InjectModel(Brand.name) private brandModel: Model<BrandDocument>,
     protected readonly fileUploadService: FileUploadService,

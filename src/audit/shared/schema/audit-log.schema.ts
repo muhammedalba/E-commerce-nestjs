@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
+import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 
 export type AuditLogDocument = HydratedDocument<AuditLog>;
 
@@ -21,7 +22,7 @@ export class AuditLog {
   @Prop({ required: true })
   declare module: string;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: MODEL_NAMES.USER })
   declare userId: string;
 
   @Prop({ default: '' })

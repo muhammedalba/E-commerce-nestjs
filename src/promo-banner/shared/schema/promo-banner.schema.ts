@@ -10,13 +10,13 @@ export class PromoBanner {
   @IsDefined()
   @Type(() => FieldLocalizeDto)
   @ValidateNested()
-  text!: FieldLocalizeDto;
+  declare text: FieldLocalizeDto;
 
-  @Prop()
-  link?: string;
+  @Prop({ type: String })
+  declare link: string | undefined;
 
   @Prop({ default: false })
-  isActive?: boolean;
+  declare isActive: boolean;
 }
 
 export const PromoBannerSchema = SchemaFactory.createForClass(PromoBanner);

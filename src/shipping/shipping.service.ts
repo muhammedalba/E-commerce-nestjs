@@ -34,6 +34,7 @@ export interface ShippingCalculationResult {
 
 @Injectable()
 export class ShippingService extends BaseService<ShippingProviderDocument> {
+  protected slugSourceField = 'name';
   constructor(
     @InjectModel(ShippingProvider.name)
     private readonly providerModel: Model<ShippingProviderDocument>,

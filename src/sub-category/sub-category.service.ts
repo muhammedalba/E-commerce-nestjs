@@ -17,6 +17,7 @@ import { IdParamDto } from 'src/shared/dto/id-param.dto';
 
 @Injectable()
 export class SubCategoryService extends BaseService<SubCategoryDocument> {
+   protected slugSourceField = 'name';
   constructor(
     @InjectModel(SubCategory.name)
     private SubCategoryModel: Model<SubCategoryDocument>,

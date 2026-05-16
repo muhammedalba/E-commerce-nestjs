@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import mongoose, { HydratedDocument } from 'mongoose';
-import { Country } from 'src/locations/shared/schema/country.schema';
+import mongoose, { HydratedDocument, Types } from 'mongoose';
+import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 
 export type TaxDocument = HydratedDocument<Tax>;
 
@@ -12,8 +12,8 @@ export class Tax {
   @Prop({ required: true, default: 15, min: 0, max: 100 })
   declare percentage: number;
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: Country.name, required: false })
-  declare country?: Country;
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: MODEL_NAMES.COUNTRY, required: false })
+  declare country: Types.ObjectId | null;
 
   @Prop({ default: '' })
   declare taxNumber: string;

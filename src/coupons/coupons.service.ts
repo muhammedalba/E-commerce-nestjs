@@ -12,6 +12,7 @@ import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 
 @Injectable()
 export class CouponsService extends BaseService<CouponDocument> {
+  protected slugSourceField = 'name';
   constructor(
     @InjectModel(Coupon.name) private couponModel: Model<CouponDocument>,
     protected readonly fileUploadService: FileUploadService,

@@ -14,6 +14,7 @@ import { MulterFileType } from '../interfaces/fileInterface';
 import { TranslateOptions } from 'nestjs-i18n';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import * as path from 'path';
+import slugify from 'slugify';
 
 /**
  * Interface representing a document with potential file fields.
@@ -34,6 +35,7 @@ interface FileSchema {
  */
 export class BaseService<T> {
   protected readonly logger = new Logger(this.constructor.name);
+  protected slugSourceField: string | null = null;
 
   constructor(
     protected readonly model: Model<T>,
@@ -53,7 +55,7 @@ export class BaseService<T> {
 
     return path.posix.join('/', uploadsDir, modelName, defaultImage);
   }
- 
+
   /**
    * Checks if a specific field value is already taken by another document.
    * 
@@ -140,6 +142,29 @@ export class BaseService<T> {
   }
 
   /**
+   * Generates a URL-friendly slug from a string or localized object.
+   * 
+   * @param value - The string or localized object (e.g., { en: '...', ar: '...' })
+   * @returns The generated slug.
+   */
+  protected generateSlug(value: any): string {
+    let text = '';
+
+    if (typeof value === 'object' && value !== null) {
+      text = value.en?.trim() || value.ar?.trim() || '';
+    } else if (typeof value === 'string') {
+      text = value.trim();
+    }
+
+    if (!text) return '';
+
+    return slugify(text.toLowerCase(), {
+      lower: true,
+      strict: true,
+    });
+  }
+
+  /**
    * Creates a new document with optional file upload and uniqueness checks.
    * 
    * @param CreateDataDto - The data to create the document.
@@ -170,6 +195,10 @@ export class BaseService<T> {
 
     if (checkField && fieldValue) {
       await this.isFieldTaken(checkField, fieldValue, undefined, onlyActive);
+    }
+
+    if (this.slugSourceField && (CreateDataDto as any)[this.slugSourceField]) {
+      (CreateDataDto as any).slug = this.generateSlug((CreateDataDto as any)[this.slugSourceField]);
     }
 
     let filePath: string | undefined;
@@ -336,16 +365,27 @@ export class BaseService<T> {
     if (!doc) {
       throw new NotFoundException(this.t('exception.NOT_FOUND'));
     }
-
+    console.log(modelName, "modleName");
     if (checkField && fieldValue) {
       await this.isFieldTaken(checkField, fieldValue, doc._id, onlyActive);
     }
 
+    if (this.slugSourceField && (UpdateDataDto as any)[this.slugSourceField]) {
+      (UpdateDataDto as any).slug = this.generateSlug((UpdateDataDto as any)[this.slugSourceField]);
+    }
+
     let newFilePath: string | undefined;
+    
     if (file) {
       const oldPath = doc[fileFieldName] as string | undefined;
       newFilePath = await this.handleFileUpload(file, modelName, doc, oldPath);
       UpdateDataDto[fileFieldName] = newFilePath;
+    } else if (
+      UpdateDataDto[fileFieldName] !== undefined && 
+      (typeof UpdateDataDto[fileFieldName] === 'object' || UpdateDataDto[fileFieldName] === '{}')
+    ) {
+      // The frontend sent an empty object or stringified empty object for the file field without a valid file
+      delete UpdateDataDto[fileFieldName];
     }
 
     try {

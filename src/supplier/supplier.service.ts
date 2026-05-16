@@ -11,10 +11,11 @@ import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { FileUploadService } from 'src/file-upload/file-upload.service';
 import { SupplierStatistics } from './shared/Suppliers-helper/supplier-statistics.service';
-import slugify from 'slugify';
+
 
 @Injectable()
 export class SupplierService extends BaseService<SupplierDocument> {
+  protected slugSourceField = 'name';
   constructor(
     @InjectModel(Supplier.name) private SupplierModel: Model<SupplierDocument>,
     protected readonly fileUploadService: FileUploadService,
@@ -36,12 +37,7 @@ export class SupplierService extends BaseService<SupplierDocument> {
     createSupplierDto: CreateSupplierDto,
     file: MulterFileType,
   ): Promise<any> {
-    if (createSupplierDto.name) {
-      createSupplierDto.slug = slugify(createSupplierDto.name.trim().toLowerCase(), {
-        lower: true,
-        strict: true,
-      });
-    }
+
     return await this.createOneDoc(createSupplierDto, file, Supplier.name, {
       fileFieldName: 'avatar',
       checkField: 'name',

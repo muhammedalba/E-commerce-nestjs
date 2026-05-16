@@ -53,7 +53,7 @@ export class UsersController {
   /* ------------ =============================== ---------- */
   /* ------------ ======  CREATE USER  ====== ---------------- */
   /* ------------ =============================== ---------- */
-  @Post('create-user')
+  @Post()
   @ClearCache('users')
   @UseInterceptors(FileInterceptor('avatar'))
   createUser(

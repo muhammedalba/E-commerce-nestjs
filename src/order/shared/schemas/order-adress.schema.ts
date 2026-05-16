@@ -3,37 +3,37 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 @Schema({ _id: false }) // nested schema
 export class OrderAddress {
   @Prop({ type: String, required: true })
-  firsName!: string;
+  declare firsName: string;
 
   @Prop({ type: String, required: true })
-  lastName!: string;
+  declare lastName: string;
 
   @Prop({ type: String, required: true })
-  phone!: string;
+  declare phone: string;
 
   @Prop({ type: String, required: true })
-  country!: string;
+  declare country: string;
 
   @Prop({ type: String, required: true })
-  city!: string;
+  declare city: string;
 
   @Prop({ type: String, required: true })
-  street!: string;
+  declare street: string;
 
   @Prop({ type: String, required: true })
-  building!: string;
+  declare building: string;
 
   @Prop({ type: String, required: true })
-  postalCode?: string;
+  declare postalCode: string;
 
   @Prop({ type: String, required: false })
-  additionalInfo?: string;
+  declare additionalInfo: string;
 
   @Prop({ type: String, required: true, default: 'home' })
-  addressType!: 'home' | 'office' | 'other'; // Type of address
+  declare addressType: 'home' | 'office' | 'other'; // Type of address
 
   @Prop({ type: String, required: false })
-  companyName?: string; // Optional field for company name
+  declare companyName: string; // Optional field for company name
   @Prop({
     type: {
       type: String,
@@ -45,7 +45,7 @@ export class OrderAddress {
       required: false,
     },
   })
-  location?: {
+  declare location: {
     type: string;
     coordinates: number[]; //[longitude, latitude]،
   };

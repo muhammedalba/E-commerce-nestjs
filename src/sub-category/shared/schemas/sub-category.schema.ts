@@ -1,66 +1,31 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Type } from 'class-transformer';
+import { IsDefined, ValidateNested } from 'class-validator';
 import { HydratedDocument, Model, Types } from 'mongoose';
 import * as mongoose from 'mongoose';
-import { Category } from 'src/categories/shared/schemas/category.schema';
-import { generateUniqueSlug } from 'src/shared/utils/slug.util';
+import { MODEL_NAMES } from 'src/shared/constants/models.constants';
+import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
 
 @Schema({ timestamps: true })
 export class SubCategory {
-  @Prop({
-    type: Object,
-    i18n: true,
-  })
-  name!: string | { en?: string; ar?: string };
+  @Prop({ type: Object, required: true })
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => FieldLocalizeDto)
+  declare name: FieldLocalizeDto;
   @Prop({
     type: 'string',
     trim: true,
     lowercase: true,
   })
-  slug?: string;
+  declare slug: string | undefined;
   @Prop({
     type: mongoose.Schema.Types.ObjectId,
-    ref: Category.name,
+    ref: MODEL_NAMES.CATEGORY,
     required: true,
   })
-  category!: Types.ObjectId;
+  declare category: Types.ObjectId;
 }
 export const SubCategorySchema = SchemaFactory.createForClass(SubCategory);
 export type SubCategoryDocument = HydratedDocument<SubCategory>;
 
-//update , findOne and findAll
-// this will be used to generate the slug
-SubCategorySchema.pre('save', async function (next) {
-  if (this.isModified('name') && this.name) {
-    const nameValue =
-      typeof this.name === 'object'
-        ? this.name.en?.trim() || this.name.ar?.trim() || ''
-        : this.name.trim();
-    // generate a unique slug
-    const model = this.constructor as unknown as Model<SubCategory>;
-    this.slug = await generateUniqueSlug(nameValue, model);
-  }
-  next();
-});
-// this will be used to generate the slug
-SubCategorySchema.pre('findOneAndUpdate', async function (this: any, next) {
-  const update = this.getUpdate();
-  if (update && typeof update === 'object' && '$set' in update) {
-    if (update?.$set?.name) {
-      const name = update.$set.name as string | { en?: string; ar?: string };
-      const nameValue: string =
-        typeof name === 'object' ? name.en || name.ar || '' : name;
-      //
-      const model = this.model as Model<SubCategory>;
-      // generate a unique slug
-      // Extract current document _id to exclude it from slug uniqueness check
-      const conditions = this.getQuery();
-      const excludeId = conditions._id ?? conditions.id ?? undefined;
-      // generate a unique slug (excluding current doc so its own slug isn't flagged)
-      const newSlug = await generateUniqueSlug(nameValue, model, excludeId);
-      update.slug = newSlug;
-      this.setUpdate(update);
-    }
-  }
-
-  next();
-});

@@ -1,111 +1,33 @@
-// import { Injectable } from '@nestjs/common';
-// import { I18nContext, I18nService, TranslateOptions } from 'nestjs-i18n';
-// import { Types } from 'mongoose';
-
-// @Injectable()
-// export class CustomI18nService {
-//   constructor(private readonly i18n: I18nService) {}
-
-//   translate(key: string, options?: TranslateOptions): string {
-//     const lang = this.getLang();
-//     return this.i18n.translate(key, {
-//       lang,
-//       ...options,
-//     });
-//   }
-
-//   getLang(): string {
-//     return I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
-//   }
-
-//   /**
-//    * دالة شاملة لتوطين البيانات تدعم الكائنات والمصفوفات المتداخلة
-//    */
-//   localize(data: any, allLangs: boolean = false) {
-//     if (allLangs || !data) return data;
-//     const lang = this.getLang();
-
-//     const translate = (obj: any): any => {
-//       // 1. إذا كان العنصر ليس كائناً أو كان null
-//       if (!obj || typeof obj !== 'object') return obj;
-
-//       // 2. إذا كان ObjectID أو Date أو Buffer، نرجعه كما هو (مع تحويل ObjectID لنص)
-//       if (obj instanceof Types.ObjectId) return obj.toString();
-//       if (obj instanceof Date) return obj;
-
-//       // 3. إذا كان العنصر مصفوفة، نقوم بترجمة كل عنصر بداخلها
-//       if (Array.isArray(obj)) {
-//         return obj.map((item) => translate(item));
-//       }
-
-//       // 4. تحويل Mongoose Document إلى Object بسيط
-//       const raw = obj.toObject ? obj.toObject() : { ...obj };
-
-//       // 5. ترجمة الحقول النصية المباشرة (name, title, description, etc.)
-//       const translatableFields = [
-//         'name',
-//         'title',
-//         'description',
-//         'text',
-//         'uses',
-//       ];
-//       translatableFields.forEach((field) => {
-//         if (
-//           raw[field] &&
-//           typeof raw[field] === 'object' &&
-//           !Array.isArray(raw[field])
-//         ) {
-//           // التأكد أن الكائن يحتوي على مفاتيح لغات وليس كائناً عادياً
-//           if (raw[field][lang] || raw[field]['en'] || raw[field]['ar']) {
-//             raw[field] =
-//               raw[field][lang] ||
-//               raw[field]['en'] ||
-//               raw[field]['ar'] ||
-//               raw[field];
-//           }
-//         }
-//       });
-
-//       // 6. ترجمة الحقول المتداخلة (Recursive) أياً كان نوعها (Object أو Array)
-//       // أضفنا SubCategories هنا ليتم فحصها كـ Array of Objects
-//       const nestedFields = [
-//         'category',
-//         'brand',
-//         'supplier',
-//         'SubCategories',
-//         'product',
-//         'variants',
-//       ];
-//       nestedFields.forEach((key) => {
-//         if (raw[key]) {
-//           raw[key] = translate(raw[key]);
-//         }
-//       });
-
-//       return raw;
-//     };
-
-//     return Array.isArray(data)
-//       ? data.map((item) => translate(item))
-//       : translate(data);
-//   }
-// }
 import { Injectable } from '@nestjs/common';
 import { I18nContext, I18nService, TranslateOptions } from 'nestjs-i18n';
 import { Types } from 'mongoose';
+import { withBaseUrl } from 'src/shared/utils/with-base-url.util';
 
+/**
+ * Custom Service for Internationalization (i18n) and Data Localization.
+ * Provides automated translation and dynamic media URL formatting for API responses.
+ */
 @Injectable()
 export class CustomI18nService {
   constructor(private readonly i18n: I18nService) { }
 
-  // 1️⃣ قائمة الحقول التي نعلم أنها تحتوي على ملفات أو صور
-  // استخدام Set يجعل البحث أسرع (O(1)) من المصفوفة العادية
+  /**
+   * Set of field names recognized as media or file paths.
+   * These fields will automatically have the BASE_URL prepended during localization.
+   */
   private readonly fileFields = new Set([
-    'avatar', 'image', 'imageCover', 'infoProductPdf',
+    'avatar', 'image', 'imageCover', 'infoProductPdf', 'images',
     'carouselSm', 'carouselMd', 'carouselLg', 'carouselImage',
     'logo', 'favicon', 'transferReceiptImg', 'InvoicePdf'
   ]);
 
+  /**
+   * Translates a specific key based on the current request language.
+   * 
+   * @param key - Translation key (e.g., 'common.save')
+   * @param options - Additional translation options like variables
+   * @returns The translated string in the current locale
+   */
   translate(key: string, options?: TranslateOptions): string {
     const lang = this.getLang();
     return this.i18n.translate(key, {
@@ -114,61 +36,63 @@ export class CustomI18nService {
     });
   }
 
+  /**
+   * Retrieves the current language code for the request.
+   * Checks i18n context, then environment variables, falling back to 'ar'.
+   * 
+   * @returns Language code (e.g., 'ar', 'en')
+   */
   getLang(): string {
     return I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
   }
 
-  // 2️⃣ دالة مساعدة لإضافة الـ Base URL بأمان للصور والملفات
-  private appendBaseUrl(filePath: any): any {
-    console.log(filePath);
-
-    if (typeof filePath === 'string' && filePath.startsWith('/') && !filePath.startsWith('http')) {
-      const baseUrl = (process.env.BASE_URL || 'http://localhost:4000').replace(/\/$/, '');
-      return `${baseUrl}${filePath}`;
-    }
-    return filePath;
-  }
 
   /**
-   * دالة شاملة لتوطين البيانات وتنسيق الصور تدعم الكائنات والمصفوفات المتداخلة
+   * Comprehensive function to localize objects and arrays.
+   * Recursively traverses data to apply translations and format media URLs.
+   * 
+   * @param data - The raw data to process (Object or Array)
+   * @param allLangs - If true, returns the full translation object instead of localized string
+   * @returns The localized and formatted data
    */
   localize(data: any, allLangs: boolean = false) {
     if (!data) return data;
-    // if (allLangs || !data) return data;
     const lang = this.getLang();
 
+    /**
+     * Internal recursive processor for nested items
+     */
     const processItem = (obj: any): any => {
-      // 1. إذا كان العنصر ليس كائناً أو كان null
+      // 1. Return if not an object or null
       if (!obj || typeof obj !== 'object') return obj;
 
-      // 2. إذا كان ObjectID أو Date أو Buffer، نرجعه كما هو (مع تحويل ObjectID لنص)
+      // 2. Handle MongoDB specific types
       if (obj instanceof Types.ObjectId) return obj.toString();
       if (obj instanceof Date) return obj;
 
-      // 3. إذا كان العنصر مصفوفة، نقوم بمعالجة كل عنصر بداخلها
+      // 3. Process Arrays
       if (Array.isArray(obj)) {
         return obj.map((item) => processItem(item));
       }
 
-      // 4. تحويل Mongoose Document إلى Object بسيط (Lean Object)
+      // 4. Convert Mongoose Documents to plain objects
       const raw = obj.toObject ? obj.toObject() : { ...obj };
 
-      // 5. 🌟 المرور الديناميكي على جميع مفاتيح الكائن 🌟
+      // 5. Dynamically iterate over object keys
       for (const key in raw) {
         let value = raw[key];
 
-        // --- أ) معالجة روابط الصور والملفات ---
+        // A) Process Media/File fields
         if (this.fileFields.has(key) && value) {
           if (Array.isArray(value)) {
-            raw[key] = value.map(v => this.appendBaseUrl(v)); // إذا كانت مصفوفة صور
+            raw[key] = withBaseUrl(value);
           } else {
-            raw[key] = this.appendBaseUrl(value); // إذا كانت صورة واحدة
+            raw[key] = withBaseUrl(value);
           }
-          continue; // ننتقل للمفتاح التالي
+          continue;
         }
 
-        // --- ب) معالجة الترجمة (التخلص من القوائم الثابتة) ---
-        // إذا كان الحقل كائناً يحتوي على لغات (ar أو en)، نترجمه فوراً
+        // B) Process Translatable strings (if ar/en keys exist)
         if (
           !allLangs &&
           value &&
@@ -177,10 +101,10 @@ export class CustomI18nService {
           (value['ar'] !== undefined || value['en'] !== undefined)
         ) {
           raw[key] = value[lang] || value['en'] || value['ar'] || value;
-          continue; // ننتقل للمفتاح التالي
+          continue;
         }
 
-        // --- ج) معالجة الكائنات المتداخلة (Nested Objects / Populated Relational Data) ---
+        // C) Recursively process nested objects/relationships
         if (typeof value === 'object' && value !== null) {
           raw[key] = processItem(value);
         }

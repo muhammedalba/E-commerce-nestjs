@@ -1,27 +1,27 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { CartItem, CartItemSchema } from './cart-item.schema';
-import { User } from 'src/auth/shared/schema/user.schema';
+import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 
 @Schema({ timestamps: true })
 export class Cart extends Document {
-  @Prop({ type: Types.ObjectId, ref: User.name, required: true, unique: true })
-  user!: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: MODEL_NAMES.USER, required: true, unique: true })
+  declare user: Types.ObjectId;
 
   @Prop({ type: [CartItemSchema], default: [] })
-  items!: CartItem[];
+  declare items: CartItem[];
 
   @Prop({ default: 0 })
-  totalPrice!: number;
+  declare totalPrice: number;
 
   @Prop({ default: 0 })
-  totalQuantity!: number;
+  declare totalQuantity: number;
 
   @Prop({ default: false })
-  isCheckedOut!: boolean;
+  declare isCheckedOut: boolean;
 
   @Prop({ default: false })
-  isSavedForLater!: boolean;
+  declare isSavedForLater: boolean;
 }
 
 export const CartSchema = SchemaFactory.createForClass(Cart);

@@ -1,21 +1,23 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Type } from 'class-transformer';
+import { IsDefined, ValidateNested } from 'class-validator';
 import { HydratedDocument, Model } from 'mongoose';
-
-import { generateUniqueSlug } from 'src/shared/utils/slug.util';
+import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
 
 @Schema({ timestamps: true })
 export class Brand {
-  @Prop({
-    type: Object,
-  })
-  name!: string | { en?: string; ar?: string };
+  @Prop({ type: Object, required: true })
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => FieldLocalizeDto)
+  declare name: FieldLocalizeDto;
 
   @Prop({
     type: 'string',
     trim: true,
     lowercase: true,
   })
-  slug?: string;
+  declare slug: string | undefined;
 
   @Prop({
     required: false,
@@ -23,59 +25,10 @@ export class Brand {
     default: 'default.png',
     trim: true,
   })
-  image?: string;
+  declare image: string | undefined;
 }
 export type BrandDocument = HydratedDocument<Brand>;
 export const BrandSchema = SchemaFactory.createForClass(Brand);
 
-//update , findOne and findAll
-BrandSchema.post('init', function (doc: HydratedDocument<Brand>) {
-  const hasTranslatedName =
-    doc &&
-    doc.name &&
-    typeof doc.name === 'object' &&
-    Object.values(doc.name).some(
-      (value) => typeof value === 'string' && value.trim() !== '',
-    );
 
-  if (
-    hasTranslatedName &&
-    doc.image &&
-    !doc.image.startsWith(process.env.BASE_URL ?? 'http')
-  ) {
-    doc.image = `${process.env.BASE_URL}${doc.image}`;
-  }
-});
-BrandSchema.pre('save', async function (next) {
-  if (this.isModified('name') && this.name) {
-    const nameValue =
-      typeof this.name === 'object'
-        ? this.name.en?.trim() || this.name.ar?.trim() || ''
-        : this.name.trim();
-    // generate a unique slug
-    const model = this.constructor as unknown as Model<Brand>;
-    this.slug = await generateUniqueSlug(nameValue, model);
-  }
-  next();
-});
-BrandSchema.pre('findOneAndUpdate', async function (next) {
-  const update = this.getUpdate();
-  if (update && typeof update === 'object' && '$set' in update) {
-    if (update?.$set?.name) {
-      const name = update.$set.name as string | { en?: string; ar?: string };
-      const nameValue: string =
-        typeof name === 'object' ? name.en || name.ar || '' : name;
-      //
-      const model = this.model as Model<Brand>;
-      // Extract current document _id to exclude it from slug uniqueness check
-      const conditions = this.getQuery();
-      const excludeId = conditions._id ?? conditions.id ?? undefined;
-      // generate a unique slug (excluding current doc so its own slug isn't flagged)
-      const newSlug = await generateUniqueSlug(nameValue, model, excludeId);
-      update.slug = newSlug;
-      this.setUpdate(update);
-    }
-  }
 
-  next();
-});

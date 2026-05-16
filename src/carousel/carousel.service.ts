@@ -16,7 +16,7 @@ import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { Request } from 'express';
-import { generateUniqueSlug } from 'src/shared/utils/slug.util';
+
 type file = Request['file'];
 @Injectable()
 export class CarouselService extends BaseService<CarouselDocument> {
@@ -54,12 +54,8 @@ export class CarouselService extends BaseService<CarouselDocument> {
     }
 
     // generate unique slug for description
-    const newSlug = await generateUniqueSlug(
-      createCarouselDto.description?.en,
-      this.CarouselModel,
-      null,
-      this.i18n.translate('exception.NAME_EXISTS'),
-    );
+    const newSlug = this.generateSlug(createCarouselDto.description);
+    await this.isFieldTaken('slug', newSlug);
     createCarouselDto.slug = newSlug;
     //1) check if the files is not empty
     const requiredKeys = ['carouselSm', 'carouselMd', 'carouselLg'] as const;
@@ -137,70 +133,7 @@ export class CarouselService extends BaseService<CarouselDocument> {
   // ------------ =============================== ---------- //
   // ------------ ======  update carousel   ====== ---------- //
   // ------------ =============================== ---------- //
-  // async updateOne(
-  //   idParamDto: IdParamDto,
-  //   updateCarouselDto: UpdateCarouselDto,
-  //   files: {
-  //     carouselSm?: file;
-  //     carouselMd?: file;
-  //     carouselLg?: file;
-  //   },
-  // ): Promise<any> {
-  //   const { id } = idParamDto;
-
-  //   // 1) check if the document exists
-  //   const carousel = await this.CarouselModel.findById(id).select(
-  //     'carouselMd carouselLg carouselSm',
-  //   );
-  //   if (!carousel) {
-  //     throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
-  //   }
-
-  //   const imageFields: (keyof typeof files)[] = [
-  //     'carouselSm',
-  //     'carouselMd',
-  //     'carouselLg',
-  //   ];
-
-  //   try {
-  //     for (const key of imageFields) {
-  //       const file = (files[key]?.[0] as file) ?? null;
-  //       if (file) {
-  //         // save the new file to disk
-  //         const newPath = await this.fileUploadService.saveFileToDisk(
-  //           file,
-  //           Carousel.name,
-  //         );
-
-  //         // delete the old file from disk
-  //         const oldPath = carousel[key];
-  //         if (oldPath) {
-  //           await this.fileUploadService.deleteFile(`.${oldPath}`);
-  //         }
-
-  //         // update the DTO with the new path
-  //         updateCarouselDto[key] = newPath;
-  //       } else {
-  //         // if no new file is provided, keep the old path
-  //         updateCarouselDto[key] = carousel[key];
-  //       }
-  //     }
-  //   } catch (error) {
-  //     this.logger.error('Error processing carousel images', error);
-  //     throw new InternalServerErrorException(
-  //       this.i18n.translate('exception.ERROR_SAVE'),
-  //     );
-  //   }
-
-  //   // update the document in the database
-  //   const updatedDoc = await this.CarouselModel.findByIdAndUpdate(
-  //     { _id: id },
-  //     { $set: updateCarouselDto },
-  //     { new: true, runValidators: true },
-  //   );
-
-  //   return updatedDoc ? this.i18n.localize(updatedDoc) : [];
-  // }
+  
   async updateOne(
     idParamDto: IdParamDto,
     updateCarouselDto: UpdateCarouselDto,
@@ -238,11 +171,8 @@ export class CarouselService extends BaseService<CarouselDocument> {
     // 2) Handle translations for description
     if (updateCarouselDto.description) {
       // generate unique slug for description
-      const newSlug = await generateUniqueSlug(
-        updateCarouselDto.description?.en,
-        this.CarouselModel,
-        id,
-      );
+      const newSlug = this.generateSlug(updateCarouselDto.description);
+      await this.isFieldTaken('slug', newSlug, id);
       carousel.slug = newSlug;
       carousel.description = updateCarouselDto.description;
     }
