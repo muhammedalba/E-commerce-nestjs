@@ -32,12 +32,13 @@ import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 @UseInterceptors(ClearCacheInterceptor)
 export class BrandsController {
   constructor(private readonly brandsService: BrandsService) {}
+
   // ------------ =============================== ---------- //
   // ------------ ======  create brand   ====== ---------- //
   // ------------ =============================== ---------- //
   @Post()
   @ClearCache('brands')
-  @RequirePermission(Permissions.MANAGE_BRANDS)
+  @RequirePermission(Permissions.CREATE_BRAND)
   @UseGuards(AuthGuard, PermissionsGuard)
   @UseInterceptors(FileInterceptor('image'))
   async create(
@@ -64,7 +65,7 @@ export class BrandsController {
   // ------------ ====== get statistics brands  = ---------- //
   // ------------ =============================== ---------- //
   @Get('statistics')
-  @RequirePermission(Permissions.MANAGE_BRANDS)
+  @RequirePermission(Permissions.VIEW_DASHBOARD_STATS)
   @UseGuards(AuthGuard, PermissionsGuard)
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(300000) // 5 minutes
@@ -89,7 +90,7 @@ export class BrandsController {
   // ------------ =============================== ---------- //
   @Patch(':id')
   @ClearCache('brands')
-  @RequirePermission(Permissions.MANAGE_BRANDS)
+  @RequirePermission(Permissions.UPDATE_BRAND)
   @UseGuards(AuthGuard, PermissionsGuard)
   @UseInterceptors(FileInterceptor('image'))
   async updateBrand(
@@ -109,7 +110,7 @@ export class BrandsController {
   // ------------ =============================== ---------- //
   @Delete(':id')
   @ClearCache('brands')
-  @RequirePermission(Permissions.MANAGE_BRANDS)
+  @RequirePermission(Permissions.DELETE_BRAND)
   @UseGuards(AuthGuard, PermissionsGuard)
   async remove(@Param() idParamDto: IdParamDto) {
     return await this.brandsService.deleteOne(idParamDto);

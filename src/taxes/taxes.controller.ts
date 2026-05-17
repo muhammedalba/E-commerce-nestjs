@@ -24,7 +24,6 @@ import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 
 @Controller('taxes')
-@RequirePermission(Permissions.MANAGE_TAXES)
 @UseGuards(AuthGuard, PermissionsGuard)
 @UseInterceptors(ClearCacheInterceptor)
 export class TaxesController {
@@ -34,6 +33,7 @@ export class TaxesController {
   /*  GET ALL TAXES - Admin Only                       */
   /* ================================================ */
   @Get()
+  @RequirePermission(Permissions.VIEW_TAXES)
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(3600000) // 1 hour
   findAll(@Query() queryString: QueryString) {
@@ -44,6 +44,7 @@ export class TaxesController {
   /*  GET SINGLE TAX - Admin Only                      */
   /* ================================================ */
   @Get(':id')
+  @RequirePermission(Permissions.VIEW_TAXES)
   @UseInterceptors(CustomCacheInterceptor)
   findOne(@Param() id: IdParamDto) {
     return this.taxesService.findOne(id);
@@ -53,6 +54,7 @@ export class TaxesController {
   /*  CREATE TAX - Admin Only                          */
   /* ================================================ */
   @Post()
+  @RequirePermission(Permissions.CREATE_TAX)
   @ClearCache('taxes')
   create(@Body() createTaxDto: CreateTaxDto) {
     return this.taxesService.create(createTaxDto);
@@ -62,6 +64,7 @@ export class TaxesController {
   /*  UPDATE TAX - Admin Only                          */
   /* ================================================ */
   @Patch(':id')
+  @RequirePermission(Permissions.UPDATE_TAX)
   @ClearCache('taxes')
   update(@Param() id: IdParamDto, @Body() updateTaxDto: UpdateTaxDto) {
     return this.taxesService.update(id, updateTaxDto);
@@ -71,6 +74,7 @@ export class TaxesController {
   /*  DELETE TAX - Admin Only                          */
   /* ================================================ */
   @Delete(':id')
+  @RequirePermission(Permissions.DELETE_TAX)
   @ClearCache('taxes')
   remove(@Param() id: IdParamDto) {
     return this.taxesService.remove(id);

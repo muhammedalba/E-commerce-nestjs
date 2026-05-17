@@ -72,7 +72,7 @@ export class ShippingController {
   /*  GET ALL RATES - Admin                          */
   /* ================================================ */
   @Get('rates')
-  @RequirePermission(Permissions.MANAGE_SHIPPING)
+  @RequirePermission(Permissions.VIEW_SHIPPING_RATES)
   @UseGuards(AuthGuard, PermissionsGuard)
   @CacheTTL(3600000)
   getRates(@Query() query: QueryString) {
@@ -92,7 +92,7 @@ export class ShippingController {
   /*  ADMIN ENDPOINTS                                  */
   /* ================================================ */
   @Post('providers')
-  @RequirePermission(Permissions.MANAGE_SHIPPING)
+  @RequirePermission(Permissions.CREATE_SHIPPING)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('shipping')
   @UseInterceptors(FileInterceptor('logo'))
@@ -104,8 +104,11 @@ export class ShippingController {
     return this.shippingService.createProvider(body, file);
   }
 
+  /* ================================================ */
+  /*  UPDATE SHIPPING - Admin                          */
+  /* ================================================ */
   @Patch('providers/:id')
-  @RequirePermission(Permissions.MANAGE_SHIPPING)
+  @RequirePermission(Permissions.UPDATE_SHIPPING)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('shipping')
   @UseInterceptors(FileInterceptor('logo'))
@@ -117,33 +120,44 @@ export class ShippingController {
   ) {
     return this.shippingService.updateProvider(id, body, file);
   }
-
+  /* ================================================ */
+  /*  CREATE SHIPPING RATE - Admin                      */
+  /* ================================================ */
   @Post('rates')
-  @RequirePermission(Permissions.MANAGE_SHIPPING)
+  @RequirePermission(Permissions.CREATE_SHIPPING)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('shipping')
   createRate(@Body() body: CreateShippingRateDto) {
     return this.shippingRatesService.createRate(body);
   }
 
+  /* ================================================ */
+  /*  UPDATE SHIPPING RATE - Admin                      */
+  /* ================================================ */
   @Patch('rates/:id')
-  @RequirePermission(Permissions.MANAGE_SHIPPING)
+  @RequirePermission(Permissions.UPDATE_SHIPPING)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('shipping')
   updateRate(@Param() { id }: IdParamDto, @Body() body: UpdateShippingRateDto) {
     return this.shippingRatesService.updateRate(id, body);
   }
 
+  /* ================================================ */
+  /*  DELETE SHIPPING PROVIDER - Admin                */
+  /* ================================================ */
   @Delete('providers/:id')
-  @RequirePermission(Permissions.MANAGE_SHIPPING)
+  @RequirePermission(Permissions.DELETE_SHIPPING)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('shipping')
   deleteProvider(@Param() { id }: IdParamDto) {
     return this.shippingService.deleteProvider(id);
   }
 
+  /* ================================================ */
+  /*  DELETE SHIPPING RATE - Admin                      */
+  /* ================================================ */
   @Delete('rates/:id')
-  @RequirePermission(Permissions.MANAGE_SHIPPING)
+  @RequirePermission(Permissions.DELETE_SHIPPING)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('shipping')
   deleteRate(@Param() { id }: IdParamDto) {

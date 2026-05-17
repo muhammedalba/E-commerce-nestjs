@@ -30,6 +30,13 @@ import { PermissionsGuard } from 'src/roles/shared/guards/permissions.guard';
 import { RequirePermission } from 'src/roles/shared/decorators/require-permission.decorator';
 import { Permissions } from 'src/roles/shared/enums/permissions.enum';
 
+import { Request } from 'express';
+import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
+
+interface AuthenticatedRequest extends Omit<Request, 'user'> {
+  user: JwtPayload;
+}
+
 @Controller('users')
 @UseGuards(AuthGuard, PermissionsGuard)
 @UseInterceptors(ClearCacheInterceptor)
@@ -39,7 +46,7 @@ export class UsersController {
   /* ------------ ======  GET USERS STATISTICS  ====== ------- */
   /* ------------ =============================== ---------- */
   @Get('statistics')
-  @RequirePermission(Permissions.VIEW_USERS)
+  @RequirePermission(Permissions.VIEW_DASHBOARD_STATS)
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(300000) // 5 minutes
   async get_users_statistics(
@@ -53,7 +60,7 @@ export class UsersController {
   /* ------------ ======  CREATE USER  ====== ---------------- */
   /* ------------ =============================== ---------- */
   @Post()
-  @RequirePermission(Permissions.MANAGE_USERS)
+  @RequirePermission(Permissions.CREATE_USER)
   @ClearCache('users')
   @UseInterceptors(FileInterceptor('avatar'))
   createUser(
@@ -61,7 +68,7 @@ export class UsersController {
     CreateUserDto: CreateUserDto,
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], false))
     file: MulterFileType,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.usersService.createUser(CreateUserDto, file, req.user);
   }
@@ -89,7 +96,7 @@ export class UsersController {
   /* ------------ ======  UPDATE USER  ====== ---------------- */
   /* ------------ =============================== ---------- */
   @Patch(':id')
-  @RequirePermission(Permissions.MANAGE_USERS)
+  @RequirePermission(Permissions.UPDATE_USER)
   @ClearCache('users')
   @UseInterceptors(FileInterceptor('avatar'))
   update_user(
@@ -99,7 +106,7 @@ export class UsersController {
     idParamDto: IdParamDto,
     @Body()
     updateUserDto: UpdateUserDto,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.usersService.update_user(
       idParamDto,
@@ -112,9 +119,12 @@ export class UsersController {
   /* ------------ ======  DELETE USER  ====== ---------------- */
   /* ------------ =============================== ---------- */
   @Delete(':id')
-  @RequirePermission(Permissions.MANAGE_USERS)
+  @RequirePermission(Permissions.DELETE_USER)
   @ClearCache('users')
-  delete_user(@Param() idParamDto: IdParamDto, @Req() req: any) {
+  delete_user(
+    @Param() idParamDto: IdParamDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
     return this.usersService.delete_user(idParamDto, req.user);
   }
 }

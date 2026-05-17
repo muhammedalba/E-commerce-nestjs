@@ -29,7 +29,7 @@ export class RolesController {
 
   // ─── Create Role ──────────────────────────────────────────────────────────
   @Post()
-  @RequirePermission(Permissions.MANAGE_ROLES)
+  @RequirePermission(Permissions.CREATE_ROLE)
   async createRole(
     @Body() createRoleDto: CreateRoleDto,
     @Req() req: AuthenticatedRequest,
@@ -40,7 +40,7 @@ export class RolesController {
 
   // ─── Update Role ──────────────────────────────────────────────────────────
   @Put(':id')
-  @RequirePermission(Permissions.MANAGE_ROLES)
+  @RequirePermission(Permissions.UPDATE_ROLE)
   async updateRole(
     @Param('id') id: string,
     @Body() updateRoleDto: UpdateRoleDto,
@@ -51,7 +51,7 @@ export class RolesController {
 
   // ─── Delete Role ──────────────────────────────────────────────────────────
   @Delete(':id')
-  @RequirePermission(Permissions.MANAGE_ROLES)
+  @RequirePermission(Permissions.DELETE_ROLE)
   async deleteRole(
     @Param('id') id: string,
     @Req() req: AuthenticatedRequest,
@@ -68,7 +68,7 @@ export class RolesController {
 
   // ─── Get Permissions Grouped by Category (for UI Checkbox Grid) ───────────
   @Get('permissions-list')
-  @RequirePermission(Permissions.MANAGE_ROLES)
+  @RequirePermission(Permissions.VIEW_ROLES)
   getAllPermissions(): any {
     return this.rolesService.getGroupedPermissions();
   }

@@ -32,7 +32,7 @@ export class LocationsController {
   constructor(private readonly locationsService: LocationsService) {}
 
   /* ================================================ */
-  /*  COUNTRIES                                        */
+  /*  GET COUNTRIES                                 */
   /* ================================================ */
   @Get('countries')
   // Caching is handled at the service level (LocationsService) for better efficiency
@@ -42,17 +42,21 @@ export class LocationsController {
       isActive === 'true' ? true : isActive === 'false' ? false : undefined;
     return this.locationsService.getCountries(isActiveBool);
   }
-
+  /* ================================================ */
+  /*  CREATE COUNTRY  ADMIN ONLY                            */
+  /* ================================================ */
   @Post('countries')
-  @RequirePermission(Permissions.MANAGE_SETTINGS)
+  @RequirePermission(Permissions.CREATE_LOCATION)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('locations')
   createCountry(@Body() body: CreateCountryDto) {
     return this.locationsService.createCountry(body);
   }
-
+  /* ================================================ */
+  /*  UPDATE COUNTRY  ADMIN ONLY                            */
+  /* ================================================ */
   @Patch('countries/:id')
-  @RequirePermission(Permissions.MANAGE_SETTINGS)
+  @RequirePermission(Permissions.UPDATE_LOCATION)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('locations')
   updateCountry(@Param() { id }: IdParamDto, @Body() body: UpdateCountryDto) {
@@ -72,17 +76,21 @@ export class LocationsController {
       isActive === 'true' ? true : isActive === 'false' ? false : undefined;
     return this.locationsService.getRegionsByCountry(countryId, isActiveBool);
   }
-
+  /* ================================================ */
+  /*  CREATE REGION  ADMIN ONLY                            */
+  /* ================================================ */
   @Post('regions')
-  @RequirePermission(Permissions.MANAGE_SETTINGS)
+  @RequirePermission(Permissions.CREATE_LOCATION)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('locations')
   createRegion(@Body() body: CreateRegionDto) {
     return this.locationsService.createRegion(body);
   }
-
+  /* ================================================ */
+  /*  UPDATE REGION  ADMIN ONLY                            */
+  /* ================================================ */
   @Patch('regions/:id')
-  @RequirePermission(Permissions.MANAGE_SETTINGS)
+  @RequirePermission(Permissions.UPDATE_LOCATION)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('locations')
   updateRegion(@Param() { id }: IdParamDto, @Body() body: UpdateRegionDto) {
@@ -102,22 +110,28 @@ export class LocationsController {
       isActive === 'true' ? true : isActive === 'false' ? false : undefined;
     return this.locationsService.getCitiesByRegion(regionId, isActiveBool);
   }
-
+  /* ================================================ */
+  /*  GET CITY BY ID                            */
+  /* ================================================ */
   @Get('cities/detail/:id')
   getCityById(@Param() { id }: IdParamDto) {
     return this.locationsService.getCityById(id);
   }
-
+  /* ================================================ */
+  /*  CREATE CITY  ADMIN ONLY                            */
+  /* ================================================ */
   @Post('cities')
-  @RequirePermission(Permissions.MANAGE_SETTINGS)
+  @RequirePermission(Permissions.CREATE_LOCATION)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('locations')
   createCity(@Body() body: CreateCityDto) {
     return this.locationsService.createCity(body);
   }
-
+  /* ================================================ */
+  /*  UPDATE CITY  ADMIN ONLY                            */
+  /* ================================================ */
   @Patch('cities/:id')
-  @RequirePermission(Permissions.MANAGE_SETTINGS)
+  @RequirePermission(Permissions.UPDATE_LOCATION)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('locations')
   updateCity(@Param() { id }: IdParamDto, @Body() body: UpdateCityDto) {

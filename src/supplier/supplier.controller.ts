@@ -29,7 +29,6 @@ import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.inter
 import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 
 @Controller('supplier')
-@RequirePermission(Permissions.MANAGE_USERS)
 @UseGuards(AuthGuard, PermissionsGuard)
 @UseInterceptors(ClearCacheInterceptor)
 export class SupplierController {
@@ -38,6 +37,7 @@ export class SupplierController {
   // ------------ ======  GET statistics  ====== ---------- //
   // ------------ =============================== ---------- //
   @Get('statistics')
+  @RequirePermission(Permissions.VIEW_DASHBOARD_STATS)
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(300000) // 5 minutes
   async suppliers_statistics(): Promise<any> {
@@ -48,6 +48,7 @@ export class SupplierController {
   // ------------ =============================== ---------- //
   // ------------ =============================== ---------- //
   @Post()
+  @RequirePermission(Permissions.CREATE_SUPPLIER)
   @ClearCache('supplier')
   @UseInterceptors(FileInterceptor('avatar'))
   create(
@@ -61,6 +62,7 @@ export class SupplierController {
   // ------------ ======  GET ALL SUPPLIERS  ====== ---------- //
   // ------------ =============================== ---------- //
   @Get()
+  @RequirePermission(Permissions.VIEW_SUPPLIERS)
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(60000) // 60 seconds
   async findAll(@Query() queryString: QueryString): Promise<any> {
@@ -70,6 +72,7 @@ export class SupplierController {
   // ------------ ======  GET SUPPLIER BY ID  ====== ---------- //
   // ------------ =============================== ---------- //
   @Get(':id')
+  @RequirePermission(Permissions.VIEW_SUPPLIERS)
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(60000) // 60 seconds
   async findOne(@Param() id: IdParamDto): Promise<any> {
@@ -80,6 +83,7 @@ export class SupplierController {
   // ------------ =============================== ---------- //
   // ------------ =============================== ---------- //
   @Patch(':id')
+  @RequirePermission(Permissions.UPDATE_SUPPLIER)
   @ClearCache('supplier')
   @UseInterceptors(FileInterceptor('avatar'))
   update(
@@ -95,6 +99,7 @@ export class SupplierController {
   // ------------ =============================== ---------- //
   // ------------ =============================== ---------- //
   @Delete(':id')
+  @RequirePermission(Permissions.DELETE_SUPPLIER)
   @ClearCache('supplier')
   remove(@Param() id: IdParamDto) {
     return this.supplierService.delete_Supplier(id);

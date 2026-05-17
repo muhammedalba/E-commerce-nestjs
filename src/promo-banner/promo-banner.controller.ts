@@ -28,7 +28,7 @@ import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 @Controller('promo-banner')
 @UseInterceptors(ClearCacheInterceptor)
 export class PromoBannerController {
-  constructor(private readonly promoBannerService: PromoBannerService) {}
+  constructor(private readonly promoBannerService: PromoBannerService) { }
 
   // ------------------------------------------------------
   // ---------------- get active banners ------------------
@@ -44,6 +44,8 @@ export class PromoBannerController {
   // ---------------- get all banners ----------------------
   // ------------------------------------------------------
   @Get()
+  @RequirePermission(Permissions.VIEW_PROMO_BANNERS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(60000) // 60 seconds
   async getBanners(
@@ -66,6 +68,8 @@ export class PromoBannerController {
   // ------------------------------------------------------
 
   @Get(':id')
+  @RequirePermission(Permissions.VIEW_PROMO_BANNERS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(60000) // 60 seconds
   async getBanner(
@@ -84,7 +88,7 @@ export class PromoBannerController {
   // ------------------------------------------------------
 
   @Post()
-  @RequirePermission(Permissions.MANAGE_PROMO_BANNERS)
+  @RequirePermission(Permissions.CREATE_PROMO_BANNER)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('promo-banner')
   async createBanner(
@@ -98,7 +102,7 @@ export class PromoBannerController {
   // ------------------------------------------------------
 
   @Patch(':id')
-  @RequirePermission(Permissions.MANAGE_PROMO_BANNERS)
+  @RequirePermission(Permissions.UPDATE_PROMO_BANNER)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('promo-banner')
   async update(
@@ -115,7 +119,7 @@ export class PromoBannerController {
   // ------------------------------------------------------
 
   @Delete(':id')
-  @RequirePermission(Permissions.MANAGE_PROMO_BANNERS)
+  @RequirePermission(Permissions.DELETE_PROMO_BANNER)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('promo-banner')
   async deleteBanner(@Param() idParamDto: IdParamDto) {

@@ -32,7 +32,7 @@ export class SubCategoryController {
   // ------------ =============================== ---------- //
   // ------------ ======  CREATE SUP CATEGORY  ====== ---------- //
   // ------------ =============================== ---------- //
-  @RequirePermission(Permissions.MANAGE_CATEGORIES)
+  @RequirePermission(Permissions.CREATE_SUB_CATEGORY)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('sub-category')
   @Post()
@@ -57,7 +57,7 @@ export class SubCategoryController {
   // ------------ =============================== ---------- //
   // ------------ ======  GET ALL SUP CATEGORIES STATISTICS ====== ---------- //
   // ------------ =============================== ---------- //
-  @RequirePermission(Permissions.MANAGE_CATEGORIES)
+  @RequirePermission(Permissions.VIEW_DASHBOARD_STATS)
   @UseGuards(AuthGuard, PermissionsGuard)
   @Get('statistics')
   @UseInterceptors(CustomCacheInterceptor)
@@ -83,7 +83,7 @@ export class SubCategoryController {
   // ------------ =============================== ---------- //
   // ------------ ======  UPDATE SUP CATEGORY  ====== ---------- //
   // ------------ =============================== ---------- //
-  @RequirePermission(Permissions.MANAGE_CATEGORIES)
+  @RequirePermission(Permissions.UPDATE_SUB_CATEGORY)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('sub-category')
   @Patch(':id')
@@ -97,7 +97,7 @@ export class SubCategoryController {
   // ------------ =============================== ---------- //
   // ------------ ======  DELETE SUP CATEGORY  ====== ---------- //
   // ------------ =============================== ---------- //
-  @RequirePermission(Permissions.MANAGE_CATEGORIES)
+  @RequirePermission(Permissions.DELETE_SUB_CATEGORY)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('sub-category')
   @Delete(':id')

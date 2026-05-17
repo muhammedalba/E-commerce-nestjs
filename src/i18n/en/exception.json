@@ -71,6 +71,12 @@
       "REGION_EXISTS": "A region with this name already exists in this country",
       "CITY_EXISTS": "A city with this name already exists in this region",
       "FORBIDDEN_PERMISSIONS": "You do not have the required permissions to perform this action",
+      "user": {
+            "CANNOT_CREATE_WITH_HIGHER_ROLE": "You cannot create a user with a role level higher than or equal to yours",
+            "CANNOT_MODIFY_HIGHER_USER": "You cannot modify a user with a role level higher than or equal to yours",
+            "CANNOT_ASSIGN_HIGHER_ROLE": "You cannot assign a role with a level higher than or equal to yours",
+            "CANNOT_DELETE_HIGHER_USER": "You cannot delete a user with a role level higher than or equal to yours"
+      },
       "role": {
             "CANNOT_CREATE_HIGHER_ROLE": "You cannot create a role with a level higher than or equal to yours",
             "CANNOT_MODIFY_HIGHER_ROLE": "You cannot modify a role with a level higher than or equal to yours",

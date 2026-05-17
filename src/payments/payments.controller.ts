@@ -19,6 +19,7 @@ import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
+import { PaymentMethod } from './shared/schema/payment-method.schema';
 
 @Controller('payments')
 @UseInterceptors(ClearCacheInterceptor)
@@ -39,7 +40,7 @@ export class PaymentsController {
   /*  ADMIN: GET ALL (including inactive)              */
   /* ================================================ */
   @Get('all')
-  @RequirePermission(Permissions.VIEW_ORDERS)
+  @RequirePermission(Permissions.VIEW_SETTINGS)
   @UseGuards(AuthGuard, PermissionsGuard)
   findAll() {
     return this.paymentsService.findAll();
@@ -49,10 +50,10 @@ export class PaymentsController {
   /*  CREATE - Admin Only                              */
   /* ================================================ */
   @Post()
-  @RequirePermission(Permissions.VIEW_ORDERS)
+  @RequirePermission(Permissions.UPDATE_SETTINGS)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('payments')
-  create(@Body() body: any) {
+  create(@Body() body: Partial<PaymentMethod>) {
     return this.paymentsService.create(body);
   }
 
@@ -60,10 +61,10 @@ export class PaymentsController {
   /*  UPDATE - Admin Only                              */
   /* ================================================ */
   @Patch(':id')
-  @RequirePermission(Permissions.VIEW_ORDERS)
+  @RequirePermission(Permissions.UPDATE_SETTINGS)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('payments')
-  update(@Param() { id }: IdParamDto, @Body() body: any) {
+  update(@Param() { id }: IdParamDto, @Body() body: Partial<PaymentMethod>) {
     return this.paymentsService.update(id, body);
   }
 
@@ -71,7 +72,7 @@ export class PaymentsController {
   /*  DELETE - Admin Only                              */
   /* ================================================ */
   @Delete(':id')
-  @RequirePermission(Permissions.VIEW_ORDERS)
+  @RequirePermission(Permissions.UPDATE_SETTINGS)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('payments')
   remove(@Param() { id }: IdParamDto) {

@@ -44,7 +44,7 @@ export class SettingsController {
   /*  UPDATE SETTINGS - Admin Only (للإدمن فقط)       */
   /* ================================================ */
   @Patch()
-  @RequirePermission(Permissions.MANAGE_SETTINGS)
+  @RequirePermission(Permissions.UPDATE_SETTINGS)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('settings')
   @UseInterceptors(
@@ -83,7 +83,7 @@ export class SettingsController {
         ],
       ),
     )
-    files,
+    files: { favicon?: MulterFilesType; logo?: MulterFilesType },
     @Body() updateSettingDto: UpdateSettingDto,
   ) {
     return await this.settingsService.updateSettings(updateSettingDto, files);
@@ -93,7 +93,7 @@ export class SettingsController {
   /*  CLEAR CACHE - Admin Only                        */
   /* ================================================ */
   @Patch('clear-cache')
-  @RequirePermission(Permissions.MANAGE_SETTINGS)
+  @RequirePermission(Permissions.UPDATE_SETTINGS)
   @UseGuards(AuthGuard, PermissionsGuard)
   async clearCache() {
     return await this.settingsService.clearCache();

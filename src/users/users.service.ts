@@ -40,10 +40,14 @@ export class UsersService extends BaseService<UserDocument> {
   ): Promise<any> {
     if (CreateUserDto.role) {
       const newRole = await this.roleModel.findById(CreateUserDto.role);
-      if (!newRole) throw new NotFoundException('الدور غير موجود');
+      if (!newRole) {
+        throw new NotFoundException(
+          this.i18n.translate('exception.role.ROLE_NOT_FOUND'),
+        );
+      }
       if (newRole.level >= currentUser.level && currentUser.level !== 100) {
         throw new ForbiddenException(
-          'لا يمكنك إنشاء مستخدم بدور يمتلك صلاحيات مساوية أو أعلى من صلاحياتك',
+          this.i18n.translate('exception.user.CANNOT_CREATE_WITH_HIGHER_ROLE'),
         );
       }
     }
@@ -88,22 +92,26 @@ export class UsersService extends BaseService<UserDocument> {
       );
     }
 
-    const targetRoleLevel = (targetUser.role as any)?.level || 0;
+    const targetRoleLevel = (targetUser.role as Role)?.level || 0;
 
     // Check existing user's role level
     if (targetRoleLevel >= currentUser.level && currentUser.level !== 100) {
       throw new ForbiddenException(
-        'لا يمكنك تعديل مستخدم يمتلك صلاحيات مساوية أو أعلى من صلاحياتك',
+        this.i18n.translate('exception.user.CANNOT_MODIFY_HIGHER_USER'),
       );
     }
 
     // Check new role if it's being updated
     if (UpdateUserDto.role) {
       const newRole = await this.roleModel.findById(UpdateUserDto.role);
-      if (!newRole) throw new NotFoundException('الدور غير موجود');
+      if (!newRole) {
+        throw new NotFoundException(
+          this.i18n.translate('exception.role.ROLE_NOT_FOUND'),
+        );
+      }
       if (newRole.level >= currentUser.level && currentUser.level !== 100) {
         throw new ForbiddenException(
-          'لا يمكنك تعيين دور يمتلك صلاحيات مساوية أو أعلى من صلاحياتك',
+          this.i18n.translate('exception.user.CANNOT_ASSIGN_HIGHER_ROLE'),
         );
       }
     }
@@ -140,12 +148,12 @@ export class UsersService extends BaseService<UserDocument> {
       );
     }
 
-    const targetRoleLevel = (targetUser.role as any)?.level || 0;
+    const targetRoleLevel = (targetUser.role as Role)?.level || 0;
 
     // Check existing user's role level
     if (targetRoleLevel >= currentUser.level && currentUser.level !== 100) {
       throw new ForbiddenException(
-        'لا يمكنك حذف مستخدم يمتلك صلاحيات مساوية أو أعلى من صلاحياتك',
+        this.i18n.translate('exception.user.CANNOT_DELETE_HIGHER_USER'),
       );
     }
 

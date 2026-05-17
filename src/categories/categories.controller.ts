@@ -36,7 +36,7 @@ export class CategoriesController {
   // ------------ =============================== ---------- //
   // ------------ ======  get statistics categories  = ---------- //
   // ------------ =============================== ---------- //
-  @RequirePermission(Permissions.MANAGE_CATEGORIES)
+  @RequirePermission(Permissions.VIEW_DASHBOARD_STATS)
   @UseGuards(AuthGuard, PermissionsGuard)
   @Get('statistics')
   @UseInterceptors(CustomCacheInterceptor)
@@ -48,7 +48,7 @@ export class CategoriesController {
   // ------------ =============================== ---------- //
   // ------------ ======  CREATE CATEGORY   ====== ---------- //
   // ------------ =============================== ---------- //
-  @RequirePermission(Permissions.MANAGE_CATEGORIES)
+  @RequirePermission(Permissions.CREATE_CATEGORY)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('categories')
   @Post()
@@ -92,7 +92,7 @@ export class CategoriesController {
   // ------------ =============================== ---------- //
   // ------------ ======  update category   ====== ---------- //
   // ------------ =============================== ---------- //
-  @RequirePermission(Permissions.MANAGE_CATEGORIES)
+  @RequirePermission(Permissions.UPDATE_CATEGORY)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('categories')
   @Patch(':id')
@@ -113,7 +113,7 @@ export class CategoriesController {
   // ------------ =============================== ---------- //
   // ------------ ======  delete category   ====== ---------- //
   // ------------ =============================== ---------- //
-  @RequirePermission(Permissions.MANAGE_CATEGORIES)
+  @RequirePermission(Permissions.DELETE_CATEGORY)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('categories')
   @Delete(':id')

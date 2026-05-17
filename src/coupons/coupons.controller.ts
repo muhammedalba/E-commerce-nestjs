@@ -25,7 +25,6 @@ import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.inter
 import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 
 @Controller('coupons')
-@RequirePermission(Permissions.MANAGE_COUPONS)
 @UseGuards(AuthGuard, PermissionsGuard)
 @UseInterceptors(ClearCacheInterceptor)
 export class CouponsController {
@@ -34,6 +33,7 @@ export class CouponsController {
   // ------------ ======  CREATE COUPON   ====== ---------- //
   // ------------ =============================== ---------- //
   @Post()
+  @RequirePermission(Permissions.CREATE_COUPON)
   @ClearCache('coupons')
   create(@Body() createCouponDto: CreateCouponDto) {
     return this.couponsService.create(createCouponDto);
@@ -42,6 +42,7 @@ export class CouponsController {
   // ------------ ======  GET ALL COUPONS   ====== ---------- //
   // ------------ =============================== ---------- //
   @Get()
+  @RequirePermission(Permissions.VIEW_COUPONS)
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(60000) // 60 seconds
   findAll(@Query() queryString: QueryString) {
@@ -51,6 +52,7 @@ export class CouponsController {
   // ------------ ======  GET COUPON BY ID   ====== ---------- //
   // ------------ =============================== ---------- //
   @Get(':id')
+  @RequirePermission(Permissions.VIEW_COUPONS)
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(60000) // 60 seconds
   findOne(@Param() idParamDto: IdParamDto) {
@@ -60,6 +62,7 @@ export class CouponsController {
   // ------------ ======  UPDATE COUPON   ====== ---------- //
   // ------------ =============================== ---------- //
   @Patch(':id')
+  @RequirePermission(Permissions.UPDATE_COUPON)
   @ClearCache('coupons')
   update(
     @Param() idParamDto: IdParamDto,
@@ -71,6 +74,7 @@ export class CouponsController {
   // ------------ ======  DELETE COUPON   ====== ---------- //
   // ------------ =============================== ---------- //
   @Delete(':id')
+  @RequirePermission(Permissions.DELETE_COUPON)
   @ClearCache('coupons')
   remove(@Param() idParamDto: IdParamDto) {
     return this.couponsService.remove(idParamDto);

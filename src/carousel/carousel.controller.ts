@@ -36,7 +36,7 @@ type file = Request['file'];
 @Controller('carousel')
 @UseInterceptors(ClearCacheInterceptor)
 export class CarouselController {
-  constructor(private readonly carouselService: CarouselService) { }
+  constructor(private readonly carouselService: CarouselService) {}
   static readonly imageSize = [
     { name: 'carouselSm', maxCount: MaxFileCount.CAROUSEl },
     { name: 'carouselMd', maxCount: MaxFileCount.CAROUSEl },
@@ -46,7 +46,7 @@ export class CarouselController {
   // ------------ ======  CREATE CAROUSEL   ====== ---------- //
   // ------------ =============================== ---------- //
   @Post()
-  @RequirePermission(Permissions.MANAGE_PROMO_BANNERS)
+  @RequirePermission(Permissions.CREATE_CAROUSEL)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('carousel')
   @UseInterceptors(FileFieldsInterceptor(CarouselController.imageSize))
@@ -69,7 +69,7 @@ export class CarouselController {
       carouselMd: file;
       carouselSm: file;
     },
-  ) {
+  ): Promise<any> {
     if (!files.carouselLg || !files.carouselMd || !files.carouselSm) {
       throw new BadRequestException('All carousel images are required.');
     }
@@ -109,7 +109,7 @@ export class CarouselController {
   // ------------ ======  UPDATE CAROUSEL   ====== ---------- //
   // ------------ =============================== ---------- //
   @Patch(':id')
-  @RequirePermission(Permissions.MANAGE_PROMO_BANNERS)
+  @RequirePermission(Permissions.UPDATE_CAROUSEL)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('carousel')
   @UseInterceptors(FileFieldsInterceptor(CarouselController.imageSize))
@@ -143,7 +143,7 @@ export class CarouselController {
   // ------------ ======  DELETE CAROUSEL   ====== ---------- //
   // ------------ =============================== ---------- //
   @Delete(':id')
-  @RequirePermission(Permissions.MANAGE_PROMO_BANNERS)
+  @RequirePermission(Permissions.DELETE_CAROUSEL)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('carousel')
   async remove(@Param() idParamDto: IdParamDto): Promise<void> {
