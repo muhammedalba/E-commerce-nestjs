@@ -6,19 +6,25 @@ export interface PermissionMetadata {
 export enum Permissions {
   // ---- Dashboard Access ----
   ACCESS_DASHBOARD = 'access_dashboard',
+  VIEW_DASHBOARD_STATS = 'view_dashboard_stats',
   // ---- Settings ----
   MANAGE_SETTINGS = 'manage_settings',
+  VIEW_SETTINGS = 'view_settings',
+  VIEW_LOCATIONS = 'view_locations',
+  VIEW_EXTERNAL_PLATFORMS = 'view_external-platforms',
   // ---- Roles & Permissions ----
   MANAGE_ROLES = 'manage_roles',
   VIEW_ROLES = 'view_roles',
-  // ---- Users ----
+  // ---- Users & Suppliers ----
   MANAGE_USERS = 'manage_users',
   VIEW_USERS = 'view_users',
+  VIEW_SUPPLIERS = 'view_suppliers',
   // ---- Products ----
   CREATE_PRODUCT = 'create_product',
   UPDATE_PRODUCT = 'update_product',
   DELETE_PRODUCT = 'delete_product',
   VIEW_PRODUCTS = 'view_products',
+  VIEW_PRODUCTS_STATS = 'view_products_stats',
   // ---- Orders ----
   UPDATE_ORDER_STATUS = 'update_order_status',
   DELETE_ORDER = 'delete_order',
@@ -38,12 +44,15 @@ export enum Permissions {
   VIEW_CAROUSEL = 'view_carousels',
   // ---- Coupons & Promo ----
   MANAGE_COUPONS = 'manage_coupons',
+  VIEW_COUPONS = 'view_coupons',
   MANAGE_PROMO_BANNERS = 'manage_promo_banners',
   VIEW_PROMO_BANNERS = 'view_promo_banners',
   // ---- Shipping & Taxes ----
   MANAGE_SHIPPING = 'manage_shipping',
   VIEW_SHIPPING = 'view_shipping',
+  VIEW_SHIPPING_RATES = 'view_shipping_rates',
   MANAGE_TAXES = 'manage_taxes',
+  VIEW_TAXES = 'view_taxes',
 }
 
 export const PERMISSIONS_METADATA: PermissionMetadata[] = [
@@ -53,9 +62,29 @@ export const PERMISSIONS_METADATA: PermissionMetadata[] = [
     label: 'دخول لوحة التحكم',
   },
   {
+    key: Permissions.VIEW_DASHBOARD_STATS,
+    group: 'لوحة التحكم',
+    label: 'عرض إحصائيات لوحة التحكم',
+  },
+  {
     key: Permissions.MANAGE_SETTINGS,
     group: 'الإعدادات',
     label: 'إدارة إعدادات النظام',
+  },
+  {
+    key: Permissions.VIEW_SETTINGS,
+    group: 'الإعدادات',
+    label: 'عرض إعدادات النظام',
+  },
+  {
+    key: Permissions.VIEW_LOCATIONS,
+    group: 'الإعدادات',
+    label: 'عرض المواقع والفروع',
+  },
+  {
+    key: Permissions.VIEW_EXTERNAL_PLATFORMS,
+    group: 'الإعدادات',
+    label: 'عرض المنصات الخارجية',
   },
   {
     key: Permissions.VIEW_ROLES,
@@ -73,7 +102,17 @@ export const PERMISSIONS_METADATA: PermissionMetadata[] = [
     group: 'المستخدمون',
     label: 'إدارة المستخدمين',
   },
+  {
+    key: Permissions.VIEW_SUPPLIERS,
+    group: 'الموردون',
+    label: 'عرض الموردين',
+  },
   { key: Permissions.VIEW_PRODUCTS, group: 'المنتجات', label: 'عرض المنتجات' },
+  {
+    key: Permissions.VIEW_PRODUCTS_STATS,
+    group: 'المنتجات',
+    label: 'عرض إحصائيات المنتجات',
+  },
   { key: Permissions.CREATE_PRODUCT, group: 'المنتجات', label: 'إضافة منتج' },
   { key: Permissions.UPDATE_PRODUCT, group: 'المنتجات', label: 'تعديل منتج' },
   { key: Permissions.DELETE_PRODUCT, group: 'المنتجات', label: 'حذف منتج' },
@@ -141,6 +180,11 @@ export const PERMISSIONS_METADATA: PermissionMetadata[] = [
     label: 'إدارة الكوبونات',
   },
   {
+    key: Permissions.VIEW_COUPONS,
+    group: 'الكوبونات والعروض',
+    label: 'عرض الكوبونات',
+  },
+  {
     key: Permissions.VIEW_SHIPPING,
     group: 'الشحن والضرائب',
     label: 'عرض إعدادات الشحن',
@@ -151,8 +195,18 @@ export const PERMISSIONS_METADATA: PermissionMetadata[] = [
     label: 'إدارة الشحن',
   },
   {
+    key: Permissions.VIEW_SHIPPING_RATES,
+    group: 'الشحن والضرائب',
+    label: 'عرض أسعار الشحن',
+  },
+  {
     key: Permissions.MANAGE_TAXES,
     group: 'الشحن والضرائب',
     label: 'إدارة الضرائب',
+  },
+  {
+    key: Permissions.VIEW_TAXES,
+    group: 'الشحن والضرائب',
+    label: 'عرض الضرائب',
   },
 ];

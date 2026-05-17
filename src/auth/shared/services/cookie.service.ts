@@ -28,6 +28,14 @@ export class CookieService {
       path: '/api/v1/auth/refresh-token',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7d
     });
+
+    res.cookie('is_logged_in', 'true', {
+      httpOnly: false,
+      secure: this.isProd,
+      sameSite: this.isProd ? 'none' : 'lax',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7d
+    });
   }
 
   clearCookies(res: Response): void {
@@ -43,6 +51,13 @@ export class CookieService {
       secure: this.isProd,
       sameSite: this.isProd ? 'none' : 'lax',
       path: '/api/v1/auth/refresh-token',
+    });
+
+    res.clearCookie('is_logged_in', {
+      httpOnly: false,
+      secure: this.isProd,
+      sameSite: this.isProd ? 'none' : 'lax',
+      path: '/',
     });
 
     //delete token from  header

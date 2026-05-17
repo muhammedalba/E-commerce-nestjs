@@ -28,12 +28,27 @@ export class RolesSeederService implements OnModuleInit {
         description: 'Administrator with high-level access',
         permissions: [
           Permissions.ACCESS_DASHBOARD,
+          Permissions.VIEW_DASHBOARD_STATS,
           Permissions.MANAGE_USERS,
+          Permissions.VIEW_USERS,
+          Permissions.VIEW_SUPPLIERS,
           Permissions.MANAGE_ROLES,
+          Permissions.VIEW_ROLES,
           Permissions.MANAGE_CATEGORIES,
+          Permissions.VIEW_CATEGORIES,
+          Permissions.VIEW_SUB_CATEGORIES,
+          Permissions.VIEW_BRANDS,
           Permissions.CREATE_PRODUCT,
           Permissions.UPDATE_PRODUCT,
+          Permissions.VIEW_PRODUCTS,
+          Permissions.VIEW_PRODUCTS_STATS,
           Permissions.VIEW_ORDERS,
+          Permissions.VIEW_COUPONS,
+          Permissions.VIEW_SHIPPING_RATES,
+          Permissions.VIEW_TAXES,
+          Permissions.VIEW_LOCATIONS,
+          Permissions.VIEW_EXTERNAL_PLATFORMS,
+          Permissions.VIEW_SETTINGS,
         ],
         isSystemDefined: true,
         level: 50,
@@ -43,7 +58,9 @@ export class RolesSeederService implements OnModuleInit {
         description: 'Manager with operational access',
         permissions: [
           Permissions.ACCESS_DASHBOARD,
+          Permissions.VIEW_DASHBOARD_STATS,
           Permissions.VIEW_PRODUCTS,
+          Permissions.VIEW_PRODUCTS_STATS,
           Permissions.UPDATE_PRODUCT,
           Permissions.VIEW_ORDERS,
           Permissions.UPDATE_ORDER_STATUS,
@@ -71,7 +88,8 @@ export class RolesSeederService implements OnModuleInit {
         this.logger.log(
           `✅ Role ${roleData.name} has been seeded successfully.`,
         );
-      } else {
+      } else if (roleData.name === 'SuperAdmin') {
+        // Only reset SuperAdmin to guarantee level 100 and all permissions
         await this.roleModel.updateOne(
           { name: roleData.name },
           {
