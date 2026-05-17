@@ -54,7 +54,6 @@ export class Setting {
   @Prop({ type: Number, default: 1, min: 0 })
   declare exchangeRate: number;
 
-
   // إعدادات SEO
   @Prop({ type: Object, required: true, default: { ar: '', en: '' } })
   @IsDefined()
@@ -132,8 +131,6 @@ export class Setting {
   @Prop({ type: Boolean, default: false })
   declare taxesIncluded: boolean;
 
-
-
   @Prop({ type: Number, default: 0 })
   declare minOrderAmount: number;
 
@@ -195,7 +192,6 @@ const prependBaseUrl = (doc: any) => {
     doc.favicon = `${baseUrl}/${doc.favicon.replace(/^\//, '')}`;
   }
 };
-
 
 // خطاف بعد التحديث (findOneAndUpdate)
 SettingSchema.post('findOneAndUpdate', function (doc) {

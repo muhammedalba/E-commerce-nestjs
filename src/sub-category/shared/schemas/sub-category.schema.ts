@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Type } from 'class-transformer';
 import { IsDefined, ValidateNested } from 'class-validator';
-import { HydratedDocument, Model, Types } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
 import * as mongoose from 'mongoose';
 import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
@@ -28,4 +28,3 @@ export class SubCategory {
 }
 export const SubCategorySchema = SchemaFactory.createForClass(SubCategory);
 export type SubCategoryDocument = HydratedDocument<SubCategory>;
-

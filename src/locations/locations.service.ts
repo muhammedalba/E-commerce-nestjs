@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, Inject, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Inject,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -33,7 +38,7 @@ export class LocationsService {
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
     private readonly i18n: CustomI18nService,
-  ) { }
+  ) {}
 
   // ===========================================================================
   // COUNTRIES
@@ -57,7 +62,7 @@ export class LocationsService {
     }
   }
 
-  private async assertCountryCodeUnique( 
+  private async assertCountryCodeUnique(
     code: string,
     excludeId?: string,
   ): Promise<void> {
@@ -197,7 +202,10 @@ export class LocationsService {
    * @param countryId - The ID of the country
    * @returns Array of active regions
    */
-  async getRegionsByCountry(countryId: string, isActive?: boolean): Promise<any[]> {
+  async getRegionsByCountry(
+    countryId: string,
+    isActive?: boolean,
+  ): Promise<any[]> {
     const cacheKey = `locations:regions:${countryId}:${isActive ?? 'all'}`;
     const cached = await this.cacheManager.get<any[]>(cacheKey);
     if (cached) return cached;
@@ -305,7 +313,10 @@ export class LocationsService {
    * @param regionId - The ID of the region
    * @returns Array of active cities
    */
-  async getCitiesByRegion(regionId: string, isActive?: boolean): Promise<any[]> {
+  async getCitiesByRegion(
+    regionId: string,
+    isActive?: boolean,
+  ): Promise<any[]> {
     const cacheKey = `locations:cities:${regionId}:${isActive ?? 'all'}`;
     const cached = await this.cacheManager.get<any[]>(cacheKey);
     if (cached) return cached;

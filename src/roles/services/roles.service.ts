@@ -3,7 +3,7 @@ import {
   ForbiddenException,
   NotFoundException,
   Inject,
-  InternalServerErrorException
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -12,20 +12,16 @@ import { Cache } from 'cache-manager';
 
 import { Role, RoleDocument } from '../shared/schemas/role.schema';
 import { User } from '../../auth/shared/schema/user.schema';
-import { Permissions, PERMISSIONS_METADATA } from '../shared/enums/permissions.enum';
+import { PERMISSIONS_METADATA } from '../shared/enums/permissions.enum';
 import { JwtPayload } from '../../auth/shared/types/jwt-payload.interface';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
+import { CreateRoleDto, UpdateRoleDto } from '../shared/dto/role.dto';
 
-// يُفضل تعريف هذه الـ Interfaces في ملفات DTO منفصلة
-interface CreateRoleDto {
-  name: string;
-  level: number;
-  permissions?: string[];
-  [key: string]: any;
-}
-
-interface UpdateRoleDto extends Partial<CreateRoleDto> { }
-
+/**
+ * Service responsible for managing Roles and Permissions within the system.
+ * Handles hierarchy validation, system role protection, caching invalidation,
+ * and high-performance aggregations.
+ */
 @Injectable()
 export class RolesService {
   constructor(
@@ -33,76 +29,131 @@ export class RolesService {
     @InjectModel(User.name) private readonly userModel: Model<User>,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
     private readonly i18n: CustomI18nService,
-  ) { }
+  ) {}
 
   /**
-     * دالة التحقق من التسلسل الهرمي مع دعم الاستثناء للـ SuperAdmin
-     */
+   * Validates the role hierarchy and enforces system-defined role protections.
+   * Allows SuperAdmin (level 100) to bypass certain update restrictions while
+   * strictly protecting system roles from deletion and peer modification.
+   *
+   * @param targetRole - The role document being targeted for modification or deletion.
+   * @param currentUser - The currently authenticated user performing the action.
+   * @param action - The type of action being performed ('update' or 'delete').
+   * @throws {ForbiddenException} If the user attempts an unauthorized modification or deletion.
+   */
   private checkHierarchyAndSystemProtection(
     targetRole: RoleDocument,
     currentUser: JwtPayload,
-    action: 'update' | 'delete'
+    action: 'update' | 'delete',
   ) {
-    const isSuperAdmin = currentUser.level === 100; // بافتراض أن 100 هو أعلى مستوى
+    const isSuperAdmin = currentUser.level === 100;
 
-    // 1. المنع المطلق لحذف الأدوار النظامية (حتى السوبر آدمن لا يمكنه حذف دوره)
+    // 1. Absolute prohibition of deleting system-defined roles (even SuperAdmin cannot delete core roles)
     if (action === 'delete' && targetRole.isSystemDefined) {
-      throw new ForbiddenException(this.i18n.translate('exception.role.SYSTEM_ROLE_CANNOT_BE_DELETED'));
+      throw new ForbiddenException(
+        this.i18n.translate('exception.role.SYSTEM_ROLE_CANNOT_BE_DELETED'),
+      );
     }
 
-    // 2. السماح للسوبر آدمن بتعديل الأدوار النظامية (بما فيها دوره)
+    // 2. Allow SuperAdmin to update system-defined roles (including their own role)
     if (isSuperAdmin && action === 'update') {
-      return; // تجاوز الحماية والسماح له بالمرور
+      return;
     }
 
-    // 3. القواعد الصارمة لباقي المدراء والموظفين
+    // 3. Strict rules for standard administrators and staff
     if (targetRole.isSystemDefined) {
-      throw new ForbiddenException(this.i18n.translate('exception.role.SYSTEM_ROLE_PROTECTED'));
+      throw new ForbiddenException(
+        this.i18n.translate('exception.role.SYSTEM_ROLE_PROTECTED'),
+      );
     }
 
-    // يمنع تعديل دور أعلى أو مساوٍ لمستوى المستخدم الحالي (يمنع ترقية الأقران)
+    // Prevent modifying a role with a level higher than or equal to the current user's level (prevents peer promotion)
     if (targetRole.level >= currentUser.level) {
-      throw new ForbiddenException(this.i18n.translate('exception.role.CANNOT_MODIFY_HIGHER_ROLE'));
+      throw new ForbiddenException(
+        this.i18n.translate('exception.role.CANNOT_MODIFY_HIGHER_ROLE'),
+      );
     }
   }
 
   /**
-   * دالة مساعدة لمسح الكاش بشكل متوازي (Parallel) لتحسين الأداء
+   * Helper method to invalidate user permissions cache in parallel for maximum performance.
+   * Executed whenever a role's permissions are modified or when a role is deleted.
+   *
+   * @param roleId - The ID of the role whose assigned users' cache needs invalidation.
    */
   private async invalidateUsersCache(roleId: string | Types.ObjectId) {
-    const affectedUsers = await this.userModel.find({ role: roleId }).select('_id').lean();
+    const affectedUsers = await this.userModel
+      .find({ role: roleId })
+      .select('_id')
+      .lean();
 
     if (affectedUsers.length > 0) {
-      // استخدام Promise.all لمنع حظر الـ Event Loop بدلاً من for..of
+      // Use Promise.all to prevent blocking the event loop
       const cachePromises = affectedUsers.map((user) =>
-        this.cacheManager.del(`user_permissions:${user._id.toString()}`)
+        this.cacheManager.del(`user_permissions:${user._id.toString()}`),
       );
       await Promise.all(cachePromises);
     }
   }
 
+  /**
+   * Creates a new custom role in the system.
+   * Enforces hierarchy checks to ensure a user cannot create a role with a level higher than or equal to their own.
+   *
+   * @param createRoleDto - Data transfer object containing the role details.
+   * @param currentUser - The currently authenticated user performing the creation.
+   * @returns The newly created role document.
+   * @throws {ForbiddenException} If attempting to create a role at or above the user's own level.
+   */
   async createRole(createRoleDto: CreateRoleDto, currentUser: JwtPayload) {
     if (createRoleDto.level >= currentUser.level) {
-      throw new ForbiddenException(this.i18n.translate('exception.role.CANNOT_CREATE_HIGHER_ROLE'));
+      throw new ForbiddenException(
+        this.i18n.translate('exception.role.CANNOT_CREATE_HIGHER_ROLE'),
+      );
     }
     return this.roleModel.create(createRoleDto);
   }
 
-  async updateRole(roleId: string, updateRoleDto: UpdateRoleDto, currentUser: JwtPayload) {
+  /**
+   * Updates an existing role's details or permissions.
+   * Enforces hierarchy validation, prevents peer elevation, and protects SuperAdmin from accidental self-lockout.
+   *
+   * @param roleId - The ID of the role to update.
+   * @param updateRoleDto - Data transfer object containing the fields to update.
+   * @param currentUser - The currently authenticated user performing the update.
+   * @returns The updated role document.
+   * @throws {NotFoundException} If the targeted role does not exist.
+   * @throws {ForbiddenException} If hierarchy rules or SuperAdmin protections are violated.
+   */
+  async updateRole(
+    roleId: string,
+    updateRoleDto: UpdateRoleDto,
+    currentUser: JwtPayload,
+  ) {
     const targetRole = await this.roleModel.findById(roleId);
-    if (!targetRole) throw new NotFoundException(this.i18n.translate('exception.role.ROLE_NOT_FOUND'));
+    if (!targetRole)
+      throw new NotFoundException(
+        this.i18n.translate('exception.role.ROLE_NOT_FOUND'),
+      );
 
-    // نمرر نوع العملية 'update'
     this.checkHierarchyAndSystemProtection(targetRole, currentUser, 'update');
 
-    // منع أي شخص (حتى السوبر آدمن) من رفع مستوى دور ليصبح مساوياً أو أعلى منه
+    // Prevent any user (including SuperAdmin) from elevating a role's level to be equal to or higher than their own
     if (updateRoleDto.level && updateRoleDto.level > currentUser.level) {
-      throw new ForbiddenException(this.i18n.translate('exception.role.CANNOT_RAISE_LEVEL'));
+      throw new ForbiddenException(
+        this.i18n.translate('exception.role.CANNOT_RAISE_LEVEL'),
+      );
     }
 
-    // حماية إضافية: منع السوبر آدمن من تخفيض مستوى دوره النظامي بالخطأ
-    if (targetRole.isSystemDefined && updateRoleDto.level !== undefined && updateRoleDto.level < 100) {
-      throw new ForbiddenException('لا يمكن تخفيض مستوى دور النظام الأساسي');
+    // Additional protection: prevent SuperAdmin from accidentally downgrading the core SuperAdmin role level below 100
+    if (
+      targetRole.level === 100 &&
+      updateRoleDto.level !== undefined &&
+      updateRoleDto.level < 100
+    ) {
+      throw new ForbiddenException(
+        this.i18n.translate('exception.role.SUPERADMIN_LEVEL_PROTECTED'),
+      );
     }
 
     Object.assign(targetRole, updateRoleDto);
@@ -111,26 +162,43 @@ export class RolesService {
     if (updateRoleDto.permissions) {
       await this.invalidateUsersCache(roleId);
     }
-     
 
     return updatedRole;
   }
 
+  /**
+   * Deletes a custom role from the system.
+   * Reassigns all associated users to the default 'User' role and invalidates their permission caches.
+   * System-defined roles are strictly protected from deletion.
+   *
+   * @param roleId - The ID of the role to delete.
+   * @param currentUser - The currently authenticated user performing the deletion.
+   * @returns A success message object upon completion.
+   * @throws {NotFoundException} If the targeted role does not exist.
+   * @throws {ForbiddenException} If attempting to delete a system-defined role.
+   * @throws {InternalServerErrorException} If the default 'User' role cannot be found in the database.
+   */
   async deleteRole(roleId: string, currentUser: JwtPayload) {
     const targetRole = await this.roleModel.findById(roleId);
-    if (!targetRole) throw new NotFoundException(this.i18n.translate('exception.role.ROLE_NOT_FOUND'));
+    if (!targetRole)
+      throw new NotFoundException(
+        this.i18n.translate('exception.role.ROLE_NOT_FOUND'),
+      );
 
-    // نمرر نوع العملية 'delete'
-    // هذه الدالة سترفض العملية فوراً إذا كان الدور isSystemDefined
     this.checkHierarchyAndSystemProtection(targetRole, currentUser, 'delete');
 
     const defaultRole = await this.roleModel.findOne({ name: 'User' }).lean();
     if (!defaultRole) {
-      throw new InternalServerErrorException(this.i18n.translate('exception.role.DEFAULT_ROLE_MISSING'));
+      throw new InternalServerErrorException(
+        this.i18n.translate('exception.role.DEFAULT_ROLE_MISSING'),
+      );
     }
 
-    // نقل المستخدمين إلى الدور الافتراضي ومسح الكاش
-    await this.userModel.updateMany({ role: roleId }, { $set: { role: defaultRole._id } });
+    // Reassign users to the default role and invalidate cache
+    await this.userModel.updateMany(
+      { role: roleId },
+      { $set: { role: defaultRole._id } },
+    );
     await this.invalidateUsersCache(roleId);
 
     await this.roleModel.findByIdAndDelete(roleId);
@@ -138,40 +206,55 @@ export class RolesService {
   }
 
   /**
-   * تم استبدال N+1 Queries بـ MongoDB Aggregation لأداء فائق السرعة
+   * Retrieves all roles in the system along with their assigned user count.
+   * Utilizes MongoDB Aggregation pipeline for high-performance execution instead of N+1 queries.
+   *
+   * @returns An array of role aggregation objects sorted by level in descending order.
    */
   async getAllRoles(): Promise<any[]> {
     return this.roleModel.aggregate([
       {
+        $match: { level: { $lt: 100 } }, // Prevent sending SuperAdmin (level 100) to the frontend
+      },
+      {
         $lookup: {
-          from: 'users', // تأكد أن اسم الـ Collection في قاعدة البيانات هو users (غالباً بالجمع)
+          from: 'users',
           localField: '_id',
           foreignField: 'role',
-          as: 'assignedUsers'
-        }
+          as: 'assignedUsers',
+        },
       },
       {
         $addFields: {
-          userCount: { $size: '$assignedUsers' }
-        }
+          userCount: { $size: '$assignedUsers' },
+        },
       },
       {
         $project: {
-          assignedUsers: 0 // إزالة مصفوفة المستخدمين لتخفيف حجم الـ Response
-        }
+          assignedUsers: 0, // Exclude user array to minimize response payload size
+        },
       },
       {
-        $sort: { level: -1 }
-      }
+        $sort: { level: -1 },
+      },
     ]);
   }
 
+  /**
+   * Retrieves all system permissions grouped by their respective categories.
+   * Formats the metadata into a structured array suitable for UI checkbox grids.
+   *
+   * @returns An array of grouped permission objects containing group names and permission key-label pairs.
+   */
   getGroupedPermissions(): any[] {
-    const groupsMap = PERMISSIONS_METADATA.reduce((acc, meta) => {
-      if (!acc[meta.group]) acc[meta.group] = [];
-      acc[meta.group].push({ key: meta.key, label: meta.label });
-      return acc;
-    }, {} as Record<string, { key: string; label: string }[]>);
+    const groupsMap = PERMISSIONS_METADATA.reduce(
+      (acc, meta) => {
+        if (!acc[meta.group]) acc[meta.group] = [];
+        acc[meta.group].push({ key: meta.key, label: meta.label });
+        return acc;
+      },
+      {} as Record<string, { key: string; label: string }[]>,
+    );
 
     return Object.entries(groupsMap).map(([group, permissions]) => ({
       group,
@@ -179,6 +262,13 @@ export class RolesService {
     }));
   }
 
+  /**
+   * Retrieves the assigned permissions for a specific user.
+   * Utilizes caching to minimize database query overhead for repeated permission checks.
+   *
+   * @param userId - The ID of the user whose permissions are being retrieved.
+   * @returns An array of permission string keys assigned to the user.
+   */
   async getUserPermissions(userId: string): Promise<string[]> {
     const cacheKey = `user_permissions:${userId}`;
     let userPermissions = await this.cacheManager.get<string[]>(cacheKey);
@@ -191,7 +281,11 @@ export class RolesService {
         .lean();
 
       userPermissions = user?.role?.permissions || [];
-      await this.cacheManager.set(cacheKey, userPermissions, 1000 * 60 * 60 * 12); // 12 Hours
+      await this.cacheManager.set(
+        cacheKey,
+        userPermissions,
+        1000 * 60 * 60 * 12, // 12 Hours
+      );
     }
 
     return userPermissions;

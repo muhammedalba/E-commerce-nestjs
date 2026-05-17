@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Role } from '../shared/schemas/role.schema';
 import { Permissions } from '../shared/enums/permissions.enum';
 
@@ -27,6 +27,7 @@ export class RolesSeederService implements OnModuleInit {
         name: 'Admin',
         description: 'Administrator with high-level access',
         permissions: [
+          Permissions.ACCESS_DASHBOARD,
           Permissions.MANAGE_USERS,
           Permissions.MANAGE_ROLES,
           Permissions.MANAGE_CATEGORIES,
@@ -41,6 +42,7 @@ export class RolesSeederService implements OnModuleInit {
         name: 'Manager',
         description: 'Manager with operational access',
         permissions: [
+          Permissions.ACCESS_DASHBOARD,
           Permissions.VIEW_PRODUCTS,
           Permissions.UPDATE_PRODUCT,
           Permissions.VIEW_ORDERS,
@@ -61,10 +63,24 @@ export class RolesSeederService implements OnModuleInit {
     ];
 
     for (const roleData of rolesToSeed) {
-      const existingRole = await this.roleModel.findOne({ name: roleData.name });
+      const existingRole = await this.roleModel.findOne({
+        name: roleData.name,
+      });
       if (!existingRole) {
         await this.roleModel.create(roleData);
-        this.logger.log(`✅ Role ${roleData.name} has been seeded successfully.`);
+        this.logger.log(
+          `✅ Role ${roleData.name} has been seeded successfully.`,
+        );
+      } else {
+        await this.roleModel.updateOne(
+          { name: roleData.name },
+          {
+            $set: {
+              permissions: roleData.permissions,
+              level: roleData.level,
+            },
+          },
+        );
       }
     }
 
@@ -73,14 +89,18 @@ export class RolesSeederService implements OnModuleInit {
   }
 
   private async repairLegacyRoles() {
-    this.logger.log('🔍 Checking for legacy string-based roles in User collection...');
+    this.logger.log(
+      '🔍 Checking for legacy string-based roles in User collection...',
+    );
 
     const adminRole = await this.roleModel.findOne({ name: 'Admin' });
     const managerRole = await this.roleModel.findOne({ name: 'Manager' });
     const userRole = await this.roleModel.findOne({ name: 'User' });
 
     if (!adminRole || !managerRole || !userRole) {
-      this.logger.warn('⚠️ Cannot repair legacy roles: standard roles not found in DB.');
+      this.logger.warn(
+        '⚠️ Cannot repair legacy roles: standard roles not found in DB.',
+      );
       return;
     }
 
@@ -88,19 +108,51 @@ export class RolesSeederService implements OnModuleInit {
     // In MongoDB, we can use $type: "string"
     const usersToUpdate = [
       { legacy: 'admin', target: adminRole._id },
+      { legacy: 'Admin', target: adminRole._id },
       { legacy: 'manager', target: managerRole._id },
+      { legacy: 'Manager', target: managerRole._id },
       { legacy: 'user', target: userRole._id },
+      { legacy: 'User', target: userRole._id },
     ];
 
     for (const mapping of usersToUpdate) {
-      const result = await this.roleModel.db.collection('users').updateMany(
-        { role: mapping.legacy },
-        { $set: { role: mapping.target } }
-      );
+      const result = await this.roleModel.db
+        .collection('users')
+        .updateMany(
+          { role: mapping.legacy },
+          { $set: { role: mapping.target } },
+        );
 
       if (result.modifiedCount > 0) {
-        this.logger.log(`🔧 Repaired ${result.modifiedCount} users with legacy role "${mapping.legacy}" -> ${mapping.target}`);
+        this.logger.log(
+          `🔧 Repaired ${result.modifiedCount} users with legacy role "${mapping.legacy}" -> ${mapping.target.toString()}`,
+        );
       }
+    }
+
+    // 2. Repair any users where role is stored as a stringified ObjectId (24 hex chars)
+    const stringRoleUsers = await this.roleModel.db
+      .collection('users')
+      .find({ role: { $type: 'string' } })
+      .toArray();
+
+    let repairedStringIdsCount = 0;
+    for (const u of stringRoleUsers) {
+      if (typeof u.role === 'string' && /^[0-9a-fA-F]{24}$/.test(u.role)) {
+        await this.roleModel.db
+          .collection('users')
+          .updateOne(
+            { _id: u._id },
+            { $set: { role: new Types.ObjectId(u.role) } },
+          );
+        repairedStringIdsCount++;
+      }
+    }
+
+    if (repairedStringIdsCount > 0) {
+      this.logger.log(
+        `🔧 Repaired ${repairedStringIdsCount} users with stringified ObjectId roles to BSON ObjectId.`,
+      );
     }
   }
 }

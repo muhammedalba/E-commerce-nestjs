@@ -14,6 +14,7 @@ import { ResetCodeDto } from '../dto/reset-code.dto';
 import { LoginUserDto } from '../dto/login-user.dto';
 import { TokenService } from 'src/auth/shared/services/token.service';
 import { User } from '../schema/user.schema';
+import { Role } from 'src/roles/shared/schemas/role.schema';
 
 @Injectable()
 export class PasswordResetService {
@@ -164,11 +165,13 @@ export class PasswordResetService {
     user.verificationCode = undefined;
     await user.save();
     // 4) if everything is ok ,generate token
+    const roleObj = user.role as Role;
     const userId = {
       user_id: user._id.toString(),
-      role: user.role?.name || 'user',
-      level: user.role?.level || 0,
+      role: roleObj?.name || 'User',
+      level: roleObj?.level || 0,
       email: user.email,
+      permissions: roleObj?.permissions || [],
     };
     const Tokens = await this.tokenService.generate_Tokens(userId, '5h');
     // 5) send email to user

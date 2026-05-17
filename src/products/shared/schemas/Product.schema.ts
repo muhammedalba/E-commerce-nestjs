@@ -1,11 +1,13 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Type } from 'class-transformer';
 import { IsDefined, IsOptional, ValidateNested } from 'class-validator';
-import { HydratedDocument } from 'mongoose';
-import { Types } from 'mongoose';
+import { HydratedDocument, Types, Schema as MongooseSchema } from 'mongoose';
 import { ProductVariant } from './ProductVariant.schema';
 import { MODEL_NAMES } from 'src/shared/constants/models.constants';
-import { FieldLocalizeDto, ArrayLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
+import {
+  FieldLocalizeDto,
+  ArrayLocalizeDto,
+} from 'src/shared/utils/field-locolaized.dto';
 
 @Schema({
   timestamps: true,
@@ -28,7 +30,7 @@ export class Product {
     required: true,
     lowercase: true,
   })
-  declare slug: string ;
+  declare slug: string;
 
   @Prop({
     type: Object,
@@ -68,26 +70,32 @@ export class Product {
 
   // ─── Classification ────────────────────────────────────
   @Prop({
-    type: Types.ObjectId,
+    type: MongooseSchema.Types.ObjectId,
     ref: MODEL_NAMES.CATEGORY,
     required: false,
   })
   declare category: Types.ObjectId | undefined;
 
   @Prop({
-    type: [{ type: Types.ObjectId, ref: MODEL_NAMES.SUB_CATEGORY, required: true }],
+    type: [
+      {
+        type: MongooseSchema.Types.ObjectId,
+        ref: MODEL_NAMES.SUB_CATEGORY,
+        required: true,
+      },
+    ],
   })
   declare SubCategories: Types.ObjectId[];
 
   @Prop({
-    type: Types.ObjectId,
+    type: MongooseSchema.Types.ObjectId,
     ref: MODEL_NAMES.BRAND,
     required: false,
   })
   declare brand: Types.ObjectId | undefined;
 
   @Prop({
-    type: Types.ObjectId,
+    type: MongooseSchema.Types.ObjectId,
     ref: MODEL_NAMES.SUPPLIER,
     required: false,
   })

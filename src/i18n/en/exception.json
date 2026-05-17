@@ -76,6 +76,9 @@
             "CANNOT_MODIFY_HIGHER_ROLE": "You cannot modify a role with a level higher than or equal to yours",
             "CANNOT_RAISE_LEVEL": "You cannot raise this role's level to this degree",
             "SYSTEM_ROLE_PROTECTED": "This role is system-defined and cannot be modified or deleted",
+            "SYSTEM_ROLE_CANNOT_BE_DELETED": "System-defined roles cannot be deleted",
+            "SUPERADMIN_LEVEL_PROTECTED": "The core SuperAdmin role level cannot be downgraded",
+            "DEFAULT_ROLE_MISSING": "Default role 'User' is missing from the system",
             "ROLE_NOT_FOUND": "Role not found",
             "SUCCESS_DELETE": "Role deleted successfully"
       }

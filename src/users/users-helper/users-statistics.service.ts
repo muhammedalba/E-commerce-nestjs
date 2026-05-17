@@ -3,11 +3,13 @@ import { startOfMonth, endOfMonth } from 'date-fns';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { User } from 'src/auth/shared/schema/user.schema';
+import { Role } from 'src/roles/shared/schemas/role.schema';
 
 @Injectable()
 export class UsersStatistics {
   constructor(
     @InjectModel(User.name) private readonly UserModel: Model<User>,
+    @InjectModel(Role.name) private readonly roleModel: Model<Role>,
   ) {}
 
   async users_statistics(startDate?: string, endDate?: string) {
@@ -17,6 +19,13 @@ export class UsersStatistics {
       // 1. التواريخ الديناميكية
       const start = startDate ? new Date(startDate) : startOfMonth(today);
       const end = endDate ? new Date(endDate) : endOfMonth(today);
+
+      // البحث عن كائن الدور الخاص بالعملاء (User) للحصول على الـ ObjectId الخاص به
+      const userRole = await this.roleModel
+        .findOne({ name: { $regex: /^user$/i } })
+        .lean();
+      const userRoleId = userRole ? userRole._id : null;
+      const userRoleIds = userRoleId ? [userRoleId, userRoleId.toString()] : [];
 
       const [
         totalUsersRaw,
@@ -34,16 +43,51 @@ export class UsersStatistics {
           { $group: { _id: '$isActive', count: { $sum: 1 } } },
         ]),
 
-        // توزيع الأدوار (Admin, User, Manager...)
+        // توزيع الأدوار (Admin, User, Manager...) باستخدام $lookup لجلب اسم الدور
         this.UserModel.aggregate([
           { $match: { isDeleted: { $ne: true } } },
-          { $group: { _id: '$role', count: { $sum: 1 } } },
+          {
+            $lookup: {
+              from: 'roles',
+              let: { roleId: '$role' },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $or: [
+                        { $eq: ['$_id', '$$roleId'] },
+                        {
+                          $eq: [
+                            { $toString: '$_id' },
+                            { $toString: '$$roleId' },
+                          ],
+                        },
+                      ],
+                    },
+                  },
+                },
+              ],
+              as: 'roleData',
+            },
+          },
+          {
+            $unwind: {
+              path: '$roleData',
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+          {
+            $group: {
+              _id: { $ifNull: ['$roleData.name', 'unknown'] },
+              count: { $sum: 1 },
+            },
+          },
         ]),
 
         // العملاء الجدد فقط (نستثني الإداريين) خلال الفترة المحددة
         this.UserModel.countDocuments({
           createdAt: { $gte: start, $lte: end },
-          role: 'user', // تأكد من اسم الـ Role الخاص بالعملاء في نظامك
+          role: { $in: userRoleIds },
           isDeleted: { $ne: true },
         }),
 
@@ -52,7 +96,7 @@ export class UsersStatistics {
           {
             $match: {
               createdAt: { $gte: start, $lte: end },
-              role: 'user', // التركيز على العملاء الجدد فقط
+              role: { $in: userRoleIds },
               isDeleted: { $ne: true },
             },
           },

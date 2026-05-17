@@ -38,8 +38,6 @@ export class UsersController {
   /* ------------ =============================== ---------- */
   /* ------------ ======  GET USERS STATISTICS  ====== ------- */
   /* ------------ =============================== ---------- */
-  /* ------------ ======  GET USERS STATISTICS  ====== ------- */
-  /* ------------ =============================== ---------- */
   @Get('statistics')
   @RequirePermission(Permissions.VIEW_USERS)
   @UseInterceptors(CustomCacheInterceptor)
@@ -103,7 +101,12 @@ export class UsersController {
     updateUserDto: UpdateUserDto,
     @Req() req: any,
   ) {
-    return this.usersService.update_user(idParamDto, updateUserDto, file, req.user);
+    return this.usersService.update_user(
+      idParamDto,
+      updateUserDto,
+      file,
+      req.user,
+    );
   }
   /* ------------ =============================== ---------- */
   /* ------------ ======  DELETE USER  ====== ---------------- */

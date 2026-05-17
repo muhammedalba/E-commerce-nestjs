@@ -31,5 +31,11 @@ export const RegionSchema = SchemaFactory.createForClass(Region);
 
 RegionSchema.index({ country: 1 });
 RegionSchema.index({ country: 1, isActive: 1 });
-RegionSchema.index({ 'name.ar': 1, country: 1 }, { unique: true, sparse: true });
-RegionSchema.index({ 'name.en': 1, country: 1 }, { unique: true, sparse: true });
+RegionSchema.index(
+  { 'name.ar': 1, country: 1 },
+  { unique: true, sparse: true },
+);
+RegionSchema.index(
+  { 'name.en': 1, country: 1 },
+  { unique: true, sparse: true },
+);

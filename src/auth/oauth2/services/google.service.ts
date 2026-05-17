@@ -56,6 +56,7 @@ export class GoogleService {
         role: 'User',
         level: userRole ? userRole.level : 1,
         email: newUser.email,
+        permissions: userRole ? userRole.permissions : [],
       };
       // 3) generate access token
       Tokens = await this.tokenService.generate_Tokens(userId, '1h');
@@ -72,11 +73,13 @@ export class GoogleService {
           this.i18n.translate('exception.ACCOUNT_BLOCKED'),
         );
       }
+      const roleObj = user.role as Role;
       const userId = {
         user_id: user._id.toString(),
-        role: user.role?.name || 'user',
-        level: user.role?.level || 0,
+        role: roleObj?.name || 'User',
+        level: roleObj?.level || 0,
         email: user.email,
+        permissions: roleObj?.permissions || [],
       };
       Tokens = await this.tokenService.generate_Tokens(userId);
       await this.userModel.findByIdAndUpdate(user._id, {

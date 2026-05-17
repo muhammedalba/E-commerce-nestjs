@@ -12,7 +12,6 @@ export class Country {
   @IsDefined()
   @Type(() => FieldLocalizeDto)
   @ValidateNested()
-
   declare name: FieldLocalizeDto;
 
   @Prop({ required: true, unique: true, uppercase: true, trim: true })

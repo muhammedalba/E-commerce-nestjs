@@ -18,7 +18,9 @@
 const resolveBaseUrl = (): string =>
   process.env.BASE_URL || 'http://localhost:4000';
 
-function transformPath(filePath: string | null | undefined): string | null | undefined {
+function transformPath(
+  filePath: string | null | undefined,
+): string | null | undefined {
   if (!filePath || filePath.startsWith('http')) return filePath;
   const baseUrl = resolveBaseUrl();
   try {
@@ -28,8 +30,12 @@ function transformPath(filePath: string | null | undefined): string | null | und
   }
 }
 
-export function withBaseUrl(filePath: string | null | undefined): string | null | undefined;
-export function withBaseUrl(filePaths: (string | null | undefined)[]): (string | null | undefined)[];
+export function withBaseUrl(
+  filePath: string | null | undefined,
+): string | null | undefined;
+export function withBaseUrl(
+  filePaths: (string | null | undefined)[],
+): (string | null | undefined)[];
 export function withBaseUrl(
   input: string | null | undefined | (string | null | undefined)[],
 ): string | null | undefined | (string | null | undefined)[] {

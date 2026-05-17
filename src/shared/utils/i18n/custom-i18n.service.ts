@@ -9,21 +9,31 @@ import { withBaseUrl } from 'src/shared/utils/with-base-url.util';
  */
 @Injectable()
 export class CustomI18nService {
-  constructor(private readonly i18n: I18nService) { }
+  constructor(private readonly i18n: I18nService) {}
 
   /**
    * Set of field names recognized as media or file paths.
    * These fields will automatically have the BASE_URL prepended during localization.
    */
   private readonly fileFields = new Set([
-    'avatar', 'image', 'imageCover', 'infoProductPdf', 'images',
-    'carouselSm', 'carouselMd', 'carouselLg', 'carouselImage',
-    'logo', 'favicon', 'transferReceiptImg', 'InvoicePdf'
+    'avatar',
+    'image',
+    'imageCover',
+    'infoProductPdf',
+    'images',
+    'carouselSm',
+    'carouselMd',
+    'carouselLg',
+    'carouselImage',
+    'logo',
+    'favicon',
+    'transferReceiptImg',
+    'InvoicePdf',
   ]);
 
   /**
    * Translates a specific key based on the current request language.
-   * 
+   *
    * @param key - Translation key (e.g., 'common.save')
    * @param options - Additional translation options like variables
    * @returns The translated string in the current locale
@@ -39,18 +49,17 @@ export class CustomI18nService {
   /**
    * Retrieves the current language code for the request.
    * Checks i18n context, then environment variables, falling back to 'ar'.
-   * 
+   *
    * @returns Language code (e.g., 'ar', 'en')
    */
   getLang(): string {
     return I18nContext.current()?.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
   }
 
-
   /**
    * Comprehensive function to localize objects and arrays.
    * Recursively traverses data to apply translations and format media URLs.
-   * 
+   *
    * @param data - The raw data to process (Object or Array)
    * @param allLangs - If true, returns the full translation object instead of localized string
    * @returns The localized and formatted data

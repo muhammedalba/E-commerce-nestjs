@@ -86,7 +86,6 @@ export class SettingsController {
     files,
     @Body() updateSettingDto: UpdateSettingDto,
   ) {
-    
     return await this.settingsService.updateSettings(updateSettingDto, files);
   }
 

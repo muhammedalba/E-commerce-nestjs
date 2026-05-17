@@ -32,7 +32,7 @@ export class AuthCredentialService {
     private readonly i18n: CustomI18nService,
     private readonly tokenService: TokenService,
     private readonly cookieService: CookieService,
-  ) { }
+  ) {}
 
   async register(
     createUserDto: CreateUserDto,
@@ -61,7 +61,7 @@ export class AuthCredentialService {
       }
     }
     createUserDto.avatar = filePath;
-    
+
     // Fetch default 'User' role
     const userRole = await this.roleModel.findOne({ name: 'User' });
     createUserDto.role = userRole ? userRole._id : undefined;
@@ -76,6 +76,7 @@ export class AuthCredentialService {
       role: 'User',
       level: userRole ? userRole.level : 1,
       email: newUser.email,
+      permissions: userRole ? userRole.permissions : [],
     };
 
     newUser.avatar = `${process.env.BASE_URL}${filePath}`;
@@ -130,6 +131,7 @@ export class AuthCredentialService {
       role: user.role?.name || 'User',
       level: user.role?.level || 0,
       email: user.email,
+      permissions: user.role?.permissions || [],
     };
     const Tokens = await this.tokenService.generate_Tokens(userId);
 

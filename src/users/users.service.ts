@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { FileUploadService } from 'src/file-upload/file-upload.service';
@@ -38,7 +42,9 @@ export class UsersService extends BaseService<UserDocument> {
       const newRole = await this.roleModel.findById(CreateUserDto.role);
       if (!newRole) throw new NotFoundException('الدور غير موجود');
       if (newRole.level >= currentUser.level && currentUser.level !== 100) {
-        throw new ForbiddenException('لا يمكنك إنشاء مستخدم بدور يمتلك صلاحيات مساوية أو أعلى من صلاحياتك');
+        throw new ForbiddenException(
+          'لا يمكنك إنشاء مستخدم بدور يمتلك صلاحيات مساوية أو أعلى من صلاحياتك',
+        );
       }
     }
 
@@ -50,11 +56,17 @@ export class UsersService extends BaseService<UserDocument> {
     });
   }
   async getUsers(QueryString: QueryString): Promise<any> {
-    return await this.findAllDoc(User.name, QueryString, { path: 'role', select: 'name level' });
+    return await this.findAllDoc(User.name, QueryString, {
+      path: 'role',
+      select: 'name level',
+    });
   }
 
   async findOne(idParamDto: IdParamDto) {
-    return await this.findOneDoc(idParamDto, '-__v', false, { path: 'role', select: 'name level' });
+    return await this.findOneDoc(idParamDto, '-__v', false, {
+      path: 'role',
+      select: 'name level',
+    });
   }
 
   async update_user(
@@ -63,7 +75,11 @@ export class UsersService extends BaseService<UserDocument> {
     file: MulterFileType,
     currentUser: JwtPayload,
   ): Promise<any> {
-    const targetUser = await this.userModel.findById(idParamDto.id).populate('role').lean().exec();
+    const targetUser = await this.userModel
+      .findById(idParamDto.id)
+      .populate('role')
+      .lean()
+      .exec();
     if (!targetUser) {
       throw new NotFoundException(
         this.i18n.translate('exception.USER_NOT_FOUND', {
@@ -76,7 +92,9 @@ export class UsersService extends BaseService<UserDocument> {
 
     // Check existing user's role level
     if (targetRoleLevel >= currentUser.level && currentUser.level !== 100) {
-      throw new ForbiddenException('لا يمكنك تعديل مستخدم يمتلك صلاحيات مساوية أو أعلى من صلاحياتك');
+      throw new ForbiddenException(
+        'لا يمكنك تعديل مستخدم يمتلك صلاحيات مساوية أو أعلى من صلاحياتك',
+      );
     }
 
     // Check new role if it's being updated
@@ -84,7 +102,9 @@ export class UsersService extends BaseService<UserDocument> {
       const newRole = await this.roleModel.findById(UpdateUserDto.role);
       if (!newRole) throw new NotFoundException('الدور غير موجود');
       if (newRole.level >= currentUser.level && currentUser.level !== 100) {
-        throw new ForbiddenException('لا يمكنك تعيين دور يمتلك صلاحيات مساوية أو أعلى من صلاحياتك');
+        throw new ForbiddenException(
+          'لا يمكنك تعيين دور يمتلك صلاحيات مساوية أو أعلى من صلاحياتك',
+        );
       }
     }
 
@@ -103,8 +123,15 @@ export class UsersService extends BaseService<UserDocument> {
     );
   }
 
-  async delete_user(idParamDto: IdParamDto, currentUser: JwtPayload): Promise<void> {
-    const targetUser = await this.userModel.findById(idParamDto.id).populate('role').lean().exec();
+  async delete_user(
+    idParamDto: IdParamDto,
+    currentUser: JwtPayload,
+  ): Promise<void> {
+    const targetUser = await this.userModel
+      .findById(idParamDto.id)
+      .populate('role')
+      .lean()
+      .exec();
     if (!targetUser) {
       throw new NotFoundException(
         this.i18n.translate('exception.USER_NOT_FOUND', {
@@ -117,7 +144,9 @@ export class UsersService extends BaseService<UserDocument> {
 
     // Check existing user's role level
     if (targetRoleLevel >= currentUser.level && currentUser.level !== 100) {
-      throw new ForbiddenException('لا يمكنك حذف مستخدم يمتلك صلاحيات مساوية أو أعلى من صلاحياتك');
+      throw new ForbiddenException(
+        'لا يمكنك حذف مستخدم يمتلك صلاحيات مساوية أو أعلى من صلاحياتك',
+      );
     }
 
     return await this.deleteOneDoc(idParamDto, 'avatar');

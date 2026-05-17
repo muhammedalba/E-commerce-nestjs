@@ -88,8 +88,13 @@ export class CheckoutService {
     }
 
     // 6. حساب الضرائب
-    const countryId = (city.country as any)?._id ? (city.country as any)._id.toString() : city.country?.toString();
-    const taxDetails = await this.taxesService.calculateTax(subtotal, countryId);
+    const countryId = (city.country as any)?._id
+      ? (city.country as any)._id.toString()
+      : city.country?.toString();
+    const taxDetails = await this.taxesService.calculateTax(
+      subtotal,
+      countryId,
+    );
 
     // 5. التحقق من وسيلة الدفع
     const paymentMethod = await this.paymentsService.findById(

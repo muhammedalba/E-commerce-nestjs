@@ -1,6 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types } from 'mongoose';
-import { Product } from './Product.schema';
+import { HydratedDocument, Types, Schema as MongooseSchema } from 'mongoose';
 import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 
 // ─── Valid Units Enum ────────────────────────────────────
@@ -50,7 +49,7 @@ export const VariantComponentSchema =
 export class ProductVariant {
   // ─── Parent Reference ──────────────────────────────────
   @Prop({
-    type: Types.ObjectId,
+    type: MongooseSchema.Types.ObjectId,
     ref: MODEL_NAMES.PRODUCT,
     required: true,
     index: true,

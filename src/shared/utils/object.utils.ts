@@ -1,6 +1,6 @@
 /**
  * UTILITY: Enterprise-Grade Payload Sanitization
- * Safely strips 'undefined' values recursively to prevent Mongoose from 
+ * Safely strips 'undefined' values recursively to prevent Mongoose from
  * accidentally overwriting valid data with null/empty states.
  */
 export function sanitizePayload<T>(obj: T): T {

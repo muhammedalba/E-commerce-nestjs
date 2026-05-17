@@ -10,7 +10,7 @@ import { FileUploadService } from 'src/file-upload/file-upload.service';
 import { MulterFilesType } from 'src/shared/utils/interfaces/fileInterface';
 
 const SETTINGS_CACHE_KEY = 'settings:global';
-const SETTINGS_DOC_KEY = 'global'; 
+const SETTINGS_DOC_KEY = 'global';
 const SETTINGS_CACHE_TTL = 3600000; // 1 hour in ms
 
 @Injectable()
@@ -26,12 +26,13 @@ export class SettingsService {
 
     private readonly configService: ConfigService,
     private readonly fileUploadService: FileUploadService,
-  ) { }
+  ) {}
 
   /**
    * جلب الإعدادات - يبحث في الـ Cache أولاً، إذا لم يجد يبحث في MongoDB
    */
-  async getSettings(): Promise<Setting> { // 3. إرجاع كائن عادي (Setting) بدلاً من Document
+  async getSettings(): Promise<Setting> {
+    // 3. إرجاع كائن عادي (Setting) بدلاً من Document
     // 1. فحص الـ Cache
     const cached = await this.cacheManager.get<Setting>(SETTINGS_CACHE_KEY);
     if (cached) return cached;
@@ -45,7 +46,11 @@ export class SettingsService {
     );
 
     // 3. تخزين في الـ Cache
-    await this.cacheManager.set(SETTINGS_CACHE_KEY, settings, SETTINGS_CACHE_TTL);
+    await this.cacheManager.set(
+      SETTINGS_CACHE_KEY,
+      settings,
+      SETTINGS_CACHE_TTL,
+    );
 
     return settings as Setting;
   }
@@ -61,7 +66,7 @@ export class SettingsService {
     // 5. التخلص من 'any' واستخدام Partial لضمان Type Safety
     const updateData: Record<string, any> = { ...dto };
     const imageFields = ['favicon', 'logo'] as const;
-   
+
     // 6. استخدام Promise.all لمعالجة رفع الصور بالتوازي (Parallel) لتحسين السرعة
     await Promise.all(
       imageFields.map(async (key) => {
@@ -84,7 +89,10 @@ export class SettingsService {
           if (oldPath) {
             // 7. تسجيل الخطأ بدلاً من تجاهله تماماً
             await this.fileUploadService.deleteFile(oldPath).catch((err) => {
-              this.logger.error(`Failed to delete old ${key}: ${oldPath}`, err.stack);
+              this.logger.error(
+                `Failed to delete old ${key}: ${oldPath}`,
+                err.stack,
+              );
             });
           }
           updateData[key] = null;
@@ -141,30 +149,36 @@ export class SettingsService {
     const secret = this.configService.get<string>('REVALIDATE_SECRET');
 
     if (!frontendUrl || !secret) {
-      this.logger.warn('Frontend URL or Revalidate Secret missing in config. Skipping revalidation.');
+      this.logger.warn(
+        'Frontend URL or Revalidate Secret missing in config. Skipping revalidation.',
+      );
       return;
     }
 
     try {
-      const response = await fetch(
-        `${frontendUrl}/api/revalidate?tag=${tag}`,
-        { 
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${secret}`,
-            'Content-Type': 'application/json',
-          }
-        }
-      );
+      const response = await fetch(`${frontendUrl}/api/revalidate?tag=${tag}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${secret}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
       if (response.ok) {
-        this.logger.log(`[ISR] Successfully triggered revalidation for tag: ${tag}`);
+        this.logger.log(
+          `[ISR] Successfully triggered revalidation for tag: ${tag}`,
+        );
       } else {
         const error = await response.text();
-        this.logger.error(`[ISR] Failed to trigger revalidation for tag: ${tag}. Status: ${response.status} - ${error}`);
+        this.logger.error(
+          `[ISR] Failed to trigger revalidation for tag: ${tag}. Status: ${response.status} - ${error}`,
+        );
       }
     } catch (err: any) {
-      this.logger.error(`[ISR] Network error while triggering revalidation for tag: ${tag}`, err.stack);
+      this.logger.error(
+        `[ISR] Network error while triggering revalidation for tag: ${tag}`,
+        err.stack,
+      );
     }
   }
 }

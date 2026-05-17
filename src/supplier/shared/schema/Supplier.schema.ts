@@ -55,15 +55,12 @@ SupplierSchema.pre(['find', 'countDocuments'], function () {
   if (this.getFilter().isActive === undefined) {
     this.where({ isActive: { $ne: false } });
   }
-  
 });
-
-
 
 //update , findOne and findAll
 // SupplierSchema.post('init', function (doc) {
-  
+
 //   if (doc.avatar && !doc.avatar.startsWith(process.env.BASE_URL ?? 'http')) {
-//     doc.avatar = `${process.env.BASE_URL}${doc.avatar}`; 
+//     doc.avatar = `${process.env.BASE_URL}${doc.avatar}`;
 //   }
 // });

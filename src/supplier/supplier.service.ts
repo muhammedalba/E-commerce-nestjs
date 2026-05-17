@@ -12,7 +12,6 @@ import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { FileUploadService } from 'src/file-upload/file-upload.service';
 import { SupplierStatistics } from './shared/Suppliers-helper/supplier-statistics.service';
 
-
 @Injectable()
 export class SupplierService extends BaseService<SupplierDocument> {
   protected slugSourceField = 'name';
@@ -37,7 +36,6 @@ export class SupplierService extends BaseService<SupplierDocument> {
     createSupplierDto: CreateSupplierDto,
     file: MulterFileType,
   ): Promise<any> {
-
     return await this.createOneDoc(createSupplierDto, file, Supplier.name, {
       fileFieldName: 'avatar',
       checkField: 'name',

@@ -30,7 +30,7 @@ interface FileSchema {
 /**
  * Base Service providing common CRUD operations and utility methods for Mongoose models.
  * Includes support for localization, file uploads, and API features (filtering, sorting, pagination).
- * 
+ *
  * @template T The Mongoose document type.
  */
 export class BaseService<T> {
@@ -41,24 +41,27 @@ export class BaseService<T> {
     protected readonly model: Model<T>,
     protected readonly i18n: CustomI18nService,
     protected readonly fileUploadService: FileUploadService,
-  ) { }
+  ) {}
 
   /**
    * Generates the default file path for a model if no file is uploaded.
-   * 
+   *
    * @param modelName - The name of the model (e.g., 'users', 'products').
    * @returns The relative path to the default image.
    */
   private getDefaultFilePath(modelName: string): string {
     const uploadsDir = process.env.UPLOADS_FOLDER || 'uploads';
-    const defaultImage = modelName === 'User' || modelName === 'Supplier' ? 'avatar.png' : 'default.png';
+    const defaultImage =
+      modelName === 'User' || modelName === 'Supplier'
+        ? 'avatar.png'
+        : 'default.png';
 
     return path.posix.join('/', uploadsDir, modelName, defaultImage);
   }
 
   /**
    * Checks if a specific field value is already taken by another document.
-   * 
+   *
    * @param field - The field to check (e.g., 'email', 'name').
    * @param value - The value to check for uniqueness.
    * @param excludeId - Optional ID to exclude from the check (useful for updates).
@@ -79,7 +82,6 @@ export class BaseService<T> {
       query.isActive = true;
     }
 
-
     if (excludeId) {
       const idToExclude = isValidObjectId(excludeId)
         ? new Types.ObjectId(excludeId)
@@ -90,8 +92,10 @@ export class BaseService<T> {
     if (result) {
       const exceptionKey =
         this.model.modelName === 'User'
-          ? 'exception.EMAIL_EXISTS' : this.model.modelName === 'Tax'
-            ? 'exception.COUNTRY_EXISTS' : 'exception.NAME_EXISTS';
+          ? 'exception.EMAIL_EXISTS'
+          : this.model.modelName === 'Tax'
+            ? 'exception.COUNTRY_EXISTS'
+            : 'exception.NAME_EXISTS';
       throw new BadRequestException(this.t(exceptionKey));
     }
     return;
@@ -99,7 +103,7 @@ export class BaseService<T> {
 
   /**
    * Helper method to translate messages using the I18n service.
-   * 
+   *
    * @param key - The translation key.
    * @param option - Translation options (args, etc.).
    * @returns The translated string.
@@ -110,7 +114,7 @@ export class BaseService<T> {
 
   /**
    * Handles file uploads, either saving a new file or updating an existing one.
-   * 
+   *
    * @param file - The uploaded file object.
    * @param modelName - The name of the model associated with the file.
    * @param doc - Optional existing document for update context.
@@ -130,8 +134,12 @@ export class BaseService<T> {
 
     try {
       return doc
-        ? ((await this.fileUploadService.updateFile(file, modelName, doc, oldPath)) ??
-          this.getDefaultFilePath(modelName))
+        ? ((await this.fileUploadService.updateFile(
+            file,
+            modelName,
+            doc,
+            oldPath,
+          )) ?? this.getDefaultFilePath(modelName))
         : await this.fileUploadService.saveFileToDisk(file, modelName);
     } catch (error) {
       this.logger.error('File upload failed', error);
@@ -143,7 +151,7 @@ export class BaseService<T> {
 
   /**
    * Generates a URL-friendly slug from a string or localized object.
-   * 
+   *
    * @param value - The string or localized object (e.g., { en: '...', ar: '...' })
    * @returns The generated slug.
    */
@@ -166,7 +174,7 @@ export class BaseService<T> {
 
   /**
    * Creates a new document with optional file upload and uniqueness checks.
-   * 
+   *
    * @param CreateDataDto - The data to create the document.
    * @param file - Optional file to upload.
    * @param modelName - The name of the model.
@@ -198,7 +206,9 @@ export class BaseService<T> {
     }
 
     if (this.slugSourceField && (CreateDataDto as any)[this.slugSourceField]) {
-      (CreateDataDto as any).slug = this.generateSlug((CreateDataDto as any)[this.slugSourceField]);
+      (CreateDataDto as any).slug = this.generateSlug(
+        (CreateDataDto as any)[this.slugSourceField],
+      );
     }
 
     let filePath: string | undefined;
@@ -223,9 +233,13 @@ export class BaseService<T> {
       }
       return this.i18n.localize(newDocFilter) as T;
     } catch (dbError) {
-      if (filePath && !filePath.includes('default.png') && !filePath.includes('avatar.png')) {
+      if (
+        filePath &&
+        !filePath.includes('default.png') &&
+        !filePath.includes('avatar.png')
+      ) {
         this.logger.warn(`DB insertion failed. Rolling back file: ${filePath}`);
-        await this.fileUploadService.deleteFile(filePath).catch(() => { });
+        await this.fileUploadService.deleteFile(filePath).catch(() => {});
       }
       throw dbError;
     }
@@ -233,7 +247,7 @@ export class BaseService<T> {
 
   /**
    * Retrieves all documents matching the query with support for filtering, sorting, pagination, and population.
-   * 
+   *
    * @param modelName - The name of the model for search context.
    * @param QueryString - The query parameters (filter, sort, etc.).
    * @param populate - Optional population options.
@@ -264,8 +278,9 @@ export class BaseService<T> {
 
     const data = populate
       ? await features
-        .getQuery()
-        .populate({ path: populate.path, select: populate.select }).lean()
+          .getQuery()
+          .populate({ path: populate.path, select: populate.select })
+          .lean()
       : await features.getQuery().lean();
 
     if (!data) {
@@ -281,7 +296,7 @@ export class BaseService<T> {
 
   /**
    * Retrieves a single document by ID or slug with optional population and localization.
-   * 
+   *
    * @param idParamDto - Object containing the ID or slug.
    * @param selected - Space-separated list of fields to select.
    * @param allLangs - Whether to return values for all languages.
@@ -323,7 +338,7 @@ export class BaseService<T> {
 
   /**
    * Updates a document by ID with optional file upload and uniqueness checks.
-   * 
+   *
    * @param idParamDto - Object containing the document ID.
    * @param UpdateDataDto - The data to update.
    * @param file - Optional new file to upload.
@@ -365,24 +380,27 @@ export class BaseService<T> {
     if (!doc) {
       throw new NotFoundException(this.t('exception.NOT_FOUND'));
     }
-    console.log(modelName, "modleName");
+    console.log(modelName, 'modleName');
     if (checkField && fieldValue) {
       await this.isFieldTaken(checkField, fieldValue, doc._id, onlyActive);
     }
 
     if (this.slugSourceField && (UpdateDataDto as any)[this.slugSourceField]) {
-      (UpdateDataDto as any).slug = this.generateSlug((UpdateDataDto as any)[this.slugSourceField]);
+      (UpdateDataDto as any).slug = this.generateSlug(
+        (UpdateDataDto as any)[this.slugSourceField],
+      );
     }
 
     let newFilePath: string | undefined;
-    
+
     if (file) {
       const oldPath = doc[fileFieldName] as string | undefined;
       newFilePath = await this.handleFileUpload(file, modelName, doc, oldPath);
       UpdateDataDto[fileFieldName] = newFilePath;
     } else if (
-      UpdateDataDto[fileFieldName] !== undefined && 
-      (typeof UpdateDataDto[fileFieldName] === 'object' || UpdateDataDto[fileFieldName] === '{}')
+      UpdateDataDto[fileFieldName] !== undefined &&
+      (typeof UpdateDataDto[fileFieldName] === 'object' ||
+        UpdateDataDto[fileFieldName] === '{}')
     ) {
       // The frontend sent an empty object or stringified empty object for the file field without a valid file
       delete UpdateDataDto[fileFieldName];
@@ -402,7 +420,7 @@ export class BaseService<T> {
     } catch (dbError) {
       if (newFilePath) {
         this.logger.warn(`DB update failed. Rolling back file: ${newFilePath}`);
-        await this.fileUploadService.deleteFile(newFilePath).catch(() => { });
+        await this.fileUploadService.deleteFile(newFilePath).catch(() => {});
       }
       throw dbError;
     }
@@ -410,13 +428,16 @@ export class BaseService<T> {
 
   /**
    * Deletes a document by ID and removes its associated file from disk.
-   * 
+   *
    * @param idParamDto - Object containing the document ID.
    * @param fileFieldName - The name of the field storing the file path.
    * @throws NotFoundException if the ID is invalid or document not found.
    * @throws BadGatewayException if file deletion fails.
    */
-  async deleteOneDoc(idParamDto: IdParamDto, fileFieldName: string = 'avatar'): Promise<void> {
+  async deleteOneDoc(
+    idParamDto: IdParamDto,
+    fileFieldName: string = 'avatar',
+  ): Promise<void> {
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto.id);
     if (!isObjectId) {
       throw new NotFoundException(

@@ -22,28 +22,33 @@ export class SeedService {
     private readonly paymentsService: PaymentsService,
     private readonly taxesService: TaxesService,
     private readonly rolesSeederService: RolesSeederService,
-  ) { }
+  ) {}
 
   async runSeed() {
     console.log('🌱 Starting Database Seeding...');
-    
+
     // 0. Seed Roles
     await this.rolesSeederService.seedRoles();
     // 1. Seed Settings
-    await this.settingsService.updateSettings({
-      siteName: { ar: 'مجرة السماء', en: 'Sky Galaxy' },
-      currencyCode: 'SAR',
-      currencySymbol: 'ر.س',
-      freeShippingThreshold: 500,
-      contactInfo: {
-        email: 'info@skygalaxy.com',
-        phones: ['+966598909991'],
-        addressAr: 'الرياض، المملكة العربية السعودية',
-        addressEn: 'Riyadh, Saudi Arabia',
+    await this.settingsService.updateSettings(
+      {
+        siteName: { ar: 'مجرة السماء', en: 'Sky Galaxy' },
+        currencyCode: 'SAR',
+        currencySymbol: 'ر.س',
+        freeShippingThreshold: 500,
+        contactInfo: {
+          email: 'info@skygalaxy.com',
+          phones: ['+966598909991'],
+          addressAr: 'الرياض، المملكة العربية السعودية',
+          addressEn: 'Riyadh, Saudi Arabia',
+        },
       },
-    }, undefined);
+      undefined,
+    );
     // 2. Seed Tax (VAT 16%)
-    const existingTax = await this.connection.collection('taxes').findOne({ name: 'VAT' });
+    const existingTax = await this.connection
+      .collection('taxes')
+      .findOne({ name: 'VAT' });
     if (!existingTax) {
       await this.taxesService.create({
         name: 'VAT',
@@ -54,7 +59,9 @@ export class SeedService {
     }
 
     // 3. Seed Country
-    let country = await this.connection.collection('countries').findOne({ code: 'TR' });
+    let country = await this.connection
+      .collection('countries')
+      .findOne({ code: 'TR' });
     if (!country) {
       country = await this.locationsService.createCountry({
         name: { ar: 'تركيا', en: 'Turkey' },
@@ -65,7 +72,9 @@ export class SeedService {
     }
 
     // 4. Seed Region
-    let region = await this.connection.collection('regions').findOne({ 'name.en': 'Istanbul Region' });
+    let region = await this.connection
+      .collection('regions')
+      .findOne({ 'name.en': 'Istanbul Region' });
     if (!region) {
       region = await this.locationsService.createRegion({
         name: { ar: 'منطقة اسطنبول', en: 'Istanbul Region' },
@@ -74,7 +83,9 @@ export class SeedService {
     }
 
     // 5. Seed City
-    let city = await this.connection.collection('cities').findOne({ 'name.en': 'Istanbul' });
+    let city = await this.connection
+      .collection('cities')
+      .findOne({ 'name.en': 'Istanbul' });
     if (!city) {
       city = await this.locationsService.createCity({
         name: { ar: 'اسطنبول', en: 'Istanbul' },
@@ -85,7 +96,9 @@ export class SeedService {
     }
 
     // 6. Seed Shipping Provider
-    let provider = await this.connection.collection('shippingproviders').findOne({ code: 'sky-express' });
+    let provider = await this.connection
+      .collection('shippingproviders')
+      .findOne({ code: 'sky-express' });
     if (!provider) {
       provider = await this.shippingService.createProvider({
         name: 'Sky Express',
@@ -95,7 +108,9 @@ export class SeedService {
     }
 
     // 7. Seed Shipping Rate
-    let rate = await this.connection.collection('shippingrates').findOne({ city: city._id, provider: provider._id });
+    let rate = await this.connection
+      .collection('shippingrates')
+      .findOne({ city: city._id, provider: provider._id });
     if (!rate) {
       await this.shippingRatesService.createRate({
         provider: provider._id as any,
@@ -109,7 +124,9 @@ export class SeedService {
     }
 
     // 8. Seed Payment Methods
-    const existingCard = await this.connection.collection('paymentmethods').findOne({ code: 'card' });
+    const existingCard = await this.connection
+      .collection('paymentmethods')
+      .findOne({ code: 'card' });
     if (!existingCard) {
       await this.paymentsService.create({
         name: 'مدى / بطاقة ائتمانية',
@@ -119,7 +136,9 @@ export class SeedService {
       } as any);
     }
 
-    const existingCod = await this.connection.collection('paymentmethods').findOne({ code: 'cod' });
+    const existingCod = await this.connection
+      .collection('paymentmethods')
+      .findOne({ code: 'cod' });
     if (!existingCod) {
       await this.paymentsService.create({
         name: 'الدفع عند الاستلام',
@@ -139,7 +158,9 @@ export class SeedService {
     // Get or create Saudi Arabia
     let country: any;
     try {
-      const existing = await this.connection.collection('countries').findOne({ code: 'SA' });
+      const existing = await this.connection
+        .collection('countries')
+        .findOne({ code: 'SA' });
       if (existing) {
         country = existing;
       } else {
@@ -152,14 +173,18 @@ export class SeedService {
       }
     } catch (err: any) {
       if (err.code === 11000) {
-        country = await this.connection.collection('countries').findOne({ code: 'SA' });
+        country = await this.connection
+          .collection('countries')
+          .findOne({ code: 'SA' });
       } else throw err;
     }
 
     for (const regionData of KSA_DATA) {
       // Find or create Region
-      const regions = await this.locationsService.getRegionsByCountry(country._id.toString());
-      let region = regions.find(r => r.name?.ar === regionData.region.ar);
+      const regions = await this.locationsService.getRegionsByCountry(
+        country._id.toString(),
+      );
+      let region = regions.find((r) => r.name?.ar === regionData.region.ar);
 
       if (!region) {
         region = await this.locationsService.createRegion({
@@ -170,8 +195,10 @@ export class SeedService {
 
       // Add Cities
       for (const cityData of regionData.cities) {
-        const cities = await this.locationsService.getCitiesByRegion(region._id.toString());
-        let city = cities.find(c => c.name?.ar === cityData.ar);
+        const cities = await this.locationsService.getCitiesByRegion(
+          region._id.toString(),
+        );
+        let city = cities.find((c) => c.name?.ar === cityData.ar);
 
         if (!city) {
           await this.locationsService.createCity({

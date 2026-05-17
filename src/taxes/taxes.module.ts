@@ -3,7 +3,10 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { TaxesService } from './taxes.service';
 import { TaxesController } from './taxes.controller';
 import { Tax, TaxSchema } from './shared/schema/tax.schema';
-import { Country, CountrySchema } from '../locations/shared/schema/country.schema';
+import {
+  Country,
+  CountrySchema,
+} from '../locations/shared/schema/country.schema';
 import { AuthModule } from '../auth/auth.module';
 import { SettingsModule } from '../settings/settings.module';
 

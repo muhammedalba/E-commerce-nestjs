@@ -1,11 +1,16 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document, Types, Schema as MongooseSchema } from 'mongoose';
 import { CartItem, CartItemSchema } from './cart-item.schema';
 import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 
 @Schema({ timestamps: true })
 export class Cart extends Document {
-  @Prop({ type: Types.ObjectId, ref: MODEL_NAMES.USER, required: true, unique: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: MODEL_NAMES.USER,
+    required: true,
+    unique: true,
+  })
   declare user: Types.ObjectId;
 
   @Prop({ type: [CartItemSchema], default: [] })

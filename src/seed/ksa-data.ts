@@ -10,7 +10,7 @@ export const KSA_DATA = [
       { ar: 'وادي الدواسر', en: 'Wadi ad Dawasir' },
       { ar: 'الدوادمي', en: 'Ad Dawadimi' },
       { ar: 'شقراء', en: 'Shaqra' },
-    ]
+    ],
   },
   {
     region: { ar: 'مكة المكرمة', en: 'Makkah' },
@@ -22,7 +22,7 @@ export const KSA_DATA = [
       { ar: 'الليث', en: 'Al Lith' },
       { ar: 'رابغ', en: 'Rabigh' },
       { ar: 'خليص', en: 'Khulays' },
-    ]
+    ],
   },
   {
     region: { ar: 'المدينة المنورة', en: 'Al Madinah' },
@@ -33,7 +33,7 @@ export const KSA_DATA = [
       { ar: 'المهد', en: 'Al Mahd' },
       { ar: 'بدر', en: 'Badr' },
       { ar: 'خيبر', en: 'Khaybar' },
-    ]
+    ],
   },
   {
     region: { ar: 'المنطقة الشرقية', en: 'Eastern Province' },
@@ -46,7 +46,7 @@ export const KSA_DATA = [
       { ar: 'حفر الباطن', en: 'Hafar Al Batin' },
       { ar: 'الخفجي', en: 'Khafji' },
       { ar: 'القطيف', en: 'Qatif' },
-    ]
+    ],
   },
   {
     region: { ar: 'عسير', en: 'Asir' },
@@ -57,7 +57,7 @@ export const KSA_DATA = [
       { ar: 'محايل عسير', en: 'Muhayil' },
       { ar: 'النماص', en: 'Al Namas' },
       { ar: 'تثليث', en: 'Tathlith' },
-    ]
+    ],
   },
   {
     region: { ar: 'تبوك', en: 'Tabuk' },
@@ -68,7 +68,7 @@ export const KSA_DATA = [
       { ar: 'تيماء', en: 'Tayma' },
       { ar: 'أملج', en: 'Umluj' },
       { ar: 'حقل', en: 'Haql' },
-    ]
+    ],
   },
   {
     region: { ar: 'حائل', en: 'Hail' },
@@ -77,7 +77,7 @@ export const KSA_DATA = [
       { ar: 'بقعاء', en: 'Baqaa' },
       { ar: 'الغزالة', en: 'Al Ghazalah' },
       { ar: 'الشنان', en: 'Ash Shinan' },
-    ]
+    ],
   },
   {
     region: { ar: 'الحدود الشمالية', en: 'Northern Borders' },
@@ -86,7 +86,7 @@ export const KSA_DATA = [
       { ar: 'رفحاء', en: 'Rafha' },
       { ar: 'طريف', en: 'Turaif' },
       { ar: 'العويقيلة', en: 'Al Uwayqilah' },
-    ]
+    ],
   },
   {
     region: { ar: 'جازان', en: 'Jazan' },
@@ -97,7 +97,7 @@ export const KSA_DATA = [
       { ar: 'صامطة', en: 'Samtah' },
       { ar: 'بيش', en: 'Bish' },
       { ar: 'الدرب', en: 'Ad Darb' },
-    ]
+    ],
   },
   {
     region: { ar: 'نجران', en: 'Najran' },
@@ -106,7 +106,7 @@ export const KSA_DATA = [
       { ar: 'شرورة', en: 'Sharurah' },
       { ar: 'حبونا', en: 'Hubuna' },
       { ar: 'بدر الجنوب', en: 'Badr Al Janoub' },
-    ]
+    ],
   },
   {
     region: { ar: 'الباحة', en: 'Al Baha' },
@@ -116,7 +116,7 @@ export const KSA_DATA = [
       { ar: 'المندق', en: 'Al Mandaq' },
       { ar: 'المخواة', en: 'Al Makhwah' },
       { ar: 'العقيق', en: 'Al Aqiq' },
-    ]
+    ],
   },
   {
     region: { ar: 'الجوف', en: 'Al Jouf' },
@@ -125,7 +125,7 @@ export const KSA_DATA = [
       { ar: 'القريات', en: 'Qurayyat' },
       { ar: 'دومة الجندل', en: 'Dumat Al Jandal' },
       { ar: 'طبرجل', en: 'Tabarjal' },
-    ]
+    ],
   },
   {
     region: { ar: 'القصيم', en: 'Al Qassim' },
@@ -136,6 +136,6 @@ export const KSA_DATA = [
       { ar: 'المذنب', en: 'Al Mithnab' },
       { ar: 'البكيرية', en: 'Al Bukayriyah' },
       { ar: 'البدائع', en: 'Al Badai' },
-    ]
-  }
+    ],
+  },
 ];

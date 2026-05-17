@@ -20,7 +20,6 @@ import {
   UpdateShippingProviderDto,
 } from './shared/dto/shipping-provider.dto';
 
-
 export interface ShippingCalculationResult {
   providerId: string;
   providerName: string;

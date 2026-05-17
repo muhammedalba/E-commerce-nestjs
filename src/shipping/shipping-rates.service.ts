@@ -106,11 +106,18 @@ export class ShippingRatesService extends BaseService<ShippingRateDocument> {
     id: string,
     data: UpdateShippingRateDto,
   ): Promise<ShippingRateDocument> {
-    const updated = await this.updateOneDoc({ id }, data, undefined, ShippingRate.name, '', {
-      onlyActive: true,
-      fieldValue: data.city,
-      checkField: 'city',
-    });
+    const updated = await this.updateOneDoc(
+      { id },
+      data,
+      undefined,
+      ShippingRate.name,
+      '',
+      {
+        onlyActive: true,
+        fieldValue: data.city,
+        checkField: 'city',
+      },
+    );
     return updated as ShippingRateDocument;
   }
 
@@ -178,7 +185,10 @@ export class ShippingRatesService extends BaseService<ShippingRateDocument> {
    * @returns The shipping rate document.
    */
   async getRateById(rateId: string): Promise<any> {
-    const rate = await this.findOneDoc({ id: rateId }, "-__v", true, { path: 'provider', select: 'name code trackingUrl' });
+    const rate = await this.findOneDoc({ id: rateId }, '-__v', true, {
+      path: 'provider',
+      select: 'name code trackingUrl',
+    });
 
     return rate;
   }

@@ -49,12 +49,11 @@ export class ProductMutationService {
     private readonly queryService: ProductQueryService,
     private readonly i18n: CustomI18nService,
     private readonly eventEmitter: EventEmitter2,
-  ) { }
-
+  ) {}
 
   /**
-   * 
-   * @param createProductDto 
+   *
+   * @param createProductDto
    * @param files   @description the file that will uploaded files
    * @returns    @description the product that will created
    */
@@ -75,7 +74,10 @@ export class ProductMutationService {
     // ==========================================
 
     // 1. التحقق من السمات (Attributes)
-    this.skuService.validateVariantAttributes(variants, createProductDto.allowedAttributes || []);
+    this.skuService.validateVariantAttributes(
+      variants,
+      createProductDto.allowedAttributes || [],
+    );
 
     // 2. توليد Slug والتحقق من الـ SKUs (عمليات سريعة في قاعدة البيانات)
     // نقوم بها قبل رفع الملفات، لتوفير الباندويث والمساحة إذا كان هناك خطأ
@@ -103,9 +105,13 @@ export class ProductMutationService {
     session.startTransaction();
 
     try {
-      const [newProduct] = await this.productModel.create([productData as any], { session });
+      const [newProduct] = await this.productModel.create(
+        [productData as any],
+        { session },
+      );
 
-      if (!newProduct) throw new InternalServerErrorException('Failed to create product');
+      if (!newProduct)
+        throw new InternalServerErrorException('Failed to create product');
 
       // 4. تجهيز المتغيرات بالتوازي (لأننا فحصنا الـ SKUs مسبقاً)
       const variantDocs = await Promise.all(
@@ -113,21 +119,28 @@ export class ProductMutationService {
           ...v,
           productId: newProduct._id,
           sku: v.sku ? await this.skuService.ensureUnique(v.sku) : undefined,
-        }))
+        })),
       );
 
-      const createdVariants = await this.variantModel.insertMany(variantDocs, { session });
+      const createdVariants = await this.variantModel.insertMany(variantDocs, {
+        session,
+      });
 
       await session.commitTransaction();
       // 5. الأحداث وتجهيز الرد
-      this.eventEmitter.emit('variant.changed', new VariantChangedEvent(newProduct._id));
+      this.eventEmitter.emit(
+        'variant.changed',
+        new VariantChangedEvent(newProduct._id),
+      );
 
       const baseUrl = process.env.BASE_URL || '';
       const productResponse = newProduct.toObject();
 
       productResponse.imageCover = `${baseUrl}${productResponse.imageCover}`;
       if (productResponse.images?.length) {
-        productResponse.images = productResponse.images.map((img) => `${baseUrl}${img}`);
+        productResponse.images = productResponse.images.map(
+          (img) => `${baseUrl}${img}`,
+        );
       }
       if (productResponse.infoProductPdf) {
         productResponse.infoProductPdf = `${baseUrl}${productResponse.infoProductPdf}`;
@@ -137,11 +150,13 @@ export class ProductMutationService {
         product: this.i18n.localize(productResponse),
         variants: createdVariants,
       };
-
     } catch (error: any) {
       // تراجع عن عمليات قاعدة البيانات
       await session.abortTransaction();
-      this.logger.error('Transaction Error (create product)', error?.stack || error);
+      this.logger.error(
+        'Transaction Error (create product)',
+        error?.stack || error,
+      );
 
       // ==========================================
       // خط الدفاع الثاني: تنظيف الملفات اليتيمة (Rollback)
@@ -151,22 +166,27 @@ export class ProductMutationService {
         try {
           // تأكد من إضافة دالة مثل deleteFiles في fileService الخاص بك
           await this.fileService.deleteProductFiles(uploadedFiles);
-          this.logger.log('Orphaned files deleted successfully due to transaction failure.');
+          this.logger.log(
+            'Orphaned files deleted successfully due to transaction failure.',
+          );
         } catch (cleanupError) {
           this.logger.error('Failed to clean up orphaned files', cleanupError);
         }
       }
 
       if (error.code === 11000) {
-        throw new ConflictException(this.i18n.translate('exception.NAME_EXISTS'));
+        throw new ConflictException(
+          this.i18n.translate('exception.NAME_EXISTS'),
+        );
       }
 
-      throw new InternalServerErrorException(this.i18n.translate('exception.ERROR_SAVE'));
+      throw new InternalServerErrorException(
+        this.i18n.translate('exception.ERROR_SAVE'),
+      );
     } finally {
       session.endSession();
     }
   }
-
 
   /*
    * @description this function will update a product
@@ -202,7 +222,7 @@ export class ProductMutationService {
       .findById(idParamDto.id)
       .populate({
         path: 'variants',
-        match: { isDeleted: { $ne: true } } // CRITICAL: Consistently ignore soft-deleted variants
+        match: { isDeleted: { $ne: true } }, // CRITICAL: Consistently ignore soft-deleted variants
       })
       .lean();
 
@@ -210,15 +230,17 @@ export class ProductMutationService {
       throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
     }
 
-    const effectiveAllowedAttributes = cleanDto.allowedAttributes || doc.allowedAttributes || [];
+    const effectiveAllowedAttributes =
+      cleanDto.allowedAttributes || doc.allowedAttributes || [];
 
     // ==========================================
     // PHASE 2: In-Memory Validation (Fail-Fast)
     // ==========================================
     if (variantOps?.create && variantOps.create.length > 0) {
-      const existingSimpleCount = doc.variants?.filter(
-        (v: any) => !v.attributes || Object.keys(v.attributes).length === 0,
-      ).length || 0;
+      const existingSimpleCount =
+        doc.variants?.filter(
+          (v: any) => !v.attributes || Object.keys(v.attributes).length === 0,
+        ).length || 0;
 
       this.skuService.validateVariantAttributes(
         variantOps.create,
@@ -229,14 +251,24 @@ export class ProductMutationService {
     }
 
     if (cleanDto.allowedAttributes) {
-      const variantsToValidate = (doc.variants as any[])?.filter((v) => {
-        const isBeingUpdated = variantOps?.update?.some((u) => String(u._id) === String(v._id));
-        const isBeingDeleted = variantOps?.delete?.some((d) => String(d) === String(v._id));
-        return !isBeingUpdated && !isBeingDeleted;
-      }) || [];
+      const variantsToValidate =
+        (doc.variants as any[])?.filter((v) => {
+          const isBeingUpdated = variantOps?.update?.some(
+            (u) => String(u._id) === String(v._id),
+          );
+          const isBeingDeleted = variantOps?.delete?.some(
+            (d) => String(d) === String(v._id),
+          );
+          return !isBeingUpdated && !isBeingDeleted;
+        }) || [];
 
       if (variantsToValidate.length > 0) {
-        this.skuService.validateVariantAttributes(variantsToValidate, cleanDto.allowedAttributes, 0, 0);
+        this.skuService.validateVariantAttributes(
+          variantsToValidate,
+          cleanDto.allowedAttributes,
+          0,
+          0,
+        );
       }
     }
 
@@ -256,17 +288,24 @@ export class ProductMutationService {
     }
 
     if (variantOps?.create && variantOps.create.length > 0) {
-      await this.skuService.generateAndValidateSkus(variantOps.create, newBaseSlug);
+      await this.skuService.generateAndValidateSkus(
+        variantOps.create,
+        newBaseSlug,
+      );
     }
 
     // ==========================================
     // PHASE 4: I/O & File Operations
     // ==========================================
     // ARCHITECTURAL NOTE: File uploads intentionally occur BEFORE the transaction retry block.
-    // File I/O is not idempotent. If placed inside the retry block, transient DB failures 
+    // File I/O is not idempotent. If placed inside the retry block, transient DB failures
     // would trigger duplicate file uploads.
     if (files) {
-      uploadedFiles = await this.fileService.handleUpdateFiles(doc, files, cleanDto.images);
+      uploadedFiles = await this.fileService.handleUpdateFiles(
+        doc,
+        files,
+        cleanDto.images,
+      );
       Object.assign(productData, uploadedFiles);
     }
 
@@ -274,117 +313,146 @@ export class ProductMutationService {
     // PHASE 5: Resilient DB Transaction
     // ==========================================
     try {
-      const updatedProduct = await withTransactionRetry(async (session) => {
+      const updatedProduct = await withTransactionRetry(
+        async (session) => {
+          // 1. Update Base Product
+          const hasProductUpdates = Object.keys(productData).length > 0;
+          let productResult: any = doc;
 
-        // 1. Update Base Product
-        const hasProductUpdates = Object.keys(productData).length > 0;
-        let productResult: any = doc;
-
-        if (hasProductUpdates) {
-          // CRITICAL FIX: Removed .lean() so Mongoose virtuals, getters, and transforms 
-          // (needed by localization decorators/interceptors) remain intact in the response.
-          productResult = await this.productModel.findByIdAndUpdate(
-            idParamDto.id,
-            { $set: productData },
-            { new: true, runValidators: true, session },
-          );
-        } else {
-          productResult = await this.productModel.findById(idParamDto.id).session(session);
-        }
-
-        // 2. Sequential Variant Operations (Prevents MongoDB WriteConflict Error 112)
-        if (variantOps) {
-
-          // A. CREATE Variants
-          if (variantOps.create && variantOps.create.length > 0) {
-            const newVariantsData = await Promise.all(
-              variantOps.create.map(async (v) => ({
-                ...v,
-                productId: productResult._id,
-                sku: v.sku ? await this.skuService.ensureUnique(v.sku) : undefined,
-              }))
+          if (hasProductUpdates) {
+            // CRITICAL FIX: Removed .lean() so Mongoose virtuals, getters, and transforms
+            // (needed by localization decorators/interceptors) remain intact in the response.
+            productResult = await this.productModel.findByIdAndUpdate(
+              idParamDto.id,
+              { $set: productData },
+              { new: true, runValidators: true, session },
             );
-
-            // ARCHITECTURAL FIX: Explicitly validate before insertMany to guarantee safety.
-            // Note: If schema utilizes complex pre('save') hooks, consider mapping into sequential .save() calls instead.
-            const newVariantDocs = newVariantsData.map((data) => new this.variantModel(data));
-            for (const newDoc of newVariantDocs) {
-              const valErr = newDoc.validateSync();
-              if (valErr) throw new BadRequestException(`Variant validation failed: ${valErr.message}`);
-            }
-            await this.variantModel.insertMany(newVariantsData, { session });
+          } else {
+            productResult = await this.productModel
+              .findById(idParamDto.id)
+              .session(session);
           }
 
-          // B. UPDATE Variants (BulkWrite with Context-Aware Validation)
-          if (variantOps.update && variantOps.update.length > 0) {
-            const bulkUpdates: AnyBulkWriteOperation<ProductDocument>[] = [];
+          // 2. Sequential Variant Operations (Prevents MongoDB WriteConflict Error 112)
+          if (variantOps) {
+            // A. CREATE Variants
+            if (variantOps.create && variantOps.create.length > 0) {
+              const newVariantsData = await Promise.all(
+                variantOps.create.map(async (v) => ({
+                  ...v,
+                  productId: productResult._id,
+                  sku: v.sku
+                    ? await this.skuService.ensureUnique(v.sku)
+                    : undefined,
+                })),
+              );
 
-            for (const variantUpdate of variantOps.update) {
-              const { _id, ...updateData } = variantUpdate;
-              if (updateData.sku) updateData.sku = updateData.sku.toUpperCase();
+              // ARCHITECTURAL FIX: Explicitly validate before insertMany to guarantee safety.
+              // Note: If schema utilizes complex pre('save') hooks, consider mapping into sequential .save() calls instead.
+              const newVariantDocs = newVariantsData.map(
+                (data) => new this.variantModel(data),
+              );
+              for (const newDoc of newVariantDocs) {
+                const valErr = newDoc.validateSync();
+                if (valErr)
+                  throw new BadRequestException(
+                    `Variant validation failed: ${valErr.message}`,
+                  );
+              }
+              await this.variantModel.insertMany(newVariantsData, { session });
+            }
 
-              // CRITICAL FIX: Document-aware bulk validation
-              // We fetch the original plain object, hydrate it into a Mongoose doc, apply updates, 
-              // and validate. This accurately respects required fields, defaults, and cross-field logic.
-              const originalState = (doc.variants as any[]).find((v: any) => String(v._id) === String(_id));
-              if (!originalState) throw new NotFoundException(`Variant ${_id} not found.`);
+            // B. UPDATE Variants (BulkWrite with Context-Aware Validation)
+            if (variantOps.update && variantOps.update.length > 0) {
+              const bulkUpdates: AnyBulkWriteOperation<ProductDocument>[] = [];
 
-              const validationDoc = this.variantModel.hydrate(originalState);
-              validationDoc.set(updateData);
+              for (const variantUpdate of variantOps.update) {
+                const { _id, ...updateData } = variantUpdate;
+                if (updateData.sku)
+                  updateData.sku = updateData.sku.toUpperCase();
 
-              const validationError = validationDoc.validateSync();
-              if (validationError) {
-                throw new BadRequestException(`Validation failed for variant ${_id}: ${validationError.message}`);
+                // CRITICAL FIX: Document-aware bulk validation
+                // We fetch the original plain object, hydrate it into a Mongoose doc, apply updates,
+                // and validate. This accurately respects required fields, defaults, and cross-field logic.
+                const originalState = (doc.variants as any[]).find(
+                  (v: any) => String(v._id) === String(_id),
+                );
+                if (!originalState)
+                  throw new NotFoundException(`Variant ${_id} not found.`);
+
+                const validationDoc = this.variantModel.hydrate(originalState);
+                validationDoc.set(updateData);
+
+                const validationError = validationDoc.validateSync();
+                if (validationError) {
+                  throw new BadRequestException(
+                    `Validation failed for variant ${_id}: ${validationError.message}`,
+                  );
+                }
+
+                bulkUpdates.push({
+                  updateOne: {
+                    filter: { _id, productId: productResult._id },
+                    update: { $set: updateData }, // Optimistic Concurrency Note: If updateData includes __v, Mongoose applies it here.
+                  },
+                });
               }
 
-              bulkUpdates.push({
-                updateOne: {
-                  filter: { _id, productId: productResult._id },
-                  update: { $set: updateData }, // Optimistic Concurrency Note: If updateData includes __v, Mongoose applies it here.
-                },
-              });
+              await this.variantModel.bulkWrite(bulkUpdates, { session });
             }
 
-            await this.variantModel.bulkWrite(bulkUpdates, { session });
+            // C. DELETE Variants
+            if (variantOps.delete && variantOps.delete.length > 0) {
+              await this.variantModel.updateMany(
+                {
+                  _id: { $in: variantOps.delete },
+                  productId: productResult._id,
+                },
+                { $set: { isDeleted: true, deletedAt: new Date() } },
+                { session },
+              );
+            }
+
+            // D. Integrity Check
+            const remainingCount = await this.variantModel
+              .countDocuments({
+                productId: productResult._id,
+                isDeleted: { $ne: true },
+              })
+              .session(session);
+
+            if (remainingCount === 0) {
+              throw new BadRequestException(
+                'Cannot delete all variants. A product must have at least one active variant.',
+              );
+            }
           }
 
-          // C. DELETE Variants
-          if (variantOps.delete && variantOps.delete.length > 0) {
-            await this.variantModel.updateMany(
-              { _id: { $in: variantOps.delete }, productId: productResult._id },
-              { $set: { isDeleted: true, deletedAt: new Date() } },
-              { session },
-            );
-          }
-
-          // D. Integrity Check
-          const remainingCount = await this.variantModel
-            .countDocuments({ productId: productResult._id, isDeleted: { $ne: true } })
-            .session(session);
-
-          if (remainingCount === 0) {
-            throw new BadRequestException('Cannot delete all variants. A product must have at least one active variant.');
-          }
-        }
-
-        return productResult;
-      }, this.connection, this.logger);
+          return productResult;
+        },
+        this.connection,
+        this.logger,
+      );
 
       // ==========================================
       // PHASE 6: Events & Final Response
       // ==========================================
       // Event emission occurs strictly AFTER transaction commit succeeds
-      this.eventEmitter.emit('variant.changed', new VariantChangedEvent(updatedProduct._id));
+      this.eventEmitter.emit(
+        'variant.changed',
+        new VariantChangedEvent(updatedProduct._id),
+      );
 
       // Fetch final hydrated variants (without lean) to support response/localization layers
-      const finalVariants = await this.variantModel
-        .find({ productId: updatedProduct._id, isDeleted: { $ne: true } });
+      const finalVariants = await this.variantModel.find({
+        productId: updatedProduct._id,
+        isDeleted: { $ne: true },
+      });
 
       return {
         product: this.i18n.localize(updatedProduct),
         variants: finalVariants,
       };
-
     } catch (error: any) {
       // ==========================================
       // ROLLBACK & ERROR TRANSLATION
@@ -394,15 +462,27 @@ export class ProductMutationService {
       if (uploadedFiles) {
         try {
           await this.fileService.deleteProductFiles(uploadedFiles);
-          this.logger.log('Rolled back newly uploaded files due to transaction failure.');
+          this.logger.log(
+            'Rolled back newly uploaded files due to transaction failure.',
+          );
         } catch (cleanupError) {
-          this.logger.error('Failed to cleanup files during update rollback', cleanupError);
+          this.logger.error(
+            'Failed to cleanup files during update rollback',
+            cleanupError,
+          );
         }
       }
 
-      this.logger.error('Transaction Error (update product)', error?.stack || error);
+      this.logger.error(
+        'Transaction Error (update product)',
+        error?.stack || error,
+      );
 
-      if (error instanceof BadRequestException || error instanceof NotFoundException || error instanceof ConflictException) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException ||
+        error instanceof ConflictException
+      ) {
         throw error;
       }
 
@@ -410,15 +490,17 @@ export class ProductMutationService {
         handleDuplicateKeyError(error, this.i18n); // Precise duplicate error translation
       }
 
-      throw new InternalServerErrorException(this.i18n.translate('exception.ERROR_SAVE'));
+      throw new InternalServerErrorException(
+        this.i18n.translate('exception.ERROR_SAVE'),
+      );
     }
   }
 
   /*
- * @description this function will remove a product
- * @param idParamDto @description the id of the product to be removed
- * @returns @description the removed product
- */
+   * @description this function will remove a product
+   * @param idParamDto @description the id of the product to be removed
+   * @returns @description the removed product
+   */
   async remove(idParamDto: IdParamDto) {
     const doc = await this.productModel
       .findById(idParamDto.id)
@@ -512,7 +594,7 @@ export class ProductMutationService {
     }
   }
 
-   /*
+  /*
    * @description this function will restore a product
    * @param idParamDto @description the id of the product to be restored
    * @returns @description the restored product
@@ -560,8 +642,3 @@ export class ProductMutationService {
     }
   }
 }
-
-
-
-
-

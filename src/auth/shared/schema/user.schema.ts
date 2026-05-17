@@ -1,7 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Model, Types } from 'mongoose';
+import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { Exclude } from 'class-transformer';
+import { Role } from 'src/roles/shared/schemas/role.schema';
+import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 
 @Schema({ timestamps: true })
 export class User {
@@ -52,9 +54,9 @@ export class User {
   @Exclude()
   declare password: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'Role' })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: MODEL_NAMES.ROLE })
   @Exclude()
-  declare role: Types.ObjectId | any;
+  declare role: Types.ObjectId | Role;
 
   @Exclude()
   @Prop({
@@ -131,7 +133,6 @@ UserSchema.pre(['find', 'countDocuments'], function () {
 });
 // Hook for hashing password before saving
 UserSchema.pre('save', async function (next) {
-
   if (!this.isModified('password')) return next();
 
   if (typeof this.password === 'string') {
@@ -147,7 +148,6 @@ UserSchema.pre('save', async function (next) {
 UserSchema.pre('findOneAndUpdate', async function (next) {
   const update = this.getUpdate();
   if (update && typeof update === 'object' && '$set' in update) {
-
     // Check if the password field is being updated
     if (update?.$set?.password && typeof update.$set.password === 'string') {
       const saltOrRounds = process.env.saltOrRounds || '10';

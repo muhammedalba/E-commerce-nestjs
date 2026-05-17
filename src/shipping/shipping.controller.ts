@@ -42,7 +42,7 @@ export class ShippingController {
   constructor(
     private readonly shippingService: ShippingService,
     private readonly shippingRatesService: ShippingRatesService,
-  ) { }
+  ) {}
 
   /* ================================================ */
   /*  CALCULATE SHIPPING - Public                      */

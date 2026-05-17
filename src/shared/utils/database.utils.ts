@@ -25,8 +25,13 @@ export async function withTransactionRetry<T>(
           await session.commitTransaction();
           break; // Commit successful
         } catch (commitError: any) {
-          if (commitError.hasErrorLabel && commitError.hasErrorLabel('UnknownTransactionCommitResult')) {
-            logger.warn('UnknownTransactionCommitResult encountered. Retrying commit...');
+          if (
+            commitError.hasErrorLabel &&
+            commitError.hasErrorLabel('UnknownTransactionCommitResult')
+          ) {
+            logger.warn(
+              'UnknownTransactionCommitResult encountered. Retrying commit...',
+            );
             await new Promise((res) => setTimeout(res, 50));
             continue;
           }
@@ -39,8 +44,14 @@ export async function withTransactionRetry<T>(
       await session.abortTransaction();
 
       // Retry the entire transaction on transient failures
-      if (error.hasErrorLabel && error.hasErrorLabel('TransientTransactionError') && attempt < maxRetries) {
-        logger.warn(`TransientTransactionError. Retrying transaction (Attempt ${attempt + 1}/${maxRetries})...`);
+      if (
+        error.hasErrorLabel &&
+        error.hasErrorLabel('TransientTransactionError') &&
+        attempt < maxRetries
+      ) {
+        logger.warn(
+          `TransientTransactionError. Retrying transaction (Attempt ${attempt + 1}/${maxRetries})...`,
+        );
         await new Promise((res) => setTimeout(res, Math.pow(2, attempt) * 100)); // Exponential backoff
         continue;
       }
@@ -49,5 +60,7 @@ export async function withTransactionRetry<T>(
       session.endSession();
     }
   }
-  throw new InternalServerErrorException('Transaction failed after maximum retries due to concurrent load.');
+  throw new InternalServerErrorException(
+    'Transaction failed after maximum retries due to concurrent load.',
+  );
 }

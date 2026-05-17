@@ -1,4 +1,10 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Inject,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
@@ -8,7 +14,6 @@ import { User } from '../../../auth/shared/schema/user.schema';
 import { PERMISSIONS_KEY } from '../decorators/require-permission.decorator';
 import { Permissions } from '../enums/permissions.enum';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
-
 
 /**
  * Guard that handles Permission-Based Access Control (PBAC).
@@ -36,10 +41,10 @@ export class PermissionsGuard implements CanActivate {
    * @throws ForbiddenException if user is not authorized or lacks permissions
    */
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const requiredPermissions = this.reflector.getAllAndOverride<Permissions[]>(PERMISSIONS_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const requiredPermissions = this.reflector.getAllAndOverride<Permissions[]>(
+      PERMISSIONS_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
     // If no specific permissions are required, allow access
     if (!requiredPermissions || requiredPermissions.length === 0) return true;
@@ -48,7 +53,9 @@ export class PermissionsGuard implements CanActivate {
     const userPayload = request.user; // Comes from JwtAuthGuard
 
     if (!userPayload) {
-      throw new ForbiddenException(this.i18n.translate('exception.NOT_AUTHORIZED'));
+      throw new ForbiddenException(
+        this.i18n.translate('exception.NOT_AUTHORIZED'),
+      );
     }
 
     // Level 100 is SuperAdmin - always passes
@@ -58,7 +65,6 @@ export class PermissionsGuard implements CanActivate {
     let userPermissions = await this.cacheManager.get<Permissions[]>(cacheKey);
 
     if (!userPermissions) {
-
       // Fetch user from DB and populate role with only permissions field
       const user: any = await this.userModel
         .findById(userPayload.user_id)
@@ -66,10 +72,18 @@ export class PermissionsGuard implements CanActivate {
         .populate('role', 'permissions')
         .lean();
 
-      userPermissions = user && user.role && Array.isArray(user.role.permissions) ? user.role.permissions : [];
+
+      userPermissions =
+        user && user.role && Array.isArray(user.role.permissions)
+          ? user.role.permissions
+          : [];
 
       // Cache the permissions for 12 hours (12 * 60 * 60 * 1000)
-      await this.cacheManager.set(cacheKey, userPermissions, 1000 * 60 * 60 * 12);
+      await this.cacheManager.set(
+        cacheKey,
+        userPermissions,
+        1000 * 60 * 60 * 12,
+      );
     }
 
     // MUST HAVE ALL required permissions (.every)
@@ -78,7 +92,9 @@ export class PermissionsGuard implements CanActivate {
     );
 
     if (!hasAllPermissions) {
-      throw new ForbiddenException(this.i18n.translate('exception.FORBIDDEN_PERMISSIONS'));
+      throw new ForbiddenException(
+        this.i18n.translate('exception.FORBIDDEN_PERMISSIONS'),
+      );
     }
 
     return true;

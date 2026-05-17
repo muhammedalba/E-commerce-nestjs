@@ -42,4 +42,4 @@ export class CreateTaxDto {
   declare description?: string;
 }
 
-export class UpdateTaxDto extends PartialType(CreateTaxDto) { }
+export class UpdateTaxDto extends PartialType(CreateTaxDto) {}

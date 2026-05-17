@@ -1,7 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 
-
 @Schema({ timestamps: true })
 export class Coupon {
   @Prop({
@@ -67,4 +66,3 @@ CouponSchema.pre(['find', 'countDocuments'], function () {
     this.where({ active: { $ne: false } });
   }
 });
-

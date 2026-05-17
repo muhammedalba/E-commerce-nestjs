@@ -7,4 +7,5 @@ export interface JwtPayload {
   exp?: number;
   name?: string; // مضافة
   password?: string;
+  permissions?: string[];
 }

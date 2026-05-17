@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import * as fs from 'fs/promises';
 import * as sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
@@ -30,7 +34,10 @@ export class FileUploadService {
   // ===========================================================
   // =============  SAVE IMAGE PDF OR FILE TO DISK =============
   // ===========================================================
-  async saveFileToDisk(file: MulterFileType, modelName: string): Promise<string> {
+  async saveFileToDisk(
+    file: MulterFileType,
+    modelName: string,
+  ): Promise<string> {
     if (!file?.buffer) return '';
 
     try {
@@ -53,7 +60,10 @@ export class FileUploadService {
 
       return path.posix.join('/', uploadsDir, modelName, filename);
     } catch (error) {
-      this.logger.error(`Error saving file ${file.originalname} to disk`, error);
+      this.logger.error(
+        `Error saving file ${file.originalname} to disk`,
+        error,
+      );
       throw new InternalServerErrorException('Failed to save file to disk');
     }
   }
@@ -61,7 +71,10 @@ export class FileUploadService {
   // ===========================================================
   // =============  SAVE IMAGES TO DISK =============
   // ===========================================================
-  async saveFilesToDisk(files: filesType, destinationPath: string): Promise<string[]> {
+  async saveFilesToDisk(
+    files: filesType,
+    destinationPath: string,
+  ): Promise<string[]> {
     if (!files?.length) return [];
 
     try {
@@ -111,7 +124,9 @@ export class FileUploadService {
    * @see src/shared/utils/with-base-url.util.ts
    */
   withBaseUrl(filePath: string | null | undefined): string | null | undefined;
-  withBaseUrl(filePaths: (string | null | undefined)[]): (string | null | undefined)[];
+  withBaseUrl(
+    filePaths: (string | null | undefined)[],
+  ): (string | null | undefined)[];
   withBaseUrl(
     input: string | null | undefined | (string | null | undefined)[],
   ): string | null | undefined | (string | null | undefined)[] {
@@ -122,9 +137,7 @@ export class FileUploadService {
   // =============  DELETE FILES TO DISK =============
   // ===========================================================
   async deleteFiles(filePaths: string[]): Promise<[]> {
-    await Promise.all(
-      filePaths.map((filePath) => this.deleteFile(filePath)),
-    );
+    await Promise.all(filePaths.map((filePath) => this.deleteFile(filePath)));
     return [];
   }
 
@@ -147,7 +160,7 @@ export class FileUploadService {
       if (filePath.startsWith('http')) {
         cleanShortPath = new URL(filePath).pathname;
       } else {
-        const baseUrl = process.env.BASE_URL || "http://localhost:4000";
+        const baseUrl = process.env.BASE_URL || 'http://localhost:4000';
         cleanShortPath = filePath.replace(baseUrl, '');
       }
 
@@ -165,14 +178,18 @@ export class FileUploadService {
   // ===========================================================
   // =============  PROCESS AND SAVE IMAGE TO DISK =============
   // ===========================================================
-  async processAndSaveImage(file: MulterFileType, outputPath: string): Promise<string> {
+  async processAndSaveImage(
+    file: MulterFileType,
+    outputPath: string,
+  ): Promise<string> {
     if (!file?.buffer) {
       throw new InternalServerErrorException('File buffer is undefined');
     }
 
     // الاعتماد على كائن الأبعاد بدلاً من الـ Switch
     const defaultDimensions = { width: 500, height: 500 };
-    const { width, height } = IMAGE_DIMENSIONS[file.fieldname] || defaultDimensions;
+    const { width, height } =
+      IMAGE_DIMENSIONS[file.fieldname] || defaultDimensions;
 
     try {
       await sharp(file.buffer)
@@ -182,8 +199,8 @@ export class FileUploadService {
           fit: 'inside',
           withoutEnlargement: true,
         })
-        .toFormat(this.IMAGE_FORMAT as keyof sharp.FormatEnum, { 
-          quality: this.IMAGE_QUALITY 
+        .toFormat(this.IMAGE_FORMAT as keyof sharp.FormatEnum, {
+          quality: this.IMAGE_QUALITY,
         })
         .toFile(outputPath);
 

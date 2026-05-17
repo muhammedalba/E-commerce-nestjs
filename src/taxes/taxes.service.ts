@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Tax, TaxDocument } from './shared/schema/tax.schema';
@@ -27,7 +31,10 @@ export class TaxesService extends BaseService<TaxDocument> {
    * @param dto - The tax data (create or update)
    * @param id - Optional ID to exclude (for updates)
    */
-  private async validateTaxUniqueness(dto: CreateTaxDto | UpdateTaxDto, id?: string) {
+  private async validateTaxUniqueness(
+    dto: CreateTaxDto | UpdateTaxDto,
+    id?: string,
+  ) {
     let country = dto.country;
     let name = dto.name;
     let isActive = dto.isActive;
@@ -45,16 +52,16 @@ export class TaxesService extends BaseService<TaxDocument> {
     // No conflict if the tax is inactive
     if (!isActive) return;
 
-    const query: any = { 
+    const query: any = {
       isActive: true,
-      _id: id ? { $ne: id } : { $exists: true }
+      _id: id ? { $ne: id } : { $exists: true },
     };
 
     if (!country) {
       // Global Tax: Check name uniqueness among global active taxes
       query.country = null;
       query.name = name;
-      
+
       const exists = await this.taxModel.exists(query);
       if (exists) {
         throw new BadRequestException(this.t('exception.TAX_NAME_EXISTS'));
@@ -62,7 +69,7 @@ export class TaxesService extends BaseService<TaxDocument> {
     } else {
       // Country Tax: Only one active tax rule per country
       query.country = country;
-      
+
       const exists = await this.taxModel.exists(query);
       if (exists) {
         throw new BadRequestException(this.t('exception.TAX_COUNTRY_EXISTS'));
@@ -76,16 +83,27 @@ export class TaxesService extends BaseService<TaxDocument> {
   }
 
   async findAll(queryString: QueryString): Promise<any> {
-    return this.findAllDoc(Tax.name, queryString, { path: 'country', select: 'name code' });
+    return this.findAllDoc(Tax.name, queryString, {
+      path: 'country',
+      select: 'name code',
+    });
   }
 
   async findOne(id: IdParamDto): Promise<TaxDocument> {
-    return this.findOneDoc(id, '', false, { path: 'country', select: 'name code' });
+    return this.findOneDoc(id, '', false, {
+      path: 'country',
+      select: 'name code',
+    });
   }
 
   async update(id: IdParamDto, dto: UpdateTaxDto): Promise<TaxDocument> {
     await this.validateTaxUniqueness(dto, id.id);
-    return (await this.updateOneDoc(id, dto, undefined, Tax.name)) as TaxDocument;
+    return (await this.updateOneDoc(
+      id,
+      dto,
+      undefined,
+      Tax.name,
+    )) as TaxDocument;
   }
 
   async remove(id: IdParamDto): Promise<void> {
@@ -112,7 +130,10 @@ export class TaxesService extends BaseService<TaxDocument> {
   /**
    * حساب الضريبة بناءً على الدولة أو الإعدادات العامة
    */
-  async calculateTax(subtotal: number, countryId?: string): Promise<{
+  async calculateTax(
+    subtotal: number,
+    countryId?: string,
+  ): Promise<{
     taxPercentage: number;
     taxAmount: number;
     totalWithTax: number;
@@ -124,7 +145,9 @@ export class TaxesService extends BaseService<TaxDocument> {
 
     // 1. إذا تم تمرير دولة، نبحث عن ضريبة مخصصة لها أولاً
     if (countryId) {
-      const countryTax = await this.taxModel.findOne({ country: countryId, isActive: true }).lean();
+      const countryTax = await this.taxModel
+        .findOne({ country: countryId, isActive: true })
+        .lean();
       if (countryTax) {
         taxPercentage = countryTax.percentage;
         isIncluded = countryTax.isIncludedInPrice;

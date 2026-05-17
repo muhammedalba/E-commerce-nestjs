@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Type } from 'class-transformer';
 import { IsDefined, ValidateNested } from 'class-validator';
-import { HydratedDocument, Model } from 'mongoose';
+import { HydratedDocument } from 'mongoose';
 import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
 
@@ -24,7 +24,7 @@ export class Category {
   declare slug: string;
 
   @Prop({
-    required: false, 
+    required: false,
     type: 'string',
     default: 'default.png',
     trim: true,

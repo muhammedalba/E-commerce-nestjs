@@ -29,6 +29,3 @@ export class Brand {
 }
 export type BrandDocument = HydratedDocument<Brand>;
 export const BrandSchema = SchemaFactory.createForClass(Brand);
-
-
-

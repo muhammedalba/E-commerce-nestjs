@@ -133,7 +133,7 @@ export class CarouselService extends BaseService<CarouselDocument> {
   // ------------ =============================== ---------- //
   // ------------ ======  update carousel   ====== ---------- //
   // ------------ =============================== ---------- //
-  
+
   async updateOne(
     idParamDto: IdParamDto,
     updateCarouselDto: UpdateCarouselDto,

@@ -1,9 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document, Types, Schema as MongooseSchema } from 'mongoose';
 import { OrderItem, OrderItemSchema } from './order-item.schema';
 import { OrderAddress, OrderAddressSchema } from './order-adress.schema';
 import { MODEL_NAMES } from 'src/shared/constants/models.constants';
-
 
 @Schema({ timestamps: true })
 export class Order extends Document {
@@ -28,7 +27,11 @@ export class Order extends Document {
   })
   declare DeliveryReceiptImage: string;
 
-  @Prop({ type: Types.ObjectId, ref: MODEL_NAMES.USER, required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: MODEL_NAMES.USER,
+    required: true,
+  })
   declare user: Types.ObjectId;
 
   @Prop({ type: [OrderItemSchema], default: [] })
@@ -61,13 +64,19 @@ export class Order extends Document {
   declare shippingAddress: OrderAddress;
 
   // --- New Enterprise Commerce Fields ---
-  @Prop({ type: Types.ObjectId, ref: MODEL_NAMES.SHIPPING_PROVIDER})
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: MODEL_NAMES.SHIPPING_PROVIDER,
+  })
   declare shippingProviderId: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: MODEL_NAMES.SHIPPING_RATE })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: MODEL_NAMES.SHIPPING_RATE })
   declare shippingRateId: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: MODEL_NAMES.PAYMENT_METHOD })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: MODEL_NAMES.PAYMENT_METHOD,
+  })
   declare paymentMethodId: Types.ObjectId;
 
   @Prop({ default: 0 })

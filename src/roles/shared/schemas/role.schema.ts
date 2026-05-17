@@ -2,7 +2,6 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, HydratedDocument } from 'mongoose';
 import { Permissions } from '../enums/permissions.enum';
 
-
 export type RoleDocument = HydratedDocument<Role>;
 @Schema({ timestamps: true })
 export class Role extends Document {

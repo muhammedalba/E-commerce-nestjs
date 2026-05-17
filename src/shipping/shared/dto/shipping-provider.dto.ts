@@ -1,5 +1,11 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { IsBoolean, IsNotEmpty, IsOptional, IsString, IsUrl } from 'class-validator';
+import {
+  IsBoolean,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUrl,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class CreateShippingProviderDto {
@@ -24,4 +30,6 @@ export class CreateShippingProviderDto {
   isActive?: boolean;
 }
 
-export class UpdateShippingProviderDto extends PartialType(CreateShippingProviderDto) {}
+export class UpdateShippingProviderDto extends PartialType(
+  CreateShippingProviderDto,
+) {}
