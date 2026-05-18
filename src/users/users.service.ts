@@ -16,11 +16,17 @@ import { BaseService } from 'src/shared/utils/service/base.service';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { User, UserDocument } from 'src/auth/shared/schema/user.schema';
 import { UsersStatistics } from './users-helper/users-statistics.service';
 import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
 import { Role } from 'src/roles/shared/schemas/role.schema';
 
+/**
+ * Service responsible for managing user accounts, role assignments, profile updates, and statistics.
+ * Extends `BaseService` to inherit standard CRUD operations with advanced file handling and i18n support.
+ * Enforces strict hierarchical security checks to prevent privilege escalation.
+ */
 @Injectable()
 export class UsersService extends BaseService<UserDocument> {
   protected slugSourceField = 'name';
@@ -32,14 +38,32 @@ export class UsersService extends BaseService<UserDocument> {
     protected readonly fileUploadService: FileUploadService,
     protected readonly i18n: CustomI18nService,
     protected readonly usersStatistics: UsersStatistics,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     super(userModel, i18n, fileUploadService);
   }
 
+  /**
+   * Retrieves user registration statistics aggregated over a specified date range.
+   *
+   * @param startDate - Optional ISO date string marking the beginning of the aggregation range.
+   * @param endDate - Optional ISO date string marking the end of the aggregation range.
+   * @returns An object containing statistical metrics regarding user growth and registration counts.
+   */
   async getUsersStatistics(startDate?: string, endDate?: string) {
     return await this.usersStatistics.users_statistics(startDate, endDate);
   }
 
+  /**
+   * Creates a new user account in the system with optional avatar upload.
+   * Enforces role hierarchy validation to ensure the creator cannot assign a role equal to or higher than their own level.
+   *
+   * @param createUserDto - Data transfer object containing the user's registration details.
+   * @param file - Optional uploaded avatar image file.
+   * @param currentUser - The currently authenticated user initiating the creation.
+   * @returns The newly created user document.
+   * @throws {ForbiddenException} If attempting to assign a role level at or above the creator's level.
+   */
   async createUser(
     createUserDto: CreateUserDto,
     file: MulterFileType,
@@ -61,6 +85,13 @@ export class UsersService extends BaseService<UserDocument> {
     });
   }
 
+  /**
+   * Retrieves a paginated list of users matching the specified query criteria.
+   * Automatically populates assigned role details (name and level).
+   *
+   * @param queryString - Parsed query parameters for filtering, sorting, and pagination.
+   * @returns A paginated result object containing user documents and metadata.
+   */
   async getUsers(queryString: QueryString): Promise<any> {
     return await this.findAllDoc(User.name, queryString, {
       path: 'role',
@@ -68,6 +99,14 @@ export class UsersService extends BaseService<UserDocument> {
     });
   }
 
+  /**
+   * Retrieves a single user document by its unique identifier.
+   * Automatically populates assigned role details while excluding internal versioning fields (`__v`).
+   *
+   * @param idParamDto - Data transfer object containing the targeted user ID.
+   * @returns The populated user document.
+   * @throws {NotFoundException} If the user does not exist.
+   */
   async findOne(idParamDto: IdParamDto) {
     return await this.findOneDoc(idParamDto, '-__v', false, {
       path: 'role',
@@ -75,20 +114,34 @@ export class UsersService extends BaseService<UserDocument> {
     });
   }
 
+  /**
+   * Updates an existing user's profile, role assignment, or avatar image.
+   * Enforces strict hierarchy checks to ensure the caller cannot modify a user with an equal or higher role level,
+   * nor assign a new role level equal to or higher than their own.
+   * Automatically invalidates cached permissions and broadcasts real-time SSE updates upon role modification.
+   *
+   * @param idParamDto - Data transfer object containing the targeted user ID.
+   * @param updateUserDto - Data transfer object containing the fields to update.
+   * @param file - Optional newly uploaded avatar image file.
+   * @param currentUser - The currently authenticated user performing the update.
+   * @returns The updated user document.
+   * @throws {NotFoundException} If the targeted user or role does not exist.
+   * @throws {ForbiddenException} If attempting an unauthorized modification or role elevation.
+   */
   async updateUser(
     idParamDto: IdParamDto,
     updateUserDto: UpdateUserDto,
     file: MulterFileType,
     currentUser: JwtPayload,
   ): Promise<any> {
-    // 1. التحقق من صلاحية تعديل المستخدم المستهدف
+    // 1. Validate modification authorization against the target user's current role level
     await this.validateTargetUserModification(
       idParamDto.id,
       currentUser.level,
       'exception.user.CANNOT_MODIFY_HIGHER_USER',
     );
 
-    // 2. التحقق من صلاحية تعيين الدور الجديد (إن وجد)
+    // 2. Validate authorization for the newly assigned role level (if applicable)
     if (updateUserDto.role) {
       await this.validateRoleAssignment(
         updateUserDto.role,
@@ -111,19 +164,43 @@ export class UsersService extends BaseService<UserDocument> {
       },
     );
 
-    // 3. تفريغ كاش الصلاحيات في حال تم تغيير الدور
+    // 3. Invalidate permission cache and broadcast real-time SSE permission refresh event upon role change
     if (updateUserDto.role) {
       await this.cacheManager.del(`user_permissions:${idParamDto.id}`);
+      const newRole = await this.roleModel
+        .findById(updateUserDto.role)
+        .select('permissions')
+        .lean();
+      const permissions = newRole?.permissions || [];
+
+      this.eventEmitter.emit(`user.notification.${idParamDto.id}`, {
+        userId: idParamDto.id,
+        action: 'REFRESH_PERMISSIONS',
+        message:
+          this.i18n.translate('notification.PERMISSIONS_UPDATED') ||
+          'تم تحديث صلاحياتك من قبل الإدارة.',
+        payload: { permissions },
+      });
     }
 
     return updatedUser;
   }
 
+  /**
+   * Deletes a user account and its associated avatar from the system.
+   * Enforces strict hierarchy checks to ensure the caller cannot delete a user with an equal or higher role level.
+   * Automatically invalidates the deleted user's cached permissions.
+   *
+   * @param idParamDto - Data transfer object containing the targeted user ID.
+   * @param currentUser - The currently authenticated user performing the deletion.
+   * @throws {NotFoundException} If the targeted user does not exist.
+   * @throws {ForbiddenException} If attempting to delete a user with an unauthorized role level.
+   */
   async deleteUser(
     idParamDto: IdParamDto,
     currentUser: JwtPayload,
   ): Promise<void> {
-    // 1. التحقق من صلاحية حذف المستخدم المستهدف
+    // 1. Validate deletion authorization against the target user's current role level
     await this.validateTargetUserModification(
       idParamDto.id,
       currentUser.level,
@@ -132,7 +209,7 @@ export class UsersService extends BaseService<UserDocument> {
 
     const deleteResult = await this.deleteOneDoc(idParamDto, 'avatar');
 
-    // 2. تفريغ كاش الصلاحيات للمستخدم المحذوف
+    // 2. Invalidate permission cache for the deleted user
     await this.cacheManager.del(`user_permissions:${idParamDto.id}`);
 
     return deleteResult;
@@ -143,7 +220,14 @@ export class UsersService extends BaseService<UserDocument> {
   // =========================================================================
 
   /**
-   * للتحقق مما إذا كان المستخدم الحالي يملك الصلاحية لتعيين هذا الدور المعين
+   * Validates whether the currently authenticated user possesses sufficient authority
+   * to assign a specific role. SuperAdmin (level 100) bypasses this restriction.
+   *
+   * @param roleId - The ID of the role being evaluated for assignment.
+   * @param currentUserLevel - The hierarchy level of the currently authenticated user.
+   * @param errorMessageKey - The i18n translation key to use if validation fails.
+   * @throws {NotFoundException} If the specified role does not exist.
+   * @throws {ForbiddenException} If attempting to assign a role at or above the user's own level.
    */
   private async validateRoleAssignment(
     roleId: string,
@@ -162,7 +246,15 @@ export class UsersService extends BaseService<UserDocument> {
   }
 
   /**
-   * للتحقق مما إذا كان المستخدم الحالي يملك الصلاحية لتعديل/حذف المستخدم المستهدف
+   * Validates whether the currently authenticated user possesses sufficient authority
+   * to modify or delete a targeted user account based on comparative role levels.
+   * SuperAdmin (level 100) bypasses this restriction.
+   *
+   * @param targetUserId - The ID of the user account being targeted for modification/deletion.
+   * @param currentUserLevel - The hierarchy level of the currently authenticated user.
+   * @param errorMessageKey - The i18n translation key to use if validation fails.
+   * @throws {NotFoundException} If the targeted user account does not exist.
+   * @throws {ForbiddenException} If attempting to modify/delete a user at or above the caller's own level.
    */
   private async validateTargetUserModification(
     targetUserId: string,

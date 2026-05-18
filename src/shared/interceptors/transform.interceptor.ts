@@ -38,6 +38,14 @@ export class TransformInterceptor<T> implements NestInterceptor<
     const response = httpContext.getResponse<Response>();
     const statusCode = response.statusCode;
 
+    // Bypass SSE stream routes to prevent wrapping MessageEvent objects
+    if (
+      request.url.includes('/notifications/stream') ||
+      request.path?.includes('/notifications/stream')
+    ) {
+      return next.handle() as unknown as Observable<ApiResponse<T>>;
+    }
+
     return next.handle().pipe(
       map((res: unknown) => {
         // Prepare shared base

@@ -20,6 +20,7 @@ import { User } from 'src/auth/shared/schema/user.schema';
 import { CheckoutService } from '../checkout/checkout.service';
 import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/shared/schema/audit-log.schema';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class OrderService {
@@ -36,6 +37,7 @@ export class OrderService {
     private readonly checkoutService: CheckoutService,
     private readonly auditService: AuditService,
     @InjectConnection() private readonly connection: Connection,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
   private readonly logger = new Logger(OrderService.name);
 
@@ -96,7 +98,7 @@ export class OrderService {
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto);
     if (!isObjectId) {
       throw new BadRequestException(
-        'Ã™â€¦Ã˜Â¹Ã˜Â±Ã™Â Ã˜Â§Ã™â€žÃ˜Â·Ã™â€žÃ˜Â¨ Ã˜ÂºÃ™Å Ã˜Â± Ã˜ÂµÃ˜Â§Ã™â€žÃ˜Â­',
+        'Ã™â€¦Ã˜Â¹Ã˜Â±Ã™Â  Ã˜Â§Ã™â€žÃ˜Â·Ã™â€žÃ˜Â¨ Ã˜ÂºÃ™Å Ã˜Â± Ã˜ÂµÃ˜Â§Ã™â€žÃ˜Â­',
       );
     }
     const order = await this.OrderModel.findById(idParamDto)
@@ -130,7 +132,7 @@ export class OrderService {
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto.id);
     if (!isObjectId) {
       throw new BadRequestException(
-        'Ã™â€¦Ã˜Â¹Ã˜Â±Ã™Â Ã˜Â§Ã™â€žÃ˜Â·Ã™â€žÃ˜Â¨ Ã˜ÂºÃ™Å Ã˜Â± Ã˜ÂµÃ˜Â§Ã™â€žÃ˜Â­',
+        'Ã™â€¦Ã˜Â¹Ã˜Â±Ã™Â  Ã˜Â§Ã™â€žÃ˜Â·Ã™â€žÃ˜Â¨ Ã˜ÂºÃ™Å Ã˜Â± Ã˜ÂµÃ˜Â§Ã™â€žÃ˜Â­',
       );
     }
     const order = await this.OrderModel.findById(idParamDto.id).select(
@@ -155,6 +157,29 @@ export class OrderService {
       { $set: updateOrderDto },
       { new: true, runValidators: true },
     );
+
+    if (
+      updatedData &&
+      (updateOrderDto.status === 'completed' ||
+        updateOrderDto.status === 'cancelled')
+    ) {
+      const orderUserIdStr = updatedData.user.toString();
+      this.eventEmitter.emit(`user.notification.${orderUserIdStr}`, {
+        userId: orderUserIdStr,
+        action:
+          updateOrderDto.status === 'completed'
+            ? 'ORDER_DELIVERED'
+            : 'ORDER_CANCELED',
+        message:
+          updateOrderDto.status === 'completed'
+            ? this.i18n.translate('notification.ORDER_DELIVERED') ||
+              'تم توصيل طلبك بنجاح!'
+            : this.i18n.translate('notification.ORDER_CANCELED') ||
+              'تم إلغاء طلبك.',
+        payload: { orderId: updatedData._id },
+      });
+    }
+
     return {
       status: 'success',
       data: updatedData,

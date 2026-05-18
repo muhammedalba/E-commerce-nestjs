@@ -9,6 +9,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { Role, RoleDocument } from '../shared/schemas/role.schema';
 import { User } from '../../auth/shared/schema/user.schema';
@@ -32,6 +33,7 @@ export class RolesService {
     @InjectModel(User.name) private readonly userModel: Model<User>,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
     private readonly i18n: CustomI18nService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -83,14 +85,24 @@ export class RolesService {
    * Executed whenever a role's permissions are modified or when a role is deleted.
    *
    * @param roleId - The ID of the role whose assigned users' cache needs invalidation.
+   * @param action - Optional SSE action to broadcast to affected users.
    */
-  private async invalidateUsersCache(roleId: string | Types.ObjectId) {
-    const affectedUsers = await this.userModel
-      .find({ role: roleId })
-      .select('_id')
-      .lean();
+  private async invalidateUsersCache(
+    roleId: string | Types.ObjectId,
+    action?: 'FORCE_LOGOUT' | 'REFRESH_PERMISSIONS',
+    prefetchedUsers?: { _id: Types.ObjectId | string }[],
+  ) {
+    const affectedUsers =
+      prefetchedUsers ||
+      (await this.userModel.find({ role: roleId }).select('_id').lean());
 
     if (affectedUsers.length > 0) {
+      const roleDoc = await this.roleModel
+        .findById(roleId)
+        .select('permissions')
+        .lean();
+      const permissions = roleDoc?.permissions || [];
+      // to make it case insensitive
       const CHUNK_SIZE = 500;
       for (let i = 0; i < affectedUsers.length; i += CHUNK_SIZE) {
         const chunk = affectedUsers.slice(i, i + CHUNK_SIZE);
@@ -98,6 +110,24 @@ export class RolesService {
           this.cacheManager.del(`user_permissions:${user._id.toString()}`),
         );
         await Promise.all(cachePromises);
+        // to make it case insensitive
+        if (action) {
+          chunk.forEach((user) => {
+            const userIdStr = user._id.toString();
+            // send notification to user
+            this.eventEmitter.emit(`user.notification.${userIdStr}`, {
+              userId: userIdStr,
+              action,
+              message:
+                action === 'FORCE_LOGOUT'
+                  ? this.i18n.translate('notification.FORCE_LOGOUT') ||
+                    'تم إيقاف حسابك أو تعديل صلاحياتك. الرجاء تسجيل الدخول مجدداً.'
+                  : this.i18n.translate('notification.PERMISSIONS_UPDATED') ||
+                    'تم تحديث صلاحياتك من قبل الإدارة.',
+              payload: { permissions },
+            });
+          });
+        }
       }
     }
   }
@@ -183,7 +213,7 @@ export class RolesService {
     const updatedRole = await targetRole.save();
 
     if (updateRoleDto.permissions) {
-      await this.invalidateUsersCache(roleId);
+      await this.invalidateUsersCache(roleId, 'REFRESH_PERMISSIONS');
     }
 
     return updatedRole;
@@ -217,15 +247,37 @@ export class RolesService {
       );
     }
 
-    // Invalidate cache first while users are still associated with the old roleId
-    await this.invalidateUsersCache(roleId);
-    // Reassign users to the default role
-    await this.userModel.updateMany(
-      { role: roleId },
-      { $set: { role: defaultRole._id } },
-    );
+    // 1. Prefetch affected users before modifying the database
+    const affectedUsers = await this.userModel
+      .find({ role: roleId })
+      .select('_id')
+      .lean();
 
-    await this.roleModel.findByIdAndDelete(roleId);
+    // 2. Execute DB operations inside a MongoDB Transaction to ensure ACID compliance
+    const session = await this.roleModel.db.startSession();
+    session.startTransaction();
+    try {
+      // Reassign users to the default role within the transaction session
+      await this.userModel.updateMany(
+        { role: roleId },
+        { $set: { role: defaultRole._id } },
+        { session },
+      );
+
+      // Delete the role within the transaction session
+      await this.roleModel.findByIdAndDelete(roleId, { session });
+
+      await session.commitTransaction();
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+
+    // 3. Invalidate cache and emit real-time logout events ONLY after successful transaction commit
+    await this.invalidateUsersCache(roleId, 'FORCE_LOGOUT', affectedUsers);
+
     return { message: this.i18n.translate('exception.role.SUCCESS_DELETE') };
   }
 

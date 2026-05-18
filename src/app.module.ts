@@ -36,6 +36,7 @@ import { AuditModule } from './audit/audit.module';
 import { CheckoutModule } from './checkout/checkout.module';
 import { SeedModule } from './seed/seed.module';
 import { RolesModule } from './roles/roles.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 import { MaintenanceGuard } from './shared/guards/maintenance.guard';
 
@@ -57,7 +58,10 @@ import { MaintenanceGuard } from './shared/guards/maintenance.guard';
       isGlobal: true,
     }),
     BullConfig,
-    EventEmitterModule.forRoot(),
+    EventEmitterModule.forRoot({
+      wildcard: true,
+      delimiter: '.',
+    }),
     I18nConfig,
     MongooseConfig,
     StaticConfig,
@@ -87,6 +91,7 @@ import { MaintenanceGuard } from './shared/guards/maintenance.guard';
     CheckoutModule,
     SeedModule,
     RolesModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

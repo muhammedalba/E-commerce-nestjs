@@ -82,5 +82,8 @@
         "DEFAULT_ROLE_MISSING": "الدور الافتراضي 'User' غير موجود في النظام",
         "ROLE_NOT_FOUND": "الدور غير موجود",
         "SUCCESS_DELETE": "تم حذف الدور بنجاح"
+    },
+    "notification": {
+        "USER_ID_REQUIRED_FOR_DIRECT_NOTIFICATION": "معرف المستخدم مطلوب عند إرسال إشعار مباشر لمستخدم محدد"
     }
 }

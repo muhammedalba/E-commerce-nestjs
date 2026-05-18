@@ -87,5 +87,8 @@
             "DEFAULT_ROLE_MISSING": "Default role 'User' is missing from the system",
             "ROLE_NOT_FOUND": "Role not found",
             "SUCCESS_DELETE": "Role deleted successfully"
+      },
+      "notification": {
+            "USER_ID_REQUIRED_FOR_DIRECT_NOTIFICATION": "User ID is required when sending a direct notification to a specific user"
       }
 }
