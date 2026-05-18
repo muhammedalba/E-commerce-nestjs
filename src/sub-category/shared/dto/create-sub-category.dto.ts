@@ -6,8 +6,8 @@ import {
   IsMongoId,
 } from 'class-validator';
 import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
-import { Category } from 'src/categories/shared/schemas/category.schema';
 import { Exists } from 'src/shared/utils/decorators/exists.decorator';
+import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 
 export class CreateSubCategoryDto {
   @IsDefined()
@@ -17,6 +17,6 @@ export class CreateSubCategoryDto {
 
   @IsString({ message: 'validation.IS_String' })
   @IsMongoId()
-  @Exists(Category.name)
+  @Exists(MODEL_NAMES.CATEGORY)
   category!: string;
 }

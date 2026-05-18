@@ -9,7 +9,7 @@ import {
 } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
 import { Exists } from 'src/shared/utils/decorators/exists.decorator';
-import { Country } from 'src/locations/shared/schema/country.schema';
+import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 
 export class CreateTaxDto {
   @IsString()
@@ -21,7 +21,7 @@ export class CreateTaxDto {
   declare percentage: number;
 
   @IsMongoId()
-  @Exists(Country.name)
+  @Exists(MODEL_NAMES.COUNTRY)
   @IsOptional()
   declare country?: string;
 

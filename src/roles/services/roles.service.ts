@@ -12,7 +12,10 @@ import { Cache } from 'cache-manager';
 
 import { Role, RoleDocument } from '../shared/schemas/role.schema';
 import { User } from '../../auth/shared/schema/user.schema';
-import { PERMISSIONS_METADATA } from '../shared/enums/permissions.enum';
+import {
+  Permissions,
+  PERMISSIONS_METADATA,
+} from '../shared/enums/permissions.enum';
 import { JwtPayload } from '../../auth/shared/types/jwt-payload.interface';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { CreateRoleDto, UpdateRoleDto } from '../shared/dto/role.dto';
@@ -88,11 +91,14 @@ export class RolesService {
       .lean();
 
     if (affectedUsers.length > 0) {
-      // Use Promise.all to prevent blocking the event loop
-      const cachePromises = affectedUsers.map((user) =>
-        this.cacheManager.del(`user_permissions:${user._id.toString()}`),
-      );
-      await Promise.all(cachePromises);
+      const CHUNK_SIZE = 500;
+      for (let i = 0; i < affectedUsers.length; i += CHUNK_SIZE) {
+        const chunk = affectedUsers.slice(i, i + CHUNK_SIZE);
+        const cachePromises = chunk.map((user) =>
+          this.cacheManager.del(`user_permissions:${user._id.toString()}`),
+        );
+        await Promise.all(cachePromises);
+      }
     }
   }
 
@@ -111,6 +117,15 @@ export class RolesService {
         this.i18n.translate('exception.role.CANNOT_CREATE_HIGHER_ROLE'),
       );
     }
+
+    if (createRoleDto.permissions) {
+      const permissionsSet = new Set(createRoleDto.permissions);
+      if (permissionsSet.has(Permissions.UPDATE_SETTINGS)) {
+        permissionsSet.add(Permissions.VIEW_SETTINGS);
+      }
+      createRoleDto.permissions = Array.from(permissionsSet);
+    }
+
     return this.roleModel.create(createRoleDto);
   }
 
@@ -156,6 +171,14 @@ export class RolesService {
       );
     }
 
+    if (updateRoleDto.permissions) {
+      const permissionsSet = new Set(updateRoleDto.permissions);
+      if (permissionsSet.has(Permissions.UPDATE_SETTINGS)) {
+        permissionsSet.add(Permissions.VIEW_SETTINGS);
+      }
+      updateRoleDto.permissions = Array.from(permissionsSet);
+    }
+
     Object.assign(targetRole, updateRoleDto);
     const updatedRole = await targetRole.save();
 
@@ -194,12 +217,13 @@ export class RolesService {
       );
     }
 
-    // Reassign users to the default role and invalidate cache
+    // Invalidate cache first while users are still associated with the old roleId
+    await this.invalidateUsersCache(roleId);
+    // Reassign users to the default role
     await this.userModel.updateMany(
       { role: roleId },
       { $set: { role: defaultRole._id } },
     );
-    await this.invalidateUsersCache(roleId);
 
     await this.roleModel.findByIdAndDelete(roleId);
     return { message: this.i18n.translate('exception.role.SUCCESS_DELETE') };
@@ -280,7 +304,12 @@ export class RolesService {
         .populate<{ role: RoleDocument }>('role', 'permissions')
         .lean();
 
-      userPermissions = user?.role?.permissions || [];
+      const permissionsSet = new Set(user?.role?.permissions || []);
+      if (permissionsSet.has(Permissions.UPDATE_SETTINGS)) {
+        permissionsSet.add(Permissions.VIEW_SETTINGS);
+      }
+      userPermissions = Array.from(permissionsSet);
+
       await this.cacheManager.set(
         cacheKey,
         userPermissions,

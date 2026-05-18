@@ -45,10 +45,7 @@ import {
 } from 'src/shared/utils/field-locolaized.dto';
 import { CreateVariantDto } from './variant.dto';
 import { Exists } from 'src/shared/utils/decorators/exists.decorator';
-import { Category } from 'src/categories/shared/schemas/category.schema';
-import { SubCategory } from 'src/sub-category/shared/schemas/sub-category.schema';
-import { Brand } from 'src/brands/shared/schemas/brand.schema';
-import { Supplier } from 'src/supplier/shared/schema/Supplier.schema';
+import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 
 export class CreateProductDto {
   // ─── Attribute Schema Versioning ───────────────────────
@@ -100,7 +97,7 @@ export class CreateProductDto {
   // ─── Classification ────────────────────────────────────
   @IsMongoId()
   @IsNotEmpty({ message: 'Category is required' })
-  @Exists(Category.name)
+  @Exists(MODEL_NAMES.CATEGORY)
   category!: string;
 
   @Transform(({ value }) => {
@@ -117,17 +114,17 @@ export class CreateProductDto {
     message: i18nValidationMessage('validation.IS_MONGO_ID'),
   })
   @IsOptional()
-  @Exists(SubCategory.name)
+  @Exists(MODEL_NAMES.SUB_CATEGORY)
   SubCategories?: string[];
 
   @IsOptional()
   @IsMongoId()
-  @Exists(Brand.name)
+  @Exists(MODEL_NAMES.BRAND)
   brand?: string;
 
   @IsOptional()
   @IsMongoId()
-  @Exists(Supplier.name)
+  @Exists(MODEL_NAMES.SUPPLIER)
   supplier?: string;
 
   // ─── Flags ─────────────────────────────────────────────

@@ -13,6 +13,7 @@ import { Model } from 'mongoose';
 import { User } from '../../../auth/shared/schema/user.schema';
 import { PERMISSIONS_KEY } from '../decorators/require-permission.decorator';
 import { Permissions } from '../enums/permissions.enum';
+import { JwtPayload } from '../../../auth/shared/types/jwt-payload.interface';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 
 /**
@@ -27,7 +28,7 @@ export class PermissionsGuard implements CanActivate {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     @InjectModel(User.name) private userModel: Model<User>,
     private readonly i18n: CustomI18nService,
-  ) { }
+  ) {}
 
   /**
    * Main authorization logic.
@@ -49,7 +50,7 @@ export class PermissionsGuard implements CanActivate {
     // If no specific permissions are required, allow access
     if (!requiredPermissions || requiredPermissions.length === 0) return true;
 
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<{ user?: JwtPayload }>();
     const userPayload = request.user; // Comes from JwtAuthGuard
 
     if (!userPayload) {
@@ -66,17 +67,25 @@ export class PermissionsGuard implements CanActivate {
 
     if (!userPermissions) {
       // Fetch user from DB and populate role with only permissions field
-      const user: any = await this.userModel
+      const user = (await this.userModel
         .findById(userPayload.user_id)
         .select('_id role')
         .populate('role', 'permissions')
-        .lean();
+        .lean()) as { role?: { permissions?: Permissions[] } } | null;
 
-
-      userPermissions =
+      const fetchedPermissions: Permissions[] =
         user && user.role && Array.isArray(user.role.permissions)
           ? user.role.permissions
           : [];
+
+      if (
+        fetchedPermissions.includes(Permissions.UPDATE_SETTINGS) &&
+        !fetchedPermissions.includes(Permissions.VIEW_SETTINGS)
+      ) {
+        fetchedPermissions.push(Permissions.VIEW_SETTINGS);
+      }
+
+      userPermissions = fetchedPermissions;
 
       // Cache the permissions for 12 hours (12 * 60 * 60 * 1000)
       await this.cacheManager.set(

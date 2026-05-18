@@ -49,11 +49,11 @@ export class UsersController {
   @RequirePermission(Permissions.VIEW_DASHBOARD_STATS)
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(300000) // 5 minutes
-  async get_users_statistics(
+  async getUsersStatistics(
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ): Promise<any> {
-    return await this.usersService.get_users_statistics(startDate, endDate);
+    return await this.usersService.getUsersStatistics(startDate, endDate);
   }
 
   /* ------------ =============================== ---------- */
@@ -99,7 +99,7 @@ export class UsersController {
   @RequirePermission(Permissions.UPDATE_USER)
   @ClearCache('users')
   @UseInterceptors(FileInterceptor('avatar'))
-  update_user(
+  updateUser(
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], false))
     file: MulterFileType,
     @Param()
@@ -108,7 +108,7 @@ export class UsersController {
     updateUserDto: UpdateUserDto,
     @Req() req: AuthenticatedRequest,
   ) {
-    return this.usersService.update_user(
+    return this.usersService.updateUser(
       idParamDto,
       updateUserDto,
       file,
@@ -121,10 +121,10 @@ export class UsersController {
   @Delete(':id')
   @RequirePermission(Permissions.DELETE_USER)
   @ClearCache('users')
-  delete_user(
+  deleteUser(
     @Param() idParamDto: IdParamDto,
     @Req() req: AuthenticatedRequest,
   ) {
-    return this.usersService.delete_user(idParamDto, req.user);
+    return this.usersService.deleteUser(idParamDto, req.user);
   }
 }

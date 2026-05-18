@@ -17,10 +17,7 @@ import {
 import { VariantOperationsDto } from './variant.dto';
 import { ProductAttributeDefinitionDto } from './create-product.dto';
 import { Exists } from 'src/shared/utils/decorators/exists.decorator';
-import { SubCategory } from 'src/sub-category/shared/schemas/sub-category.schema';
-import { Category } from 'src/categories/shared/schemas/category.schema';
-import { Brand } from 'src/brands/shared/schemas/brand.schema';
-import { Supplier } from 'src/supplier/shared/schema/Supplier.schema';
+import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 
 export class UpdateProductDto {
   // ─── Localized Fields ──────────────────────────────────
@@ -63,7 +60,7 @@ export class UpdateProductDto {
   // ─── Classification ────────────────────────────────────
   @IsMongoId()
   @IsOptional()
-  @Exists(Category.name)
+  @Exists(MODEL_NAMES.CATEGORY)
   category?: string;
   @IsOptional()
   @Transform(({ value }) => {
@@ -76,16 +73,16 @@ export class UpdateProductDto {
   })
   @IsArray()
   @IsMongoId({ each: true })
-  @Exists(SubCategory.name)
+  @Exists(MODEL_NAMES.SUB_CATEGORY)
   SubCategories?: string[];
 
   @IsMongoId()
   @IsOptional()
-  @Exists(Brand.name)
+  @Exists(MODEL_NAMES.BRAND)
   brand?: string;
   @IsMongoId()
   @IsOptional()
-  @Exists(Supplier.name)
+  @Exists(MODEL_NAMES.SUPPLIER)
   supplier?: string;
 
   // ─── Flags ─────────────────────────────────────────────

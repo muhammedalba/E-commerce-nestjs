@@ -4,18 +4,16 @@ import {
   MinLength,
   MaxLength,
   IsOptional,
-  IsEnum,
   IsNotEmpty,
   Validate,
-  IsLowercase,
-  IsNumber,
   IsBoolean,
   IsMongoId,
 } from 'class-validator';
 import { MatchPasswordValidator } from '../validators/match-password.validator';
 import { Transform } from 'class-transformer';
-import { roles } from 'src/auth/shared/enums/role.enum';
 import { i18nValidationMessage } from 'nestjs-i18n';
+import { Exists } from 'src/shared/utils/decorators/exists.decorator';
+import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 
 export class CreateUserDto {
   @IsNotEmpty({ message: i18nValidationMessage('validation.NOT_EMPTY') })
@@ -58,7 +56,9 @@ export class CreateUserDto {
   confirmPassword!: string;
 
   @IsOptional()
-  role?: string | any;
+  @IsMongoId({ message: i18nValidationMessage('validation.INVALID_MONGO_ID') })
+  @Exists(MODEL_NAMES.ROLE)
+  role?: string;
 
   @IsOptional()
   avatar?: string;

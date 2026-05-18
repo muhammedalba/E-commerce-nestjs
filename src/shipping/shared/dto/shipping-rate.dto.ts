@@ -10,30 +10,27 @@ import {
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { Exists } from 'src/shared/utils/decorators/exists.decorator';
-import { ShippingProvider } from '../schema/shipping-provider.schema';
-import { Country } from 'src/locations/shared/schema/country.schema';
-import { Region } from 'src/locations/shared/schema/region.schema';
-import { City } from 'src/locations/shared/schema/city.schema';
+import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 
 export class CreateShippingRateDto {
   @IsMongoId()
   @IsNotEmpty()
-  @Exists(ShippingProvider.name)
+  @Exists(MODEL_NAMES.SHIPPING_PROVIDER)
   provider!: string;
 
   @IsOptional()
   @IsMongoId()
-  @Exists(Country.name)
+  @Exists(MODEL_NAMES.COUNTRY)
   country?: string;
 
   @IsOptional()
   @IsMongoId()
-  @Exists(Region.name)
+  @Exists(MODEL_NAMES.REGION)
   region?: string;
 
   @IsOptional()
   @IsMongoId()
-  @Exists(City.name)
+  @Exists(MODEL_NAMES.CITY)
   city?: string;
 
   @IsNumber()

@@ -64,7 +64,7 @@ export class AuthCredentialService {
 
     // Fetch default 'User' role
     const userRole = await this.roleModel.findOne({ name: 'User' });
-    createUserDto.role = userRole ? userRole._id : undefined;
+    createUserDto.role = userRole ? userRole._id.toString() : undefined;
 
     const newUser = await this.userModel.create({
       ...createUserDto,
@@ -96,12 +96,24 @@ export class AuthCredentialService {
 
   async login(loginUserDto: LoginUserDto, res: Response): Promise<any> {
     const { email, password } = loginUserDto;
-    const user: any = await this.userModel
+    const user = (await this.userModel
       .findOne({ email })
       .select('password email role avatar name isActive')
       .populate('role')
       .lean()
-      .exec();
+      .exec()) as {
+      _id: { toString(): string };
+      email: string;
+      password?: string;
+      avatar?: string;
+      name?: string;
+      isActive?: boolean;
+      role?: {
+        name?: string;
+        level?: number;
+        permissions?: string[];
+      };
+    } | null;
 
     if (!user) {
       throw new BadRequestException(
@@ -114,7 +126,7 @@ export class AuthCredentialService {
         this.i18n.translate('exception.ACCOUNT_BLOCKED'),
       );
     }
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.password || '');
     if (!isMatch) {
       throw new BadRequestException(
         this.i18n.translate('exception.INVALID_LOGIN'),

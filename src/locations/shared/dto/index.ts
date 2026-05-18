@@ -11,9 +11,8 @@ import {
 } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
 import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
-import { Country } from '../schema/country.schema';
-import { Region } from '../schema/region.schema';
 import { Exists } from 'src/shared/utils/decorators/exists.decorator';
+import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 
 // ===========================================================================
 // COUNTRY DTOs
@@ -55,7 +54,7 @@ export class CreateRegionDto {
   name!: FieldLocalizeDto;
 
   @IsMongoId()
-  @Exists(Country.name)
+  @Exists(MODEL_NAMES.CATEGORY)
   country!: string;
 
   @IsBoolean()
@@ -76,11 +75,11 @@ export class CreateCityDto {
   name!: FieldLocalizeDto;
 
   @IsMongoId()
-  @Exists(Country.name)
+  @Exists(MODEL_NAMES.CATEGORY)
   country!: string;
 
   @IsMongoId()
-  @Exists(Region.name)
+  @Exists(MODEL_NAMES.REGION)
   region!: string;
 
   @IsString()
