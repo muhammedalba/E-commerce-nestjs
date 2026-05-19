@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
 import { SettingsService } from '../settings/settings.service';
@@ -39,8 +39,10 @@ export class SeedService {
         contactInfo: {
           email: 'info@skygalaxy.com',
           phones: ['+966598909991'],
-          addressAr: 'الرياض، المملكة العربية السعودية',
-          addressEn: 'Riyadh, Saudi Arabia',
+          address: {
+            ar: 'الرياض، المملكة العربية السعودية',
+            en: 'Riyadh, Saudi Arabia',
+          },
         },
       },
       undefined,

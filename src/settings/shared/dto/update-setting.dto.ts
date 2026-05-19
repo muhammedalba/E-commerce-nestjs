@@ -1,7 +1,6 @@
 import {
   IsBoolean,
   IsNumber,
-  IsObject,
   IsOptional,
   IsString,
   Min,
@@ -57,13 +56,20 @@ class ContactInfoDto {
   @IsOptional()
   phones?: string[];
 
-  @IsString()
   @IsOptional()
-  addressAr?: string;
+  @ValidateNested()
+  @Type(() => LocalizedStringDto)
+  address?: LocalizedStringDto;
 
-  @IsString()
   @IsOptional()
-  addressEn?: string;
+  @ValidateNested()
+  @Type(() => LocalizedStringDto)
+  workingDays?: LocalizedStringDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => LocalizedStringDto)
+  workingHours?: LocalizedStringDto;
 }
 
 class StoreFeaturesDto {

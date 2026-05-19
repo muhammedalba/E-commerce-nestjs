@@ -96,13 +96,20 @@ export class Setting {
   // معلومات التواصل
   @Prop({
     type: Object,
-    default: { email: '', phones: [], addressAr: '', addressEn: '' },
+    default: {
+      email: '',
+      phones: [],
+      address: { ar: '', en: '' },
+      workingDays: { ar: '', en: '' },
+      workingHours: { ar: '', en: '' },
+    },
   })
   declare contactInfo: {
     email: string;
     phones: string[];
-    addressAr: string;
-    addressEn: string;
+    address?: FieldLocalizeDto;
+    workingDays?: FieldLocalizeDto;
+    workingHours?: FieldLocalizeDto;
   };
 
   // ميزات المتجر
@@ -179,8 +186,12 @@ export class Setting {
 
 export const SettingSchema = SchemaFactory.createForClass(Setting);
 
-// وظيفة مساعدة لإضافة النطاق (Domain) للمسارات
-const prependBaseUrl = (doc: any) => {
+interface SettingUrls {
+  logo?: string;
+  favicon?: string;
+}
+// function prepend base url to logo and favicon
+const prependBaseUrl = (doc: SettingUrls) => {
   if (!doc) return;
   const baseUrl = process.env.BASE_URL || '';
 
@@ -193,7 +204,7 @@ const prependBaseUrl = (doc: any) => {
   }
 };
 
-// خطاف بعد التحديث (findOneAndUpdate)
+// check if logo or favicon is updated
 SettingSchema.post('findOneAndUpdate', function (doc) {
-  prependBaseUrl(doc);
+  prependBaseUrl(doc as SettingUrls);
 });
