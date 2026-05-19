@@ -12,6 +12,7 @@ import {
   Post,
   Body,
   BadRequestException,
+  Header,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Observable, fromEventPattern, merge } from 'rxjs';
@@ -62,6 +63,10 @@ export class NotificationsController {
    * @returns An observable stream of formatted MessageEvent objects representing real-time notifications.
    */
   @UseGuards(AuthGuard)
+  @Header('Content-Type', 'text/event-stream')
+  @Header('Cache-Control', 'no-cache, no-transform')
+  @Header('Connection', 'keep-alive')
+  @Header('X-Accel-Buffering', 'no')
   @Sse('stream')
   stream(@Req() req: AuthenticatedRequest): Observable<MessageEvent> {
     const userId = req.user?.user_id;
