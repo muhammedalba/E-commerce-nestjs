@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { FileUploadService } from 'src/file-upload/file-upload.service';
 import { CreateUserDto } from './shared/dto/create-user.dto';
@@ -21,6 +21,13 @@ import { User, UserDocument } from 'src/auth/shared/schema/user.schema';
 import { UsersStatistics } from './users-helper/users-statistics.service';
 import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
 import { Role } from 'src/roles/shared/schemas/role.schema';
+
+type PopulatedUser = Omit<UserDocument, 'role'> & {
+  role?:
+    | { _id?: Types.ObjectId | string; level?: number }
+    | Types.ObjectId
+    | string;
+};
 
 /**
  * Service responsible for managing user accounts, role assignments, profile updates, and statistics.
@@ -135,7 +142,7 @@ export class UsersService extends BaseService<UserDocument> {
     currentUser: JwtPayload,
   ): Promise<any> {
     // 1. Validate modification authorization against the target user's current role level
-    await this.validateTargetUserModification(
+    const oldTargetUser = await this.validateTargetUserModification(
       idParamDto.id,
       currentUser.level,
       'exception.user.CANNOT_MODIFY_HIGHER_USER',
@@ -165,10 +172,22 @@ export class UsersService extends BaseService<UserDocument> {
     );
 
     // 3. Invalidate permission cache and broadcast real-time SSE permission refresh event upon role change
-    if (updateUserDto.role) {
+    let oldRoleId: string | undefined;
+    if (oldTargetUser.role) {
+      if (typeof oldTargetUser.role === 'string') {
+        oldRoleId = oldTargetUser.role;
+      } else if (oldTargetUser.role instanceof Types.ObjectId) {
+        oldRoleId = oldTargetUser.role.toString();
+      } else if ('_id' in oldTargetUser.role && oldTargetUser.role._id) {
+        oldRoleId = oldTargetUser.role._id.toString();
+      }
+    }
+    const newRoleId = updateUserDto.role?.toString();
+
+    if (newRoleId && oldRoleId !== newRoleId) {
       await this.cacheManager.del(`user_permissions:${idParamDto.id}`);
       const newRole = await this.roleModel
-        .findById(updateUserDto.role)
+        .findById(newRoleId)
         .select('permissions')
         .lean();
       const permissions = newRole?.permissions || [];
@@ -258,7 +277,7 @@ export class UsersService extends BaseService<UserDocument> {
     targetUserId: string,
     currentUserLevel: number,
     errorMessageKey: string,
-  ): Promise<void> {
+  ): Promise<PopulatedUser> {
     const targetUser = await this.userModel
       .findById(targetUserId)
       .populate('role')
@@ -277,5 +296,7 @@ export class UsersService extends BaseService<UserDocument> {
     if (targetRoleLevel >= currentUserLevel && currentUserLevel !== 100) {
       throw new ForbiddenException(this.i18n.translate(errorMessageKey));
     }
+
+    return targetUser as unknown as PopulatedUser;
   }
 }

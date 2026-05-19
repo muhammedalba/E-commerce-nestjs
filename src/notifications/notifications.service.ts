@@ -246,7 +246,7 @@ export class NotificationsService {
       .skip((page - 1) * limit)
       .limit(limit)
       .populate('recipient', 'name email')
-      .populate('targetRole', 'name')
+      .populate('targetRole', 'name  level')
       .lean()
       .exec();
 

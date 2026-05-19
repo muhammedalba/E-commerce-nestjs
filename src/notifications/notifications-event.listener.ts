@@ -42,7 +42,6 @@ export class NotificationsEventListener {
   @OnEvent('user.notification.*', { async: true })
   async handleUserNotification(event: NotificationPayload) {
     try {
-      console.log('new user notification event: ', event);
       await this.notificationsService.createDirect(event);
     } catch (error) {
       this.logger.error(
@@ -62,7 +61,6 @@ export class NotificationsEventListener {
   @OnEvent('role.notification.*', { async: true })
   async handleRoleNotification(event: RoleNotificationPayload) {
     try {
-      console.log('new role notification event: ', event);
       await this.notificationsService.createRoleNotification(event);
     } catch (error) {
       this.logger.error(
@@ -82,7 +80,6 @@ export class NotificationsEventListener {
   @OnEvent('system.broadcast', { async: true })
   async handleSystemBroadcast(event: BroadcastPayload) {
     try {
-      console.log('new system broadcast event: ', event);
       await this.notificationsService.createBroadcast(event);
     } catch (error) {
       this.logger.error(

@@ -29,6 +29,7 @@ import {
   SendNotificationDto,
   NotificationTargetType,
 } from './shared/dto/send-notification.dto';
+import { UNIFIED_NOTIFICATION_ACTIONS } from './shared/constants';
 
 interface NotificationEvent {
   userId?: string;
@@ -72,7 +73,6 @@ export class NotificationsController {
     @Req() req: AuthenticatedRequest,
   ): Promise<Observable<MessageEvent>> {
     const userId = req.user?.user_id;
-    console.log(`Subscribing SSE for user: user.notification.${userId}`);
 
     const roleId = userId
       ? await this.notificationsService.getUserRoleId(userId)
@@ -146,7 +146,7 @@ export class NotificationsController {
    * @returns An object containing success status, pagination metadata, and the list of all notifications.
    */
   @UseGuards(AuthGuard, PermissionsGuard)
-  @RequirePermission(Permissions.UPDATE_SETTINGS)
+  @RequirePermission(Permissions.VIEW_NOTIFICATIONS)
   @Get('admin')
   async getAllAdminNotifications(
     @Query('page') page = '1',
@@ -156,8 +156,23 @@ export class NotificationsController {
       parseInt(page, 10),
       parseInt(limit, 10),
     );
-    const localizedResult = this.i18n.localize(result) as Record<string, any>;
-    return { success: true, ...localizedResult };
+    return this.i18n.localize(result) as Record<string, any>;
+  }
+
+  /**
+   * Retrieves the list of allowed notification actions and their bilingual translations.
+   * Restricted to administrative users possessing the `UPDATE_SETTINGS` permission.
+   *
+   * @returns An array of NotificationAction objects containing action keys and translations.
+   */
+  @UseGuards(AuthGuard, PermissionsGuard)
+  @RequirePermission(
+    Permissions.VIEW_NOTIFICATIONS,
+    Permissions.UPDATE_SETTINGS,
+  )
+  @Get('admin/actions')
+  getNotificationActions() {
+    return UNIFIED_NOTIFICATION_ACTIONS;
   }
 
   /**
@@ -235,7 +250,7 @@ export class NotificationsController {
    * @returns An object confirming successful administrative deletion.
    */
   @UseGuards(AuthGuard, PermissionsGuard)
-  @RequirePermission(Permissions.UPDATE_SETTINGS)
+  @RequirePermission(Permissions.DELETE_NOTIFICATION)
   @Delete('admin/:id')
   async deleteNotificationByAdmin(@Param('id') id: string) {
     return await this.notificationsService.deleteByAdmin(id);
@@ -250,7 +265,7 @@ export class NotificationsController {
    * @throws {BadRequestException} If direct target type is selected but no user ID is provided, or if role target type is selected but no role ID is provided.
    */
   @UseGuards(AuthGuard, PermissionsGuard)
-  @RequirePermission(Permissions.UPDATE_SETTINGS)
+  @RequirePermission(Permissions.SEND_NOTIFICATION)
   @Post('admin/send')
   sendNotificationByAdmin(@Body() sendNotificationDto: SendNotificationDto) {
     const { targetType, userId, roleId, action, message, payload } =

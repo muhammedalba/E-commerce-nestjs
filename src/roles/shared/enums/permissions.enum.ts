@@ -96,6 +96,10 @@ export enum Permissions {
   CREATE_TAX = 'create_tax',
   UPDATE_TAX = 'update_tax',
   DELETE_TAX = 'delete_tax',
+  // ---- Notifications ----
+  VIEW_NOTIFICATIONS = 'view_notifications',
+  SEND_NOTIFICATION = 'send_notification',
+  DELETE_NOTIFICATION = 'delete_notification',
 }
 
 export const PERMISSIONS_METADATA: PermissionMetadata[] = [
@@ -440,5 +444,22 @@ export const PERMISSIONS_METADATA: PermissionMetadata[] = [
     key: Permissions.DELETE_TAX,
     group: 'الشحن والضرائب',
     label: 'حذف ضريبة',
+  },
+
+  // Notifications
+  {
+    key: Permissions.VIEW_NOTIFICATIONS,
+    group: 'الإشعارات',
+    label: 'عرض الإشعارات',
+  },
+  {
+    key: Permissions.SEND_NOTIFICATION,
+    group: 'الإشعارات',
+    label: 'إضافة إشعار',
+  },
+  {
+    key: Permissions.DELETE_NOTIFICATION,
+    group: 'الإشعارات',
+    label: 'حذف إشعار',
   },
 ];
