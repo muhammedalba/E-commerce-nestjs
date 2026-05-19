@@ -42,16 +42,16 @@ export class CarouselService extends BaseService<CarouselDocument> {
     },
   ) {
     // check if there is active banner
-    if (createCarouselDto.isActive) {
-      const isCarouselExist = await this.CarouselModel.exists({
-        isActive: true,
-      });
-      if (isCarouselExist) {
-        throw new BadRequestException(
-          this.i18n.translate('exception.ALREADY_EXISTS_ACTIVE_CAROUSEL'),
-        );
-      }
-    }
+    // if (createCarouselDto.isActive) {
+    //   const isCarouselExist = await this.CarouselModel.exists({
+    //     isActive: true,
+    //   });
+    //   if (isCarouselExist) {
+    //     throw new BadRequestException(
+    //       this.i18n.translate('exception.ALREADY_EXISTS_ACTIVE_CAROUSEL'),
+    //     );
+    //   }
+    // }
 
     // generate unique slug for description
     const newSlug = this.generateSlug(createCarouselDto.description);
@@ -155,18 +155,18 @@ export class CarouselService extends BaseService<CarouselDocument> {
       );
     }
     //  check if there is another active carousel
-    if (updateCarouselDto.isActive === true && carousel.isActive !== true) {
-      const isAnotherActive = await this.CarouselModel.exists({
-        isActive: true,
-        _id: { $ne: id },
-      });
+    // if (updateCarouselDto.isActive === true && carousel.isActive !== true) {
+    //   const isAnotherActive = await this.CarouselModel.exists({
+    //     isActive: true,
+    //     _id: { $ne: id },
+    //   });
 
-      if (isAnotherActive) {
-        throw new BadRequestException(
-          this.i18n.translate('exception.ALREADY_EXISTS_ACTIVE_CAROUSEL'),
-        );
-      }
-    }
+    //   if (isAnotherActive) {
+    //     throw new BadRequestException(
+    //       this.i18n.translate('exception.ALREADY_EXISTS_ACTIVE_CAROUSEL'),
+    //     );
+    //   }
+    // }
 
     // 2) Handle translations for description
     if (updateCarouselDto.description) {
