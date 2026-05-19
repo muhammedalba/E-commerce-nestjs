@@ -41,6 +41,16 @@ export class NotificationsService {
   }
 
   /**
+   * Normalizes string or bilingual message object to a standard bilingual object.
+   */
+  private normalizeMessage(message: string | { ar: string; en: string }): {
+    ar: string;
+    en: string;
+  } {
+    return typeof message === 'string' ? { ar: message, en: message } : message;
+  }
+
+  /**
    * Creates and persists a direct notification addressed to a specific user.
    *
    * @param event - The notification event details.
@@ -53,14 +63,14 @@ export class NotificationsService {
   async createDirect(event: {
     userId: string;
     action: string;
-    message: string;
+    message: string | { ar: string; en: string };
     payload?: unknown;
   }) {
     const newNotification = new this.notificationModel({
       type: NotificationType.DIRECT,
       recipient: new Types.ObjectId(event.userId),
       action: event.action,
-      message: event.message,
+      message: this.normalizeMessage(event.message),
       payload: event.payload || {},
     });
     return await newNotification.save();
@@ -77,14 +87,14 @@ export class NotificationsService {
    */
   async createBroadcast(event: {
     action: string;
-    message: string;
+    message: string | { ar: string; en: string };
     payload?: unknown;
   }) {
     const newNotification = new this.notificationModel({
       type: NotificationType.BROADCAST,
       recipient: null,
       action: event.action,
-      message: event.message,
+      message: this.normalizeMessage(event.message),
       payload: event.payload || {},
     });
     return await newNotification.save();
@@ -103,7 +113,7 @@ export class NotificationsService {
   async createRoleNotification(event: {
     roleId: string;
     action: string;
-    message: string;
+    message: string | { ar: string; en: string };
     payload?: unknown;
   }) {
     const newNotification = new this.notificationModel({
@@ -111,7 +121,7 @@ export class NotificationsService {
       recipient: null,
       targetRole: new Types.ObjectId(event.roleId),
       action: event.action,
-      message: event.message,
+      message: this.normalizeMessage(event.message),
       payload: event.payload || {},
     });
     return await newNotification.save();
@@ -154,7 +164,17 @@ export class NotificationsService {
    * @param limit - The maximum number of notifications to return per page (defaults to 20).
    * @returns A promise resolving to a paginated result containing total count, pagination metadata, and notification documents.
    */
-  async getUserNotifications(userId: string, page = 1, limit = 20) {
+  async getUserNotifications(
+    userId: string,
+    page = 1,
+    limit = 20,
+  ): Promise<{
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    data: any[];
+  }> {
     const userObjId = new Types.ObjectId(userId);
     const roleIdStr = await this.getUserRoleId(userId);
     const userRoleId = roleIdStr ? new Types.ObjectId(roleIdStr) : null;
@@ -186,12 +206,23 @@ export class NotificationsService {
       .lean()
       .exec();
 
+    const mappedData = notifications.map((n) => {
+      const isReadForUser =
+        n.type === NotificationType.DIRECT
+          ? n.isRead
+          : (n.readByUsers || []).some((id) => id.toString() === userId);
+      return {
+        ...n,
+        isRead: isReadForUser,
+      };
+    });
+
     return {
       total,
       page,
       limit,
       totalPages: Math.ceil(total / limit),
-      data: notifications,
+      data: mappedData,
     };
   }
 
@@ -261,17 +292,24 @@ export class NotificationsService {
       deletedByUsers: { $ne: userObjId } as any,
     };
 
-    const notification = await this.notificationModel.findOneAndUpdate(
-      filter,
-      {
-        $set: { isRead: true, readAt: new Date() },
-      },
-      { new: true },
-    );
-
+    const notification = await this.notificationModel.findOne(filter);
     if (!notification) {
       throw new NotFoundException('الإشعار غير موجود أو محذوف');
     }
+
+    if (notification.type === NotificationType.DIRECT) {
+      notification.isRead = true;
+      notification.readAt = new Date();
+    }
+
+    if (!notification.readByUsers.some((id) => id.toString() === userId)) {
+      notification.readByUsers.push(userObjId);
+    }
+
+    await notification.save();
+
+    // Dynamically set isRead to true for the returning object representation
+    notification.isRead = true;
 
     return notification;
   }

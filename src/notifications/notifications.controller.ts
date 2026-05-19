@@ -33,7 +33,7 @@ import {
 interface NotificationEvent {
   userId?: string;
   action: string;
-  message: string;
+  message: string | { ar: string; en: string };
   payload?: unknown;
 }
 
@@ -114,14 +114,26 @@ export class NotificationsController {
 
     streams.push(keepAlive$);
 
+    const lang = this.i18n.getLang();
     return merge(...streams).pipe(
-      map((event) => ({
-        data: {
-          action: event.action,
-          message: event.message,
-          payload: event.payload,
-        },
-      })),
+      map((event) => {
+        const rawMessage = event.message;
+        const localizedMsg =
+          rawMessage && typeof rawMessage === 'object'
+            ? (rawMessage as Record<string, string>)[lang] ||
+              (rawMessage as Record<string, string>)['en'] ||
+              (rawMessage as Record<string, string>)['ar'] ||
+              ''
+            : rawMessage;
+
+        return {
+          data: {
+            action: event.action,
+            message: localizedMsg,
+            payload: event.payload,
+          },
+        };
+      }),
     );
   }
 
@@ -144,7 +156,8 @@ export class NotificationsController {
       parseInt(page, 10),
       parseInt(limit, 10),
     );
-    return { success: true, ...result };
+    const localizedResult = this.i18n.localize(result) as Record<string, any>;
+    return { success: true, ...localizedResult };
   }
 
   /**
@@ -171,7 +184,8 @@ export class NotificationsController {
       parseInt(page, 10),
       parseInt(limit, 10),
     );
-    return { success: true, ...result };
+    const localizedResult = this.i18n.localize(result) as Record<string, any>;
+    return { success: true, ...localizedResult };
   }
 
   /**

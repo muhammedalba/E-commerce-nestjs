@@ -176,9 +176,7 @@ export class UsersService extends BaseService<UserDocument> {
       this.eventEmitter.emit(`user.notification.${idParamDto.id}`, {
         userId: idParamDto.id,
         action: 'REFRESH_PERMISSIONS',
-        message:
-          this.i18n.translate('notification.PERMISSIONS_UPDATED') ||
-          'تم تحديث صلاحياتك من قبل الإدارة.',
+        message: this.i18n.translateAll('notification.PERMISSIONS_UPDATED'),
         payload: { permissions },
       });
     }

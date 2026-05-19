@@ -47,6 +47,23 @@ export class CustomI18nService {
   }
 
   /**
+   * Translates a key into all supported languages (Arabic and English) simultaneously.
+   *
+   * @param key - Translation key
+   * @param options - Translation options
+   * @returns An object containing translations for both languages
+   */
+  translateAll(
+    key: string,
+    options?: TranslateOptions,
+  ): { ar: string; en: string } {
+    return {
+      ar: this.i18n.translate(key, { lang: 'ar', ...options }),
+      en: this.i18n.translate(key, { lang: 'en', ...options }),
+    };
+  }
+
+  /**
    * Retrieves the current language code for the request.
    * Checks i18n context, then environment variables, falling back to 'ar'.
    *

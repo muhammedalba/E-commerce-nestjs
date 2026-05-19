@@ -120,10 +120,8 @@ export class RolesService {
               action,
               message:
                 action === 'FORCE_LOGOUT'
-                  ? this.i18n.translate('notification.FORCE_LOGOUT') ||
-                    'تم إيقاف حسابك أو تعديل صلاحياتك. الرجاء تسجيل الدخول مجدداً.'
-                  : this.i18n.translate('notification.PERMISSIONS_UPDATED') ||
-                    'تم تحديث صلاحياتك من قبل الإدارة.',
+                  ? this.i18n.translateAll('notification.FORCE_LOGOUT')
+                  : this.i18n.translateAll('notification.PERMISSIONS_UPDATED'),
               payload: { permissions },
             });
           });

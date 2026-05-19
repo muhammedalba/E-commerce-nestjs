@@ -1,6 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Type } from 'class-transformer';
+import { IsDefined, ValidateNested } from 'class-validator';
 import { Document, Types, Schema as MongooseSchema } from 'mongoose';
 import { MODEL_NAMES } from 'src/shared/constants/models.constants';
+import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
 
 export enum NotificationType {
   DIRECT = 'DIRECT',
@@ -30,8 +33,11 @@ export class Notification extends Document {
   @Prop({ required: true })
   declare action: string;
 
-  @Prop({ required: true })
-  declare message: string;
+  @Prop({ type: Object, required: true })
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => FieldLocalizeDto)
+  declare message: FieldLocalizeDto;
 
   @Prop({ type: Object, default: {} })
   declare payload: Record<string, any>;
@@ -45,8 +51,11 @@ export class Notification extends Document {
   @Prop({ default: false })
   declare deletedByAdmin: boolean;
 
-  @Prop({ type: [Types.ObjectId], default: [] })
+  @Prop({ type: [MongooseSchema.Types.ObjectId], default: [] })
   declare deletedByUsers: Types.ObjectId[];
+
+  @Prop({ type: [MongooseSchema.Types.ObjectId], default: [] })
+  declare readByUsers: Types.ObjectId[];
 
   @Prop({ type: Date, expires: 86400 * 90, default: Date.now })
   declare createdAt: Date;

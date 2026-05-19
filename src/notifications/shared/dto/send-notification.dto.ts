@@ -29,9 +29,8 @@ export class SendNotificationDto {
   @IsOptional()
   declare action?: string;
 
-  @IsString({ message: 'نص الإشعار يجب أن يكون نصاً' })
   @IsNotEmpty({ message: 'نص الإشعار مطلوب' })
-  declare message: string;
+  declare message: string | { ar: string; en: string };
 
   @IsOptional()
   declare payload?: unknown;

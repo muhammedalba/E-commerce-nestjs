@@ -172,10 +172,8 @@ export class OrderService {
             : 'ORDER_CANCELED',
         message:
           updateOrderDto.status === 'completed'
-            ? this.i18n.translate('notification.ORDER_DELIVERED') ||
-              'تم توصيل طلبك بنجاح!'
-            : this.i18n.translate('notification.ORDER_CANCELED') ||
-              'تم إلغاء طلبك.',
+            ? this.i18n.translateAll('notification.ORDER_DELIVERED')
+            : this.i18n.translateAll('notification.ORDER_CANCELED'),
         payload: { orderId: updatedData._id },
       });
     }
