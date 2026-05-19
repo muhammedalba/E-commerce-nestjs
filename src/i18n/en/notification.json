@@ -4,5 +4,6 @@
   "ORDER_DELIVERED": "Your order has been delivered successfully!",
   "ORDER_CANCELED": "Your order has been cancelled.",
   "DIRECT_SEND_SUCCESS": "Notification sent to the target user successfully",
-  "BROADCAST_SEND_SUCCESS": "Notification sent to all users successfully"
+  "BROADCAST_SEND_SUCCESS": "Notification sent to all users successfully",
+  "ROLE_SEND_SUCCESS": "Notification sent to all users of the selected role successfully"
 }

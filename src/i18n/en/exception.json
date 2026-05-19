@@ -89,6 +89,7 @@
             "SUCCESS_DELETE": "Role deleted successfully"
       },
       "notification": {
-            "USER_ID_REQUIRED_FOR_DIRECT_NOTIFICATION": "User ID is required when sending a direct notification to a specific user"
+            "USER_ID_REQUIRED_FOR_DIRECT_NOTIFICATION": "User ID is required when sending a direct notification to a specific user",
+            "ROLE_ID_REQUIRED_FOR_ROLE_NOTIFICATION": "Role ID is required when sending a notification to a specific user role group"
       }
 }

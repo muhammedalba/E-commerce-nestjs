@@ -5,6 +5,7 @@ import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 export enum NotificationType {
   DIRECT = 'DIRECT',
   BROADCAST = 'BROADCAST',
+  ROLE = 'ROLE',
 }
 
 @Schema({ timestamps: true })
@@ -18,6 +19,13 @@ export class Notification extends Document {
     default: null,
   })
   declare recipient: Types.ObjectId | null;
+
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: MODEL_NAMES.ROLE,
+    default: null,
+  })
+  declare targetRole: Types.ObjectId | null;
 
   @Prop({ required: true })
   declare action: string;
@@ -48,3 +56,6 @@ export const NotificationSchema = SchemaFactory.createForClass(Notification);
 
 NotificationSchema.index({ recipient: 1, isRead: 1 });
 NotificationSchema.index({ type: 1, deletedByAdmin: 1 });
+NotificationSchema.index({ targetRole: 1, type: 1 });
+NotificationSchema.index({ deletedByAdmin: 1, createdAt: -1 });
+NotificationSchema.index({ recipient: 1, deletedByAdmin: 1, createdAt: -1 });

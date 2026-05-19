@@ -15,6 +15,13 @@ interface BroadcastPayload {
   payload?: unknown;
 }
 
+interface RoleNotificationPayload {
+  roleId: string;
+  action: string;
+  message: string;
+  payload?: unknown;
+}
+
 /**
  * Event listener responsible for asynchronously persisting notification events triggered across the application.
  * Decouples event emission from database write operations to maintain high system performance.
@@ -40,6 +47,26 @@ export class NotificationsEventListener {
     } catch (error) {
       this.logger.error(
         `Failed to save direct notification for user ${event.userId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+  }
+
+  /**
+   * Asynchronously handles role-targeted notification events matching the `role.notification.*` wildcard pattern.
+   * Persists the notification data to MongoDB via NotificationsService.
+   *
+   * @param event - The payload containing role ID, action code, message, and optional metadata.
+   * @returns A promise that resolves when the notification is processed.
+   */
+  @OnEvent('role.notification.*', { async: true })
+  async handleRoleNotification(event: RoleNotificationPayload) {
+    try {
+      console.log('new role notification event: ', event);
+      await this.notificationsService.createRoleNotification(event);
+    } catch (error) {
+      this.logger.error(
+        `Failed to save role notification for role ${event.roleId}`,
         error instanceof Error ? error.stack : String(error),
       );
     }

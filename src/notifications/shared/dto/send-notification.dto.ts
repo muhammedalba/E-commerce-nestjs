@@ -5,11 +5,12 @@ import { Exists } from 'src/shared/utils/decorators/exists.decorator';
 export enum NotificationTargetType {
   DIRECT = 'direct',
   BROADCAST = 'broadcast',
+  ROLE = 'role',
 }
 
 export class SendNotificationDto {
   @IsEnum(NotificationTargetType, {
-    message: 'نوع الهدف يجب أن يكون direct أو broadcast',
+    message: 'نوع الهدف يجب أن يكون direct أو broadcast أو role',
   })
   @IsNotEmpty({ message: 'نوع الهدف مطلوب' })
   declare targetType: NotificationTargetType;
@@ -18,6 +19,11 @@ export class SendNotificationDto {
   @IsOptional()
   @Exists(MODEL_NAMES.USER)
   declare userId?: string;
+
+  @IsString({ message: 'معرف الدور يجب أن يكون نصاً' })
+  @IsOptional()
+  @Exists(MODEL_NAMES.ROLE)
+  declare roleId?: string;
 
   @IsString({ message: 'الإجراء يجب أن يكون نصاً' })
   @IsOptional()

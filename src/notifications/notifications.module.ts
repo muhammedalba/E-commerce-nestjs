@@ -7,12 +7,16 @@ import {
   Notification,
   NotificationSchema,
 } from './shared/schemas/Notification.schema';
+import { User, UserSchema } from 'src/auth/shared/schema/user.schema';
+import { Role, RoleSchema } from 'src/roles/shared/schemas/role.schema';
 
 @Global()
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: Notification.name, schema: NotificationSchema },
+      { name: User.name, schema: UserSchema },
+      { name: Role.name, schema: RoleSchema },
     ]),
   ],
   controllers: [NotificationsController],

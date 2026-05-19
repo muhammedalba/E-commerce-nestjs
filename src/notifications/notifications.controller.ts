@@ -68,9 +68,15 @@ export class NotificationsController {
   @Header('Connection', 'keep-alive')
   @Header('X-Accel-Buffering', 'no')
   @Sse('stream')
-  stream(@Req() req: AuthenticatedRequest): Observable<MessageEvent> {
+  async stream(
+    @Req() req: AuthenticatedRequest,
+  ): Promise<Observable<MessageEvent>> {
     const userId = req.user?.user_id;
     console.log(`Subscribing SSE for user: user.notification.${userId}`);
+
+    const roleId = userId
+      ? await this.notificationsService.getUserRoleId(userId)
+      : null;
 
     const userStream$ = fromEventPattern<NotificationEvent>(
       (handler) => this.eventEmitter.on(`user.notification.${userId}`, handler),
@@ -83,6 +89,19 @@ export class NotificationsController {
       (handler) => this.eventEmitter.off('system.broadcast', handler),
     );
 
+    const streams = [userStream$, broadcastStream$];
+
+    if (roleId) {
+      console.log(`Subscribing SSE for user role: role.notification.${roleId}`);
+      const roleStream$ = fromEventPattern<NotificationEvent>(
+        (handler) =>
+          this.eventEmitter.on(`role.notification.${roleId}`, handler),
+        (handler) =>
+          this.eventEmitter.off(`role.notification.${roleId}`, handler),
+      );
+      streams.push(roleStream$);
+    }
+
     const keepAlive$ = interval(30000).pipe(
       map(
         () =>
@@ -93,7 +112,9 @@ export class NotificationsController {
       ),
     );
 
-    return merge(userStream$, broadcastStream$, keepAlive$).pipe(
+    streams.push(keepAlive$);
+
+    return merge(...streams).pipe(
       map((event) => ({
         data: {
           action: event.action,
@@ -207,18 +228,18 @@ export class NotificationsController {
   }
 
   /**
-   * Allows an administrator to send a real-time and persistent notification to a specific user or broadcast to all users.
+   * Allows an administrator to send a real-time and persistent notification to a specific user, role, or broadcast to all users.
    * Restricted to administrative users possessing the `UPDATE_SETTINGS` permission.
    *
-   * @param sendNotificationDto - Data transfer object containing target type, optional user ID, action, message, and payload.
+   * @param sendNotificationDto - Data transfer object containing target type, optional user ID, role ID, action, message, and payload.
    * @returns An object confirming successful emission of the notification.
-   * @throws {BadRequestException} If direct target type is selected but no user ID is provided.
+   * @throws {BadRequestException} If direct target type is selected but no user ID is provided, or if role target type is selected but no role ID is provided.
    */
   @UseGuards(AuthGuard, PermissionsGuard)
   @RequirePermission(Permissions.UPDATE_SETTINGS)
   @Post('admin/send')
   sendNotificationByAdmin(@Body() sendNotificationDto: SendNotificationDto) {
-    const { targetType, userId, action, message, payload } =
+    const { targetType, userId, roleId, action, message, payload } =
       sendNotificationDto;
 
     if (targetType === NotificationTargetType.DIRECT) {
@@ -240,6 +261,26 @@ export class NotificationsController {
       return {
         success: true,
         message: this.i18n.translate('notification.DIRECT_SEND_SUCCESS'),
+      };
+    } else if (targetType === NotificationTargetType.ROLE) {
+      if (!roleId) {
+        throw new BadRequestException(
+          this.i18n.translate(
+            'exception.notification.ROLE_ID_REQUIRED_FOR_ROLE_NOTIFICATION',
+          ),
+        );
+      }
+
+      this.eventEmitter.emit(`role.notification.${roleId}`, {
+        roleId,
+        action: action || 'ADMIN_ROLE_ALERT',
+        message,
+        payload: payload || {},
+      });
+
+      return {
+        success: true,
+        message: this.i18n.translate('notification.ROLE_SEND_SUCCESS'),
       };
     } else {
       this.eventEmitter.emit('system.broadcast', {
