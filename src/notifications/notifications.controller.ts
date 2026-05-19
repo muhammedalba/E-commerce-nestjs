@@ -15,7 +15,7 @@ import {
   Header,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Observable, fromEventPattern, merge } from 'rxjs';
+import { Observable, fromEventPattern, merge, interval } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { AuthGuard } from '../auth/shared/guards/auth.guard';
 import { PermissionsGuard } from '../roles/shared/guards/permissions.guard';
@@ -83,7 +83,17 @@ export class NotificationsController {
       (handler) => this.eventEmitter.off('system.broadcast', handler),
     );
 
-    return merge(userStream$, broadcastStream$).pipe(
+    const keepAlive$ = interval(30000).pipe(
+      map(
+        () =>
+          ({
+            action: 'ping',
+            message: '',
+          }) as NotificationEvent,
+      ),
+    );
+
+    return merge(userStream$, broadcastStream$, keepAlive$).pipe(
       map((event) => ({
         data: {
           action: event.action,
