@@ -72,7 +72,13 @@ export class MaintenanceGuard implements CanActivate {
    * @returns True if the route is an authentication endpoint.
    */
   private isAuthRoute(url: string): boolean {
-    return url.includes('/auth/login') || url.includes('/auth/verify');
+    console.log(url);
+    return (
+      url.includes('/auth/login') ||
+      url.includes('/auth/verify-Pass-Reset-Code') ||
+      url.includes('/settings/clear-cache') ||
+      url.includes('/settings')
+    );
   }
 
   /**
@@ -101,6 +107,7 @@ export class MaintenanceGuard implements CanActivate {
       const requiredPermissions = [
         Permissions.UPDATE_SETTINGS,
         Permissions.VIEW_SETTINGS,
+        Permissions.ACCESS_DASHBOARD,
       ];
 
       // Validate that all required permissions are possessed by the user
