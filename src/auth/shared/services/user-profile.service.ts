@@ -232,7 +232,9 @@ export class UserProfileService {
       .select('refresh_Token expiryDate')
       .lean()
       .exec();
-
+    console.log(tokenDoc, 'tokenDoc');
+    console.log(refreshToken, 'refreshToken');
+    console.log(access_token, 'access_token');
     if (!tokenDoc) {
       throw new UnauthorizedException(
         this.i18n.translate('exception.REFRESH_TOKEN_INVALID'),
@@ -245,6 +247,7 @@ export class UserProfileService {
       await this.RefreshTokenModel.deleteOne({
         refresh_Token: refreshToken,
       });
+      this.cookieService.clearCookies(res);
       throw new UnauthorizedException(
         this.i18n.translate('exception.REFRESH_TOKEN_EXPIRED'),
       );
@@ -267,7 +270,7 @@ export class UserProfileService {
     //3) verify user data from decoded token
     const userData = {
       user_id: decoded_access_token.user_id,
-      role: decoded_access_token.role || 'user',
+      role: decoded_access_token.role || 'User',
       level: decoded_access_token.level || 0,
       email: decoded_access_token.email,
       permissions: decoded_access_token.permissions || [],

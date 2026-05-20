@@ -44,6 +44,7 @@ export class AuthCredentialService {
       email: email,
     });
     if (isExists) {
+      this.cookieService.clearCookies(res);
       throw new BadRequestException(
         this.i18n.translate('exception.EMAIL_EXISTS'),
       );

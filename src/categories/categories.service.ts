@@ -59,7 +59,7 @@ export class CategoriesService extends BaseService<CategoryDocument> {
   }> {
     const populate = {
       path: 'SubCategories',
-      select: 'name slug',
+      select: 'name slug id',
     };
     return await this.findAllDoc(
       Category.name,
