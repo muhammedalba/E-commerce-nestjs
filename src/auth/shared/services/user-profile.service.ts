@@ -225,6 +225,11 @@ export class UserProfileService {
         this.i18n.translate('exception.REFRESH_TOKEN_NOT_FOUND'),
       );
     }
+    if (!access_token) {
+      throw new BadRequestException(
+        this.i18n.translate('exception.TOKEN_NOT_FOUND'),
+      );
+    }
     //1) find refresh token from database
     const tokenDoc = await this.RefreshTokenModel.findOne({
       refresh_Token: refreshToken,
@@ -232,9 +237,7 @@ export class UserProfileService {
       .select('refresh_Token expiryDate')
       .lean()
       .exec();
-    console.log(tokenDoc, 'tokenDoc');
-    console.log(refreshToken, 'refreshToken');
-    console.log(access_token, 'access_token');
+
     if (!tokenDoc) {
       throw new UnauthorizedException(
         this.i18n.translate('exception.REFRESH_TOKEN_INVALID'),
