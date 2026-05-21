@@ -92,7 +92,6 @@ export class NotificationsController {
     const streams = [userStream$, broadcastStream$];
 
     if (roleId) {
-      console.log(`Subscribing SSE for user role: role.notification.${roleId}`);
       const roleStream$ = fromEventPattern<NotificationEvent>(
         (handler) =>
           this.eventEmitter.on(`role.notification.${roleId}`, handler),

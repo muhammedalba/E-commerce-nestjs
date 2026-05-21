@@ -205,11 +205,34 @@ export type ProductDocument = HydratedDocument<Product>;
 
 // ─── Indexes ─────────────────────────────────────────────
 ProductSchema.index({ slug: 1 }, { unique: true });
-ProductSchema.index({ category: 1, 'priceRange.min': 1 }); // Enhanced compound filter
+ProductSchema.index({
+  category: 1,
+  isActive: 1,
+  isDeleted: 1,
+  'priceRange.min': 1,
+}); // Enhanced compound filter
 ProductSchema.index({ brand: 1 });
 ProductSchema.index({ supplier: 1 });
 ProductSchema.index({ isDeleted: 1, isActive: 1, isFeatured: 1 });
 ProductSchema.index({ 'priceRange.min': 1 });
+// Text index for search functionality (weighted titles higher than descriptions)
+ProductSchema.index(
+  {
+    'title.en': 'text',
+    'title.ar': 'text',
+    'description.en': 'text',
+    'description.ar': 'text',
+  },
+  {
+    name: 'product_text_index',
+    weights: {
+      'title.en': 10,
+      'title.ar': 10,
+      'description.en': 5,
+      'description.ar': 5,
+    },
+  },
+);
 
 // ─── Auto-exclude soft-deleted documents ─────────────────
 ProductSchema.pre('find', function () {

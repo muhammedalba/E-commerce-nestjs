@@ -276,7 +276,7 @@ export class ProductMutationService {
     // PHASE 3: DB-Light Logic (Slugs & SKUs)
     // ==========================================
     let newBaseSlug = doc.slug;
-    console.log(productData.title);
+
     if (productData.title) {
       newBaseSlug = await generateUniqueSlug(
         productData.title.en,

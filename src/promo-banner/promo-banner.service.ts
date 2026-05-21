@@ -44,7 +44,6 @@ export class PromoBannerService {
     if (!data) {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }
-    console.log('pag', features.getPagination());
     return {
       results: data.length,
       pagination: features.getPagination(),

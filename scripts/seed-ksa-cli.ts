@@ -5,7 +5,9 @@ import { KSA_DATA } from '../src/seed/ksa-data';
 dotenv.config();
 
 async function run() {
-  await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/nest-commerce');
+  await mongoose.connect(
+    process.env.MONGODB_URI || 'mongodb://localhost:27017/nest-commerce',
+  );
   console.log('Connected to MongoDB');
 
   const Country = mongoose.connection.collection('countries');
@@ -27,7 +29,10 @@ async function run() {
   }
 
   for (const regionData of KSA_DATA) {
-    let region = await Region.findOne({ 'name.ar': regionData.region.ar, country: country!._id });
+    let region = await Region.findOne({
+      'name.ar': regionData.region.ar,
+      country: country!._id,
+    });
     if (!region) {
       const res = await Region.insertOne({
         name: regionData.region,
@@ -40,7 +45,10 @@ async function run() {
     }
 
     for (const cityData of regionData.cities) {
-      let city = await City.findOne({ 'name.ar': cityData.ar, region: region!._id });
+      const city = await City.findOne({
+        'name.ar': cityData.ar,
+        region: region!._id,
+      });
       if (!city) {
         await City.insertOne({
           name: cityData,

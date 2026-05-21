@@ -8,7 +8,6 @@ import {
 } from '../shared/schemas/ProductVariant.schema';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
-import { I18nContext } from 'nestjs-i18n';
 import { ApiFeatures } from 'src/shared/utils/ApiFeatures';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import {
@@ -27,7 +26,6 @@ export class ProductQueryService {
   ) {}
 
   /**
-   * Ã˜Â§Ã™â€žÃ˜ÂªÃ˜Â­Ã™â€šÃ™â€š Ã™â€¦Ã™â€¦Ã˜Â§ Ã˜Â¥Ã˜Â°Ã˜Â§ Ã™Æ’Ã˜Â§Ã™â€  Ã˜Â§Ã™â€žÃ˜Â·Ã™â€žÃ˜Â¨ Ã™Å Ã˜ÂªÃ˜Â·Ã™â€žÃ˜Â¨ Ã™ÂÃ˜Â­Ã˜Âµ Ã˜Â¬Ã˜Â¯Ã™Ë†Ã™â€ž Ã˜Â§Ã™â€žÃ™â€¦Ã˜ÂªÃ˜ÂºÃ™Å Ã˜Â±Ã˜Â§Ã˜Âª
    */
   private shouldQueryVariants(
     vParams: VariantFilterParams,
@@ -47,9 +45,7 @@ export class ProductQueryService {
     );
   }
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-  //  2. CORE LOGIC (Ã™â€¦Ã™â€ Ã˜Â·Ã™â€š Ã˜Â§Ã™â€žÃ˜ÂªÃ™â€ Ã™ÂÃ™Å Ã˜Â°)
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  //  2. CORE LOGIC
 
   private async getProcessedFeatures(
     queryString: QueryString,
@@ -57,8 +53,7 @@ export class ProductQueryService {
   ) {
     const filter: any = productIds ? { _id: { $in: productIds } } : {};
     const baseQuery = this.productModel.find(filter);
-
-    // ApiFeatures Ã˜Â³Ã™Å Ã˜Â¹Ã˜Â§Ã™â€žÃ˜Â¬ keywords (Ã˜Â§Ã™â€žÃ˜Â¨Ã˜Â­Ã˜Â« Ã˜Â§Ã™â€žÃ˜Â¹Ã˜Â§Ã™â€¦) Ã™Ë† totalSold (Ã™Â Ã™â€žÃ˜ÂªÃ˜Â±Ã˜Â© Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â¨Ã™Å Ã˜Â¹Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¬Ã™â€¦Ã˜Â§Ã™â€žÃ™Å Ã˜Â©)
+    //   // ApiFeatures
     const features = new ApiFeatures(baseQuery, queryString)
       .filter()
       .search(Product.name);
@@ -138,7 +133,7 @@ export class ProductQueryService {
       }
     }
 
-    // 2. Ã˜Â§Ã™â€žÃ˜Â¨Ã˜Â­Ã˜Â« Ã™ÂÃ™Å  Ã˜Â§Ã™â€žÃ™â€¦Ã™â€ Ã˜ÂªÃ˜Â¬Ã˜Â§Ã˜Âª (Ã˜Â§Ã™â€žÃ˜Â§Ã˜Â³Ã™â€¦Ã˜Å’ Ã˜Â§Ã™â€žÃ™Ë†Ã˜ÂµÃ™ÂÃ˜Å’ Ã™Ë†Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â¨Ã™Å Ã˜Â¹Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¬Ã™â€¦Ã˜Â§Ã™â€žÃ™Å Ã˜Â© totalSold) Ã˜Â¹Ã˜Â¨Ã˜Â± ApiFeatures
+    // 2
     const { features, total } = await this.getProcessedFeatures(
       queryString,
       productIds,
@@ -173,7 +168,6 @@ export class ProductQueryService {
       .find({ productId: product._id, isActive: true, isDeleted: false })
       .lean();
 
-    // return { product: this.localize(product, allLangs), variants };
     return { product: this.i18n.localize(product, allLangs), variants };
   }
 }

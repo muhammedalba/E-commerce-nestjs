@@ -72,7 +72,6 @@ export class MaintenanceGuard implements CanActivate {
    * @returns True if the route is an authentication endpoint.
    */
   private isAuthRoute(url: string): boolean {
-    console.log(url);
     return (
       url.includes('/auth/login') ||
       url.includes('/auth/verify-Pass-Reset-Code') ||

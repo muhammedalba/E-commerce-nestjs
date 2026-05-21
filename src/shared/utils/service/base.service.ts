@@ -380,7 +380,7 @@ export class BaseService<T> {
     if (!doc) {
       throw new NotFoundException(this.t('exception.NOT_FOUND'));
     }
-    console.log(modelName, 'modleName');
+
     if (checkField && fieldValue) {
       await this.isFieldTaken(checkField, fieldValue, doc._id, onlyActive);
     }

@@ -246,7 +246,6 @@ export class CarouselService extends BaseService<CarouselDocument> {
 
     // 3 ) delete the images from disk
     try {
-      console.log(imagePaths);
       await Promise.all(
         imagePaths.map((path) => this.fileUploadService.deleteFile(`.${path}`)),
       );
