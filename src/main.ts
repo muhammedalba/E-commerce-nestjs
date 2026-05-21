@@ -5,8 +5,6 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { I18nValidationPipe } from 'nestjs-i18n';
 import { AllExceptionsFilter } from './shared/filters/all-exceptions.filter';
-import { TransformInterceptor } from './shared/interceptors/transform.interceptor';
-import { LoggingInterceptor } from './shared/interceptors/logging.interceptor';
 import { I18nService } from 'nestjs-i18n';
 import { Request, Response, NextFunction } from 'express';
 
@@ -61,11 +59,6 @@ async function bootstrap() {
   // handle all exceptions
   app.useGlobalFilters(new AllExceptionsFilter(app.get(I18nService)));
 
-  // standardize the response and log slow requests
-  app.useGlobalInterceptors(
-    new TransformInterceptor(app.get(I18nService)),
-    new LoggingInterceptor(),
-  );
   // enable cors
   app.enableCors({
     origin: allowedOrigins,

@@ -1,10 +1,8 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { BullConfig } from './config/bull.config';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { ConfigModule } from '@nestjs/config';
 import { validateEnv } from './config/env.validation';
@@ -20,11 +18,9 @@ import { CouponsModule } from './coupons/coupons.module';
 import { ProductsModule } from './products/products.module';
 import { CartModule } from './cart/cart.module';
 import { OrderModule } from './order/order.module';
-import { CustomI18nValidationExceptionFilter } from './filters/i18n-validation-exception.filter';
 import { PromoBannerModule } from './promo-banner/promo-banner.module';
 import { SubCategoryModule } from './sub-category/sub-category.module';
 import { SupplierModule } from './supplier/supplier.module';
-import { ExistsConstraint } from './shared/utils/decorators/exists.decorator';
 import { CacheModule } from '@nestjs/cache-manager';
 // ======= New Modules =======
 import { SettingsModule } from './settings/settings.module';
@@ -37,8 +33,7 @@ import { CheckoutModule } from './checkout/checkout.module';
 import { SeedModule } from './seed/seed.module';
 import { RolesModule } from './roles/roles.module';
 import { NotificationsModule } from './notifications/notifications.module';
-
-import { MaintenanceGuard } from './shared/guards/maintenance.guard';
+import { appProviders } from './app.providers';
 
 @Module({
   imports: [
@@ -94,18 +89,6 @@ import { MaintenanceGuard } from './shared/guards/maintenance.guard';
     NotificationsModule,
   ],
   controllers: [AppController],
-  providers: [
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: MaintenanceGuard,
-    },
-    AppService,
-    ExistsConstraint,
-    CustomI18nValidationExceptionFilter,
-  ],
+  providers: [...appProviders],
 })
 export class AppModule {}
