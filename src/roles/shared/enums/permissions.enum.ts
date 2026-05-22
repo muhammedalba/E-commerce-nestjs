@@ -1,8 +1,11 @@
 export interface PermissionMetadata {
   key: Permissions;
-  label: string;
-  group: string;
+  /** مفتاح الترجمة لاسم الصلاحية — مثال: 'permissions.labels.view_users' */
+  labelKey: string;
+  /** مفتاح الترجمة لاسم المجموعة — مثال: 'permissions.groups.users' */
+  groupKey: string;
 }
+
 export enum Permissions {
   // ---- Dashboard Access ----
   ACCESS_DASHBOARD = 'access_dashboard',
@@ -11,6 +14,9 @@ export enum Permissions {
   // ---- Settings ----
   VIEW_SETTINGS = 'view_settings',
   UPDATE_SETTINGS = 'update_settings',
+  UPDATE_MAINTENANCE = 'update_maintenance',
+  UPDATE_DEBUG = 'update_debug',
+
   // ---- Locations ----
   VIEW_LOCATIONS = 'view_locations',
   CREATE_LOCATION = 'create_location',
@@ -103,363 +109,369 @@ export enum Permissions {
 }
 
 export const PERMISSIONS_METADATA: PermissionMetadata[] = [
-  // Dashboard
+  // ── Dashboard ─────────────────────────────────────────────────────────────
   {
     key: Permissions.ACCESS_DASHBOARD,
-    group: 'لوحة التحكم',
-    label: 'دخول لوحة التحكم',
+    groupKey: 'permissions.groups.dashboard',
+    labelKey: 'permissions.labels.access_dashboard',
   },
   {
     key: Permissions.VIEW_DASHBOARD_STATS,
-    group: 'لوحة التحكم',
-    label: 'عرض إحصائيات لوحة التحكم',
+    groupKey: 'permissions.groups.dashboard',
+    labelKey: 'permissions.labels.view_dashboard_stats',
   },
 
-  // Settings
+  // ── Settings ──────────────────────────────────────────────────────────────
   {
     key: Permissions.VIEW_SETTINGS,
-    group: 'الإعدادات',
-    label: 'عرض إعدادات النظام',
+    groupKey: 'permissions.groups.settings',
+    labelKey: 'permissions.labels.view_settings',
   },
   {
     key: Permissions.UPDATE_SETTINGS,
-    group: 'الإعدادات',
-    label: 'تعديل إعدادات النظام',
+    groupKey: 'permissions.groups.settings',
+    labelKey: 'permissions.labels.update_settings',
   },
-
+  {
+    key: Permissions.UPDATE_MAINTENANCE,
+    groupKey: 'permissions.groups.settings',
+    labelKey: 'permissions.labels.update_maintenance',
+  },
+  {
+    key: Permissions.UPDATE_DEBUG,
+    groupKey: 'permissions.groups.settings',
+    labelKey: 'permissions.labels.update_debug',
+  },
   {
     key: Permissions.VIEW_LOCATIONS,
-    group: 'الإعدادات',
-    label: 'عرض المواقع والفروع',
+    groupKey: 'permissions.groups.settings',
+    labelKey: 'permissions.labels.view_locations',
   },
   {
     key: Permissions.CREATE_LOCATION,
-    group: 'الإعدادات',
-    label: 'إضافة موقع/فرع',
+    groupKey: 'permissions.groups.settings',
+    labelKey: 'permissions.labels.create_location',
   },
   {
     key: Permissions.UPDATE_LOCATION,
-    group: 'الإعدادات',
-    label: 'تعديل موقع/فرع',
+    groupKey: 'permissions.groups.settings',
+    labelKey: 'permissions.labels.update_location',
   },
   {
     key: Permissions.DELETE_LOCATION,
-    group: 'الإعدادات',
-    label: 'حذف موقع/فرع',
+    groupKey: 'permissions.groups.settings',
+    labelKey: 'permissions.labels.delete_location',
   },
-
   {
     key: Permissions.VIEW_EXTERNAL_PLATFORMS,
-    group: 'الإعدادات',
-    label: 'عرض المنصات الخارجية',
+    groupKey: 'permissions.groups.settings',
+    labelKey: 'permissions.labels.view_external_platforms',
   },
-  // Roles & Permissions
+
+  // ── Roles & Permissions ───────────────────────────────────────────────────
   {
     key: Permissions.VIEW_ROLES,
-    group: 'الأدوار والصلاحيات',
-    label: 'عرض الأدوار',
+    groupKey: 'permissions.groups.roles_permissions',
+    labelKey: 'permissions.labels.view_roles',
   },
   {
     key: Permissions.CREATE_ROLE,
-    group: 'الأدوار والصلاحيات',
-    label: 'إضافة دور',
+    groupKey: 'permissions.groups.roles_permissions',
+    labelKey: 'permissions.labels.create_role',
   },
   {
     key: Permissions.UPDATE_ROLE,
-    group: 'الأدوار والصلاحيات',
-    label: 'تعديل دور',
+    groupKey: 'permissions.groups.roles_permissions',
+    labelKey: 'permissions.labels.update_role',
   },
   {
     key: Permissions.DELETE_ROLE,
-    group: 'الأدوار والصلاحيات',
-    label: 'حذف دور',
+    groupKey: 'permissions.groups.roles_permissions',
+    labelKey: 'permissions.labels.delete_role',
   },
 
-  // Users & Suppliers
+  // ── Users ─────────────────────────────────────────────────────────────────
   {
     key: Permissions.VIEW_USERS,
-    group: 'المستخدمون',
-    label: 'عرض المستخدمين',
+    groupKey: 'permissions.groups.users',
+    labelKey: 'permissions.labels.view_users',
   },
   {
     key: Permissions.CREATE_USER,
-    group: 'المستخدمون',
-    label: 'إضافة مستخدم',
+    groupKey: 'permissions.groups.users',
+    labelKey: 'permissions.labels.create_user',
   },
   {
     key: Permissions.UPDATE_USER,
-    group: 'المستخدمون',
-    label: 'تعديل مستخدم',
+    groupKey: 'permissions.groups.users',
+    labelKey: 'permissions.labels.update_user',
   },
   {
     key: Permissions.DELETE_USER,
-    group: 'المستخدمون',
-    label: 'حذف مستخدم',
+    groupKey: 'permissions.groups.users',
+    labelKey: 'permissions.labels.delete_user',
   },
 
+  // ── Suppliers ─────────────────────────────────────────────────────────────
   {
     key: Permissions.VIEW_SUPPLIERS,
-    group: 'الموردون',
-    label: 'عرض الموردين',
+    groupKey: 'permissions.groups.suppliers',
+    labelKey: 'permissions.labels.view_suppliers',
   },
   {
     key: Permissions.CREATE_SUPPLIER,
-    group: 'الموردون',
-    label: 'إضافة مورد',
+    groupKey: 'permissions.groups.suppliers',
+    labelKey: 'permissions.labels.create_supplier',
   },
   {
     key: Permissions.UPDATE_SUPPLIER,
-    group: 'الموردون',
-    label: 'تعديل مورد',
+    groupKey: 'permissions.groups.suppliers',
+    labelKey: 'permissions.labels.update_supplier',
   },
   {
     key: Permissions.DELETE_SUPPLIER,
-    group: 'الموردون',
-    label: 'حذف مورد',
+    groupKey: 'permissions.groups.suppliers',
+    labelKey: 'permissions.labels.delete_supplier',
   },
 
-  // Products
+  // ── Products ──────────────────────────────────────────────────────────────
   {
     key: Permissions.VIEW_PRODUCTS,
-    group: 'المنتجات',
-    label: 'عرض المنتجات',
+    groupKey: 'permissions.groups.products',
+    labelKey: 'permissions.labels.view_products',
   },
   {
     key: Permissions.VIEW_PRODUCTS_STATS,
-    group: 'المنتجات',
-    label: 'عرض إحصائيات المنتجات',
+    groupKey: 'permissions.groups.products',
+    labelKey: 'permissions.labels.view_products_stats',
   },
   {
     key: Permissions.CREATE_PRODUCT,
-    group: 'المنتجات',
-    label: 'إضافة منتج',
+    groupKey: 'permissions.groups.products',
+    labelKey: 'permissions.labels.create_product',
   },
   {
     key: Permissions.UPDATE_PRODUCT,
-    group: 'المنتجات',
-    label: 'تعديل منتج',
+    groupKey: 'permissions.groups.products',
+    labelKey: 'permissions.labels.update_product',
   },
   {
     key: Permissions.DELETE_PRODUCT,
-    group: 'المنتجات',
-    label: 'حذف منتج',
+    groupKey: 'permissions.groups.products',
+    labelKey: 'permissions.labels.delete_product',
   },
 
-  // Orders
+  // ── Orders ────────────────────────────────────────────────────────────────
   {
     key: Permissions.VIEW_ORDERS,
-    group: 'الطلبات',
-    label: 'عرض الطلبات',
+    groupKey: 'permissions.groups.orders',
+    labelKey: 'permissions.labels.view_orders',
   },
   {
     key: Permissions.UPDATE_ORDER_STATUS,
-    group: 'الطلبات',
-    label: 'تحديث حالة الطلب',
+    groupKey: 'permissions.groups.orders',
+    labelKey: 'permissions.labels.update_order_status',
   },
   {
     key: Permissions.DELETE_ORDER,
-    group: 'الطلبات',
-    label: 'حذف طلب',
+    groupKey: 'permissions.groups.orders',
+    labelKey: 'permissions.labels.delete_order',
   },
   {
     key: Permissions.REFUND_ORDER,
-    group: 'الطلبات',
-    label: 'استرداد طلب',
+    groupKey: 'permissions.groups.orders',
+    labelKey: 'permissions.labels.refund_order',
   },
 
-  // Categories
+  // ── Categories & Subcategories ────────────────────────────────────────────
   {
     key: Permissions.VIEW_CATEGORIES,
-    group: 'الفئات والأقسام',
-    label: 'عرض الفئات',
+    groupKey: 'permissions.groups.categories_subcategories',
+    labelKey: 'permissions.labels.view_categories',
   },
   {
     key: Permissions.CREATE_CATEGORY,
-    group: 'الفئات والأقسام',
-    label: 'إضافة فئة',
+    groupKey: 'permissions.groups.categories_subcategories',
+    labelKey: 'permissions.labels.create_category',
   },
   {
     key: Permissions.UPDATE_CATEGORY,
-    group: 'الفئات والأقسام',
-    label: 'تعديل فئة',
+    groupKey: 'permissions.groups.categories_subcategories',
+    labelKey: 'permissions.labels.update_category',
   },
   {
     key: Permissions.DELETE_CATEGORY,
-    group: 'الفئات والأقسام',
-    label: 'حذف فئة',
+    groupKey: 'permissions.groups.categories_subcategories',
+    labelKey: 'permissions.labels.delete_category',
   },
-
-  // Sub Categories
   {
     key: Permissions.VIEW_SUB_CATEGORIES,
-    group: 'الفئات والأقسام',
-    label: 'عرض الأقسام الفرعية',
+    groupKey: 'permissions.groups.categories_subcategories',
+    labelKey: 'permissions.labels.view_sub_categories',
   },
   {
     key: Permissions.CREATE_SUB_CATEGORY,
-    group: 'الفئات والأقسام',
-    label: 'إضافة قسم فرعي',
+    groupKey: 'permissions.groups.categories_subcategories',
+    labelKey: 'permissions.labels.create_sub_category',
   },
   {
     key: Permissions.UPDATE_SUB_CATEGORY,
-    group: 'الفئات والأقسام',
-    label: 'تعديل قسم فرعي',
+    groupKey: 'permissions.groups.categories_subcategories',
+    labelKey: 'permissions.labels.update_sub_category',
   },
   {
     key: Permissions.DELETE_SUB_CATEGORY,
-    group: 'الفئات والأقسام',
-    label: 'حذف قسم فرعي',
+    groupKey: 'permissions.groups.categories_subcategories',
+    labelKey: 'permissions.labels.delete_sub_category',
   },
 
-  // Brands
+  // ── Brands ────────────────────────────────────────────────────────────────
   {
     key: Permissions.VIEW_BRANDS,
-    group: 'العلامات التجارية',
-    label: 'عرض العلامات التجارية',
+    groupKey: 'permissions.groups.brands',
+    labelKey: 'permissions.labels.view_brands',
   },
   {
     key: Permissions.CREATE_BRAND,
-    group: 'العلامات التجارية',
-    label: 'إضافة علامة تجارية',
+    groupKey: 'permissions.groups.brands',
+    labelKey: 'permissions.labels.create_brand',
   },
   {
     key: Permissions.UPDATE_BRAND,
-    group: 'العلامات التجارية',
-    label: 'تعديل علامة تجارية',
+    groupKey: 'permissions.groups.brands',
+    labelKey: 'permissions.labels.update_brand',
   },
   {
     key: Permissions.DELETE_BRAND,
-    group: 'العلامات التجارية',
-    label: 'حذف علامة تجارية',
+    groupKey: 'permissions.groups.brands',
+    labelKey: 'permissions.labels.delete_brand',
   },
 
-  // Carousels
+  // ── Carousels ─────────────────────────────────────────────────────────────
   {
     key: Permissions.VIEW_CAROUSEL,
-    group: 'العروض المرئية',
-    label: 'عرض شريط العروض (Carousel)',
+    groupKey: 'permissions.groups.carousels',
+    labelKey: 'permissions.labels.view_carousels',
   },
   {
     key: Permissions.CREATE_CAROUSEL,
-    group: 'العروض المرئية',
-    label: 'إضافة عرض مرئي',
+    groupKey: 'permissions.groups.carousels',
+    labelKey: 'permissions.labels.create_carousel',
   },
   {
     key: Permissions.UPDATE_CAROUSEL,
-    group: 'العروض المرئية',
-    label: 'تعديل عرض مرئي',
+    groupKey: 'permissions.groups.carousels',
+    labelKey: 'permissions.labels.update_carousel',
   },
   {
     key: Permissions.DELETE_CAROUSEL,
-    group: 'العروض المرئية',
-    label: 'حذف عرض مرئي',
+    groupKey: 'permissions.groups.carousels',
+    labelKey: 'permissions.labels.delete_carousel',
   },
 
-  // Coupons & Promo
+  // ── Coupons & Promo ───────────────────────────────────────────────────────
   {
     key: Permissions.VIEW_COUPONS,
-    group: 'الكوبونات والعروض',
-    label: 'عرض الكوبونات',
+    groupKey: 'permissions.groups.coupons_offers',
+    labelKey: 'permissions.labels.view_coupons',
   },
   {
     key: Permissions.CREATE_COUPON,
-    group: 'الكوبونات والعروض',
-    label: 'إضافة كوبون',
+    groupKey: 'permissions.groups.coupons_offers',
+    labelKey: 'permissions.labels.create_coupon',
   },
   {
     key: Permissions.UPDATE_COUPON,
-    group: 'الكوبونات والعروض',
-    label: 'تعديل كوبون',
+    groupKey: 'permissions.groups.coupons_offers',
+    labelKey: 'permissions.labels.update_coupon',
   },
   {
     key: Permissions.DELETE_COUPON,
-    group: 'الكوبونات والعروض',
-    label: 'حذف كوبون',
+    groupKey: 'permissions.groups.coupons_offers',
+    labelKey: 'permissions.labels.delete_coupon',
   },
-
   {
     key: Permissions.VIEW_PROMO_BANNERS,
-    group: 'الكوبونات والعروض',
-    label: 'عرض البنرات الإعلانية',
+    groupKey: 'permissions.groups.coupons_offers',
+    labelKey: 'permissions.labels.view_promo_banners',
   },
   {
     key: Permissions.CREATE_PROMO_BANNER,
-    group: 'الكوبونات والعروض',
-    label: 'إضافة بنر إعلاني',
+    groupKey: 'permissions.groups.coupons_offers',
+    labelKey: 'permissions.labels.create_promo_banner',
   },
   {
     key: Permissions.UPDATE_PROMO_BANNER,
-    group: 'الكوبونات والعروض',
-    label: 'تعديل بنر إعلاني',
+    groupKey: 'permissions.groups.coupons_offers',
+    labelKey: 'permissions.labels.update_promo_banner',
   },
   {
     key: Permissions.DELETE_PROMO_BANNER,
-    group: 'الكوبونات والعروض',
-    label: 'حذف بنر إعلاني',
+    groupKey: 'permissions.groups.coupons_offers',
+    labelKey: 'permissions.labels.delete_promo_banner',
   },
 
-  // Shipping & Taxes
+  // ── Shipping & Taxes ──────────────────────────────────────────────────────
   {
     key: Permissions.VIEW_SHIPPING,
-    group: 'الشحن والضرائب',
-    label: 'عرض إعدادات الشحن',
+    groupKey: 'permissions.groups.shipping_taxes',
+    labelKey: 'permissions.labels.view_shipping',
   },
   {
     key: Permissions.CREATE_SHIPPING,
-    group: 'الشحن والضرائب',
-    label: 'إضافة إعداد شحن',
+    groupKey: 'permissions.groups.shipping_taxes',
+    labelKey: 'permissions.labels.create_shipping',
   },
   {
     key: Permissions.UPDATE_SHIPPING,
-    group: 'الشحن والضرائب',
-    label: 'تعديل إعداد شحن',
+    groupKey: 'permissions.groups.shipping_taxes',
+    labelKey: 'permissions.labels.update_shipping',
   },
   {
     key: Permissions.DELETE_SHIPPING,
-    group: 'الشحن والضرائب',
-    label: 'حذف إعداد شحن',
+    groupKey: 'permissions.groups.shipping_taxes',
+    labelKey: 'permissions.labels.delete_shipping',
   },
   {
     key: Permissions.VIEW_SHIPPING_RATES,
-    group: 'الشحن والضرائب',
-    label: 'عرض أسعار الشحن',
+    groupKey: 'permissions.groups.shipping_taxes',
+    labelKey: 'permissions.labels.view_shipping_rates',
   },
-
   {
     key: Permissions.VIEW_TAXES,
-    group: 'الشحن والضرائب',
-    label: 'عرض الضرائب',
+    groupKey: 'permissions.groups.shipping_taxes',
+    labelKey: 'permissions.labels.view_taxes',
   },
   {
     key: Permissions.CREATE_TAX,
-    group: 'الشحن والضرائب',
-    label: 'إضافة ضريبة',
+    groupKey: 'permissions.groups.shipping_taxes',
+    labelKey: 'permissions.labels.create_tax',
   },
   {
     key: Permissions.UPDATE_TAX,
-    group: 'الشحن والضرائب',
-    label: 'تعديل ضريبة',
+    groupKey: 'permissions.groups.shipping_taxes',
+    labelKey: 'permissions.labels.update_tax',
   },
   {
     key: Permissions.DELETE_TAX,
-    group: 'الشحن والضرائب',
-    label: 'حذف ضريبة',
+    groupKey: 'permissions.groups.shipping_taxes',
+    labelKey: 'permissions.labels.delete_tax',
   },
 
-  // Notifications
+  // ── Notifications ─────────────────────────────────────────────────────────
   {
     key: Permissions.VIEW_NOTIFICATIONS,
-    group: 'الإشعارات',
-    label: 'عرض الإشعارات',
+    groupKey: 'permissions.groups.notifications',
+    labelKey: 'permissions.labels.view_notifications',
   },
   {
     key: Permissions.SEND_NOTIFICATION,
-    group: 'الإشعارات',
-    label: 'إضافة إشعار',
+    groupKey: 'permissions.groups.notifications',
+    labelKey: 'permissions.labels.send_notification',
   },
   {
     key: Permissions.DELETE_NOTIFICATION,
-    group: 'الإشعارات',
-    label: 'حذف إشعار',
+    groupKey: 'permissions.groups.notifications',
+    labelKey: 'permissions.labels.delete_notification',
   },
 ];

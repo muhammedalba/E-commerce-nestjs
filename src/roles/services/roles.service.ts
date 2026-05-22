@@ -323,8 +323,13 @@ export class RolesService {
   getGroupedPermissions(): any[] {
     const groupsMap = PERMISSIONS_METADATA.reduce(
       (acc, meta) => {
-        if (!acc[meta.group]) acc[meta.group] = [];
-        acc[meta.group].push({ key: meta.key, label: meta.label });
+        // ترجمة اسم المجموعة ديناميكياً بناءً على لغة الطلب الحالية
+        const groupName = this.i18n.translate(meta.groupKey);
+        // ترجمة اسم الصلاحية ديناميكياً بناءً على لغة الطلب الحالية
+        const label = this.i18n.translate(meta.labelKey);
+
+        if (!acc[groupName]) acc[groupName] = [];
+        acc[groupName].push({ key: meta.key, label });
         return acc;
       },
       {} as Record<string, { key: string; label: string }[]>,

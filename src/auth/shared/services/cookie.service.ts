@@ -18,7 +18,7 @@ export class CookieService {
       secure: this.isProd,
       sameSite: this.isProd ? 'none' : 'lax',
       path: '/',
-      maxAge: 1 * 24 * 60 * 1000, // 1d
+      maxAge: 1 * 24 * 60 * 60 * 1000, // 1 day
     });
 
     res.cookie('refresh_token', tokens.refresh_Token, {
