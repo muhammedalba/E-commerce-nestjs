@@ -2,12 +2,12 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Body,
   Param,
   Req,
   UseGuards,
-  HttpStatus,
   UseInterceptors,
 } from '@nestjs/common';
 import { CacheTTL } from '@nestjs/cache-manager';
@@ -15,7 +15,6 @@ import { CartService } from './cart.service';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
 import { CreateCartDto } from './shared/dto/create-cart.dto';
-import { Cart } from './shared/schemas/cart.schema';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 
@@ -40,6 +39,17 @@ export class CartController {
     return await this.cartService.addItem(req.user.user_id, createCartDto);
   }
 
+  @Patch('update-quantity')
+  async updateQuantity(
+    @Req() req: { user: JwtPayload },
+    @Body() updateCartDto: CreateCartDto,
+  ) {
+    return await this.cartService.updateQuantity(
+      req.user.user_id,
+      updateCartDto,
+    );
+  }
+
   @Delete('remove/:productId')
   removeItem(
     @Req() req: { user: JwtPayload },
@@ -51,5 +61,13 @@ export class CartController {
   @Delete('clear')
   clearCart(@Req() req: { user: JwtPayload }) {
     return this.cartService.clearCart(req.user.user_id);
+  }
+
+  @Post('sync')
+  async syncCart(
+    @Req() req: { user: JwtPayload },
+    @Body('items') items: CreateCartDto[],
+  ) {
+    return await this.cartService.syncCart(req.user.user_id, items);
   }
 }

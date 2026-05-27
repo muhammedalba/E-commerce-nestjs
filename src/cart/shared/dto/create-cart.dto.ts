@@ -8,13 +8,17 @@ import {
   Max,
   Min,
 } from 'class-validator';
+import { MODEL_NAMES } from 'src/shared/constants/models.constants';
+import { Exists } from 'src/shared/utils/decorators/exists.decorator';
 
 export class CreateCartDto {
   @IsMongoId()
+  @Exists(MODEL_NAMES.PRODUCT)
   @Type(() => String)
   productId!: string;
 
   @IsMongoId()
+  @Exists(MODEL_NAMES.PRODUCT_VARIANT)
   @Type(() => String)
   variantId!: string;
 

@@ -66,6 +66,31 @@ export class MailProcessor extends WorkerHost {
         );
         return {};
       }
+      case 'inventory-alert': {
+        const {
+          email,
+          adminName,
+          productTitle,
+          sku,
+          stock,
+          threshold,
+          alertType,
+          subject,
+          lang,
+        } = job.data;
+        await this.emailService.send_inventory_alert(
+          email,
+          adminName,
+          productTitle,
+          sku,
+          stock,
+          threshold,
+          alertType,
+          subject,
+          lang,
+        );
+        return {};
+      }
       default:
         throw new Error(`Unknown job name: ${job.name}`);
     }

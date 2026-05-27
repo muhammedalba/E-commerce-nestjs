@@ -3,7 +3,6 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
-  NotFoundException,
 } from '@nestjs/common';
 import { CreateCarouselDto } from './shared/dto/create-carousel.dto';
 import { UpdateCarouselDto } from './shared/dto/update-carousel.dto';

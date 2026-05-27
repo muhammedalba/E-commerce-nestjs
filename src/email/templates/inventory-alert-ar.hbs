@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="utf-8">
+  <title>{{subject}}</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      direction: rtl;
+    }
+    .container {
+      max-width: 600px;
+      margin: 20px auto;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .header {
+      background-color: #d9534f;
+      color: white;
+      text-align: center;
+      padding: 10px;
+      border-radius: 8px 8px 0 0;
+    }
+    .header.warning {
+      background-color: #f0ad4e;
+    }
+    .content {
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .footer {
+      text-align: center;
+      color: #777;
+      font-size: 12px;
+      margin-top: 20px;
+    }
+    .details-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    .details-table th, .details-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: right;
+    }
+    .details-table th {
+      background-color: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    {{#if (eq alertType "out_of_stock")}}
+    <div class="header">
+      <h2>🚨 تنبيه: نفاد المخزون</h2>
+    </div>
+    {{else}}
+    <div class="header warning">
+      <h2>⚠️ تنبيه: انخفاض المخزون</h2>
+    </div>
+    {{/if}}
+
+    <div class="content">
+      <p>مرحباً <strong>{{adminName}}</strong>،</p>
+      
+      {{#if (eq alertType "out_of_stock")}}
+      <p>نود إعلامكم بأن المنتج التالي قد نفد تماماً من المخزون.</p>
+      {{else}}
+      <p>نود إعلامكم بأن مخزون المنتج التالي قد انخفض ووصل إلى حد التنبيه.</p>
+      {{/if}}
+
+      <table class="details-table">
+        <tr>
+          <th>اسم المنتج</th>
+          <td>{{productTitle}}</td>
+        </tr>
+        <tr>
+          <th>رمز المنتج (SKU)</th>
+          <td>{{sku}}</td>
+        </tr>
+        <tr>
+          <th>الكمية المتبقية</th>
+          <td>{{stock}}</td>
+        </tr>
+      </table>
+
+      <p>يرجى اتخاذ الإجراء المناسب في أقرب وقت.</p>
+    </div>
+
+    <div class="footer">
+      <p>&copy; {{year}} {{companyName}}. جميع الحقوق محفوظة.</p>
+    </div>
+  </div>
+</body>
+</html>

@@ -29,6 +29,7 @@ import { generateUniqueSlug } from 'src/shared/utils/slug.util';
 import { sanitizePayload } from 'src/shared/utils/object.utils';
 import { withTransactionRetry } from 'src/shared/utils/database.utils';
 import { handleDuplicateKeyError } from '../products-helper/product-error.utils';
+import { InventoryAlertService } from './inventory-alert.service';
 
 /**
  * Handles all write operations: create, update, delete, restore.
@@ -49,6 +50,7 @@ export class ProductMutationService {
     private readonly queryService: ProductQueryService,
     private readonly i18n: CustomI18nService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly inventoryAlertService: InventoryAlertService,
   ) {}
 
   /**
@@ -388,6 +390,15 @@ export class ProductMutationService {
                   throw new BadRequestException(
                     `Validation failed for variant ${_id}: ${validationError.message}`,
                   );
+                }
+
+                // CLEAR STOCK ALERT CACHE IF STOCK IS UPDATED
+                if ('stock' in updateData) {
+                  this.inventoryAlertService
+                    .clearStockAlertCache(String(_id))
+                    .catch((e) =>
+                      this.logger.error('Failed to clear stock alert cache', e),
+                    );
                 }
 
                 bulkUpdates.push({

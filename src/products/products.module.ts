@@ -28,16 +28,21 @@ import {
   SubCategory,
   SubCategorySchema,
 } from 'src/sub-category/shared/schemas/sub-category.schema';
+import { Role, RoleSchema } from 'src/roles/shared/schemas/role.schema';
+import { BullModule } from '@nestjs/bullmq';
 
 // â”€â”€â”€ New separated services â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 import { ProductQueryService } from './services/products-query.service';
 import { ProductMutationService } from './services/products-mutation.service';
 import { ProductFileService } from './services/products-file.service';
 import { ProductSkuService } from './services/products-sku.service';
+import { InventoryAlertService } from './services/inventory-alert.service';
+import { InventoryEventListener } from './services/inventory-event.listener';
 
 @Module({
   imports: [
     FileUploadDiskStorageModule,
+    BullModule.registerQueue({ name: 'mail-queue' }),
     MongooseModule.forFeatureAsync([
       {
         name: Product.name,
@@ -75,6 +80,12 @@ import { ProductSkuService } from './services/products-sku.service';
           return SubCategorySchema;
         },
       },
+      {
+        name: Role.name,
+        useFactory: () => {
+          return RoleSchema;
+        },
+      },
     ]),
     AuthModule,
     OrderModule,
@@ -88,11 +99,13 @@ import { ProductSkuService } from './services/products-sku.service';
     ProductMutationService,
     ProductFileService,
     ProductSkuService,
+    InventoryAlertService,
+    InventoryEventListener,
     // Helpers
     CustomI18nService,
     ProductsStatistics,
     AggregationSyncService,
   ],
-  exports: [MongooseModule],
+  exports: [MongooseModule, InventoryAlertService],
 })
 export class ProductsModule {}

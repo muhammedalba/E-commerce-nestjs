@@ -122,4 +122,43 @@ export class EmailService {
       },
     });
   }
+
+  async send_inventory_alert(
+    to: string,
+    adminName: string,
+    productTitle: string,
+    sku: string,
+    stock: number,
+    threshold: number,
+    alertType: string,
+    subject: string,
+    lang?: string,
+  ): Promise<void> {
+    const resolvedLang =
+      lang ??
+      I18nContext.current()?.lang ??
+      process.env.DEFAULT_LANGUAGE ??
+      'ar';
+    const template = `inventory-alert-${resolvedLang}`;
+    console.log(
+      `📧 Attempting to send [send_inventory_alert] to: ${to} | Lang: ${resolvedLang} | Template: ${template}`,
+    );
+
+    await this.mailerService.sendMail({
+      to,
+      subject,
+      template,
+      context: {
+        subject,
+        adminName,
+        productTitle,
+        sku,
+        stock,
+        threshold,
+        alertType,
+        year: new Date().getFullYear(),
+        companyName: process.env.APP_NAME,
+      },
+    });
+  }
 }

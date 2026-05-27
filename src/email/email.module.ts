@@ -27,8 +27,10 @@ import { MailProcessor } from './mail.processor';
         template: {
           dir: path.join(process.cwd(), 'src', 'email', 'templates'),
 
-          adapter: new HandlebarsAdapter(),
-
+          adapter: new HandlebarsAdapter({
+            eq: (a: unknown, b: unknown) => a === b,
+            neq: (a: unknown, b: unknown) => a !== b,
+          }),
           options: {
             strict: true,
           },

@@ -20,6 +20,14 @@ export class CartItem {
 
   @Prop({ required: true, min: 1 })
   declare quantity: number;
+
+  /**
+   * Price Snapshot: the unit price captured at the moment the item was added to the cart.
+   * Stored to avoid N+1 queries (e.g., when removing items and recalculating totals).
+   * Derived from `variant.priceAfterDiscount ?? variant.price` at add-time.
+   */
+  @Prop({ required: true, min: 0 })
+  declare unitPrice: number;
 }
 
 export const CartItemSchema = SchemaFactory.createForClass(CartItem);
