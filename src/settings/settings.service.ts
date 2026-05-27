@@ -136,6 +136,15 @@ export class SettingsService {
   }
 
   /**
+   * فحص هل تنبيهات نقص المخزون مفعّلة (للسلة فقط)
+   * يستخدم الـ Cache تلقائياً عبر getSettings()
+   */
+  async isInventoryAlertsEnabled(): Promise<boolean> {
+    const settings = await this.getSettings();
+    return settings.inventoryAlertsEnabled ?? true;
+  }
+
+  /**
    * مسح كافة التخزين المؤقت للإعدادات
    */
   async clearCache(): Promise<{ success: boolean }> {

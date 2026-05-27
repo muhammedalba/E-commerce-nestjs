@@ -28,7 +28,7 @@ export class InventoryAlertService {
   async checkStockAndAlert(
     product: {
       _id: Types.ObjectId | string;
-      title: any;
+      title: { ar: string; en: string } | string;
       isUnlimitedStock: boolean;
       isActive: boolean;
     },
@@ -78,8 +78,6 @@ export class InventoryAlertService {
       alertType,
     };
 
-    console.log('inventory alert event emitted');
-    console.log('payload', payload);
     this.eventEmitter.emit(`inventory.alert.${alertType}`, payload);
   }
 

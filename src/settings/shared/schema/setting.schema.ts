@@ -182,6 +182,10 @@ export class Setting {
   @ValidateNested()
   @Type(() => FieldLocalizeDto)
   declare maintenanceMessage: FieldLocalizeDto;
+
+  // إعدادات تنبيهات المخزون
+  @Prop({ type: Boolean, default: true })
+  declare inventoryAlertsEnabled: boolean;
 }
 
 export const SettingSchema = SchemaFactory.createForClass(Setting);

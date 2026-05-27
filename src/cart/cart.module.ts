@@ -6,6 +6,7 @@ import { CartController } from './cart.controller';
 import { Cart, CartSchema } from './shared/schemas/cart.schema';
 import { AuthModule } from 'src/auth/auth.module';
 import { ProductsModule } from 'src/products/products.module';
+import { SettingsModule } from 'src/settings/settings.module';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import {
   Product,
@@ -20,6 +21,7 @@ import {
   imports: [
     AuthModule,
     ProductsModule,
+    SettingsModule,
     MongooseModule.forFeature([{ name: Cart.name, schema: CartSchema }]),
     MongooseModule.forFeature([{ name: Product.name, schema: ProductSchema }]),
     MongooseModule.forFeature([

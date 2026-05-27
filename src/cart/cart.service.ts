@@ -11,6 +11,7 @@ import {
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { CartItem } from './shared/schemas/cart-item.schema';
 import { InventoryAlertService } from 'src/products/services/inventory-alert.service';
+import { SettingsService } from 'src/settings/settings.service';
 
 @Injectable()
 export class CartService {
@@ -21,6 +22,7 @@ export class CartService {
     private readonly VariantModel: Model<ProductVariantDocument>,
     protected readonly i18n: CustomI18nService,
     private readonly inventoryAlertService: InventoryAlertService,
+    private readonly settingsService: SettingsService,
   ) {}
 
   /**
@@ -84,11 +86,14 @@ export class CartService {
       // 4. Silent Inventory Correction
       if (!product.isUnlimitedStock && variant.stock < item.quantity) {
         isModified = true;
-        await this.inventoryAlertService.checkStockAndAlert(
-          product as any,
-          variant as any,
-          item.quantity,
-        );
+        // فحص الإعداد قبل الإرسال — سلة فقط
+        if (await this.settingsService.isInventoryAlertsEnabled()) {
+          await this.inventoryAlertService.checkStockAndAlert(
+            product as any,
+            variant as any,
+            item.quantity,
+          );
+        }
         if (variant.stock <= 0) {
           continue; // Remove from cart if completely out of stock
         } else {
@@ -153,11 +158,13 @@ export class CartService {
 
     // 3. initial stock check
     if (!product.isUnlimitedStock && variant.stock < quantity) {
-      await this.inventoryAlertService.checkStockAndAlert(
-        product as any,
-        variant as any,
-        quantity,
-      );
+      if (await this.settingsService.isInventoryAlertsEnabled()) {
+        await this.inventoryAlertService.checkStockAndAlert(
+          product as any,
+          variant as any,
+          quantity,
+        );
+      }
       throw new BadRequestException(
         'الكمية المطلوبة غير متوفرة في المخزون حالياً',
       );
@@ -201,11 +208,13 @@ export class CartService {
             const newTotalQty = existingItem.quantity + quantity;
             // check new total quantity
             if (!product.isUnlimitedStock && variant.stock < newTotalQty) {
-              await this.inventoryAlertService.checkStockAndAlert(
-                product as any,
-                variant as any,
-                newTotalQty,
-              );
+              if (await this.settingsService.isInventoryAlertsEnabled()) {
+                await this.inventoryAlertService.checkStockAndAlert(
+                  product as any,
+                  variant as any,
+                  newTotalQty,
+                );
+              }
               throw new BadRequestException(
                 'الكمية الإجمالية تتخطى المخزون المتوفر',
               );
@@ -274,11 +283,13 @@ export class CartService {
 
         // check stock
         if (!product.isUnlimitedStock && variant.stock < quantity) {
-          await this.inventoryAlertService.checkStockAndAlert(
-            product as any,
-            variant as any,
-            quantity,
-          );
+          if (await this.settingsService.isInventoryAlertsEnabled()) {
+            await this.inventoryAlertService.checkStockAndAlert(
+              product as any,
+              variant as any,
+              quantity,
+            );
+          }
           throw new BadRequestException(
             'الكمية المطلوبة تتخطى المخزون المتوفر',
           );

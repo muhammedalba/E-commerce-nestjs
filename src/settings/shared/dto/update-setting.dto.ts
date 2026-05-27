@@ -6,17 +6,8 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
-
-class LocalizedStringDto {
-  @IsString()
-  @IsOptional()
-  ar?: string;
-
-  @IsString()
-  @IsOptional()
-  en?: string;
-}
+import { Transform, Type } from 'class-transformer';
+import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
 
 class SocialLinksDto {
   @IsString()
@@ -58,18 +49,18 @@ class ContactInfoDto {
 
   @IsOptional()
   @ValidateNested()
-  @Type(() => LocalizedStringDto)
-  address?: LocalizedStringDto;
+  @Type(() => FieldLocalizeDto)
+  address?: FieldLocalizeDto;
 
   @IsOptional()
   @ValidateNested()
-  @Type(() => LocalizedStringDto)
-  workingDays?: LocalizedStringDto;
+  @Type(() => FieldLocalizeDto)
+  workingDays?: FieldLocalizeDto;
 
   @IsOptional()
   @ValidateNested()
-  @Type(() => LocalizedStringDto)
-  workingHours?: LocalizedStringDto;
+  @Type(() => FieldLocalizeDto)
+  workingHours?: FieldLocalizeDto;
 }
 
 class StoreFeaturesDto {
@@ -110,14 +101,14 @@ class GatewaysDto {
 
 export class UpdateSettingDto {
   @ValidateNested()
-  @Type(() => LocalizedStringDto)
+  @Type(() => FieldLocalizeDto)
   @IsOptional()
-  siteName?: LocalizedStringDto;
+  siteName?: FieldLocalizeDto;
 
   @ValidateNested()
-  @Type(() => LocalizedStringDto)
+  @Type(() => FieldLocalizeDto)
   @IsOptional()
-  siteDescription?: LocalizedStringDto;
+  siteDescription?: FieldLocalizeDto;
 
   @IsOptional()
   @IsString()
@@ -148,14 +139,14 @@ export class UpdateSettingDto {
   freeShippingThreshold?: number;
 
   @ValidateNested()
-  @Type(() => LocalizedStringDto)
+  @Type(() => FieldLocalizeDto)
   @IsOptional()
-  metaTitle?: LocalizedStringDto;
+  metaTitle?: FieldLocalizeDto;
 
   @ValidateNested()
-  @Type(() => LocalizedStringDto)
+  @Type(() => FieldLocalizeDto)
   @IsOptional()
-  metaDescription?: LocalizedStringDto;
+  metaDescription?: FieldLocalizeDto;
 
   @IsString()
   @IsOptional()
@@ -183,11 +174,13 @@ export class UpdateSettingDto {
   vatRate?: number;
 
   @Type(() => Boolean)
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   @IsOptional()
   taxesIncluded?: boolean;
 
   @Type(() => Boolean)
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   @IsOptional()
   debugMode?: boolean;
@@ -204,11 +197,13 @@ export class UpdateSettingDto {
   gateways?: GatewaysDto;
 
   @Type(() => Boolean)
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   @IsOptional()
   allowRegistration?: boolean;
 
   @Type(() => Boolean)
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   @IsOptional()
   autoBackup?: boolean;
@@ -218,12 +213,19 @@ export class UpdateSettingDto {
   googleMapsApiKey?: string;
 
   @Type(() => Boolean)
+  @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   @IsOptional()
   maintenanceMode?: boolean;
 
   @ValidateNested()
-  @Type(() => LocalizedStringDto)
+  @Type(() => FieldLocalizeDto)
   @IsOptional()
-  maintenanceMessage?: LocalizedStringDto;
+  maintenanceMessage?: FieldLocalizeDto;
+
+  @Type(() => Boolean)
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  @IsOptional()
+  inventoryAlertsEnabled?: boolean;
 }

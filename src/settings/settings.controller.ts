@@ -70,6 +70,7 @@ export class SettingsController {
       'autoBackup',
       'taxesIncluded',
       'debugMode',
+      'inventoryAlertsEnabled',
     ]),
   )
   async updateSettings(
