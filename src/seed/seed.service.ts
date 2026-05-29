@@ -151,6 +151,19 @@ export class SeedService {
       } as any);
     }
 
+    const existingBankTransfer = await this.connection
+      .collection('paymentmethods')
+      .findOne({ code: 'bankTransfer' });
+    if (!existingBankTransfer) {
+      await this.paymentsService.create({
+        name: 'تحويل بنكي',
+        code: 'bankTransfer',
+        type: PaymentType.BANK_TRANSFER,
+        displayOrder: 3,
+        fees: 0,
+      } as any);
+    }
+
     console.log('✅ Seeding Completed Successfully!');
   }
 

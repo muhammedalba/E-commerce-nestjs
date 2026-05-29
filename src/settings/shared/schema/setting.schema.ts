@@ -186,6 +186,10 @@ export class Setting {
   // إعدادات تنبيهات المخزون
   @Prop({ type: Boolean, default: true })
   declare inventoryAlertsEnabled: boolean;
+
+  // الحقول الديناميكية (لا تُحفظ في قاعدة البيانات)
+  hasCustomShippingRates?: boolean;
+  hasCustomTaxes?: boolean;
 }
 
 export const SettingSchema = SchemaFactory.createForClass(Setting);

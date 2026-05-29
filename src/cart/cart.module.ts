@@ -16,12 +16,14 @@ import {
   ProductVariant,
   ProductVariantSchema,
 } from 'src/products/shared/schemas/ProductVariant.schema';
+import { CouponsModule } from 'src/coupons/coupons.module';
 
 @Module({
   imports: [
     AuthModule,
     ProductsModule,
     SettingsModule,
+    CouponsModule,
     MongooseModule.forFeature([{ name: Cart.name, schema: CartSchema }]),
     MongooseModule.forFeature([{ name: Product.name, schema: ProductSchema }]),
     MongooseModule.forFeature([

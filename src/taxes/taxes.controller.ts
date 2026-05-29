@@ -55,7 +55,7 @@ export class TaxesController {
   /* ================================================ */
   @Post()
   @RequirePermission(Permissions.CREATE_TAX)
-  @ClearCache('taxes')
+  @ClearCache('taxes', 'settings')
   create(@Body() createTaxDto: CreateTaxDto) {
     return this.taxesService.create(createTaxDto);
   }
@@ -65,7 +65,7 @@ export class TaxesController {
   /* ================================================ */
   @Patch(':id')
   @RequirePermission(Permissions.UPDATE_TAX)
-  @ClearCache('taxes')
+  @ClearCache('taxes', 'settings')
   update(@Param() id: IdParamDto, @Body() updateTaxDto: UpdateTaxDto) {
     return this.taxesService.update(id, updateTaxDto);
   }
@@ -75,7 +75,7 @@ export class TaxesController {
   /* ================================================ */
   @Delete(':id')
   @RequirePermission(Permissions.DELETE_TAX)
-  @ClearCache('taxes')
+  @ClearCache('taxes', 'settings')
   remove(@Param() id: IdParamDto) {
     return this.taxesService.remove(id);
   }

@@ -1,6 +1,6 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { InjectModel, InjectConnection } from '@nestjs/mongoose';
+import { Model, Connection } from 'mongoose';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { ConfigService } from '@nestjs/config';
@@ -26,6 +26,9 @@ export class SettingsService {
 
     private readonly configService: ConfigService,
     private readonly fileUploadService: FileUploadService,
+
+    @InjectConnection()
+    private readonly connection: Connection,
   ) {}
 
   /**
@@ -45,14 +48,49 @@ export class SettingsService {
       { upsert: true, new: true, lean: true },
     );
 
+    let hasCustomShippingRates = false;
+    let hasCustomTaxes = false;
+
+    try {
+      if (this.connection.models['ShippingRate']) {
+        const result = await this.connection.models['ShippingRate']
+          .findOne({ isActive: true })
+          .select('_id')
+          .lean()
+          .exec();
+        hasCustomShippingRates = !!result;
+      }
+    } catch (e) {
+      this.logger.error('Failed to check custom shipping rates', e);
+    }
+
+    try {
+      if (this.connection.models['Tax']) {
+        const result = await this.connection.models['Tax']
+          .findOne({ isActive: true })
+          .select('_id')
+          .lean()
+          .exec();
+        hasCustomTaxes = !!result;
+      }
+    } catch (e) {
+      this.logger.error('Failed to check custom taxes', e);
+    }
+
+    const settingsWithCustoms = {
+      ...settings,
+      hasCustomShippingRates,
+      hasCustomTaxes,
+    } as unknown as Setting;
+
     // 3. تخزين في الـ Cache
     await this.cacheManager.set(
       SETTINGS_CACHE_KEY,
-      settings,
+      settingsWithCustoms,
       SETTINGS_CACHE_TTL,
     );
 
-    return settings as Setting;
+    return settingsWithCustoms;
   }
 
   /**

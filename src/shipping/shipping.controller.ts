@@ -94,7 +94,7 @@ export class ShippingController {
   @Post('providers')
   @RequirePermission(Permissions.CREATE_SHIPPING)
   @UseGuards(AuthGuard, PermissionsGuard)
-  @ClearCache('shipping')
+  @ClearCache('shipping', 'settings')
   @UseInterceptors(FileInterceptor('logo'))
   createProvider(
     @Body() body: CreateShippingProviderDto,
@@ -110,7 +110,7 @@ export class ShippingController {
   @Patch('providers/:id')
   @RequirePermission(Permissions.UPDATE_SHIPPING)
   @UseGuards(AuthGuard, PermissionsGuard)
-  @ClearCache('shipping')
+  @ClearCache('shipping', 'settings')
   @UseInterceptors(FileInterceptor('logo'))
   updateProvider(
     @Param() { id }: IdParamDto,
@@ -126,7 +126,7 @@ export class ShippingController {
   @Post('rates')
   @RequirePermission(Permissions.CREATE_SHIPPING)
   @UseGuards(AuthGuard, PermissionsGuard)
-  @ClearCache('shipping')
+  @ClearCache('shipping', 'settings')
   createRate(@Body() body: CreateShippingRateDto) {
     return this.shippingRatesService.createRate(body);
   }
@@ -137,7 +137,7 @@ export class ShippingController {
   @Patch('rates/:id')
   @RequirePermission(Permissions.UPDATE_SHIPPING)
   @UseGuards(AuthGuard, PermissionsGuard)
-  @ClearCache('shipping')
+  @ClearCache('shipping', 'settings')
   updateRate(@Param() { id }: IdParamDto, @Body() body: UpdateShippingRateDto) {
     return this.shippingRatesService.updateRate(id, body);
   }
@@ -148,7 +148,7 @@ export class ShippingController {
   @Delete('providers/:id')
   @RequirePermission(Permissions.DELETE_SHIPPING)
   @UseGuards(AuthGuard, PermissionsGuard)
-  @ClearCache('shipping')
+  @ClearCache('shipping', 'settings')
   deleteProvider(@Param() { id }: IdParamDto) {
     return this.shippingService.deleteProvider(id);
   }
@@ -159,7 +159,7 @@ export class ShippingController {
   @Delete('rates/:id')
   @RequirePermission(Permissions.DELETE_SHIPPING)
   @UseGuards(AuthGuard, PermissionsGuard)
-  @ClearCache('shipping')
+  @ClearCache('shipping', 'settings')
   deleteRate(@Param() { id }: IdParamDto) {
     return this.shippingRatesService.deleteRate(id);
   }

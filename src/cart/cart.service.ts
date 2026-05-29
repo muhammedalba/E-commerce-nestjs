@@ -12,6 +12,7 @@ import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { CartItem } from './shared/schemas/cart-item.schema';
 import { InventoryAlertService } from 'src/products/services/inventory-alert.service';
 import { SettingsService } from 'src/settings/settings.service';
+import { CouponHelperService } from 'src/coupons/shared/coupon.helper';
 
 @Injectable()
 export class CartService {
@@ -23,6 +24,7 @@ export class CartService {
     protected readonly i18n: CustomI18nService,
     private readonly inventoryAlertService: InventoryAlertService,
     private readonly settingsService: SettingsService,
+    private readonly couponHelperService: CouponHelperService,
   ) {}
 
   /**
@@ -436,5 +438,25 @@ export class CartService {
       }
     }
     return this.getCart(userId);
+  }
+
+  // ------------ =============================== ---------- //
+  // ------------ ======  VALIDATE COUPON   ====== ---------- //
+  // ------------ =============================== ---------- //
+  /**
+   * Pre-validates a coupon code against the current cart total.
+   * Does NOT mark the coupon as used — that happens at checkout.
+   */
+  async validateCouponForCart(
+    userId: string,
+    couponCode: string,
+    orderAmount: number,
+  ) {
+    return this.couponHelperService.applyCouponIfAvailable(
+      couponCode,
+      userId,
+      orderAmount,
+      [], // No item-level validation at cart stage; full validation happens at checkout
+    );
   }
 }

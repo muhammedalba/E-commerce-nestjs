@@ -38,6 +38,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
           : (res as any).message || exception.message;
     } else if (exception instanceof Error) {
       message = exception.message;
+      console.error('💥 Unexpected Server Error:', exception);
+    } else {
+      console.error('💥 Unknown Server Exception:', exception);
     }
 
     // Special handling for I18nValidationException
