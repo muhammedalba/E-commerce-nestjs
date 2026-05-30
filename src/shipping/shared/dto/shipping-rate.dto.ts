@@ -52,8 +52,15 @@ export class CreateShippingRateDto {
   additionalKgPrice?: number;
 
   @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Transform(({ value }) => Number(value))
+  freeShippingThreshold?: number;
+
+  @IsOptional()
   @IsString()
   estimatedDays?: string;
+
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()

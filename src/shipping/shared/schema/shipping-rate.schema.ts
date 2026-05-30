@@ -26,6 +26,9 @@ export class ShippingRate {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: MODEL_NAMES.CITY })
   declare city: City;
 
+  @Prop({ type: Number, default: 0 })
+  declare freeShippingThreshold: number;
+
   @Prop({ required: true })
   declare basePrice: number;
 
@@ -50,3 +53,4 @@ export const ShippingRateSchema = SchemaFactory.createForClass(ShippingRate);
 ShippingRateSchema.index({ city: 1, isActive: 1 });
 ShippingRateSchema.index({ region: 1, isActive: 1 });
 ShippingRateSchema.index({ provider: 1, city: 1 });
+ShippingRateSchema.index({ freeShippingThreshold: 1, city: 1, isActive: 1 });
