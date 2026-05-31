@@ -45,6 +45,9 @@ export class ApiFeatures<T> {
       'priceRange', // مهم
       'totalSold',
       'active',
+      'country',
+      'region',
+      'city',
     ];
 
     const mongoQuery: Record<string, any> = {};
@@ -142,6 +145,7 @@ export class ApiFeatures<T> {
         }
       }
     }
+    console.log('mongoQuery', mongoQuery);
     this.mongooseQuery = this.mongooseQuery.find(mongoQuery);
     return this;
   }

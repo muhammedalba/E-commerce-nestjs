@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Tax, TaxDocument } from './shared/schema/tax.schema';
 import { CreateTaxDto, UpdateTaxDto } from './shared/dto/tax.dto';
 import { SettingsService } from '../settings/settings.service';
@@ -24,6 +24,59 @@ export class TaxesService extends BaseService<TaxDocument> {
     protected readonly fileUploadService: FileUploadService,
   ) {
     super(taxModel, i18n, fileUploadService);
+  }
+
+  async findByCountry(countryId: string) {
+    if (!countryId) {
+      throw new BadRequestException(this.t('exception.NOT_FOUND'));
+    }
+    // convert country id to object id
+    const countryQuery = Types.ObjectId.isValid(countryId)
+      ? new Types.ObjectId(countryId)
+      : countryId;
+
+    // 1. Search by country first
+    const listByCountry = await this.taxModel
+      .find({
+        country: countryQuery,
+        isActive: true,
+      })
+      .select('percentage isIncludedInPrice country')
+      .lean();
+
+    // Mongoose .find() always returns an array, so we only check length
+    if (listByCountry.length > 0) return listByCountry;
+
+    // 2. Search for the general tax if no tax was found for the country
+    const generalTax = await this.taxModel
+      .find({
+        $or: [
+          { country: { $exists: false } },
+          { country: null },
+          { country: '' },
+        ],
+        isActive: true,
+      })
+      .select('percentage isIncludedInPrice country')
+      .lean();
+
+    if (generalTax.length > 0) return generalTax;
+
+    // 3. Search for the general tax in the settings if the above failed
+    const settings = await this.settingsService.getSettings();
+
+    // Optional Chaining
+    if (settings?.vatRate > 0) {
+      return [
+        {
+          percentage: settings.vatRate,
+          isIncludedInPrice: settings.taxesIncluded,
+          country: null,
+        },
+      ];
+    }
+
+    return [];
   }
 
   /**
@@ -83,6 +136,8 @@ export class TaxesService extends BaseService<TaxDocument> {
   }
 
   async findAll(queryString: QueryString): Promise<any> {
+    console.log(queryString);
+
     return this.findAllDoc(Tax.name, queryString, {
       path: 'country',
       select: 'name code',
@@ -108,23 +163,6 @@ export class TaxesService extends BaseService<TaxDocument> {
 
   async remove(id: IdParamDto): Promise<void> {
     return this.deleteOneDoc(id);
-  }
-
-  /**
-   * جلب نسبة الضريبة النشطة - نفضل الإعدادات العامة أولاً
-   */
-  async getActiveTaxPercentage(): Promise<number> {
-    const settings = await this.settingsService.getSettings();
-    if (settings.vatRate !== undefined && settings.vatRate > 0) {
-      return settings.vatRate;
-    }
-
-    // Fallback للـ Tax collection القديم
-    const activeTax = await this.taxModel
-      .findOne({ isActive: true })
-      .select('percentage')
-      .lean();
-    return (activeTax as any)?.percentage ?? 0;
   }
 
   /**
