@@ -89,38 +89,38 @@ export class OrderController {
   // =========================================  PAYMENT BY BANK TRANSFER =============================
   // ========================================================================================
 
-  @Post('PaymentByBankTransfer')
-  @ClearCache('order')
-  @UseInterceptors(FileInterceptor('transferReceiptImg'))
-  async checkoutByBankTransfer(
-    @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], true))
-    file: MulterFileType,
-    @Req() req: { user: JwtPayload },
-    @Body() dto: CreateOrderDto,
-  ) {
-    return await this.orderService.PaymentByBankTransfer(
-      req.user.user_id,
-      req.user.email,
-      dto,
-      file,
-    );
-  }
+  // @Post('PaymentByBankTransfer')
+  // @ClearCache('order')
+  // @UseInterceptors(FileInterceptor('transferReceiptImg'))
+  // async checkoutByBankTransfer(
+  //   @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], true))
+  //   file: MulterFileType,
+  //   @Req() req: { user: JwtPayload },
+  //   @Body() dto: CreateOrderDto,
+  // ) {
+  //   return await this.orderService.PaymentByBankTransfer(
+  //     req.user.user_id,
+  //     req.user.email,
+  //     dto,
+  //     file,
+  //   );
+  // }
 
   // ========================================================================================
   // =========================================  PLACE ORDER (ENTERPRISE) =====================
   // ========================================================================================
-  @Post('placeOrder')
-  @ClearCache('order')
-  async placeOrder(
-    @Req() req: { user: JwtPayload },
-    @Body() dto: CreateOrderDto,
-  ) {
-    return await this.orderService.placeOrder(
-      req.user.user_id,
-      req.user.email,
-      dto,
-    );
-  }
+  // @Post('placeOrder')
+  // @ClearCache('order')
+  // async placeOrder(
+  //   @Req() req: { user: JwtPayload },
+  //   @Body() dto: CreateOrderDto,
+  // ) {
+  //   return await this.orderService.placeOrder(
+  //     req.user.user_id,
+  //     req.user.email,
+  //     dto,
+  //   );
+  // }
   // This endpoint is used to apply a coupon to an order
 
   // ========================================================================================

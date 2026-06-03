@@ -65,4 +65,33 @@ export class ProductHelperService {
 
     await this.variantModel.bulkWrite(bulkOptions);
   }
+
+  /**
+   * Reverts variant stock and sold counts after a failed order (Compensating action).
+   */
+  async revertProductStats(validatedItems: ValidatedItem[]) {
+    const bulkOptions = validatedItems.map((item) => {
+      const newSold = Math.max(0, (item.variant.sold || 0) - item.quantity);
+      let newStock = item.variant.stock;
+
+      // Only increment stock if product is NOT unlimited
+      if (!item.product.isUnlimitedStock) {
+        newStock = item.variant.stock + item.quantity;
+      }
+
+      return {
+        updateOne: {
+          filter: { _id: item.variant.id },
+          update: {
+            $set: {
+              sold: newSold,
+              stock: newStock,
+            },
+          },
+        },
+      };
+    });
+
+    await this.variantModel.bulkWrite(bulkOptions);
+  }
 }

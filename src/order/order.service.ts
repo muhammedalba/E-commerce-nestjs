@@ -17,10 +17,9 @@ import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { OrdersStatisticsService } from './shared/order-helper/order-statistics.service';
 import { User } from 'src/auth/shared/schema/user.schema';
-import { CheckoutService } from '../checkout/checkout.service';
 import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/shared/schema/audit-log.schema';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 
 @Injectable()
 export class OrderService {
@@ -34,7 +33,6 @@ export class OrderService {
     private readonly productHelperService: ProductHelperService,
     private readonly couponHelperService: CouponHelperService,
     private readonly ordersStatisticsService: OrdersStatisticsService,
-    private readonly checkoutService: CheckoutService,
     private readonly auditService: AuditService,
     @InjectConnection() private readonly connection: Connection,
     private readonly eventEmitter: EventEmitter2,
@@ -46,26 +44,6 @@ export class OrderService {
       startDate,
       endDate,
     );
-  }
-
-  async PaymentByBankTransfer(
-    userId: string,
-    user_email: string,
-    dto: CreateOrderDto,
-    file: MulterFileType,
-  ) {
-    // 1) Handle file upload
-    let transferReceiptImg: string | undefined;
-    if (file) {
-      transferReceiptImg = await this.fileUploadService.saveFileToDisk(
-        file,
-        'orders',
-      );
-    }
-
-    // 2) Delegate to the new enterprise placeOrder method
-    // This ensures all tax, shipping, and payment fee calculations are consistent
-    return await this.placeOrder(userId, user_email, dto, transferReceiptImg);
   }
 
   async findAll(user: JwtPayload, queryString: QueryString) {
@@ -222,122 +200,175 @@ export class OrderService {
   }
 
   /* ================================================ */
-  /*  PLACE ORDER - New Enterprise Logic              */
+  /*  CREATE PENDING ORDER - Event Driven Logic       */
   /* ================================================ */
-  async placeOrder(
-    userId: string,
-    userEmail: string,
-    dto: CreateOrderDto,
-    transferReceiptImg?: string,
-  ) {
-    const session = await this.connection.startSession();
-    session.startTransaction();
-
+  @OnEvent('checkout.placeOrderCommand')
+  async handlePlaceOrderCommand(orderPayload: any) {
     try {
-      // 1) Get Checkout Preview (Validation & Calculation)
-      const checkoutPreview = await this.checkoutService.getCheckoutPreview(
-        {
-          items: dto.items as any,
-          cityId: dto.cityId,
-          paymentMethodId: dto.paymentMethodId,
-          shippingProviderId: dto.shippingProviderId,
-          couponCode: dto.couponCode,
-        },
-        userId,
-      );
-
-      // 2) Validate stock and items (Reuse existing helper if possible, or use logic from checkout)
-      // Note: CheckoutService already validated product existence and prices.
-      // We still need to decrement stock.
-      const { validatedItems } =
-        await this.orderHelperService.validateOrderItems(dto.items);
-
-      // 3) Create Order Document
+      // 1) Create Order Document
       const newOrder = new this.OrderModel({
-        user: userId,
-        items: dto.items,
-        shippingAddress: dto.shippingAddress,
+        user: orderPayload.user,
+        items: orderPayload.items,
+        shippingAddress: orderPayload.shippingAddress,
 
-        // Enterprise Commerce Fields
-        shippingProviderId: new Types.ObjectId(
-          checkoutPreview.delivery.providerId,
-        ),
-        shippingRateId: new Types.ObjectId(checkoutPreview.delivery.rateId),
-        paymentMethodId: new Types.ObjectId(dto.paymentMethodId),
+        shippingProviderId: new Types.ObjectId(orderPayload.shippingProviderId),
+        shippingRateId: new Types.ObjectId(orderPayload.shippingRateId),
+        paymentMethodId: new Types.ObjectId(orderPayload.paymentMethodId),
 
-        shippingAmount: checkoutPreview.summary.shippingCost,
-        taxAmount: checkoutPreview.summary.taxAmount,
-        paymentFees: checkoutPreview.summary.paymentFees,
-        totalPrice: checkoutPreview.summary.subtotal,
-        discountAmount: checkoutPreview.summary.discount,
-        grandTotal: checkoutPreview.summary.total,
-        currency: checkoutPreview.summary.currency,
+        shippingAmount: orderPayload.shippingAmount,
+        taxAmount: orderPayload.taxAmount,
+        paymentFees: orderPayload.paymentFees,
+        totalPrice: orderPayload.totalPrice,
+        discountAmount: orderPayload.discountAmount,
+        grandTotal: orderPayload.grandTotal,
+        currency: orderPayload.currency,
 
         status: 'pending',
         paymentStatus: 'pending',
         isCheckedOut: true,
         checkedOutAt: new Date(),
-        checkoutSummary: checkoutPreview,
-        notes: dto.notes,
-        transferReceiptImg: transferReceiptImg || dto.transferReceiptImg,
+        checkoutSummary: orderPayload,
+        notes: orderPayload.notes,
+        transferReceiptImg: orderPayload.transferReceiptImg,
       });
 
-      const savedOrder = await newOrder.save({ session });
+      const savedOrder = await newOrder.save();
 
-      // 5) If there is a coupon used, record it and the user's record in the database.
-      if (checkoutPreview.couponDetails) {
-        await this.couponHelperService.markCouponAsUsed(
-          checkoutPreview.couponDetails.CouponId,
-          userId,
-        );
-      }
+      // 2) Audit Log
+      await this.auditService.log({
+        action: AuditAction.ORDER_PLACED,
+        module: 'ORDER',
+        userId: orderPayload.user,
+        userEmail: orderPayload.userEmail,
+        newData: savedOrder.toObject(),
+        previousData: {},
+      });
 
-      // 6) Update user total orders count
-      await this.UserModel.findByIdAndUpdate(
-        userId,
-        { $inc: { totalOrder: 1 } },
-        { session },
-      );
-
-      // 7) Clear User Cart (Assuming CartModule is available)
-      // TODO: Implement cart clearing if cart service is injected
-
-      // 8) Audit Log
-      await this.auditService.log(
-        {
-          action: AuditAction.ORDER_PLACED,
-          module: 'ORDER',
-          userId,
-          userEmail,
-          newData: savedOrder.toObject(),
-          previousData: {},
-        },
-        session,
-      );
-
-      // 7) Send Email
-      await this.orderEmailService.sendOrderEmail(
-        savedOrder,
-        validatedItems,
-        userEmail,
-      );
-
-      await session.commitTransaction();
+      // Return orderId back to the Orchestrator
       return {
         success: true,
-        message: this.i18n.translate('success.ORDER_CREATED_SUCCESSFULLY'),
-        orderId: savedOrder._id,
-        data: savedOrder,
+        orderId: savedOrder._id.toString(),
       };
     } catch (error: any) {
-      await session.abortTransaction();
       this.logger.error(
         `Order Placement Failed: ${error.message}`,
         error.stack,
       );
       throw error;
-    } finally {
-      session.endSession();
+    }
+  }
+
+  /* ================================================ */
+  /*  SAGA: ORDER CREATED EVENT HANDLER               */
+  /* ================================================ */
+  @OnEvent('order.created', { async: true })
+  async handleOrderCreatedEvent(payload: {
+    orderId: string;
+    userId: string;
+    items: any[];
+    couponDetails?: any;
+  }) {
+    try {
+      // 1) Re-validate and map items to ValidatedItem type for helper services
+      const { validatedItems } =
+        await this.orderHelperService.validateOrderItems(payload.items);
+
+      // 2) Decrement Stock
+      await this.productHelperService.updateProductStats(validatedItems);
+
+      // 3) Mark Coupon as used
+      if (payload.couponDetails && payload.couponDetails.CouponId) {
+        await this.couponHelperService.markCouponAsUsed(
+          payload.couponDetails.CouponId,
+          payload.userId,
+        );
+      }
+
+      // 4) Update User order count
+      await this.UserModel.findByIdAndUpdate(payload.userId, {
+        $inc: { totalOrder: 1 },
+      });
+
+      // 5) Send Email
+      const order = await this.OrderModel.findById(payload.orderId);
+      const user = await this.UserModel.findById(payload.userId);
+      if (order && user) {
+        await this.orderEmailService.sendOrderEmail(
+          order,
+          validatedItems,
+          user.email,
+        );
+      }
+    } catch (error: any) {
+      this.logger.error(
+        `Saga 'order.created' Failed: ${error.message}`,
+        error.stack,
+      );
+      // Trigger compensating event
+      this.eventEmitter.emit('order.failed', {
+        ...payload,
+        reason: error.message,
+      });
+    }
+  }
+
+  /* ================================================ */
+  /*  SAGA: COMPENSATING EVENT (ORDER FAILED)         */
+  /* ================================================ */
+  @OnEvent('order.failed', { async: true })
+  async handleOrderFailedEvent(payload: {
+    orderId: string;
+    userId: string;
+    items: any[];
+    couponDetails?: any;
+    reason?: string;
+  }) {
+    this.logger.warn(
+      `Compensating Actions for failed order ${payload.orderId}: ${payload.reason}`,
+    );
+
+    try {
+      // 1) Mark order as cancelled
+      await this.OrderModel.findByIdAndUpdate(payload.orderId, {
+        status: 'cancelled',
+        notes: `Cancelled due to system failure: ${payload.reason}`,
+      });
+
+      // 2) Revert Stock (need a revert method in productHelperService or do manual bulk write here)
+      // Since it's a compensation, we increment stock instead of decrement
+      const { validatedItems } =
+        await this.orderHelperService.validateOrderItems(payload.items);
+      const bulkOptions = validatedItems.map((item) => {
+        return {
+          updateOne: {
+            filter: { _id: item.variant.id },
+            update: {
+              $inc: {
+                sold: -item.quantity,
+                stock: item.product.isUnlimitedStock ? 0 : item.quantity,
+              },
+            },
+          },
+        };
+      });
+      // Import isn't available easily, so using Mongoose model directly might be hard if we don't inject it here.
+      // But wait! ProductHelperService is injected. Let's just create the manual update in ProductHelperService if needed, or better, do it in OrderHelper since we have models?
+      // OrderService does not inject ProductVariant Model!
+      // So let's assume we implement `revertProductStats` in `ProductHelperService`.
+      if (this.productHelperService['revertProductStats']) {
+        await (this.productHelperService as any).revertProductStats(
+          validatedItems,
+        );
+      }
+
+      // 3) Revert Coupon (not implemented in CouponHelperService yet, but we'd call it if it existed)
+      // e.g. await this.couponHelperService.revertCouponUsage(payload.couponDetails.CouponId, payload.userId);
+    } catch (error: any) {
+      // Very bad if compensating event fails. Should be logged to DLQ or manually inspected.
+      this.logger.error(
+        `CRITICAL: Compensating Action for 'order.failed' crashed: ${error.message}`,
+        error.stack,
+      );
     }
   }
 }

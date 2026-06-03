@@ -97,18 +97,21 @@ export class CheckoutService {
     );
 
     // 5. التحقق من وسيلة الدفع
-    const paymentMethod = await this.paymentsService.findById(
-      dto.paymentMethodId,
-    );
-    if (!paymentMethod || !paymentMethod.isActive) {
-      throw new BadRequestException('Invalid or inactive payment method');
-    }
+    let paymentMethod: any = null;
+    let paymentFees = 0;
+    if (dto.paymentMethodId) {
+      paymentMethod = await this.paymentsService.findById(dto.paymentMethodId);
+      if (!paymentMethod || !paymentMethod.isActive) {
+        throw new BadRequestException('Invalid or inactive payment method');
+      }
 
-    // التحقق من توافق COD
-    if (paymentMethod.code === 'cod' && !selectedShipping.supportsCOD) {
-      throw new BadRequestException(
-        'Cash on Delivery is not supported by the selected shipping provider',
-      );
+      // التحقق من توافق COD
+      if (paymentMethod.code === 'cod' && !selectedShipping.supportsCOD) {
+        throw new BadRequestException(
+          'Cash on Delivery is not supported by the selected shipping provider',
+        );
+      }
+      paymentFees = paymentMethod.fees || 0;
     }
 
     // 6. حساب الخصم عبر CouponHelperService
@@ -131,7 +134,7 @@ export class CheckoutService {
       subtotal +
       shippingCost +
       (taxDetails.isIncluded ? 0 : taxDetails.taxAmount) +
-      paymentMethod.fees -
+      paymentFees -
       discount;
 
     return {
@@ -141,7 +144,7 @@ export class CheckoutService {
         shippingCost,
         taxAmount: taxDetails.taxAmount,
         taxPercentage: taxDetails.taxPercentage,
-        paymentFees: paymentMethod.fees,
+        paymentFees,
         discount,
         total,
         currency: settings.currencySymbol || 'SAR',
@@ -155,10 +158,10 @@ export class CheckoutService {
         estimatedDays: selectedShipping.estimatedDays,
       },
       payment: {
-        methodId: dto.paymentMethodId,
-        methodName: paymentMethod.name,
-        methodCode: paymentMethod.code,
-        fees: paymentMethod.fees,
+        methodId: paymentMethod?._id?.toString() || '',
+        methodName: paymentMethod?.name || '',
+        methodCode: paymentMethod?.code || '',
+        fees: paymentFees,
       },
       couponDetails,
       shippingOptions,

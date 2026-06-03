@@ -25,7 +25,6 @@ import { CouponsModule } from '../coupons/coupons.module';
 import { ProductHelperService } from './shared/order-helper/product.helper';
 import { OrdersStatisticsService } from './shared/order-helper/order-statistics.service';
 import { MarketingStatisticsService } from './shared/order-helper/marketing-statistics.service';
-import { CheckoutModule } from '../checkout/checkout.module';
 import { AuditModule } from '../audit/audit.module';
 
 @Module({
@@ -39,7 +38,6 @@ import { AuditModule } from '../audit/audit.module';
       { name: ProductVariant.name, schema: ProductVariantSchema },
     ]),
     EmailModule,
-    CheckoutModule,
     AuditModule,
     CouponsModule,
   ],

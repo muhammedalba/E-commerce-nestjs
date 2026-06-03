@@ -1,14 +1,84 @@
-import { Controller, Post, Body, UseGuards, Req } from '@nestjs/common';
-import { CheckoutService, CheckoutPreviewDto } from './checkout.service';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  UseGuards,
+  Req,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { CheckoutOrchestratorService } from './checkout-orchestrator.service';
 import { AuthGuard } from '../auth/shared/guards/auth.guard';
+import { FileUploadService } from '../file-upload/file-upload.service';
+import { createParseFilePipe } from '../shared/files/files-validation-factory';
 
 @Controller('checkout')
+@UseGuards(AuthGuard)
 export class CheckoutController {
-  constructor(private readonly checkoutService: CheckoutService) {}
+  constructor(
+    private readonly orchestrator: CheckoutOrchestratorService,
+    private readonly fileUploadService: FileUploadService,
+  ) {}
 
-  @Post('preview')
-  @UseGuards(AuthGuard)
-  async preview(@Body() dto: CheckoutPreviewDto, @Req() req: any) {
-    return this.checkoutService.getCheckoutPreview(dto, req.user.user_id);
+  @Get('summary')
+  async getSummary(@Req() req: any) {
+    return this.orchestrator.getSummary(req.user.user_id);
+  }
+
+  @Post('address')
+  async setAddress(@Body('address') address: any, @Req() req: any) {
+    return this.orchestrator.setAddress(req.user.user_id, address);
+  }
+
+  @Post('shipping-method')
+  async setShippingMethod(
+    @Body('shippingProviderId') shippingProviderId: string,
+    @Req() req: any,
+  ) {
+    return this.orchestrator.setShippingMethod(
+      req.user.user_id,
+      shippingProviderId,
+    );
+  }
+
+  @Post('payment-method')
+  async setPaymentMethod(
+    @Body('paymentMethodId') paymentMethodId: string,
+    @Req() req: any,
+  ) {
+    return this.orchestrator.setPaymentMethod(
+      req.user.user_id,
+      paymentMethodId,
+    );
+  }
+
+  @Post('coupon')
+  async applyCoupon(@Body('couponCode') couponCode: string, @Req() req: any) {
+    return this.orchestrator.applyCoupon(req.user.user_id, couponCode);
+  }
+
+  @Post('place-order')
+  @UseInterceptors(FileInterceptor('transferReceiptImg'))
+  async placeOrder(
+    @Body('notes') notes: string,
+    @Req() req: any,
+    @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], false))
+    file?: any, // MulterFileType is typically expected, we use any for simplicity here or could import it
+  ) {
+    let transferReceiptImg: string | undefined;
+    if (file) {
+      transferReceiptImg = await this.fileUploadService.saveFileToDisk(
+        file,
+        'orders',
+      );
+    }
+    return this.orchestrator.placeOrder(
+      req.user.user_id,
+      req.user.email,
+      notes,
+      transferReceiptImg,
+    );
   }
 }
