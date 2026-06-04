@@ -194,10 +194,27 @@ export class CheckoutOrchestratorService {
       couponDetails: summary.couponDetails,
     });
 
+    const methodCode = summary.payment.methodCode;
+
+    // 6. Payment Sessions Logic
+    let paymentData: Record<string, any> = {};
+    if (methodCode === 'stripe') {
+      paymentData = {
+        client_secret: `pi_mock_${orderResponse.orderId}_secret_test`,
+        approvalUrl: `/checkout/payment?orderId=${orderResponse.orderId}`
+      };
+    } else if (methodCode === 'paypal') {
+      paymentData = {
+        approvalUrl: `https://www.sandbox.paypal.com/checkoutnow?token=mock_token_${orderResponse.orderId}`
+      };
+    }
+
     return {
       success: true,
       orderId: orderResponse.orderId,
+      methodCode,
       message: 'Order created successfully. Pending payment.',
+      ...paymentData
     };
   }
 }

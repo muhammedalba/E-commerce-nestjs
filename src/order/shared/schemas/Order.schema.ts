@@ -76,8 +76,13 @@ export class Order extends Document {
   @Prop({
     type: MongooseSchema.Types.ObjectId,
     ref: MODEL_NAMES.PAYMENT_METHOD,
+    required: false,
   })
   declare paymentMethodId: Types.ObjectId;
+
+  // Gateway code for settings-based methods (stripe, paypal, banktransfer, cod)
+  @Prop({ type: String, required: false })
+  declare paymentMethodCode: string;
 
   @Prop({ default: 0 })
   declare shippingAmount: number;

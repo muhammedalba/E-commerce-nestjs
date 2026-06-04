@@ -213,7 +213,13 @@ export class OrderService {
 
         shippingProviderId: new Types.ObjectId(orderPayload.shippingProviderId),
         shippingRateId: new Types.ObjectId(orderPayload.shippingRateId),
-        paymentMethodId: new Types.ObjectId(orderPayload.paymentMethodId),
+        // paymentMethodId may be a real ObjectId OR a gateway code string (stripe/paypal/cod/banktransfer)
+        // Only wrap in ObjectId when it looks like a 24-char hex string
+        ...(orderPayload.paymentMethodId
+          ? /^[a-f\d]{24}$/i.test(String(orderPayload.paymentMethodId))
+            ? { paymentMethodId: new Types.ObjectId(orderPayload.paymentMethodId) }
+            : { paymentMethodCode: String(orderPayload.paymentMethodId) }
+          : {}),
 
         shippingAmount: orderPayload.shippingAmount,
         taxAmount: orderPayload.taxAmount,

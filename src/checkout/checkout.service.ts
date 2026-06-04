@@ -97,21 +97,23 @@ export class CheckoutService {
     );
 
     // 5. التحقق من وسيلة الدفع
-    let paymentMethod: any = null;
+    let paymentMethodCode = dto.paymentMethodId;
     let paymentFees = 0;
-    if (dto.paymentMethodId) {
-      paymentMethod = await this.paymentsService.findById(dto.paymentMethodId);
-      if (!paymentMethod || !paymentMethod.isActive) {
+    if (paymentMethodCode) {
+      // Check if it's active in settings
+      if (settings.gateways?.[paymentMethodCode] === false) {
         throw new BadRequestException('Invalid or inactive payment method');
       }
 
       // التحقق من توافق COD
-      if (paymentMethod.code === 'cod' && !selectedShipping.supportsCOD) {
+      if (paymentMethodCode === 'cod' && !selectedShipping.supportsCOD) {
         throw new BadRequestException(
           'Cash on Delivery is not supported by the selected shipping provider',
         );
       }
-      paymentFees = paymentMethod.fees || 0;
+      
+      // Since fees are no longer stored dynamically for Stripe/PayPal in the DB, we'll assume 0 or handle fees somewhere else
+      paymentFees = 0;
     }
 
     // 6. حساب الخصم عبر CouponHelperService
@@ -158,13 +160,17 @@ export class CheckoutService {
         estimatedDays: selectedShipping.estimatedDays,
       },
       payment: {
-        methodId: paymentMethod?._id?.toString() || '',
-        methodName: paymentMethod?.name || '',
-        methodCode: paymentMethod?.code || '',
+        methodId: paymentMethodCode || '',
+        methodName: paymentMethodCode || '',
+        methodCode: paymentMethodCode || '',
         fees: paymentFees,
       },
       couponDetails,
       shippingOptions,
+      items: dto.items.map((item) => ({
+        ...item,
+        totalPrice: item.price * item.quantity,
+      })),
     };
   }
 }
