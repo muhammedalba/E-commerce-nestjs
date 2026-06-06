@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model, Types, FilterQuery } from 'mongoose';
 import { Tax, TaxDocument } from './shared/schema/tax.schema';
 import { CreateTaxDto, UpdateTaxDto } from './shared/dto/tax.dto';
 import { SettingsService } from '../settings/settings.service';
@@ -95,8 +95,9 @@ export class TaxesService extends BaseService<TaxDocument> {
     if (id) {
       const current = await this.taxModel.findById(id).lean();
       if (!current) throw new NotFoundException(this.t('exception.NOT_FOUND'));
-      if (country === undefined) country = current.country as any;
-      if (name === undefined) name = current.name as any;
+      if (country === undefined)
+        country = current.country ? current.country.toString() : undefined;
+      if (name === undefined) name = current.name;
       if (isActive === undefined) isActive = current.isActive;
     } else {
       if (isActive === undefined) isActive = true; // default when creating
@@ -105,7 +106,7 @@ export class TaxesService extends BaseService<TaxDocument> {
     // No conflict if the tax is inactive
     if (!isActive) return;
 
-    const query: any = {
+    const query: FilterQuery<TaxDocument> = {
       isActive: true,
       _id: id ? { $ne: id } : { $exists: true },
     };
@@ -179,25 +180,16 @@ export class TaxesService extends BaseService<TaxDocument> {
   }> {
     let taxPercentage = 0;
     let isIncluded = false;
-    let foundCountryTax = false;
 
     // 1. إذا تم تمرير دولة، نبحث عن ضريبة مخصصة لها أولاً
     if (countryId) {
-      const countryTax = await this.taxModel
-        .findOne({ country: countryId, isActive: true })
-        .lean();
+      const countryTax = await this.findByCountry(countryId);
       if (countryTax) {
-        taxPercentage = countryTax.percentage;
-        isIncluded = countryTax.isIncludedInPrice;
-        foundCountryTax = true;
+        taxPercentage = countryTax[0].percentage;
+        isIncluded = countryTax[0].isIncludedInPrice;
       }
-    }
-
-    // 2. إذا لم يتم العثور على ضريبة للدولة، نعود للإعدادات العامة (الضريبة الافتراضية)
-    if (!foundCountryTax) {
-      const settings = await this.settingsService.getSettings();
-      taxPercentage = settings.vatRate ?? 0;
-      isIncluded = settings.taxesIncluded ?? false;
+    } else {
+      throw new BadRequestException(this.t('exception.NOT_FOUND'));
     }
 
     if (taxPercentage <= 0) {

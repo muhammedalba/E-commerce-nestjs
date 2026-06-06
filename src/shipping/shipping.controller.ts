@@ -52,10 +52,12 @@ export class ShippingController {
   calculateShipping(
     @Query('cityId') cityId: string,
     @Query('weight') weight: string,
+    @Query('subtotal') subtotal: string,
   ) {
     return this.shippingRatesService.calculateShipping(
       cityId,
       parseFloat(weight) || 1,
+      parseFloat(subtotal) || 0,
     );
   }
 

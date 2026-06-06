@@ -81,7 +81,7 @@ export class CouponHelperService {
       }
     }
   }
-
+  //
   async applyCouponIfAvailable(
     couponCode: string | undefined,
     userId: string,
@@ -89,6 +89,9 @@ export class CouponHelperService {
     validatedItems: {
       product: { id: Types.ObjectId; brand: string; category: string };
       quantity: number;
+      variantId: string;
+      weight: number;
+      price: number;
     }[] = [],
   ): Promise<{
     discountAmount: number;
@@ -96,8 +99,9 @@ export class CouponHelperService {
     totalPrice: number;
     couponDetails: {
       couponCode: string;
-      discountAmount: number;
+      discount: number;
       CouponId: Types.ObjectId;
+      couponType: string;
     } | null;
   }> {
     if (!couponCode) {
@@ -122,6 +126,7 @@ export class CouponHelperService {
         ? (totalPrice * coupon.discount) / 100
         : coupon.discount;
 
+    //if rawDiscount > totalPrice
     const discountAmount = Math.min(rawDiscount, totalPrice);
     const totalPriceAfterDiscount =
       Math.round((totalPrice - discountAmount) * 100) / 100;
@@ -133,7 +138,8 @@ export class CouponHelperService {
       couponDetails: {
         couponCode: coupon.name,
         CouponId: coupon._id,
-        discountAmount,
+        couponType: coupon.type,
+        discount: coupon.discount,
       },
     };
   }

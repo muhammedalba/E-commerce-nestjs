@@ -15,39 +15,77 @@ export class CheckoutOrchestratorService {
   ) {}
 
   async getSummary(userId: string) {
+    // get data from session and cart and calculate summary
     const session = await this.sessionService.getSession(userId);
-    const cart: any = await this.cartService.getCart(userId);
+
+    const cartData = await this.cartService.getCart(userId);
+    const cart = cartData as {
+      items?: {
+        product?: { _id?: { toString(): string } } | string;
+        variant?:
+          | {
+              _id?: { toString(): string };
+              attributes?: { weight?: { value?: number; unit?: string } };
+            }
+          | string;
+        quantity: number;
+        unitPrice: number;
+      }[];
+      totalPrice?: number;
+    };
 
     if (!cart || !cart.items || cart.items.length === 0) {
       throw new BadRequestException('Cart is empty');
     }
 
     // Map cart items for the preview
-    const items = cart.items.map((item: any) => ({
-      productId: item.product._id ? item.product._id.toString() : item.product,
-      variantId: item.variant._id ? item.variant._id.toString() : item.variant,
-      quantity: item.quantity,
-      weight: item.variant.weight || 0, // Assuming weight is on variant
-      price: item.unitPrice,
-    }));
+    const items = cart.items.map((item) => {
+      const p = item.product as { _id?: { toString(): string } } | undefined;
+      const v = item.variant as
+        | {
+            _id?: { toString(): string };
+            attributes?: { weight?: { value?: number; unit?: string } };
+          }
+        | undefined;
+
+      const productId = p?._id
+        ? p._id.toString()
+        : typeof item.product === 'string'
+          ? item.product
+          : '';
+
+      const variantId = v?._id
+        ? v._id.toString()
+        : typeof item.variant === 'string'
+          ? item.variant
+          : '';
+
+      return {
+        productId,
+        variantId,
+        quantity: item.quantity,
+        weight: v?.attributes?.weight?.value || 0,
+        price: item.unitPrice,
+      };
+    });
 
     // If session doesn't have cityId, we can't calculate shipping or tax properly yet
     // But we can return a partial summary
-    if (!session.cityId) {
-      return {
-        isComplete: false,
-        message:
-          'Please provide a shipping city to calculate shipping and taxes.',
-        cartSubtotal: cart.totalPrice,
-        items,
-        session,
-      };
-    }
+    // if (!session.cityId) {
+    //   return {
+    //     isComplete: false,
+    //     message:
+    //       'Please provide a shipping city to calculate shipping and taxes.',
+    //     cartSubtotal: cart.totalPrice,
+    //     items,
+    //     session,
+    //   };
+    // }
 
     // Call existing checkoutService to get the full calculation
     const preview = await this.checkoutService.getCheckoutPreview(
       {
-        cityId: session.cityId,
+        cityId: session.cityId || '',
         paymentMethodId: session.paymentMethodId || '',
         shippingProviderId: session.shippingProviderId || '',
         couponCode: session.couponCode,
@@ -63,7 +101,10 @@ export class CheckoutOrchestratorService {
     };
   }
 
-  async setAddress(userId: string, address: any) {
+  async setAddress(
+    userId: string,
+    address: { cityId?: string; [key: string]: unknown } | string,
+  ) {
     const cityId = typeof address === 'string' ? address : address?.cityId;
     await this.sessionService.updateSession(userId, { address, cityId });
     return this.getSummary(userId);
@@ -91,7 +132,47 @@ export class CheckoutOrchestratorService {
     transferReceiptImg?: string,
   ) {
     // 1. Get final calculated summary
-    const summary: any = await this.getSummary(userId);
+    const summaryData = await this.getSummary(userId);
+    const summary = summaryData as {
+      isComplete: boolean;
+      items: unknown[];
+      session: {
+        address?: {
+          firstName?: string;
+          firsName?: string;
+          lastName?: string;
+          phone?: string;
+          countryId?: string;
+          country?: string;
+          cityId?: string;
+          city?: string;
+          street?: string;
+          building?: string;
+          postalCode?: string;
+          additionalInfo?: string;
+          addressType?: string;
+        };
+      };
+      summary: {
+        shippingCost: number;
+        taxAmount: number;
+        paymentFees: number;
+        subtotal: number;
+        discount: number;
+        total: number;
+        currency: string;
+      };
+      delivery: {
+        cityId: string;
+        providerId: string;
+        rateId: string;
+      };
+      payment: {
+        methodId: string;
+        methodCode: string;
+      };
+      couponDetails: unknown;
+    };
 
     if (!summary.isComplete) {
       throw new BadRequestException('Checkout is incomplete');
@@ -151,7 +232,7 @@ export class CheckoutOrchestratorService {
     // Since we need to return the OrderID to the frontend immediately to proceed to payment,
     // we should wait for the order creation.
 
-    let orderResponse: any;
+    let orderResponse: { orderId?: string } | undefined;
     try {
       this.logger.log('Emitting checkout.placeOrderCommand...');
       this.logger.log(
@@ -162,14 +243,15 @@ export class CheckoutOrchestratorService {
         'checkout.placeOrderCommand',
         orderPayload,
       );
-      orderResponse = results[0];
+      orderResponse = results[0] as { orderId?: string } | undefined;
       this.logger.log('Order event response: ' + JSON.stringify(orderResponse));
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as Error;
       this.logger.error(
-        'Order placement event threw an error: ' + error.message,
-        error.stack,
+        'Order placement event threw an error: ' + err.message,
+        err.stack,
       );
-      throw new BadRequestException('Failed to create order: ' + error.message);
+      throw new BadRequestException('Failed to create order: ' + err.message);
     }
 
     if (!orderResponse || !orderResponse.orderId) {
@@ -197,15 +279,15 @@ export class CheckoutOrchestratorService {
     const methodCode = summary.payment.methodCode;
 
     // 6. Payment Sessions Logic
-    let paymentData: Record<string, any> = {};
+    let paymentData: Record<string, unknown> = {};
     if (methodCode === 'stripe') {
       paymentData = {
         client_secret: `pi_mock_${orderResponse.orderId}_secret_test`,
-        approvalUrl: `/checkout/payment?orderId=${orderResponse.orderId}`
+        approvalUrl: `/checkout/payment?orderId=${orderResponse.orderId}`,
       };
     } else if (methodCode === 'paypal') {
       paymentData = {
-        approvalUrl: `https://www.sandbox.paypal.com/checkoutnow?token=mock_token_${orderResponse.orderId}`
+        approvalUrl: `https://www.sandbox.paypal.com/checkoutnow?token=mock_token_${orderResponse.orderId}`,
       };
     }
 
@@ -214,7 +296,7 @@ export class CheckoutOrchestratorService {
       orderId: orderResponse.orderId,
       methodCode,
       message: 'Order created successfully. Pending payment.',
-      ...paymentData
+      ...paymentData,
     };
   }
 }

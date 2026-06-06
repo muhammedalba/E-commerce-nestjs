@@ -26,7 +26,9 @@ export class CartService {
     private readonly settingsService: SettingsService,
     private readonly couponHelperService: CouponHelperService,
   ) {}
-
+  // ------------ =============================== ---------- //
+  // ------------ ======  VALIDATE COUPON  ====== ---------- //
+  // ------------ =============================== ---------- //
   /**
    * Retrieves the user's shopping cart while performing a "Silent Sync".
    * * @description
@@ -76,7 +78,11 @@ export class CartService {
       }
 
       // 3. Silent Price Sync Strategy
-      const livePriceRaw = variant.priceAfterDiscount ?? variant.price;
+      const livePriceRaw =
+        variant.priceAfterDiscount && variant.priceAfterDiscount > 0
+          ? variant.priceAfterDiscount
+          : variant.price;
+
       const livePrice = Number(livePriceRaw.toFixed(2));
 
       // If the price snapshot stored in the cart differs from the live database price
@@ -88,7 +94,7 @@ export class CartService {
       // 4. Silent Inventory Correction
       if (!product.isUnlimitedStock && variant.stock < item.quantity) {
         isModified = true;
-        // فحص الإعداد قبل الإرسال — سلة فقط
+        //Send a notification if the stock is less than the order quantity and notifications are enabled in the settings.
         if (await this.settingsService.isInventoryAlertsEnabled()) {
           await this.inventoryAlertService.checkStockAndAlert(
             product as any,
@@ -131,6 +137,9 @@ export class CartService {
     return this.i18n.localize(cleanCartObject);
   }
 
+  // ------------ =============================== ---------- //
+  // ------------ ======  ADD ITEM  ====== ---------- //
+  // ------------ =============================== ---------- //
   async addItem(userId: string, createCartDto: CreateCartDto) {
     const { productId, variantId, quantity } = createCartDto;
 
@@ -173,7 +182,11 @@ export class CartService {
     }
 
     // 3. calculations
-    const rawPrice = variant.priceAfterDiscount ?? variant.price;
+    const rawPrice =
+      variant.priceAfterDiscount && variant.priceAfterDiscount > 0
+        ? variant.priceAfterDiscount
+        : variant.price;
+
     const price = Number(rawPrice.toFixed(2));
     const itemTotal = Number((price * quantity).toFixed(2));
 
@@ -255,7 +268,9 @@ export class CartService {
       }
     }
   }
-
+  // ------------ =============================== ---------- //
+  // ------------ ======  UPDATE QUANTITY ====== ---------- //
+  // ------------ =============================== ---------- //
   async updateQuantity(userId: string, updateCartDto: CreateCartDto) {
     const { productId, variantId, quantity } = updateCartDto;
 
@@ -339,7 +354,9 @@ export class CartService {
       }
     }
   }
-
+  // ------------ =============================== ---------- //
+  // ------------ ======  REMOVE ITEM  ====== ---------- //
+  // ------------ =============================== ---------- //
   async removeItem(userId: string, productId: string, variantId?: string) {
     let retries = 3;
     while (retries >= 0) {
@@ -413,7 +430,9 @@ export class CartService {
       }
     }
   }
-
+  // ------------ =============================== ---------- //
+  // ------------ ======  CLEAR CART  ====== ---------- //
+  // ------------ =============================== ---------- //
   async clearCart(userId: string) {
     const cart = await this.cartModel.findOne({ user: userId });
 
@@ -426,7 +445,9 @@ export class CartService {
 
     return { items: [] };
   }
-
+  // ------------ =============================== ---------- //
+  // ------------ ======  SYNC CART  ====== ---------- //
+  // ------------ =============================== ---------- //
   async syncCart(userId: string, items: CreateCartDto[]) {
     if (!items || items.length === 0) return this.getCart(userId);
 
@@ -441,7 +462,7 @@ export class CartService {
   }
 
   // ------------ =============================== ---------- //
-  // ------------ ======  VALIDATE COUPON   ====== ---------- //
+  // ------------ ======  VALIDATE COUPON  ====== ---------- //
   // ------------ =============================== ---------- //
   /**
    * Pre-validates a coupon code against the current cart total.

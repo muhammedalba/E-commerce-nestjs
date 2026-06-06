@@ -23,19 +23,23 @@ export class CheckoutController {
   ) {}
 
   @Get('summary')
-  async getSummary(@Req() req: any) {
+  async getSummary(@Req() req: { user: { user_id: string } }) {
     return this.orchestrator.getSummary(req.user.user_id);
   }
 
   @Post('address')
-  async setAddress(@Body('address') address: any, @Req() req: any) {
+  async setAddress(
+    @Body('address')
+    address: { cityId?: string; [key: string]: unknown } | string,
+    @Req() req: { user: { user_id: string } },
+  ) {
     return this.orchestrator.setAddress(req.user.user_id, address);
   }
 
   @Post('shipping-method')
   async setShippingMethod(
     @Body('shippingProviderId') shippingProviderId: string,
-    @Req() req: any,
+    @Req() req: { user: { user_id: string } },
   ) {
     return this.orchestrator.setShippingMethod(
       req.user.user_id,
@@ -46,7 +50,7 @@ export class CheckoutController {
   @Post('payment-method')
   async setPaymentMethod(
     @Body('paymentMethodId') paymentMethodId: string,
-    @Req() req: any,
+    @Req() req: { user: { user_id: string } },
   ) {
     return this.orchestrator.setPaymentMethod(
       req.user.user_id,
@@ -55,7 +59,10 @@ export class CheckoutController {
   }
 
   @Post('coupon')
-  async applyCoupon(@Body('couponCode') couponCode: string, @Req() req: any) {
+  async applyCoupon(
+    @Body('couponCode') couponCode: string,
+    @Req() req: { user: { user_id: string } },
+  ) {
     return this.orchestrator.applyCoupon(req.user.user_id, couponCode);
   }
 
@@ -63,9 +70,9 @@ export class CheckoutController {
   @UseInterceptors(FileInterceptor('transferReceiptImg'))
   async placeOrder(
     @Body('notes') notes: string,
-    @Req() req: any,
+    @Req() req: { user: { user_id: string; email: string } },
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], false))
-    file?: any, // MulterFileType is typically expected, we use any for simplicity here or could import it
+    file?: Express.Multer.File,
   ) {
     let transferReceiptImg: string | undefined;
     if (file) {

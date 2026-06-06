@@ -81,15 +81,16 @@ export class CartController {
   // ------------ =============================== ---------- //
   // ------------ ====== VALIDATE COUPON   ====== ---------- //
   // ------------ =============================== ---------- //
-  @Post('validate-coupon')
-  async validateCoupon(
-    @Req() req: { user: JwtPayload },
-    @Body() body: ValidateCouponDto,
-  ) {
-    return await this.cartService.validateCouponForCart(
-      req.user.user_id,
-      body.code,
-      body.orderAmount,
-    );
-  }
+  //   @Post('validate-coupon')
+  //   async validateCoupon(
+  //     @Req() req: { user: JwtPayload },
+  //     @Body() body: ValidateCouponDto,
+  //   ) {
+  //     return await this.cartService.validateCouponForCart(
+  //       req.user.user_id,
+  //       body.code,
+  //       body.orderAmount,
+  //     );
+  //   }
+  //
 }

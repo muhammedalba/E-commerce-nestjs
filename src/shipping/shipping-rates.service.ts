@@ -14,7 +14,6 @@ import {
   CreateShippingRateDto,
   UpdateShippingRateDto,
 } from './shared/dto/shipping-rate.dto';
-import { ShippingProvider } from './shared/schema/shipping-provider.schema';
 
 export interface ShippingCalculationResult {
   providerId: string;
@@ -58,7 +57,7 @@ export class ShippingRatesService extends BaseService<ShippingRateDocument> {
    * @param query - The query parameters for filtering, sorting, and pagination.
    * @returns An object containing the localized rates, total count, and pagination info.
    */
-  async getRates(query: QueryString): Promise<any> {
+  async getRates(query: QueryString): Promise<unknown> {
     const features = new ApiFeatures(this.rateModel.find(), query)
       .filter()
       .search(ShippingRate.name);
@@ -79,7 +78,7 @@ export class ShippingRatesService extends BaseService<ShippingRateDocument> {
     return {
       results: populatedData.length,
       pagination: features.getPagination(),
-      data: this.i18n.localize(populatedData),
+      data: this.i18n.localize(populatedData) as unknown,
     };
   }
 
@@ -142,11 +141,19 @@ export class ShippingRatesService extends BaseService<ShippingRateDocument> {
   async calculateShipping(
     cityId: string,
     totalWeight: number,
+    subtotal: number,
   ): Promise<ShippingCalculationResult[]> {
     const rates = (await this.rateModel
       .find({ city: cityId, isActive: true })
-      .populate<{ provider: ShippingProvider }>('provider', 'name code')
-      .lean()) as any[];
+      .populate('provider', 'name code')
+      .lean()) as unknown as (Omit<ShippingRate, 'provider'> & {
+      _id: { toString(): string };
+      provider?: {
+        _id: { toString(): string };
+        name: string;
+        code: string;
+      } | null;
+    })[];
 
     if (!rates || rates.length === 0) {
       throw new NotFoundException('No shipping rates available for this city');
@@ -154,7 +161,20 @@ export class ShippingRatesService extends BaseService<ShippingRateDocument> {
 
     return rates.map((rate) => {
       let extraWeightCost = 0;
+      const freeShippingThreshold = rate.freeShippingThreshold || 0;
 
+      if (subtotal > freeShippingThreshold) {
+        return {
+          providerId: rate.provider?._id?.toString() ?? '',
+          providerName: rate.provider?.name ?? '',
+          basePrice: rate.basePrice,
+          extraWeightCost,
+          totalShippingCost: 0,
+          estimatedDays: rate.estimatedDays,
+          supportsCOD: rate.supportsCOD,
+          rateId: rate._id.toString(),
+        };
+      }
       if (totalWeight > rate.baseWeight) {
         const extraKg = totalWeight - rate.baseWeight;
         extraWeightCost = parseFloat(

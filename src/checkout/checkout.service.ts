@@ -34,41 +34,93 @@ export class CheckoutService {
   ) {}
 
   async getCheckoutPreview(dto: CheckoutPreviewDto, userId?: string) {
-    // 1. حساب المجموع الفرعي والوزن الإجمالي
+    // 1. حساب المجموع الفرعي الأساسي
     const subtotal = dto.items.reduce(
       (acc, item) => acc + item.price * item.quantity,
       0,
     );
+    // حساب الوزن الإجمالي
     const totalWeight = dto.items.reduce(
       (acc, item) => acc + item.weight * item.quantity,
       0,
     );
 
-    // 2. جلب الإعدادات العامة
-    const settings = await this.settingsService.getSettings();
+    // 2. تطبيق الكوبون أولاً
+    let discount = 0;
+    let taxableSubtotal = subtotal;
+    let couponDetails: unknown = null;
 
-    // 3. التحقق من الحد الأدنى للطلب
-    const minOrderAmount = settings.minOrderAmount || 0;
-    if (minOrderAmount > 0 && subtotal < minOrderAmount) {
-      const currency = settings.currencySymbol || 'ر.س';
-      throw new BadRequestException(
-        `الحد الأدنى للطلب هو ${minOrderAmount} ${currency}`,
-      );
+    if (dto.couponCode && userId) {
+      const couponPreview =
+        await this.couponHelperService.applyCouponIfAvailable(
+          dto.couponCode,
+          userId,
+          subtotal,
+          //  dto.items,
+        );
+      discount = couponPreview.discountAmount;
+      couponDetails = couponPreview.couponDetails;
+      taxableSubtotal =
+        couponPreview.totalPriceAfterDiscount ?? couponPreview.totalPrice;
+      console.log('couponPreview : ', couponPreview);
     }
 
-    // 4. التحقق من المدينة
-    const city = await this.locationsService.getCityById(dto.cityId);
+    // 3. استخراج الصافي بعد الخصم
+    // const taxableSubtotal = Math.max(0, subtotal - discount);
+
+    // 4.  التحقق من الحد الأدنى بناءً على الصافي
+    const settings = await this.settingsService.getSettings();
+    const minOrderAmount = settings.minOrderAmount || 0;
+
+    if (minOrderAmount > 0 && taxableSubtotal < minOrderAmount) {
+      const currency = settings.currencySymbol || 'SAR';
+      throw new BadRequestException(
+        `الحد الأدنى للطلب هو ${minOrderAmount} ${currency} (المجموع الحالي بعد الخصم: ${taxableSubtotal})`,
+      );
+    }
+    if (!dto.cityId || dto.cityId === '') {
+      return {
+        items: dto.items,
+        message:
+          'Please provide a shipping city to calculate shipping and taxes.',
+        totalPrice: subtotal,
+        totalPriceAfterDiscount: taxableSubtotal,
+        discountAmount: discount,
+        couponDetails: couponDetails,
+      };
+    }
+    // 4. التحقق من المدينة وتوفر التوصيل
+    const city = (await this.locationsService.getCityById(
+      dto.cityId,
+    )) as unknown as {
+      isDeliveryAvailable: boolean;
+      country: { _id?: string } | string | undefined;
+      name: { ar?: string; en?: string } | string;
+    };
     if (!city.isDeliveryAvailable) {
       throw new BadRequestException('Delivery is not available for this city');
     }
 
-    // 5. حساب الشحن
+    // 6. حساب الضرائب بناءً على المبلغ بعد الخصم
+    const countryData = city.country;
+    const countryId =
+      typeof countryData === 'object'
+        ? countryData?._id?.toString()
+        : countryData?.toString();
+
+    // نمرر taxableSubtotal بدلاً من subtotal الأصلي
+    const taxDetails = await this.taxesService.calculateTax(
+      taxableSubtotal,
+      countryId,
+    );
+
+    // 7.  حساب الشحن والتحقق من عتبة الشحن المجاني بناءً على الصافي
     const shippingOptions = await this.shippingRatesService.calculateShipping(
       dto.cityId,
       totalWeight,
+      taxableSubtotal, // المتاجر الكبرى تمرر الصافي لشركات الشحن
     );
 
-    // البحث عن الخيار المختار
     const selectedShipping =
       shippingOptions.find(
         (opt) => opt.providerId === dto.shippingProviderId,
@@ -81,63 +133,38 @@ export class CheckoutService {
 
     let shippingCost = selectedShipping.totalShippingCost;
 
-    // التحقق من عتبة الشحن المجاني من الإعدادات العامة
+    // التحقق من الشحن المجاني بناءً على الصافي (taxableSubtotal)
     const freeShippingThreshold = settings.freeShippingThreshold || 0;
-    if (freeShippingThreshold > 0 && subtotal >= freeShippingThreshold) {
+    if (
+      freeShippingThreshold > 0 &&
+      taxableSubtotal >= freeShippingThreshold &&
+      !settings.hasCustomShippingRates
+    ) {
       shippingCost = 0;
     }
 
-    // 6. حساب الضرائب
-    const countryId = (city.country as any)?._id
-      ? (city.country as any)._id.toString()
-      : city.country?.toString();
-    const taxDetails = await this.taxesService.calculateTax(
-      subtotal,
-      countryId,
-    );
-
-    // 5. التحقق من وسيلة الدفع
-    let paymentMethodCode = dto.paymentMethodId;
+    // 8. التحقق من وسيلة الدفع ورسومها
+    const paymentMethodCode = dto.paymentMethodId;
     let paymentFees = 0;
     if (paymentMethodCode) {
-      // Check if it's active in settings
       if (settings.gateways?.[paymentMethodCode] === false) {
         throw new BadRequestException('Invalid or inactive payment method');
       }
 
-      // التحقق من توافق COD
       if (paymentMethodCode === 'cod' && !selectedShipping.supportsCOD) {
         throw new BadRequestException(
           'Cash on Delivery is not supported by the selected shipping provider',
         );
       }
-      
-      // Since fees are no longer stored dynamically for Stripe/PayPal in the DB, we'll assume 0 or handle fees somewhere else
-      paymentFees = 0;
+      paymentFees = 0; // يمكن حساب رسوم الـ COD هنا لاحقاً إن وجدت
     }
 
-    // 6. حساب الخصم عبر CouponHelperService
-    let discount = 0;
-    let couponDetails: any = null;
-
-    if (dto.couponCode && userId) {
-      const couponPreview =
-        await this.couponHelperService.applyCouponIfAvailable(
-          dto.couponCode,
-          userId,
-          subtotal,
-        );
-      discount = couponPreview.discountAmount;
-      couponDetails = couponPreview.couponDetails;
-    }
-
-    // 7. تجميع النتيجة النهائية
+    // 9. تجميع النتيجة النهائية (المعادلة الحسابية الصحيحة)
     const total =
-      subtotal +
+      taxableSubtotal + // (subtotal - discount)
       shippingCost +
       (taxDetails.isIncluded ? 0 : taxDetails.taxAmount) +
-      paymentFees -
-      discount;
+      paymentFees;
 
     return {
       summary: {
