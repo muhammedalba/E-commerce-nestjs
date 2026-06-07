@@ -29,7 +29,7 @@ class GeoLocationDto {
 export class OrderAddressDto {
   @IsString()
   @Length(1, 50)
-  firsName!: string;
+  firstName!: string;
 
   @IsString()
   @Length(1, 50)

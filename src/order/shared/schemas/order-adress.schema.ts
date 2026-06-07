@@ -3,7 +3,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 @Schema({ _id: false }) // nested schema
 export class OrderAddress {
   @Prop({ type: String, required: true })
-  declare firsName: string;
+  declare firstName: string;
 
   @Prop({ type: String, required: true })
   declare lastName: string;

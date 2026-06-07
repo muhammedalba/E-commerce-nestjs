@@ -28,6 +28,28 @@ export class CartItem {
    */
   @Prop({ required: true, min: 0 })
   declare unitPrice: number;
+
+  /**
+   * Brand Snapshot: captured at add-time to support brand-restricted coupon validation
+   * without requiring an extra product lookup at checkout.
+   */
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: MODEL_NAMES.BRAND,
+    required: false,
+  })
+  declare brand?: Types.ObjectId;
+
+  /**
+   * Category Snapshot: captured at add-time to support category-restricted coupon
+   * validation without requiring an extra product lookup at checkout.
+   */
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: MODEL_NAMES.CATEGORY,
+    required: false,
+  })
+  declare category?: Types.ObjectId;
 }
 
 export const CartItemSchema = SchemaFactory.createForClass(CartItem);

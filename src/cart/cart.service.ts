@@ -145,7 +145,7 @@ export class CartService {
 
     // 1.check product is exist and active
     const product = await this.ProductModel.findById(productId)
-      .select('isUnlimitedStock isActive title')
+      .select('isUnlimitedStock isActive title brand category')
       .lean()
       .exec();
 
@@ -205,6 +205,8 @@ export class CartService {
                 variant: new Types.ObjectId(variantId),
                 quantity,
                 unitPrice: price, // Price Snapshot
+                brand: product.brand, // Brand Snapshot (for coupon validation)
+                category: product.category, // Category Snapshot (for coupon validation)
               },
             ],
             totalPrice: itemTotal,
@@ -242,6 +244,8 @@ export class CartService {
               variant: new Types.ObjectId(variantId),
               quantity,
               unitPrice: price, // Price Snapshot
+              brand: product.brand, // Brand Snapshot (for coupon validation)
+              category: product.category, // Category Snapshot (for coupon validation)
             });
           }
 

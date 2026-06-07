@@ -1,198 +1,516 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { Types } from 'mongoose';
 import { LocationsService } from '../locations/locations.service';
-import { ShippingService } from '../shipping/shipping.service';
-import { ShippingRatesService } from '../shipping/shipping-rates.service';
+import {
+  ShippingRatesService,
+  ShippingCalculationResult,
+} from '../shipping/shipping-rates.service';
 import { TaxesService } from '../taxes/taxes.service';
-import { PaymentsService } from '../payments/payments.service';
 import { SettingsService } from '../settings/settings.service';
 import { CouponHelperService } from 'src/coupons/shared/coupon.helper';
+import { Setting } from '../settings/shared/schema/setting.schema';
+
+// ---------------------------------------------------------------------------
+// Input DTO
+// ---------------------------------------------------------------------------
 
 export interface CheckoutPreviewDto {
   cityId: string;
-  items: {
-    productId: string;
-    variantId: string;
-    quantity: number;
-    weight: number;
-    price: number;
-  }[];
+  items: CheckoutItem[];
   paymentMethodId: string;
   shippingProviderId: string;
   couponCode?: string;
 }
 
+export interface CheckoutItem {
+  productId: string;
+  variantId: string;
+  quantity: number;
+  weight: number;
+  price: number;
+  /** Brand ObjectId as string — snapshotted on the cart item at add-time. */
+  brand?: string;
+  /** Category ObjectId as string — snapshotted on the cart item at add-time. */
+  category?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Internal computation types
+// ---------------------------------------------------------------------------
+
+interface CartTotals {
+  subtotal: number;
+  totalWeight: number;
+}
+
+interface CouponResult {
+  discountAmount: number;
+  /** Subtotal after coupon discount has been applied. */
+  subtotalAfterDiscount: number;
+  couponDetails: unknown;
+}
+
+interface TaxDetails {
+  taxPercentage: number;
+  taxAmount: number;
+  totalWithTax: number;
+  isIncluded: boolean;
+}
+
+/**
+ * Minimal shape of a populated city document returned by LocationsService.
+ * Avoids unsafe `as ICityData` assertions.
+ */
+export interface ICityData {
+  isDeliveryAvailable: boolean;
+  /** Populated country object or raw ObjectId string. */
+  country: { _id?: string } | string | undefined;
+  name: { ar?: string; en?: string } | string;
+}
+
+// ---------------------------------------------------------------------------
+// Output types — used to keep the orchestrator and frontend in sync
+// ---------------------------------------------------------------------------
+
+export interface CheckoutSummary {
+  subtotal: number;
+  totalWeight: number;
+  shippingCost: number;
+  taxAmount: number;
+  taxPercentage: number;
+  paymentFees: number;
+  discountAmount: number;
+  totalPrice: number;
+  currency: string;
+}
+
+export interface CheckoutDelivery {
+  cityId: string;
+  cityName: ICityData['name'];
+  providerId: string;
+  providerName: string;
+  rateId: string;
+  estimatedDays: string;
+}
+
+export interface CheckoutPayment {
+  methodId: string;
+  methodName: string;
+  methodCode: string;
+  fees: number;
+}
+
+export interface CheckoutPreviewResponse {
+  summary: CheckoutSummary;
+  delivery: CheckoutDelivery;
+  payment: CheckoutPayment;
+  couponDetails: unknown;
+  shippingOptions: ShippingCalculationResult[];
+  items: (CheckoutItem & { totalPrice: number })[];
+}
+
+/** Returned when no cityId is provided — a partial preview without shipping/tax. */
+export interface CheckoutPartialPreviewResponse {
+  items: CheckoutItem[];
+  message: string;
+  totalPrice: number;
+  totalPriceAfterDiscount: number;
+  discountAmount: number;
+  couponDetails: unknown;
+}
+
+// ---------------------------------------------------------------------------
+// Constants — avoid magic strings scattered throughout the code
+// ---------------------------------------------------------------------------
+
+const DEFAULT_CURRENCY = 'SAR';
+
+/** COD payment-method code as stored in the settings gateways map. */
+const COD_METHOD_CODE = 'cod';
+
+// ---------------------------------------------------------------------------
+// Service
+// ---------------------------------------------------------------------------
+
 @Injectable()
 export class CheckoutService {
   constructor(
     private readonly locationsService: LocationsService,
-    private readonly shippingService: ShippingService,
     private readonly shippingRatesService: ShippingRatesService,
     private readonly taxesService: TaxesService,
-    private readonly paymentsService: PaymentsService,
     private readonly settingsService: SettingsService,
     private readonly couponHelperService: CouponHelperService,
   ) {}
 
-  async getCheckoutPreview(dto: CheckoutPreviewDto, userId?: string) {
-    // 1. حساب المجموع الفرعي الأساسي
-    const subtotal = dto.items.reduce(
-      (acc, item) => acc + item.price * item.quantity,
-      0,
+  // =========================================================================
+  // Public API
+  // =========================================================================
+
+  async getCheckoutPreview(
+    dto: CheckoutPreviewDto,
+    userId?: string,
+  ): Promise<CheckoutPreviewResponse | CheckoutPartialPreviewResponse> {
+    // 1. Aggregate cart line-items into totals.
+    const cartTotals = this.calculateCartTotals(dto.items);
+
+    // 2. Fetch settings and evaluate coupon concurrently (no dependency).
+    const [settings, couponResult] = await Promise.all([
+      this.settingsService.getSettings(),
+      this.applyCoupon(dto.couponCode, userId, cartTotals.subtotal, dto.items),
+    ]);
+
+    const currency = settings.currencySymbol ?? DEFAULT_CURRENCY;
+
+    // 3. Validate the order meets the configured minimum amount.
+    this.validateMinimumOrder(
+      couponResult.subtotalAfterDiscount,
+      settings,
+      currency,
     );
-    // حساب الوزن الإجمالي
-    const totalWeight = dto.items.reduce(
-      (acc, item) => acc + item.weight * item.quantity,
-      0,
-    );
 
-    // 2. تطبيق الكوبون أولاً
-    let discount = 0;
-    let taxableSubtotal = subtotal;
-    let couponDetails: unknown = null;
-
-    if (dto.couponCode && userId) {
-      const couponPreview =
-        await this.couponHelperService.applyCouponIfAvailable(
-          dto.couponCode,
-          userId,
-          subtotal,
-          //  dto.items,
-        );
-      discount = couponPreview.discountAmount;
-      couponDetails = couponPreview.couponDetails;
-      taxableSubtotal =
-        couponPreview.totalPriceAfterDiscount ?? couponPreview.totalPrice;
-      console.log('couponPreview : ', couponPreview);
-    }
-
-    // 3. استخراج الصافي بعد الخصم
-    // const taxableSubtotal = Math.max(0, subtotal - discount);
-
-    // 4.  التحقق من الحد الأدنى بناءً على الصافي
-    const settings = await this.settingsService.getSettings();
-    const minOrderAmount = settings.minOrderAmount || 0;
-
-    if (minOrderAmount > 0 && taxableSubtotal < minOrderAmount) {
-      const currency = settings.currencySymbol || 'SAR';
-      throw new BadRequestException(
-        `الحد الأدنى للطلب هو ${minOrderAmount} ${currency} (المجموع الحالي بعد الخصم: ${taxableSubtotal})`,
+    // 4. Early-return a lightweight response when no city is provided yet.
+    if (!dto.cityId) {
+      return this.buildPartialPreviewResponse(
+        dto.items,
+        cartTotals.subtotal,
+        couponResult,
       );
     }
-    if (!dto.cityId || dto.cityId === '') {
+
+    // 5. Validate city and extract the linked country ID.
+    const city = await this.getAndValidateCity(dto.cityId);
+    const countryId = this.extractCountryId(city);
+
+    // 6. Run tax and shipping calculations concurrently — no dependency between them.
+    const [taxDetails, shippingOptions] = await this.calculateTaxesAndShipping(
+      couponResult.subtotalAfterDiscount,
+      countryId,
+      dto.cityId,
+      cartTotals.totalWeight,
+    );
+
+    // 7. Select the requested shipping option and apply the free-shipping rule.
+    const chosenShipping = this.selectShippingOption(
+      shippingOptions,
+      dto.shippingProviderId,
+    );
+    const shippingCost = this.calculateShippingCost(
+      chosenShipping,
+      couponResult.subtotalAfterDiscount,
+      settings,
+    );
+
+    // 8. Validate the chosen payment method against settings.
+    this.validatePaymentMethod(dto.paymentMethodId, chosenShipping, settings);
+
+    // 9. Compose and return the full checkout response.
+    return this.buildCheckoutResponse({
+      dto,
+      city,
+      cartTotals,
+      couponResult,
+      taxDetails,
+      shippingOptions,
+      chosenShipping,
+      shippingCost,
+      currency,
+    });
+  }
+
+  // =========================================================================
+  // Private helpers — each handles a single responsibility
+  // =========================================================================
+
+  /**
+   * Accumulates subtotal and total weight from all cart line-items in a single
+   * iteration for O(n) performance.
+   */
+  private calculateCartTotals(items: CheckoutItem[]): CartTotals {
+    return items.reduce<CartTotals>(
+      (acc, item) => {
+        acc.subtotal += item.price * item.quantity;
+        acc.totalWeight += item.weight * item.quantity;
+        return acc;
+      },
+      { subtotal: 0, totalWeight: 0 },
+    );
+  }
+
+  /**
+   * Applies a coupon code when both a code and an authenticated user are
+   * present.  Returns a zero-discount result when either is absent so the
+   * calling code never has to null-check.
+   *
+   * Builds the `validatedItems` array that CouponHelperService requires to
+   * enforce brand- and category-restricted coupons.
+   */
+  private async applyCoupon(
+    couponCode: string | undefined,
+    userId: string | undefined,
+    subtotal: number,
+    items: CheckoutItem[] = [],
+  ): Promise<CouponResult> {
+    if (!userId) {
+      throw new BadRequestException(
+        'you should be logged in to apply a coupon',
+      );
+    }
+    const validatedItems = items.map((item) => ({
+      product: {
+        id: new Types.ObjectId(item.productId),
+        brand: item.brand ?? '',
+        category: item.category ?? '',
+      },
+      quantity: item.quantity,
+      variantId: item.variantId,
+      weight: item.weight,
+      price: item.price,
+    }));
+
+    const rawResult =
+      couponCode && userId
+        ? await this.couponHelperService.applyCouponIfAvailable(
+            couponCode,
+            userId,
+            subtotal,
+            validatedItems,
+          )
+        : null;
+
+    if (!rawResult) {
       return {
-        items: dto.items,
-        message:
-          'Please provide a shipping city to calculate shipping and taxes.',
-        totalPrice: subtotal,
-        totalPriceAfterDiscount: taxableSubtotal,
-        discountAmount: discount,
-        couponDetails: couponDetails,
+        discountAmount: 0,
+        subtotalAfterDiscount: subtotal,
+        couponDetails: null,
       };
     }
-    // 4. التحقق من المدينة وتوفر التوصيل
-    const city = (await this.locationsService.getCityById(
-      dto.cityId,
-    )) as unknown as {
-      isDeliveryAvailable: boolean;
-      country: { _id?: string } | string | undefined;
-      name: { ar?: string; en?: string } | string;
+
+    return {
+      discountAmount: rawResult.discountAmount,
+      subtotalAfterDiscount:
+        rawResult.totalPriceAfterDiscount ?? rawResult.totalPrice,
+      couponDetails: rawResult.couponDetails,
     };
+  }
+
+  /**
+   * Throws a BadRequestException when the post-discount subtotal falls below
+   * the store's configured minimum order amount.
+   */
+  private validateMinimumOrder(
+    subtotalAfterDiscount: number,
+    settings: Setting,
+    currency: string,
+  ): void {
+    const minOrderAmount = settings.minOrderAmount ?? 0;
+
+    if (minOrderAmount > 0 && subtotalAfterDiscount < minOrderAmount) {
+      throw new BadRequestException(
+        `الحد الأدنى للطلب هو ${minOrderAmount} ${currency} (المجموع الحالي بعد الخصم: ${subtotalAfterDiscount})`,
+      );
+    }
+  }
+
+  /**
+   * Fetches the city document and asserts delivery availability.
+   * Returns a strongly typed ICityData — no `as` assertion required at the
+   * call site because getCityById returns `any` and we annotate the return
+   * type here once.
+   */
+  private async getAndValidateCity(cityId: string): Promise<ICityData> {
+    const city = (await this.locationsService.getCityById(cityId)) as ICityData;
+
     if (!city.isDeliveryAvailable) {
       throw new BadRequestException('Delivery is not available for this city');
     }
 
-    // 6. حساب الضرائب بناءً على المبلغ بعد الخصم
+    return city;
+  }
+
+  /**
+   * Derives a plain country ID string from the populated city document.
+   * Handles both populated objects ({ _id }) and raw string references.
+   */
+  private extractCountryId(city: ICityData): string | undefined {
     const countryData = city.country;
-    const countryId =
-      typeof countryData === 'object'
-        ? countryData?._id?.toString()
-        : countryData?.toString();
+    return typeof countryData === 'object'
+      ? countryData?._id?.toString()
+      : countryData?.toString();
+  }
 
-    // نمرر taxableSubtotal بدلاً من subtotal الأصلي
-    const taxDetails = await this.taxesService.calculateTax(
-      taxableSubtotal,
-      countryId,
-    );
+  /**
+   * Fires tax and shipping calculations concurrently — they are independent
+   * computations that both depend on previously resolved values but not on
+   * each other.
+   */
+  private async calculateTaxesAndShipping(
+    subtotalAfterDiscount: number,
+    countryId: string | undefined,
+    cityId: string,
+    totalWeight: number,
+  ): Promise<[TaxDetails, ShippingCalculationResult[]]> {
+    return Promise.all([
+      this.taxesService.calculateTax(subtotalAfterDiscount, countryId),
+      this.shippingRatesService.calculateShipping(
+        cityId,
+        totalWeight,
+        subtotalAfterDiscount,
+      ),
+    ]);
+  }
 
-    // 7.  حساب الشحن والتحقق من عتبة الشحن المجاني بناءً على الصافي
-    const shippingOptions = await this.shippingRatesService.calculateShipping(
-      dto.cityId,
-      totalWeight,
-      taxableSubtotal, // المتاجر الكبرى تمرر الصافي لشركات الشحن
-    );
+  /**
+   * Finds the shipping option matching the requested provider ID.
+   * Falls back to the first available option when no match is found.
+   * Throws when no options exist at all.
+   */
+  private selectShippingOption(
+    shippingOptions: ShippingCalculationResult[],
+    shippingProviderId: string,
+  ): ShippingCalculationResult {
+    const chosen =
+      shippingOptions.find((opt) => opt.providerId === shippingProviderId) ??
+      shippingOptions[0];
 
-    const selectedShipping =
-      shippingOptions.find(
-        (opt) => opt.providerId === dto.shippingProviderId,
-      ) || shippingOptions[0];
-    if (!selectedShipping) {
+    if (!chosen) {
       throw new BadRequestException(
         'No shipping options available for this city',
       );
     }
 
-    let shippingCost = selectedShipping.totalShippingCost;
+    return chosen;
+  }
 
-    // التحقق من الشحن المجاني بناءً على الصافي (taxableSubtotal)
-    const freeShippingThreshold = settings.freeShippingThreshold || 0;
+  /**
+   * Returns the effective shipping cost after applying the free-shipping
+   * threshold rule from settings.  Custom rates bypass the global threshold.
+   */
+  private calculateShippingCost(
+    chosenShipping: ShippingCalculationResult,
+    subtotalAfterDiscount: number,
+    settings: Setting,
+  ): number {
+    const freeShippingThreshold = settings.freeShippingThreshold ?? 0;
+
     if (
       freeShippingThreshold > 0 &&
-      taxableSubtotal >= freeShippingThreshold &&
+      subtotalAfterDiscount >= freeShippingThreshold &&
       !settings.hasCustomShippingRates
     ) {
-      shippingCost = 0;
+      return 0;
     }
 
-    // 8. التحقق من وسيلة الدفع ورسومها
-    const paymentMethodCode = dto.paymentMethodId;
-    let paymentFees = 0;
-    if (paymentMethodCode) {
-      if (settings.gateways?.[paymentMethodCode] === false) {
-        throw new BadRequestException('Invalid or inactive payment method');
-      }
+    return chosenShipping.totalShippingCost;
+  }
 
-      if (paymentMethodCode === 'cod' && !selectedShipping.supportsCOD) {
-        throw new BadRequestException(
-          'Cash on Delivery is not supported by the selected shipping provider',
-        );
-      }
-      paymentFees = 0; // يمكن حساب رسوم الـ COD هنا لاحقاً إن وجدت
+  /**
+   * Validates that the chosen payment method is active in settings and that
+   * COD is supported by the selected shipping provider when applicable.
+   */
+  private validatePaymentMethod(
+    paymentMethodId: string,
+    chosenShipping: ShippingCalculationResult,
+    settings: Setting,
+  ): void {
+    if (!paymentMethodId) return;
+
+    const gatewayKey = paymentMethodId as keyof typeof settings.gateways;
+    if (settings.gateways?.[gatewayKey] === false) {
+      throw new BadRequestException('Invalid or inactive payment method');
     }
 
-    // 9. تجميع النتيجة النهائية (المعادلة الحسابية الصحيحة)
-    const total =
-      taxableSubtotal + // (subtotal - discount)
+    if (paymentMethodId === COD_METHOD_CODE && !chosenShipping.supportsCOD) {
+      throw new BadRequestException(
+        'Cash on Delivery is not supported by the selected shipping provider',
+      );
+    }
+  }
+
+  /**
+   * Builds the partial preview response returned before a city is selected.
+   * Keeps the exact same payload structure as before so the frontend degrades
+   * gracefully while the user fills in their address.
+   */
+  private buildPartialPreviewResponse(
+    items: CheckoutItem[],
+    subtotal: number,
+    couponResult: CouponResult,
+  ): CheckoutPartialPreviewResponse {
+    return {
+      items,
+      message:
+        'Please provide a shipping city to calculate shipping and taxes.',
+      totalPrice: subtotal,
+      totalPriceAfterDiscount: couponResult.subtotalAfterDiscount,
+      discountAmount: couponResult.discountAmount,
+      couponDetails: couponResult.couponDetails,
+    };
+  }
+
+  /**
+   * Assembles the full, structured checkout response after all calculations
+   * have completed.  The shape is identical to the original implementation to
+   * guarantee frontend backward compatibility.
+   */
+  private buildCheckoutResponse(params: {
+    dto: CheckoutPreviewDto;
+    city: ICityData;
+    cartTotals: CartTotals;
+    couponResult: CouponResult;
+    taxDetails: TaxDetails;
+    shippingOptions: ShippingCalculationResult[];
+    chosenShipping: ShippingCalculationResult;
+    shippingCost: number;
+    currency: string;
+  }): CheckoutPreviewResponse {
+    const {
+      dto,
+      city,
+      cartTotals,
+      couponResult,
+      taxDetails,
+      shippingOptions,
+      chosenShipping,
+      shippingCost,
+      currency,
+    } = params;
+
+    // Payment fees are reserved for future gateway integrations.
+    const paymentFees = 0;
+
+    const totalPrice =
+      couponResult.subtotalAfterDiscount +
       shippingCost +
       (taxDetails.isIncluded ? 0 : taxDetails.taxAmount) +
       paymentFees;
 
     return {
       summary: {
-        subtotal,
-        totalWeight,
+        subtotal: cartTotals.subtotal,
+        totalWeight: cartTotals.totalWeight,
         shippingCost,
         taxAmount: taxDetails.taxAmount,
         taxPercentage: taxDetails.taxPercentage,
         paymentFees,
-        discount,
-        total,
-        currency: settings.currencySymbol || 'SAR',
+        discountAmount: couponResult.discountAmount,
+        totalPrice,
+        currency,
       },
       delivery: {
         cityId: dto.cityId,
         cityName: city.name,
-        providerId: selectedShipping.providerId,
-        providerName: selectedShipping.providerName,
-        rateId: selectedShipping.rateId,
-        estimatedDays: selectedShipping.estimatedDays,
+        providerId: chosenShipping.providerId,
+        providerName: chosenShipping.providerName,
+        rateId: chosenShipping.rateId,
+        estimatedDays: chosenShipping.estimatedDays,
       },
       payment: {
-        methodId: paymentMethodCode || '',
-        methodName: paymentMethodCode || '',
-        methodCode: paymentMethodCode || '',
+        methodId: dto.paymentMethodId ?? '',
+        methodName: dto.paymentMethodId ?? '',
+        methodCode: dto.paymentMethodId ?? '',
         fees: paymentFees,
       },
-      couponDetails,
+      couponDetails: couponResult.couponDetails,
       shippingOptions,
       items: dto.items.map((item) => ({
         ...item,

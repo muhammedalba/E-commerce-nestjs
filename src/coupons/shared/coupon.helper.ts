@@ -128,9 +128,9 @@ export class CouponHelperService {
 
     //if rawDiscount > totalPrice
     const discountAmount = Math.min(rawDiscount, totalPrice);
+
     const totalPriceAfterDiscount =
       Math.round((totalPrice - discountAmount) * 100) / 100;
-
     return {
       discountAmount,
       totalPrice,

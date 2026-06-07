@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { CheckoutSessionService } from './checkout-session.service';
-import { CheckoutService } from './checkout.service';
+import { CheckoutService, CheckoutPreviewResponse } from './checkout.service';
 import { CartService } from '../cart/cart.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
@@ -30,6 +30,10 @@ export class CheckoutOrchestratorService {
           | string;
         quantity: number;
         unitPrice: number;
+        /** Brand snapshot stored on the CartItem at add-time. */
+        brand?: { toString(): string } | string;
+        /** Category snapshot stored on the CartItem at add-time. */
+        category?: { toString(): string } | string;
       }[];
       totalPrice?: number;
     };
@@ -64,8 +68,16 @@ export class CheckoutOrchestratorService {
         productId,
         variantId,
         quantity: item.quantity,
-        weight: v?.attributes?.weight?.value || 0,
+        weight: v?.attributes?.weight?.value ?? 0,
         price: item.unitPrice,
+        brand:
+          typeof item.brand === 'object'
+            ? (item.brand?.toString() ?? '')
+            : (item.brand ?? ''),
+        category:
+          typeof item.category === 'object'
+            ? (item.category?.toString() ?? '')
+            : (item.category ?? ''),
       };
     });
 
@@ -133,13 +145,14 @@ export class CheckoutOrchestratorService {
   ) {
     // 1. Get final calculated summary
     const summaryData = await this.getSummary(userId);
-    const summary = summaryData as {
+
+    // getSummary spreads the CheckoutPreviewResponse into an object that also
+    // carries `isComplete` and `session` from the checkout session.
+    const summary = summaryData as CheckoutPreviewResponse & {
       isComplete: boolean;
-      items: unknown[];
       session: {
         address?: {
           firstName?: string;
-          firsName?: string;
           lastName?: string;
           phone?: string;
           countryId?: string;
@@ -153,25 +166,6 @@ export class CheckoutOrchestratorService {
           addressType?: string;
         };
       };
-      summary: {
-        shippingCost: number;
-        taxAmount: number;
-        paymentFees: number;
-        subtotal: number;
-        discount: number;
-        total: number;
-        currency: string;
-      };
-      delivery: {
-        cityId: string;
-        providerId: string;
-        rateId: string;
-      };
-      payment: {
-        methodId: string;
-        methodCode: string;
-      };
-      couponDetails: unknown;
     };
 
     if (!summary.isComplete) {
@@ -187,7 +181,7 @@ export class CheckoutOrchestratorService {
     // 2. Prepare order payload
     const sessionAddress = summary.session?.address || {};
     const mappedAddress = {
-      firsName: sessionAddress.firstName || sessionAddress.firsName || 'N/A', // Mongoose schema has typo `firsName`
+      firstName: sessionAddress.firstName || 'N/A', // Mongoose schema has typo `firsName`
       lastName: sessionAddress.lastName || 'N/A',
       phone: sessionAddress.phone || '0000000000',
       country: sessionAddress.countryId || sessionAddress.country || 'N/A',
@@ -215,8 +209,8 @@ export class CheckoutOrchestratorService {
       taxAmount: summary.summary.taxAmount,
       paymentFees: summary.summary.paymentFees,
       totalPrice: summary.summary.subtotal,
-      discountAmount: summary.summary.discount,
-      grandTotal: summary.summary.total,
+      discountAmount: summary.summary.discountAmount,
+      grandTotal: summary.summary.totalPrice,
       currency: summary.summary.currency,
       couponDetails: summary.couponDetails,
       notes,
