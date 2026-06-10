@@ -81,19 +81,6 @@ export class CheckoutOrchestratorService {
       };
     });
 
-    // If session doesn't have cityId, we can't calculate shipping or tax properly yet
-    // But we can return a partial summary
-    // if (!session.cityId) {
-    //   return {
-    //     isComplete: false,
-    //     message:
-    //       'Please provide a shipping city to calculate shipping and taxes.',
-    //     cartSubtotal: cart.totalPrice,
-    //     items,
-    //     session,
-    //   };
-    // }
-
     // Call existing checkoutService to get the full calculation
     const preview = await this.checkoutService.getCheckoutPreview(
       {
@@ -106,8 +93,10 @@ export class CheckoutOrchestratorService {
       userId,
     );
 
+    const isComplete = !!preview.delivery && !!preview.payment;
+
     return {
-      isComplete: true,
+      isComplete,
       ...preview,
       session,
     };
@@ -172,7 +161,7 @@ export class CheckoutOrchestratorService {
       throw new BadRequestException('Checkout is incomplete');
     }
 
-    if (!summary.payment.methodId || !summary.delivery.providerId) {
+    if (!summary.payment?.methodId || !summary.delivery?.providerId) {
       throw new BadRequestException(
         'Payment method and Shipping provider are required',
       );
@@ -186,7 +175,7 @@ export class CheckoutOrchestratorService {
       phone: sessionAddress.phone || '0000000000',
       country: sessionAddress.countryId || sessionAddress.country || 'N/A',
       city:
-        summary.delivery.cityId ||
+        summary.delivery?.cityId ||
         sessionAddress.cityId ||
         sessionAddress.city ||
         'N/A',
@@ -202,9 +191,9 @@ export class CheckoutOrchestratorService {
       userEmail,
       items: summary.items,
       shippingAddress: mappedAddress,
-      shippingProviderId: summary.delivery.providerId,
-      shippingRateId: summary.delivery.rateId,
-      paymentMethodId: summary.payment.methodId,
+      shippingProviderId: summary.delivery?.providerId,
+      shippingRateId: summary.delivery?.rateId,
+      paymentMethodId: summary.payment?.methodId,
       shippingAmount: summary.summary.shippingCost,
       taxAmount: summary.summary.taxAmount,
       paymentFees: summary.summary.paymentFees,
@@ -270,7 +259,7 @@ export class CheckoutOrchestratorService {
       couponDetails: summary.couponDetails,
     });
 
-    const methodCode = summary.payment.methodCode;
+    const methodCode = summary.payment?.methodCode;
 
     // 6. Payment Sessions Logic
     let paymentData: Record<string, unknown> = {};

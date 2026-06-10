@@ -102,21 +102,12 @@ export interface CheckoutPayment {
 
 export interface CheckoutPreviewResponse {
   summary: CheckoutSummary;
-  delivery: CheckoutDelivery;
-  payment: CheckoutPayment;
+  delivery: CheckoutDelivery | null;
+  payment: CheckoutPayment | null;
   couponDetails: unknown;
   shippingOptions: ShippingCalculationResult[];
   items: (CheckoutItem & { totalPrice: number })[];
-}
-
-/** Returned when no cityId is provided — a partial preview without shipping/tax. */
-export interface CheckoutPartialPreviewResponse {
-  items: CheckoutItem[];
-  message: string;
-  totalPrice: number;
-  totalPriceAfterDiscount: number;
-  discountAmount: number;
-  couponDetails: unknown;
+  message?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -149,7 +140,7 @@ export class CheckoutService {
   async getCheckoutPreview(
     dto: CheckoutPreviewDto,
     userId?: string,
-  ): Promise<CheckoutPreviewResponse | CheckoutPartialPreviewResponse> {
+  ): Promise<CheckoutPreviewResponse> {
     // 1. Aggregate cart line-items into totals.
     const cartTotals = this.calculateCartTotals(dto.items);
 
@@ -174,6 +165,7 @@ export class CheckoutService {
         dto.items,
         cartTotals.subtotal,
         couponResult,
+        currency,
       );
     }
 
@@ -435,15 +427,37 @@ export class CheckoutService {
     items: CheckoutItem[],
     subtotal: number,
     couponResult: CouponResult,
-  ): CheckoutPartialPreviewResponse {
+    currency: string,
+  ): CheckoutPreviewResponse {
+    const totalWeight = items.reduce(
+      (sum, item) => sum + item.weight * item.quantity,
+      0,
+    );
+
     return {
-      items,
+      summary: {
+        // total price before discount
+        subtotal: subtotal,
+        totalWeight,
+        shippingCost: 0,
+        taxAmount: 0,
+        taxPercentage: 0,
+        paymentFees: 0,
+        discountAmount: couponResult.discountAmount,
+        // total price before tax and shipping and fees but after discount
+        totalPrice: couponResult.subtotalAfterDiscount,
+        currency,
+      },
+      delivery: null,
+      payment: null,
+      couponDetails: couponResult.couponDetails,
+      shippingOptions: [],
+      items: items.map((item) => ({
+        ...item,
+        totalPrice: item.price * item.quantity,
+      })),
       message:
         'Please provide a shipping city to calculate shipping and taxes.',
-      totalPrice: subtotal,
-      totalPriceAfterDiscount: couponResult.subtotalAfterDiscount,
-      discountAmount: couponResult.discountAmount,
-      couponDetails: couponResult.couponDetails,
     };
   }
 
