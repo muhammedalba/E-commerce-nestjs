@@ -82,6 +82,7 @@ export interface CheckoutSummary {
   discountAmount: number;
   totalPrice: number;
   currency: string;
+  taxesIncluded: boolean;
 }
 
 export interface CheckoutDelivery {
@@ -247,6 +248,7 @@ export class CheckoutService {
         'you should be logged in to apply a coupon',
       );
     }
+    // map over items in the cart and for each item i want to include inside the item the brand and category
     const validatedItems = items.map((item) => ({
       product: {
         id: new Types.ObjectId(item.productId),
@@ -447,6 +449,8 @@ export class CheckoutService {
         // total price before tax and shipping and fees but after discount
         totalPrice: couponResult.subtotalAfterDiscount,
         currency,
+        // No city selected yet — tax cannot be determined, so taxesIncluded is always false here
+        taxesIncluded: false,
       },
       delivery: null,
       payment: null,
@@ -509,6 +513,7 @@ export class CheckoutService {
         discountAmount: couponResult.discountAmount,
         totalPrice,
         currency,
+        taxesIncluded: taxDetails.isIncluded,
       },
       delivery: {
         cityId: dto.cityId,
