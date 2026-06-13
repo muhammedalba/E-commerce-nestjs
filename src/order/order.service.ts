@@ -1,5 +1,4 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { CreateOrderDto } from './shared/dto/create-order.dto';
 import { UpdateOrderDto } from './shared/dto/update-order.dto';
 import { Model, Types, Connection } from 'mongoose';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
@@ -75,9 +74,7 @@ export class OrderService {
   async findOne(idParamDto: string) {
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto);
     if (!isObjectId) {
-      throw new BadRequestException(
-        'Ã™â€¦Ã˜Â¹Ã˜Â±Ã™Â  Ã˜Â§Ã™â€žÃ˜Â·Ã™â€žÃ˜Â¨ Ã˜ÂºÃ™Å Ã˜Â± Ã˜ÂµÃ˜Â§Ã™â€žÃ˜Â­',
-      );
+      throw new BadRequestException('Invalid order ID');
     }
     const order = await this.OrderModel.findById(idParamDto)
       .populate({
@@ -109,9 +106,7 @@ export class OrderService {
     // 1) check id is valid
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto.id);
     if (!isObjectId) {
-      throw new BadRequestException(
-        'Ã™â€¦Ã˜Â¹Ã˜Â±Ã™Â  Ã˜Â§Ã™â€žÃ˜Â·Ã™â€žÃ˜Â¨ Ã˜ÂºÃ™Å Ã˜Â± Ã˜ÂµÃ˜Â§Ã™â€žÃ˜Â­',
-      );
+      throw new BadRequestException('Invalid order ID');
     }
     const order = await this.OrderModel.findById(idParamDto.id).select(
       ' InvoicePdf DeliveryReceiptImage ',
@@ -166,9 +161,7 @@ export class OrderService {
     // 1) : Validate ID format
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto.id);
     if (!isObjectId) {
-      throw new BadRequestException(
-        'Ã™â€¦Ã˜Â¹Ã˜Â±Ã™Â Ã˜Â§Ã™â€žÃ˜Â·Ã™â€žÃ˜Â¨ Ã˜ÂºÃ™Å Ã˜Â± Ã˜ÂµÃ˜Â§Ã™â€žÃ˜Â­',
-      );
+      throw new BadRequestException('Invalid order ID');
     }
 
     // 2) Retrieve and delete order
@@ -191,10 +184,7 @@ export class OrderService {
       try {
         await this.fileUploadService.deleteFiles(paths);
       } catch (err) {
-        this.logger.warn?.(
-          'Ã™ÂÃ˜Â´Ã™â€ž Ã˜Â­Ã˜Â°Ã™Â Ã˜Â§Ã™â€žÃ™â€¦Ã™â€žÃ™ÂÃ˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â±Ã˜ÂªÃ˜Â¨Ã˜Â·Ã˜Â© Ã˜Â¨Ã˜Â§Ã™â€žÃ˜Â·Ã™â€žÃ˜Â¨',
-          err,
-        );
+        this.logger.warn?.(err);
       }
     }
   }
@@ -203,7 +193,25 @@ export class OrderService {
   /*  CREATE PENDING ORDER - Event Driven Logic       */
   /* ================================================ */
   @OnEvent('checkout.placeOrderCommand')
-  async handlePlaceOrderCommand(orderPayload: any) {
+  async handlePlaceOrderCommand(orderPayload: {
+    user: string;
+    items: Record<string, unknown>[];
+    shippingAddress: Record<string, unknown>;
+    shippingProviderId: string;
+    shippingRateId: string;
+    paymentMethodId?: string;
+    shippingAmount: number;
+    taxAmount: number;
+    paymentFees: number;
+    totalPrice: number;
+    discountAmount: number;
+    grandTotal: number;
+    currency: string;
+    notes?: string;
+    transferReceiptImg?: string;
+    userEmail?: string;
+    [key: string]: unknown;
+  }) {
     try {
       // 1) Create Order Document
       const newOrder = new this.OrderModel({
@@ -259,7 +267,8 @@ export class OrderService {
         success: true,
         orderId: savedOrder._id.toString(),
       };
-    } catch (error: any) {
+    } catch (err: any) {
+      const error = err as Error;
       this.logger.error(
         `Order Placement Failed: ${error.message}`,
         error.stack,
@@ -275,8 +284,8 @@ export class OrderService {
   async handleOrderCreatedEvent(payload: {
     orderId: string;
     userId: string;
-    items: any[];
-    couponDetails?: any;
+    items: { productId: string; variantId: string; quantity: number }[];
+    couponDetails?: { CouponId?: string; [key: string]: unknown };
   }) {
     try {
       // 1) Re-validate and map items to ValidatedItem type for helper services
@@ -289,7 +298,7 @@ export class OrderService {
       // 3) Mark Coupon as used
       if (payload.couponDetails && payload.couponDetails.CouponId) {
         await this.couponHelperService.markCouponAsUsed(
-          payload.couponDetails.CouponId,
+          new Types.ObjectId(payload.couponDetails.CouponId),
           payload.userId,
         );
       }
@@ -309,7 +318,8 @@ export class OrderService {
           user.email,
         );
       }
-    } catch (error: any) {
+    } catch (err: any) {
+      const error = err as Error;
       this.logger.error(
         `Saga 'order.created' Failed: ${error.message}`,
         error.stack,
@@ -328,8 +338,8 @@ export class OrderService {
   async handleMoyasarOrderCreatedEvent(payload: {
     orderId: string;
     userId: string;
-    items: any[];
-    couponDetails?: any;
+    items: { productId: string; variantId: string; quantity: number }[];
+    couponDetails?: { CouponId?: string; [key: string]: unknown };
   }) {
     try {
       const { validatedItems } =
@@ -338,7 +348,7 @@ export class OrderService {
 
       if (payload.couponDetails && payload.couponDetails.CouponId) {
         await this.couponHelperService.markCouponAsUsed(
-          payload.couponDetails.CouponId,
+          new Types.ObjectId(payload.couponDetails.CouponId),
           payload.userId,
         );
       }
@@ -346,17 +356,8 @@ export class OrderService {
       await this.UserModel.findByIdAndUpdate(payload.userId, {
         $inc: { totalOrder: 1 },
       });
-
-      const order = await this.OrderModel.findById(payload.orderId);
-      const user = await this.UserModel.findById(payload.userId);
-      if (order && user) {
-        await this.orderEmailService.sendOrderEmail(
-          order,
-          validatedItems,
-          user.email,
-        );
-      }
-    } catch (error: any) {
+    } catch (err: any) {
+      const error = err as Error;
       this.logger.error(
         `Saga 'order.moyasar_created' Failed: ${error.message}`,
         error.stack,
@@ -391,11 +392,25 @@ export class OrderService {
       );
       if (order && order.paymentMethodCode === 'moyasar') {
         const { validatedItems } =
-          await this.orderHelperService.validateOrderItems(order.items as any);
+          await this.orderHelperService.validateOrderItems(
+            order.items as unknown as {
+              productId: string;
+              variantId: string;
+              quantity: number;
+            }[],
+          );
         await this.productHelperService.confirmReservation(validatedItems);
+        const user = await this.UserModel.findById(order.user);
+        if (user) {
+          await this.orderEmailService.sendOrderEmail(
+            order,
+            validatedItems,
+            user.email,
+          );
+        }
       }
-      // Can send payment success email here
-    } catch (error: any) {
+    } catch (err: any) {
+      const error = err as Error;
       this.logger.error(
         `payment.succeeded failed for order ${payload.orderId}: ${error.message}`,
         error.stack,
@@ -417,10 +432,17 @@ export class OrderService {
       );
       if (order && order.paymentMethodCode === 'moyasar') {
         const { validatedItems } =
-          await this.orderHelperService.validateOrderItems(order.items as any);
+          await this.orderHelperService.validateOrderItems(
+            order.items as unknown as {
+              productId: string;
+              variantId: string;
+              quantity: number;
+            }[],
+          );
         await this.productHelperService.releaseReservation(validatedItems);
       }
-    } catch (error: any) {
+    } catch (err: any) {
+      const error = err as Error;
       this.logger.error(
         `payment.failed handler failed: ${error.message}`,
         error.stack,
@@ -442,10 +464,17 @@ export class OrderService {
       );
       if (order && order.paymentMethodCode === 'moyasar') {
         const { validatedItems } =
-          await this.orderHelperService.validateOrderItems(order.items as any);
+          await this.orderHelperService.validateOrderItems(
+            order.items as unknown as {
+              productId: string;
+              variantId: string;
+              quantity: number;
+            }[],
+          );
         await this.productHelperService.releaseReservation(validatedItems);
       }
-    } catch (error: any) {
+    } catch (err: any) {
+      const error = err as Error;
       this.logger.error(
         `payment.expired handler failed: ${error.message}`,
         error.stack,
@@ -460,8 +489,8 @@ export class OrderService {
   async handleOrderFailedEvent(payload: {
     orderId: string;
     userId: string;
-    items: any[];
-    couponDetails?: any;
+    items: { productId: string; variantId: string; quantity: number }[];
+    couponDetails?: { CouponId?: string; [key: string]: unknown };
     reason?: string;
   }) {
     this.logger.warn(
@@ -475,36 +504,15 @@ export class OrderService {
         notes: `Cancelled due to system failure: ${payload.reason}`,
       });
 
-      // 2) Revert Stock (need a revert method in productHelperService or do manual bulk write here)
+      // 2) Revert Stock
       // Since it's a compensation, we increment stock instead of decrement
-      const { validatedItems } =
-        await this.orderHelperService.validateOrderItems(payload.items);
-      const bulkOptions = validatedItems.map((item) => {
-        return {
-          updateOne: {
-            filter: { _id: item.variant.id },
-            update: {
-              $inc: {
-                sold: -item.quantity,
-                stock: item.product.isUnlimitedStock ? 0 : item.quantity,
-              },
-            },
-          },
-        };
-      });
-      // Import isn't available easily, so using Mongoose model directly might be hard if we don't inject it here.
-      // But wait! ProductHelperService is injected. Let's just create the manual update in ProductHelperService if needed, or better, do it in OrderHelper since we have models?
-      // OrderService does not inject ProductVariant Model!
-      // So let's assume we implement `revertProductStats` in `ProductHelperService`.
-      if (this.productHelperService['revertProductStats']) {
-        await (this.productHelperService as any).revertProductStats(
-          validatedItems,
-        );
-      }
+      // TODO: Implement revertProductStats in productHelperService and call it here.
+      // const { validatedItems } = await this.orderHelperService.validateOrderItems(payload.items);
 
       // 3) Revert Coupon (not implemented in CouponHelperService yet, but we'd call it if it existed)
       // e.g. await this.couponHelperService.revertCouponUsage(payload.couponDetails.CouponId, payload.userId);
-    } catch (error: any) {
+    } catch (err: any) {
+      const error = err as Error;
       // Very bad if compensating event fails. Should be logged to DLQ or manually inspected.
       this.logger.error(
         `CRITICAL: Compensating Action for 'order.failed' crashed: ${error.message}`,

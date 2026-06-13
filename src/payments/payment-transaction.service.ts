@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument */
 import {
   Injectable,
   Logger,
@@ -87,14 +88,50 @@ export class PaymentTransactionService {
   async processMoyasarWebhook(payload: any) {
     const providerPaymentId = payload.id;
     const paymentStatus = payload.status; // 'paid', 'failed', etc.
+    const orderId = payload.metadata?.orderId;
 
-    const transaction = await this.transactionModel.findOne({
-      providerPaymentId,
-    });
+    let transaction;
+
+    // First try by providerPaymentId (if it was already saved)
+    if (providerPaymentId) {
+      transaction = await this.transactionModel.findOne({ providerPaymentId });
+    }
+
+    // If not found, fall back to finding by orderId (since frontend creates the payment)
+    if (!transaction && orderId) {
+      transaction = await this.transactionModel.findOne({
+        orderId: new Types.ObjectId(orderId),
+        status: { $in: [PaymentStatus.INITIATED, PaymentStatus.PENDING] },
+      });
+      // Save the providerPaymentId to link it
+      if (transaction) {
+        transaction.providerPaymentId = providerPaymentId;
+        await transaction.save();
+      }
+    }
+
     if (!transaction) {
       this.logger.warn(
-        `Webhook received for unknown Moyasar payment: ${providerPaymentId}`,
+        `Webhook received for unknown Moyasar payment: ${providerPaymentId} (orderId: ${orderId})`,
       );
+      return;
+    }
+
+    // Security Check: Validate Amount
+    // Moyasar payload.amount is in halalas (e.g. 10000 for 100 SAR)
+    const expectedAmountHalalas = Math.round(transaction.amount * 100);
+    if (payload.amount !== expectedAmountHalalas) {
+      this.logger.error(
+        `Amount mismatch for order ${orderId}! Expected ${expectedAmountHalalas}, got ${payload.amount}`,
+      );
+      // Mark as failed due to tampered amount
+      transaction.status = PaymentStatus.FAILED;
+      transaction.failedAt = new Date();
+      transaction.metadata = {
+        ...transaction.metadata,
+        failureReason: 'Amount mismatch detected',
+      };
+      await transaction.save();
       return;
     }
 
@@ -144,27 +181,42 @@ export class PaymentTransactionService {
     amount: number;
     currency: string;
   }> {
-    let transaction = await this.transactionModel.findOne({
-      providerPaymentId,
-    });
-    
-    if (!transaction) {
-      throw new NotFoundException('Payment transaction not found');
+    // 1. Fetch payment directly from Moyasar to guarantee truth
+    const payment = await this.moyasarProvider.fetchPayment(providerPaymentId);
+    if (!payment) {
+      throw new NotFoundException('Payment not found on Moyasar');
     }
 
-    // Actively poll Moyasar if status is not final
-    if (transaction.status === PaymentStatus.PENDING || transaction.status === PaymentStatus.INITIATED) {
-      const invoice = await this.moyasarProvider.fetchInvoice(providerPaymentId);
-      if (invoice && invoice.status === 'paid') {
+    const metadata = payment.metadata as Record<string, unknown> | undefined;
+    const orderId = metadata?.orderId as string | undefined;
+    if (!orderId) {
+      throw new BadRequestException(
+        'Payment does not contain orderId metadata',
+      );
+    }
+
+    // 2. Find internal transaction
+    let transaction = await this.transactionModel
+      .findOne({ orderId: new Types.ObjectId(orderId) })
+      .sort({ createdAt: -1 });
+
+    if (!transaction) {
+      throw new NotFoundException('Payment transaction not found in database');
+    }
+
+    // Actively process it if status is not final
+    if (
+      transaction.status === PaymentStatus.PENDING ||
+      transaction.status === PaymentStatus.INITIATED
+    ) {
+      if (
+        payment.status === 'paid' ||
+        payment.status === 'failed' ||
+        payment.status === 'expired'
+      ) {
         // Reuse webhook logic safely
-        await this.processMoyasarWebhook(invoice);
+        await this.processMoyasarWebhook(payment);
         // Refresh transaction from DB
-        const updated = await this.transactionModel.findById(transaction._id);
-        if (updated) {
-          transaction = updated;
-        }
-      } else if (invoice && (invoice.status === 'failed' || invoice.status === 'expired')) {
-        await this.processMoyasarWebhook(invoice);
         const updated = await this.transactionModel.findById(transaction._id);
         if (updated) {
           transaction = updated;

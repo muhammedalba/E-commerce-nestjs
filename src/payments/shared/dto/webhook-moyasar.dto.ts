@@ -8,9 +8,13 @@ export class WebhookMoyasarDto {
   type!: string;
 
   @IsObject()
-  data: any;
+  data!: Record<string, unknown>;
 
   @IsOptional()
   @IsObject()
-  metadata?: any;
+  metadata?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsString()
+  secret_token?: string;
 }

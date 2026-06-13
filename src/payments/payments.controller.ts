@@ -9,6 +9,7 @@ import {
   UseGuards,
   UseInterceptors,
   Request,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { CacheTTL } from '@nestjs/cache-manager';
 import { PaymentsService } from './payments.service';
@@ -22,6 +23,7 @@ import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.int
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 import { PaymentMethod } from './shared/schema/payment-method.schema';
+import { WebhookMoyasarDto } from './shared/dto/webhook-moyasar.dto';
 
 @Controller('payments')
 @UseInterceptors(ClearCacheInterceptor)
@@ -35,8 +37,24 @@ export class PaymentsController {
   /*  MOYASAR WEBHOOK                                  */
   /* ================================================ */
   @Post('webhooks/moyasar')
-  async handleMoyasarWebhook(@Body() payload: any) {
-    await this.paymentTransactionService.processMoyasarWebhook(payload);
+  async handleMoyasarWebhook(@Body() payload: WebhookMoyasarDto) {
+    const secret = process.env.MOYASAR_WEBHOOK_SECRET;
+    if (secret && payload.secret_token !== secret) {
+      throw new UnauthorizedException('Invalid Webhook Secret Token');
+    }
+
+    // A Moyasar Webhook payload contains the payment object inside `data`
+    const paymentId = payload?.data?.id as string | undefined;
+    if (paymentId) {
+      // Securely process by triggering verifyPaymentStatus which fetches the real payment from Moyasar
+      // This guarantees we can't be spoofed by a fake webhook request.
+      try {
+        await this.paymentTransactionService.verifyPaymentStatus(paymentId);
+      } catch (error) {
+        // Log but don't fail, we return 200 OK to Moyasar
+        console.error('Webhook verification failed:', error);
+      }
+    }
     return { received: true };
   }
 
