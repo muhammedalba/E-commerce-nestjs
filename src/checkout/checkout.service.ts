@@ -75,10 +75,10 @@ export interface ICityData {
 export interface CheckoutSummary {
   subtotal: number;
   totalWeight: number;
-  shippingCost: number;
-  taxAmount: number;
-  taxPercentage: number;
-  paymentFees: number;
+  shippingCost?: number;
+  taxAmount?: number;
+  taxPercentage?: number;
+  paymentFees?: number;
   discountAmount: number;
   totalPrice: number;
   currency: string;
@@ -441,10 +441,10 @@ export class CheckoutService {
         // total price before discount
         subtotal: subtotal,
         totalWeight,
-        shippingCost: 0,
-        taxAmount: 0,
-        taxPercentage: 0,
-        paymentFees: 0,
+        shippingCost: undefined,
+        taxAmount: undefined,
+        taxPercentage: undefined,
+        paymentFees: undefined,
         discountAmount: couponResult.discountAmount,
         // total price before tax and shipping and fees but after discount
         totalPrice: couponResult.subtotalAfterDiscount,

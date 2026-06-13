@@ -217,7 +217,11 @@ export class OrderService {
         // Only wrap in ObjectId when it looks like a 24-char hex string
         ...(orderPayload.paymentMethodId
           ? /^[a-f\d]{24}$/i.test(String(orderPayload.paymentMethodId))
-            ? { paymentMethodId: new Types.ObjectId(orderPayload.paymentMethodId) }
+            ? {
+                paymentMethodId: new Types.ObjectId(
+                  orderPayload.paymentMethodId,
+                ),
+              }
             : { paymentMethodCode: String(orderPayload.paymentMethodId) }
           : {}),
 
@@ -315,6 +319,137 @@ export class OrderService {
         ...payload,
         reason: error.message,
       });
+    }
+  }
+  /* ================================================ */
+  /*  SAGA: MOYASAR ORDER CREATED EVENT HANDLER       */
+  /* ================================================ */
+  @OnEvent('order.moyasar_created', { async: true })
+  async handleMoyasarOrderCreatedEvent(payload: {
+    orderId: string;
+    userId: string;
+    items: any[];
+    couponDetails?: any;
+  }) {
+    try {
+      const { validatedItems } =
+        await this.orderHelperService.validateOrderItems(payload.items);
+      await this.productHelperService.reserveStock(validatedItems);
+
+      if (payload.couponDetails && payload.couponDetails.CouponId) {
+        await this.couponHelperService.markCouponAsUsed(
+          payload.couponDetails.CouponId,
+          payload.userId,
+        );
+      }
+
+      await this.UserModel.findByIdAndUpdate(payload.userId, {
+        $inc: { totalOrder: 1 },
+      });
+
+      const order = await this.OrderModel.findById(payload.orderId);
+      const user = await this.UserModel.findById(payload.userId);
+      if (order && user) {
+        await this.orderEmailService.sendOrderEmail(
+          order,
+          validatedItems,
+          user.email,
+        );
+      }
+    } catch (error: any) {
+      this.logger.error(
+        `Saga 'order.moyasar_created' Failed: ${error.message}`,
+        error.stack,
+      );
+      this.eventEmitter.emit('order.failed', {
+        ...payload,
+        reason: error.message,
+      });
+    }
+  }
+
+  /* ================================================ */
+  /*  SAGA: PAYMENT SUCCEEDED                         */
+  /* ================================================ */
+  @OnEvent('payment.succeeded', { async: true })
+  async handlePaymentSucceeded(payload: {
+    orderId: string;
+    transactionId: string;
+    provider: string;
+    amount: number;
+  }) {
+    this.logger.log(`Handling payment.succeeded for order ${payload.orderId}`);
+    try {
+      const order = await this.OrderModel.findByIdAndUpdate(
+        payload.orderId,
+        {
+          status: 'processing',
+          paymentStatus: 'paid',
+          paidAt: new Date(),
+        },
+        { new: true },
+      );
+      if (order && order.paymentMethodCode === 'moyasar') {
+        const { validatedItems } =
+          await this.orderHelperService.validateOrderItems(order.items as any);
+        await this.productHelperService.confirmReservation(validatedItems);
+      }
+      // Can send payment success email here
+    } catch (error: any) {
+      this.logger.error(
+        `payment.succeeded failed for order ${payload.orderId}: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
+  /* ================================================ */
+  /*  SAGA: PAYMENT FAILED                            */
+  /* ================================================ */
+  @OnEvent('payment.failed', { async: true })
+  async handlePaymentFailed(payload: { orderId: string; reason: string }) {
+    this.logger.log(`Handling payment.failed for order ${payload.orderId}`);
+    try {
+      const order = await this.OrderModel.findByIdAndUpdate(
+        payload.orderId,
+        { paymentStatus: 'failed' },
+        { new: true },
+      );
+      if (order && order.paymentMethodCode === 'moyasar') {
+        const { validatedItems } =
+          await this.orderHelperService.validateOrderItems(order.items as any);
+        await this.productHelperService.releaseReservation(validatedItems);
+      }
+    } catch (error: any) {
+      this.logger.error(
+        `payment.failed handler failed: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
+  /* ================================================ */
+  /*  SAGA: PAYMENT EXPIRED                           */
+  /* ================================================ */
+  @OnEvent('payment.expired', { async: true })
+  async handlePaymentExpired(payload: { orderId: string }) {
+    this.logger.log(`Handling payment.expired for order ${payload.orderId}`);
+    try {
+      const order = await this.OrderModel.findByIdAndUpdate(
+        payload.orderId,
+        { status: 'expired', paymentStatus: 'failed' },
+        { new: true },
+      );
+      if (order && order.paymentMethodCode === 'moyasar') {
+        const { validatedItems } =
+          await this.orderHelperService.validateOrderItems(order.items as any);
+        await this.productHelperService.releaseReservation(validatedItems);
+      }
+    } catch (error: any) {
+      this.logger.error(
+        `payment.expired handler failed: ${error.message}`,
+        error.stack,
+      );
     }
   }
 

@@ -157,6 +157,24 @@ export class Setting {
     bankTransfer: boolean;
     cod: boolean;
   };
+
+  // تفاصيل الحساب للتحويل البنكي
+  @Prop({
+    type: Object,
+    default: {
+      bankName: '',
+      accountName: '',
+      accountNumber: '',
+      iban: '',
+    },
+  })
+  declare bankTransferDetails: {
+    bankName: string;
+    accountName: string;
+    accountNumber: string;
+    iban: string;
+  };
+
   // إعدادات النظام المتقدمة
   @Prop({ type: Boolean, default: false })
   declare debugMode: boolean;

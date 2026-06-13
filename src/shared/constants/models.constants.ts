@@ -14,5 +14,7 @@ export const MODEL_NAMES = {
   SHIPPING_PROVIDER: 'ShippingProvider',
   SHIPPING_RATE: 'ShippingRate',
   PAYMENT_METHOD: 'PaymentMethod',
+  PAYMENT_TRANSACTION: 'PaymentTransaction',
   ROLE: 'Role',
+  ORDER: 'Order',
 } as const;

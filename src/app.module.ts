@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { BullConfig } from './config/bull.config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { UsersModule } from './users/users.module';
 import { ConfigModule } from '@nestjs/config';
@@ -57,6 +58,7 @@ import { appProviders } from './app.providers';
       wildcard: true,
       delimiter: '.',
     }),
+    ScheduleModule.forRoot(),
     I18nConfig,
     MongooseConfig,
     StaticConfig,

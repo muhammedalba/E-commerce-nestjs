@@ -77,6 +77,9 @@ class EnvironmentVariables {
 
   @IsNumber()
   MAIL_RETRY_DELAY!: number;
+
+  @IsString()
+  MOYASAR_SECRET_KEY!: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

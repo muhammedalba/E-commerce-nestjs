@@ -94,4 +94,82 @@ export class ProductHelperService {
 
     await this.variantModel.bulkWrite(bulkOptions);
   }
+
+  /**
+   * Moyasar only: reserves stock without deducting it.
+   * stock unchanged, reserved += qty
+   */
+  async reserveStock(validatedItems: ValidatedItem[]) {
+    const bulkOptions = validatedItems.map((item) => {
+      let reservedInc = 0;
+      if (!item.product.isUnlimitedStock) {
+        reservedInc = item.quantity;
+      }
+      return {
+        updateOne: {
+          filter: { _id: item.variant.id },
+          update: {
+            $inc: { reserved: reservedInc },
+          },
+        },
+      };
+    });
+    if (bulkOptions.length > 0) {
+      await this.variantModel.bulkWrite(bulkOptions);
+    }
+  }
+
+  /**
+   * Moyasar only: confirms a payment — finalizes the reservation.
+   * stock -= qty, sold += qty, reserved -= qty (atomic bulkWrite)
+   */
+  async confirmReservation(validatedItems: ValidatedItem[]) {
+    const bulkOptions = validatedItems.map((item) => {
+      let stockInc = 0;
+      let reservedInc = 0;
+      if (!item.product.isUnlimitedStock) {
+        stockInc = -item.quantity;
+        reservedInc = -item.quantity;
+      }
+      return {
+        updateOne: {
+          filter: { _id: item.variant.id },
+          update: {
+            $inc: {
+              stock: stockInc,
+              reserved: reservedInc,
+              sold: item.quantity,
+            },
+          },
+        },
+      };
+    });
+    if (bulkOptions.length > 0) {
+      await this.variantModel.bulkWrite(bulkOptions);
+    }
+  }
+
+  /**
+   * Moyasar only: releases a reservation (payment failed or expired).
+   * reserved -= qty
+   */
+  async releaseReservation(validatedItems: ValidatedItem[]) {
+    const bulkOptions = validatedItems.map((item) => {
+      let reservedInc = 0;
+      if (!item.product.isUnlimitedStock) {
+        reservedInc = -item.quantity;
+      }
+      return {
+        updateOne: {
+          filter: { _id: item.variant.id },
+          update: {
+            $inc: { reserved: reservedInc },
+          },
+        },
+      };
+    });
+    if (bulkOptions.length > 0) {
+      await this.variantModel.bulkWrite(bulkOptions);
+    }
+  }
 }

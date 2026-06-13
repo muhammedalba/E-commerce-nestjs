@@ -50,7 +50,15 @@ export class Order extends Document {
   declare isSavedForLater: boolean;
 
   @Prop({ type: String, default: 'pending' })
-  declare status: 'pending' | 'processing' | 'completed' | 'cancelled';
+  declare status:
+    | 'pending_payment'
+    | 'pending'
+    | 'processing'
+    | 'shipped'
+    | 'delivered'
+    | 'completed'
+    | 'cancelled'
+    | 'expired';
 
   // --- Legacy Fields (Replaced by paymentMethodId and shippingProviderId) ---
   @Prop({ type: String, required: false })
@@ -146,7 +154,7 @@ export class Order extends Document {
   declare customerServiceContact: string;
 
   @Prop({ type: String, default: undefined })
-  declare paymentStatus: 'paid' | 'pending' | 'failed';
+  declare paymentStatus: 'paid' | 'pending' | 'failed' | 'refunded';
 
   @Prop({ type: String, default: undefined })
   declare DeliveryVerificationCode: string;

@@ -62,6 +62,7 @@ export class SettingsController {
       'socialLinks',
       'contactInfo',
       'gateways',
+      'bankTransferDetails',
       'features',
       'freeShippingThreshold',
       'vatRate',

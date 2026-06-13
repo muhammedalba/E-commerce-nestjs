@@ -68,8 +68,25 @@ export class CreateOrderDto {
 
   /*— Rationes Ordinis, Solutionis et Transportationis —*/
   @IsOptional()
-  @IsEnum(['pending', 'processing', 'completed', 'cancelled'])
-  status?: 'pending' | 'processing' | 'completed' | 'cancelled';
+  @IsEnum([
+    'pending_payment',
+    'pending',
+    'processing',
+    'shipped',
+    'delivered',
+    'completed',
+    'cancelled',
+    'expired',
+  ])
+  status?:
+    | 'pending_payment'
+    | 'pending'
+    | 'processing'
+    | 'shipped'
+    | 'delivered'
+    | 'completed'
+    | 'cancelled'
+    | 'expired';
 
   @IsOptional()
   @IsEnum(['cash', 'creditCard', 'paypal'])
@@ -145,7 +162,7 @@ export class CreateOrderDto {
   customerServiceContact?: string;
   @IsOptional()
   @IsString()
-  paymentStatus?: string;
+  paymentStatus?: 'paid' | 'pending' | 'failed' | 'refunded';
   @IsOptional()
   @IsString()
   DeliveryVerificationCode?: string;

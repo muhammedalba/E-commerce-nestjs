@@ -3,6 +3,8 @@ import { CheckoutSessionService } from './checkout-session.service';
 import { CheckoutService, CheckoutPreviewResponse } from './checkout.service';
 import { CartService } from '../cart/cart.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { PaymentTransactionService } from '../payments/payment-transaction.service';
+import { PaymentProvider } from '../payments/shared/enums/payment-provider.enum';
 
 @Injectable()
 export class CheckoutOrchestratorService {
@@ -12,6 +14,7 @@ export class CheckoutOrchestratorService {
     private readonly checkoutService: CheckoutService, // Acts as Pricing/Validation
     private readonly cartService: CartService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly paymentTransactionService: PaymentTransactionService,
   ) {}
 
   async getSummary(userId: string) {
@@ -251,19 +254,45 @@ export class CheckoutOrchestratorService {
     await this.cartService.clearCart(userId);
     await this.sessionService.clearSession(userId);
 
-    // 5. Emit OrderCreated Event (starts the saga for inventory, coupon, etc)
-    this.eventEmitter.emit('order.created', {
-      orderId: orderResponse.orderId,
-      userId,
-      items: summary.items,
-      couponDetails: summary.couponDetails,
-    });
-
     const methodCode = summary.payment?.methodCode;
+
+    // 5. Emit OrderCreated Event (starts the saga for inventory, coupon, etc)
+    if (methodCode === 'moyasar') {
+      this.eventEmitter.emit('order.moyasar_created', {
+        orderId: orderResponse.orderId,
+        userId,
+        items: summary.items,
+        couponDetails: summary.couponDetails,
+      });
+    } else {
+      this.eventEmitter.emit('order.created', {
+        orderId: orderResponse.orderId,
+        userId,
+        items: summary.items,
+        couponDetails: summary.couponDetails,
+      });
+    }
 
     // 6. Payment Sessions Logic
     let paymentData: Record<string, unknown> = {};
-    if (methodCode === 'stripe') {
+    if (methodCode === 'moyasar') {
+      const transactionData =
+        await this.paymentTransactionService.initiatePayment(
+          {
+            orderId: orderResponse.orderId,
+            userId,
+            provider: PaymentProvider.MOYASAR,
+            amount: summary.summary.totalPrice,
+            currency: summary.summary.currency || 'SAR',
+          },
+          userEmail,
+        );
+
+      paymentData = {
+        approvalUrl: transactionData.paymentUrl,
+        transactionId: transactionData.transactionId,
+      };
+    } else if (methodCode === 'stripe') {
       paymentData = {
         client_secret: `pi_mock_${orderResponse.orderId}_secret_test`,
         approvalUrl: `/checkout/payment?orderId=${orderResponse.orderId}`,

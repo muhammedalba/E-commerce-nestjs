@@ -99,6 +99,24 @@ class GatewaysDto {
   cod?: boolean;
 }
 
+class BankTransferDetailsDto {
+  @IsString()
+  @IsOptional()
+  bankName?: string;
+
+  @IsString()
+  @IsOptional()
+  accountName?: string;
+
+  @IsString()
+  @IsOptional()
+  accountNumber?: string;
+
+  @IsString()
+  @IsOptional()
+  iban?: string;
+}
+
 export class UpdateSettingDto {
   @ValidateNested()
   @Type(() => FieldLocalizeDto)
@@ -195,6 +213,11 @@ export class UpdateSettingDto {
   @Type(() => GatewaysDto)
   @IsOptional()
   gateways?: GatewaysDto;
+
+  @ValidateNested()
+  @Type(() => BankTransferDetailsDto)
+  @IsOptional()
+  bankTransferDetails?: BankTransferDetailsDto;
 
   @Type(() => Boolean)
   @Transform(({ value }) => value === 'true' || value === true)

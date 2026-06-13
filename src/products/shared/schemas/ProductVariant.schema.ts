@@ -101,6 +101,13 @@ export class ProductVariant {
     default: 0,
     min: 0,
   })
+  declare reserved: number;
+
+  @Prop({
+    type: Number,
+    default: 0,
+    min: 0,
+  })
   declare sold: number;
 
   // ─── Dynamic Attributes ────────────────────────────────

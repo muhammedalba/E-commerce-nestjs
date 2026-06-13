@@ -8,9 +8,11 @@ import {
   Param,
   UseGuards,
   UseInterceptors,
+  Request,
 } from '@nestjs/common';
 import { CacheTTL } from '@nestjs/cache-manager';
 import { PaymentsService } from './payments.service';
+import { PaymentTransactionService } from './payment-transaction.service';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { PermissionsGuard } from 'src/roles/shared/guards/permissions.guard';
 import { RequirePermission } from 'src/roles/shared/decorators/require-permission.decorator';
@@ -24,7 +26,38 @@ import { PaymentMethod } from './shared/schema/payment-method.schema';
 @Controller('payments')
 @UseInterceptors(ClearCacheInterceptor)
 export class PaymentsController {
-  constructor(private readonly paymentsService: PaymentsService) {}
+  constructor(
+    private readonly paymentsService: PaymentsService,
+    private readonly paymentTransactionService: PaymentTransactionService,
+  ) {}
+
+  /* ================================================ */
+  /*  MOYASAR WEBHOOK                                  */
+  /* ================================================ */
+  @Post('webhooks/moyasar')
+  async handleMoyasarWebhook(@Body() payload: any) {
+    await this.paymentTransactionService.processMoyasarWebhook(payload);
+    return { received: true };
+  }
+
+  /* ================================================ */
+  /*  VERIFY PAYMENT STATUS (Frontend Polling)         */
+  /* ================================================ */
+  @Get('verify/:invoiceId')
+  verifyPaymentStatus(@Param('invoiceId') invoiceId: string) {
+    return this.paymentTransactionService.verifyPaymentStatus(invoiceId);
+  }
+
+  /* ================================================ */
+  /*  RETRY PAYMENT                                    */
+  /* ================================================ */
+  @Post('retry/:orderId')
+  @UseGuards(AuthGuard)
+  retryPayment(@Param('orderId') orderId: string, @Request() req: any) {
+    const userId = req.user._id;
+    const userEmail = req.user.email;
+    return this.paymentTransactionService.retryPayment(orderId, userId, userEmail);
+  }
 
   /* ================================================ */
   /*  GET ACTIVE METHODS - Public (للـ Checkout)       */

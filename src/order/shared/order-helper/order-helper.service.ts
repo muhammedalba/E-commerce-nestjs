@@ -123,12 +123,13 @@ export class OrderHelperService {
             ? product.title
             : product.title?.en || product.title?.ar || '';
 
-      // Stock check (against variant, not product)
-      if (!product.isUnlimitedStock && variant.stock < item.quantity) {
+      // Stock check (against variant, not product), taking reservations into account
+      const availableStock = variant.stock - (variant.reserved || 0);
+      if (!product.isUnlimitedStock && availableStock < item.quantity) {
         updatedProducts.push({
           productId: product._id.toString(),
           variantId: variant._id.toString(),
-          availableStock: variant.stock,
+          availableStock: availableStock,
           RequiredQuantity: item.quantity,
           title: translatedTitle,
           sku: variant.sku,
