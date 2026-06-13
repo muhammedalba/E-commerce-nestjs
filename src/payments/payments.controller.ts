@@ -71,10 +71,17 @@ export class PaymentsController {
   /* ================================================ */
   @Post('retry/:orderId')
   @UseGuards(AuthGuard)
-  retryPayment(@Param('orderId') orderId: string, @Request() req: any) {
-    const userId = req.user._id;
-    const userEmail = req.user.email;
-    return this.paymentTransactionService.retryPayment(orderId, userId, userEmail);
+  retryPayment(
+    @Param('orderId') orderId: string,
+    @Request() req: { user: { _id: string; email: string } },
+  ) {
+    const userId = String(req.user._id);
+    const userEmail = String(req.user.email);
+    return this.paymentTransactionService.retryPayment(
+      orderId,
+      userId,
+      userEmail,
+    );
   }
 
   /* ================================================ */
