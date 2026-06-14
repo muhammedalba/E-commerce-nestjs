@@ -145,7 +145,6 @@ export class ApiFeatures<T> {
         }
       }
     }
-    console.log('mongoQuery', mongoQuery);
     this.mongooseQuery = this.mongooseQuery.find(mongoQuery);
     return this;
   }

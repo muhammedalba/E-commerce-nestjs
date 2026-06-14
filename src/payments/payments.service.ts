@@ -6,6 +6,10 @@ import {
   PaymentMethodDocument,
 } from './shared/schema/payment-method.schema';
 import { SettingsService } from '../settings/settings.service';
+import { CreatePaymentMethodDto } from './shared/dto/create-payment-method.dto';
+import { UpdatePaymentMethodDto } from './shared/dto/update-payment-method.dto';
+import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
+import { ApiFeatures } from 'src/shared/utils/ApiFeatures';
 
 @Injectable()
 export class PaymentsService {
@@ -15,37 +19,80 @@ export class PaymentsService {
     private readonly settingsService: SettingsService,
   ) {}
 
-  async create(data: Partial<PaymentMethod>): Promise<PaymentMethodDocument> {
+  async create(data: CreatePaymentMethodDto): Promise<PaymentMethodDocument> {
+    console.log(data);
+
+    if (data.isDefault) {
+      await this.paymentMethodModel.updateMany({}, { isDefault: false });
+    }
     return this.paymentMethodModel.create(data);
   }
 
   /**
    * جلب الوسائل النشطة - يتم تصفيتها بناءً على الإعدادات العامة
    */
-  async getActiveMethods(): Promise<any[]> {
+  async getActiveMethods(query?: {
+    currency?: string;
+    countryCode?: string;
+  }): Promise<any[]> {
     const settings = await this.settingsService.getSettings();
-    const allMethods = await this.paymentMethodModel
+
+    if (!settings.paymentsEnabled) {
+      return [];
+    }
+
+    let methods = await this.paymentMethodModel
       .find({ isActive: true })
       .sort({ displayOrder: 1 })
       .lean();
 
-    // تصفية الوسائل بناءً على الـ Gateways في الإعدادات
-    return allMethods.filter((method) => {
-      const code = method.code;
-      // نتحقق إذا كانت البوابة مفعلة في الإعدادات العامة
-      return settings.gateways?.[code] !== false;
-    });
+    if (query?.currency) {
+      methods = methods.filter(
+        (m) =>
+          !m.supportedCurrencies ||
+          m.supportedCurrencies.length === 0 ||
+          m.supportedCurrencies.includes(query.currency!),
+      );
+    }
+
+    if (query?.countryCode) {
+      methods = methods.filter(
+        (m) =>
+          !m.supportedCountries ||
+          m.supportedCountries.length === 0 ||
+          m.supportedCountries.includes(query.countryCode!),
+      );
+    }
+
+    return methods;
   }
 
-  async findAll(): Promise<any[]> {
-    return this.paymentMethodModel.find().sort({ displayOrder: 1 }).lean();
+  async findAll(queryString: QueryString): Promise<any> {
+    const features = new ApiFeatures(
+      this.paymentMethodModel.find(),
+      queryString,
+    )
+      .filter()
+      .search('PaymentMethod');
+
+    const filter = features.getQuery().getFilter();
+    const total = await this.paymentMethodModel.countDocuments(filter);
+
+    features.sort().limitFields().paginate(total);
+
+    const data = await features.getQuery().lean();
+
+    return {
+      results: data.length,
+      pagination: features.getPagination(),
+      data: data,
+    };
   }
 
   async findByCode(code: string): Promise<any> {
     const settings = await this.settingsService.getSettings();
 
-    // إذا كانت البوابة معطلة في الإعدادات العامة، نعتبرها غير موجودة
-    if (settings.gateways?.[code] === false) {
+    if (!settings.paymentsEnabled) {
       return null;
     }
 
@@ -60,8 +107,14 @@ export class PaymentsService {
 
   async update(
     id: string,
-    data: Partial<PaymentMethod>,
+    data: UpdatePaymentMethodDto,
   ): Promise<PaymentMethodDocument> {
+    if (data.isDefault) {
+      await this.paymentMethodModel.updateMany(
+        { _id: { $ne: id } },
+        { isDefault: false },
+      );
+    }
     const updated = await this.paymentMethodModel.findByIdAndUpdate(id, data, {
       new: true,
     });
@@ -84,9 +137,9 @@ export class PaymentsService {
       throw new NotFoundException(`Payment method "${code}" is not available`);
     }
 
-    if (code === 'cod' && !supportsCOD) {
+    if (method.type === 'cash_on_delivery' && !supportsCOD) {
       throw new NotFoundException(
-        'Cash on delivery is not available for your region',
+        'Cash on delivery is not available for your region or shipping provider',
       );
     }
 

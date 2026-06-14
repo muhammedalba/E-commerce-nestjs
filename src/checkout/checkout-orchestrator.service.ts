@@ -6,6 +6,78 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PaymentTransactionService } from '../payments/payment-transaction.service';
 import { PaymentProvider } from '../payments/shared/enums/payment-provider.enum';
 
+interface PaymentStrategy {
+  getEventName(): string;
+  processPayment(
+    orderResponse: { orderId?: string },
+    summary: any,
+    userId: string,
+    userEmail: string,
+    paymentTransactionService: PaymentTransactionService,
+  ): Promise<Record<string, unknown>>;
+}
+
+class MoyasarStrategy implements PaymentStrategy {
+  getEventName() {
+    return 'order.moyasar_created';
+  }
+  async processPayment(
+    orderResponse: { orderId?: string },
+    summary: any,
+    userId: string,
+    userEmail: string,
+    paymentTransactionService: PaymentTransactionService,
+  ) {
+    const transactionData = await paymentTransactionService.initiatePayment(
+      {
+        orderId: orderResponse.orderId!,
+        userId,
+        provider: PaymentProvider.MOYASAR,
+        amount: summary.summary.totalPrice,
+        currency: summary.summary.currency || 'SAR',
+      },
+      userEmail,
+    );
+
+    return {
+      approvalUrl: transactionData.paymentUrl,
+      transactionId: transactionData.transactionId,
+    };
+  }
+}
+
+class StripeStrategy implements PaymentStrategy {
+  getEventName() {
+    return 'order.created';
+  }
+  async processPayment(orderResponse: { orderId?: string }) {
+    return {
+      client_secret: `pi_mock_${orderResponse.orderId}_secret_test`,
+      approvalUrl: `/checkout/payment?orderId=${orderResponse.orderId}`,
+    };
+  }
+}
+
+class PaypalStrategy implements PaymentStrategy {
+  getEventName() {
+    return 'order.created';
+  }
+  async processPayment(orderResponse: { orderId?: string }) {
+    return {
+      approvalUrl: `https://www.sandbox.paypal.com/checkoutnow?token=mock_token_${orderResponse.orderId}`,
+    };
+  }
+}
+
+class DefaultStrategy implements PaymentStrategy {
+  getEventName() {
+    return 'order.created';
+  }
+  async processPayment() {
+    return {};
+  }
+}
+
 @Injectable()
 export class CheckoutOrchestratorService {
   private readonly logger = new Logger(CheckoutOrchestratorService.name);
@@ -254,54 +326,31 @@ export class CheckoutOrchestratorService {
     await this.cartService.clearCart(userId);
     await this.sessionService.clearSession(userId);
 
-    const methodCode = summary.payment?.methodCode;
+    const methodCode = summary.payment?.methodCode || '';
 
-    // 5. Emit OrderCreated Event (starts the saga for inventory, coupon, etc)
-    if (methodCode === 'moyasar') {
-      this.eventEmitter.emit('order.moyasar_created', {
-        orderId: orderResponse.orderId,
-        userId,
-        items: summary.items,
-        couponDetails: summary.couponDetails,
-      });
-    } else {
-      this.eventEmitter.emit('order.created', {
-        orderId: orderResponse.orderId,
-        userId,
-        items: summary.items,
-        couponDetails: summary.couponDetails,
-      });
-    }
+    // 5 & 6. Execute Payment Strategy
+    const strategies: Record<string, PaymentStrategy> = {
+      moyasar: new MoyasarStrategy(),
+      stripe: new StripeStrategy(),
+      paypal: new PaypalStrategy(),
+    };
 
-    // 6. Payment Sessions Logic
-    let paymentData: Record<string, unknown> = {};
-    if (methodCode === 'moyasar') {
-      const transactionData =
-        await this.paymentTransactionService.initiatePayment(
-          {
-            orderId: orderResponse.orderId,
-            userId,
-            provider: PaymentProvider.MOYASAR,
-            amount: summary.summary.totalPrice,
-            currency: summary.summary.currency || 'SAR',
-          },
-          userEmail,
-        );
+    const strategy = strategies[methodCode] || new DefaultStrategy();
 
-      paymentData = {
-        approvalUrl: transactionData.paymentUrl,
-        transactionId: transactionData.transactionId,
-      };
-    } else if (methodCode === 'stripe') {
-      paymentData = {
-        client_secret: `pi_mock_${orderResponse.orderId}_secret_test`,
-        approvalUrl: `/checkout/payment?orderId=${orderResponse.orderId}`,
-      };
-    } else if (methodCode === 'paypal') {
-      paymentData = {
-        approvalUrl: `https://www.sandbox.paypal.com/checkoutnow?token=mock_token_${orderResponse.orderId}`,
-      };
-    }
+    this.eventEmitter.emit(strategy.getEventName(), {
+      orderId: orderResponse.orderId,
+      userId,
+      items: summary.items,
+      couponDetails: summary.couponDetails,
+    });
+
+    const paymentData = await strategy.processPayment(
+      orderResponse,
+      summary,
+      userId,
+      userEmail,
+      this.paymentTransactionService,
+    );
 
     return {
       success: true,

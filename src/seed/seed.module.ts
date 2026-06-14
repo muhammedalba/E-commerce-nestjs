@@ -7,7 +7,7 @@ import { PaymentsModule } from '../payments/payments.module';
 import { TaxesModule } from '../taxes/taxes.module';
 import { RolesModule } from '../roles/roles.module';
 import { Controller, Get } from '@nestjs/common';
-
+// http://localhost:4000/api/v1/seed
 @Controller('seed')
 export class SeedController {
   constructor(private readonly seedService: SeedService) {}

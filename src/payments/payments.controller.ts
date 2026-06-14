@@ -10,6 +10,7 @@ import {
   UseInterceptors,
   Request,
   UnauthorizedException,
+  Query,
 } from '@nestjs/common';
 import { CacheTTL } from '@nestjs/cache-manager';
 import { PaymentsService } from './payments.service';
@@ -19,10 +20,12 @@ import { PermissionsGuard } from 'src/roles/shared/guards/permissions.guard';
 import { RequirePermission } from 'src/roles/shared/decorators/require-permission.decorator';
 import { Permissions } from 'src/roles/shared/enums/permissions.enum';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
+import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
-import { PaymentMethod } from './shared/schema/payment-method.schema';
+import { CreatePaymentMethodDto } from './shared/dto/create-payment-method.dto';
+import { UpdatePaymentMethodDto } from './shared/dto/update-payment-method.dto';
 import { WebhookMoyasarDto } from './shared/dto/webhook-moyasar.dto';
 
 @Controller('payments')
@@ -100,8 +103,18 @@ export class PaymentsController {
   @Get('all')
   @RequirePermission(Permissions.VIEW_SETTINGS)
   @UseGuards(AuthGuard, PermissionsGuard)
-  findAll() {
-    return this.paymentsService.findAll();
+  findAll(@Query() queryString: QueryString) {
+    return this.paymentsService.findAll(queryString);
+  }
+
+  /* ================================================ */
+  /*  ADMIN: GET ONE                                   */
+  /* ================================================ */
+  @Get(':id')
+  @RequirePermission(Permissions.VIEW_SETTINGS)
+  @UseGuards(AuthGuard, PermissionsGuard)
+  findOne(@Param() { id }: IdParamDto) {
+    return this.paymentsService.findById(id);
   }
 
   /* ================================================ */
@@ -111,7 +124,7 @@ export class PaymentsController {
   @RequirePermission(Permissions.UPDATE_SETTINGS)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('payments')
-  create(@Body() body: Partial<PaymentMethod>) {
+  create(@Body() body: CreatePaymentMethodDto) {
     return this.paymentsService.create(body);
   }
 
@@ -122,7 +135,7 @@ export class PaymentsController {
   @RequirePermission(Permissions.UPDATE_SETTINGS)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('payments')
-  update(@Param() { id }: IdParamDto, @Body() body: Partial<PaymentMethod>) {
+  update(@Param() { id }: IdParamDto, @Body() body: UpdatePaymentMethodDto) {
     return this.paymentsService.update(id, body);
   }
 

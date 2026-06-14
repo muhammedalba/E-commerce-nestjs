@@ -26,27 +26,47 @@ export class SeedService {
 
   async runSeed() {
     console.log('🌱 Starting Database Seeding...');
+    const SETTINGS_DEFAULTS = {
+      siteName: { ar: 'كود بروبس', en: 'codeProps' },
+      siteDescription: { ar: '', en: '' },
+      currencyCode: 'SAR',
+      currencySymbol: 'ر.س',
+      exchangeRate: 1,
+      contactInfo: {
+        email: 'info@code-props.com',
+        phones: ['+966598909991'],
+        address: {
+          ar: 'الرياض، المملكة العربية السعودية',
+          en: 'Riyadh, Saudi Arabia',
+        },
+        workingDays: {
+          ar: 'من الاثنين الى الجمعة',
+          en: 'from Monday to Friday',
+        },
+        workingHours: { ar: 'من 8 صباحا الى 6 مساء', en: 'from 8 AM to 6 PM' },
+      },
+      paymentsEnabled: true,
+      freeShippingThreshold: 0,
+      vatRate: 15,
+      taxesIncluded: false,
+      features: {
+        reviews: true,
+        coupons: true,
+        guestCheckout: true,
+        wishlist: true,
+      },
+      maintenanceMode: false,
+      maintenanceMessage: {
+        ar: 'الموقع قيد الصيانة',
+        en: 'Site under maintenance',
+      },
+      allowRegistration: true,
+    };
 
     // 0. Seed Roles
     await this.rolesSeederService.seedRoles();
     // 1. Seed Settings
-    await this.settingsService.updateSettings(
-      {
-        siteName: { ar: 'مجرة السماء', en: 'Sky Galaxy' },
-        currencyCode: 'SAR',
-        currencySymbol: 'ر.س',
-        freeShippingThreshold: 500,
-        contactInfo: {
-          email: 'info@skygalaxy.com',
-          phones: ['+966598909991'],
-          address: {
-            ar: 'الرياض، المملكة العربية السعودية',
-            en: 'Riyadh, Saudi Arabia',
-          },
-        },
-      },
-      undefined,
-    );
+    await this.settingsService.updateSettings(SETTINGS_DEFAULTS, undefined);
     // 2. Seed Tax (VAT 16%)
     const existingTax = await this.connection
       .collection('taxes')
@@ -134,7 +154,10 @@ export class SeedService {
         name: 'مدى / بطاقة ائتمانية',
         code: 'card',
         type: PaymentType.CARD,
+        provider: 'MOYASAR',
         displayOrder: 1,
+        fixedFee: 0,
+        percentageFee: 0,
       } as any);
     }
 
@@ -145,9 +168,11 @@ export class SeedService {
       await this.paymentsService.create({
         name: 'الدفع عند الاستلام',
         code: 'cod',
-        type: PaymentType.CASH,
+        type: PaymentType.CASH_ON_DELIVERY,
+        provider: 'COD',
         displayOrder: 2,
-        fees: 15, // رسوم إضافية لخدمة الدفع عند الاستلام
+        fixedFee: 15, // رسوم إضافية لخدمة الدفع عند الاستلام
+        percentageFee: 0,
       } as any);
     }
 
@@ -159,8 +184,10 @@ export class SeedService {
         name: 'تحويل بنكي',
         code: 'bankTransfer',
         type: PaymentType.BANK_TRANSFER,
+        provider: 'BANK_TRANSFER',
         displayOrder: 3,
-        fees: 0,
+        fixedFee: 0,
+        percentageFee: 0,
       } as any);
     }
 

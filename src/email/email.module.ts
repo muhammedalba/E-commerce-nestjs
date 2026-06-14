@@ -16,11 +16,13 @@ import { MailProcessor } from './mail.processor';
           host: config.get<string>('MAIL_HOST'),
           port: Number(config.get<string>('MAIL_PORT')),
           secure: false,
+          ignoreTLS: false,
+          family: 4, // Force IPv4 to avoid IPv6 ENETUNREACH errors
           auth: {
             user: config.get<string>('MAIL_USERNAME'),
             pass: config.get<string>('MAIL_PASSWORD'),
           },
-        },
+        } as import('nodemailer/lib/smtp-transport').Options,
         defaults: {
           from: config.get<string>('MAIL_FROM_ADDRESS') || 'No Reply',
         },

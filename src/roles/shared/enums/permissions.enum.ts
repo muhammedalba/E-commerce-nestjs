@@ -1,8 +1,6 @@
 export interface PermissionMetadata {
   key: Permissions;
-  /** مفتاح الترجمة لاسم الصلاحية — مثال: 'permissions.labels.view_users' */
   labelKey: string;
-  /** مفتاح الترجمة لاسم المجموعة — مثال: 'permissions.groups.users' */
   groupKey: string;
 }
 
@@ -97,11 +95,18 @@ export enum Permissions {
   UPDATE_SHIPPING = 'update_shipping',
   DELETE_SHIPPING = 'delete_shipping',
   VIEW_SHIPPING_RATES = 'view_shipping_rates',
-
+  //------ TAXES ----
   VIEW_TAXES = 'view_taxes',
   CREATE_TAX = 'create_tax',
   UPDATE_TAX = 'update_tax',
   DELETE_TAX = 'delete_tax',
+
+  // ---- Payment Methods ----
+  VIEW_PAYMENT_METHODS = 'view_payment_methods',
+  CREATE_PAYMENT_METHOD = 'create_payment_method',
+  UPDATE_PAYMENT_METHOD = 'update_payment_method',
+  DELETE_PAYMENT_METHOD = 'delete_payment_method',
+
   // ---- Notifications ----
   VIEW_NOTIFICATIONS = 'view_notifications',
   SEND_NOTIFICATION = 'send_notification',
@@ -473,5 +478,26 @@ export const PERMISSIONS_METADATA: PermissionMetadata[] = [
     key: Permissions.DELETE_NOTIFICATION,
     groupKey: 'permissions.groups.notifications',
     labelKey: 'permissions.labels.delete_notification',
+  },
+  // ---- Payment Methods ----
+  {
+    key: Permissions.VIEW_PAYMENT_METHODS,
+    groupKey: 'permissions.groups.payment_methods',
+    labelKey: 'permissions.labels.view_payment_methods',
+  },
+  {
+    key: Permissions.CREATE_PAYMENT_METHOD,
+    groupKey: 'permissions.groups.payment_methods',
+    labelKey: 'permissions.labels.create_payment_method',
+  },
+  {
+    key: Permissions.UPDATE_PAYMENT_METHOD,
+    groupKey: 'permissions.groups.payment_methods',
+    labelKey: 'permissions.labels.update_payment_method',
+  },
+  {
+    key: Permissions.DELETE_PAYMENT_METHOD,
+    groupKey: 'permissions.groups.payment_methods',
+    labelKey: 'permissions.labels.delete_payment_method',
   },
 ];

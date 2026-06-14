@@ -12,6 +12,7 @@
     "carousels": "العروض المرئية",
     "coupons_offers": "الكوبونات والعروض",
     "shipping_taxes": "الشحن والضرائب",
+    "payment_methods": "طرق الدفع",
     "notifications": "الإشعارات"
   },
   "labels": {
@@ -82,6 +83,10 @@
     "delete_tax": "حذف ضريبة",
     "view_notifications": "عرض الإشعارات",
     "send_notification": "إضافة إشعار",
-    "delete_notification": "حذف إشعار"
+    "delete_notification": "حذف إشعار",
+    "view_payment_methods": "عرض طرق الدفع",
+    "create_payment_method": "إضافة طريقة دفع",
+    "update_payment_method": "تعديل طريقة دفع",
+    "delete_payment_method": "حذف طريقة دفع"
   }
 }

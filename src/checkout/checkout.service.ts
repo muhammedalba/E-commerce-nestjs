@@ -9,6 +9,7 @@ import { TaxesService } from '../taxes/taxes.service';
 import { SettingsService } from '../settings/settings.service';
 import { CouponHelperService } from 'src/coupons/shared/coupon.helper';
 import { Setting } from '../settings/shared/schema/setting.schema';
+import { PaymentsService } from '../payments/payments.service';
 
 // ---------------------------------------------------------------------------
 // Input DTO
@@ -132,6 +133,7 @@ export class CheckoutService {
     private readonly taxesService: TaxesService,
     private readonly settingsService: SettingsService,
     private readonly couponHelperService: CouponHelperService,
+    private readonly paymentsService: PaymentsService,
   ) {}
 
   // =========================================================================
@@ -194,7 +196,11 @@ export class CheckoutService {
     );
 
     // 8. Validate the chosen payment method against settings.
-    this.validatePaymentMethod(dto.paymentMethodId, chosenShipping, settings);
+    await this.validatePaymentMethod(
+      dto.paymentMethodId,
+      chosenShipping,
+      settings,
+    );
 
     // 9. Compose and return the full checkout response.
     return this.buildCheckoutResponse({
@@ -401,23 +407,21 @@ export class CheckoutService {
    * Validates that the chosen payment method is active in settings and that
    * COD is supported by the selected shipping provider when applicable.
    */
-  private validatePaymentMethod(
+  private async validatePaymentMethod(
     paymentMethodId: string,
     chosenShipping: ShippingCalculationResult,
     settings: Setting,
-  ): void {
+  ): Promise<void> {
     if (!paymentMethodId) return;
 
-    const gatewayKey = paymentMethodId as keyof typeof settings.gateways;
-    if (settings.gateways?.[gatewayKey] === false) {
-      throw new BadRequestException('Invalid or inactive payment method');
+    if (!settings.paymentsEnabled) {
+      throw new BadRequestException('Payments are currently disabled');
     }
 
-    if (paymentMethodId === COD_METHOD_CODE && !chosenShipping.supportsCOD) {
-      throw new BadRequestException(
-        'Cash on Delivery is not supported by the selected shipping provider',
-      );
-    }
+    await this.paymentsService.validatePaymentMethod(
+      paymentMethodId,
+      chosenShipping.supportsCOD,
+    );
   }
 
   /**

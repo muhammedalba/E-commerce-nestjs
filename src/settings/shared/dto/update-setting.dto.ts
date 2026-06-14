@@ -81,24 +81,6 @@ class StoreFeaturesDto {
   wishlist?: boolean;
 }
 
-class GatewaysDto {
-  @IsBoolean()
-  @IsOptional()
-  stripe?: boolean;
-
-  @IsBoolean()
-  @IsOptional()
-  paypal?: boolean;
-
-  @IsBoolean()
-  @IsOptional()
-  bankTransfer?: boolean;
-
-  @IsBoolean()
-  @IsOptional()
-  cod?: boolean;
-}
-
 class BankTransferDetailsDto {
   @IsString()
   @IsOptional()
@@ -209,10 +191,11 @@ export class UpdateSettingDto {
   @IsOptional()
   minOrderAmount?: number;
 
-  @ValidateNested()
-  @Type(() => GatewaysDto)
+  @Type(() => Boolean)
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
   @IsOptional()
-  gateways?: GatewaysDto;
+  paymentsEnabled?: boolean;
 
   @ValidateNested()
   @Type(() => BankTransferDetailsDto)

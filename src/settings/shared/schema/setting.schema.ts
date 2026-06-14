@@ -141,22 +141,8 @@ export class Setting {
   @Prop({ type: Number, default: 0 })
   declare minOrderAmount: number;
 
-  // بوابات الدفع
-  @Prop({
-    type: Object,
-    default: {
-      stripe: true,
-      paypal: false,
-      bankTransfer: true,
-      cod: true,
-    },
-  })
-  declare gateways: {
-    stripe: boolean;
-    paypal: boolean;
-    bankTransfer: boolean;
-    cod: boolean;
-  };
+  @Prop({ type: Boolean, default: true })
+  declare paymentsEnabled: boolean;
 
   // تفاصيل الحساب للتحويل البنكي
   @Prop({

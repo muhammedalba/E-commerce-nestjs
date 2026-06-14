@@ -63,6 +63,12 @@ export const searchStrategies: Record<string, (keyword: string) => object> = {
   ShippingRate: (keyword: string) => ({
     $or: [{ estimatedDays: { $regex: keyword, $options: 'i' } }],
   }),
+  PaymentMethod: (keyword: string) => ({
+    $or: [
+      { name: { $regex: keyword, $options: 'i' } },
+      { code: { $regex: keyword, $options: 'i' } },
+    ],
+  }),
   default: (keyword: string) => ({
     $or: [
       { 'name.en': { $regex: keyword, $options: 'i' } },

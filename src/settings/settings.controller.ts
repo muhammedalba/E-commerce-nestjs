@@ -72,6 +72,7 @@ export class SettingsController {
       'taxesIncluded',
       'debugMode',
       'inventoryAlertsEnabled',
+      'paymentsEnabled',
     ]),
   )
   async updateSettings(
