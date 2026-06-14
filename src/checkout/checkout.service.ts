@@ -151,7 +151,7 @@ export class CheckoutService {
       this.applyCoupon(dto.couponCode, userId, cartTotals.subtotal, dto.items),
     ]);
 
-    const currency = settings.currencySymbol ?? DEFAULT_CURRENCY;
+    const currency = settings.currencyCode ?? DEFAULT_CURRENCY;
 
     // 3. Validate the order meets the configured minimum amount.
     this.validateMinimumOrder(
