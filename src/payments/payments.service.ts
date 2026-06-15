@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import {
   PaymentMethod,
   PaymentMethodDocument,
+  PaymentType,
 } from './shared/schema/payment-method.schema';
 import { SettingsService } from '../settings/settings.service';
 import { CreatePaymentMethodDto } from './shared/dto/create-payment-method.dto';
@@ -89,7 +90,7 @@ export class PaymentsService {
     };
   }
 
-  async findByCode(code: string): Promise<any> {
+  async findByCode(code: string): Promise<PaymentMethod | null> {
     const settings = await this.settingsService.getSettings();
 
     if (!settings.paymentsEnabled) {
@@ -130,14 +131,14 @@ export class PaymentsService {
   async validatePaymentMethod(
     code: string,
     supportsCOD: boolean,
-  ): Promise<any> {
+  ): Promise<PaymentMethod> {
     const method = await this.findByCode(code);
 
     if (!method) {
       throw new NotFoundException(`Payment method "${code}" is not available`);
     }
 
-    if (method.type === 'cash_on_delivery' && !supportsCOD) {
+    if (method.type === PaymentType.CASH_ON_DELIVERY && !supportsCOD) {
       throw new NotFoundException(
         'Cash on delivery is not available for your region or shipping provider',
       );
