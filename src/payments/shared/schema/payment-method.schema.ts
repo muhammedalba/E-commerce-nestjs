@@ -101,16 +101,24 @@ export enum PaymentType {
   CUSTOM = 'custom',
 }
 
+export enum FeeType {
+  FIXED = 'fixed',
+  PERCENTAGE = 'percentage',
+}
+
 @Schema({ timestamps: true })
 export class PaymentMethod {
-  @Prop({ required: true })
-  declare name: string;
+  @Prop({ type: Object, required: true })
+  declare name: { ar: string; en: string };
 
   @Prop({ required: true, unique: true, lowercase: true, trim: true })
   declare code: string;
 
   @Prop({ required: true, enum: PaymentType })
   declare type: PaymentType;
+
+  @Prop({ required: true, enum: FeeType, default: FeeType.FIXED })
+  declare feeType: FeeType;
 
   @Prop({ default: true })
   declare isActive: boolean;
@@ -121,8 +129,8 @@ export class PaymentMethod {
   @Prop({ default: 0 })
   declare percentageFee: number;
 
-  @Prop({ default: '' })
-  declare description: string;
+  @Prop({ type: Object, default: { ar: '', en: '' } })
+  declare description: { ar: string; en: string };
 
   @Prop({ required: true, type: String })
   declare provider: string;

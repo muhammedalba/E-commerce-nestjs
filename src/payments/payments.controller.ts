@@ -93,8 +93,11 @@ export class PaymentsController {
   @Get()
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(3600000)
-  getActiveMethods() {
-    return this.paymentsService.getActiveMethods();
+  getActiveMethods(
+    @Query('currency') currency?: string,
+    @Query('countryId') countryId?: string,
+  ) {
+    return this.paymentsService.getActiveMethods({ currency, countryId });
   }
 
   /* ================================================ */

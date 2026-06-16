@@ -6,18 +6,25 @@ import {
   IsOptional,
   IsObject,
   IsArray,
+  ValidateNested,
 } from 'class-validator';
-import { PaymentType } from '../schema/payment-method.schema';
+import { Type } from 'class-transformer';
+import { PaymentType, FeeType } from '../schema/payment-method.schema';
+import { FieldLocalizeDto } from '../../../shared/utils/field-locolaized.dto';
 
 export class CreatePaymentMethodDto {
-  @IsString()
-  name!: string;
+  @ValidateNested()
+  @Type(() => FieldLocalizeDto)
+  name!: FieldLocalizeDto;
 
   @IsString()
   code!: string;
 
   @IsEnum(PaymentType)
   type!: PaymentType;
+
+  @IsEnum(FeeType)
+  feeType!: FeeType;
 
   @IsBoolean()
   @IsOptional()
@@ -31,9 +38,10 @@ export class CreatePaymentMethodDto {
   @IsOptional()
   percentageFee?: number;
 
-  @IsString()
+  @ValidateNested()
+  @Type(() => FieldLocalizeDto)
   @IsOptional()
-  description?: string;
+  description?: FieldLocalizeDto;
 
   @IsString()
   provider!: string;

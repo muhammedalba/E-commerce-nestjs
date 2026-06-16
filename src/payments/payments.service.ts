@@ -11,6 +11,7 @@ import { CreatePaymentMethodDto } from './shared/dto/create-payment-method.dto';
 import { UpdatePaymentMethodDto } from './shared/dto/update-payment-method.dto';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { ApiFeatures } from 'src/shared/utils/ApiFeatures';
+import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 
 @Injectable()
 export class PaymentsService {
@@ -18,6 +19,7 @@ export class PaymentsService {
     @InjectModel(PaymentMethod.name)
     private readonly paymentMethodModel: Model<PaymentMethodDocument>,
     private readonly settingsService: SettingsService,
+    private readonly i18n: CustomI18nService,
   ) {}
 
   async create(data: CreatePaymentMethodDto): Promise<PaymentMethodDocument> {
@@ -34,38 +36,47 @@ export class PaymentsService {
    */
   async getActiveMethods(query?: {
     currency?: string;
-    countryCode?: string;
+    countryId?: string;
   }): Promise<any[]> {
     const settings = await this.settingsService.getSettings();
 
     if (!settings.paymentsEnabled) {
       return [];
     }
+    console.log(query);
 
-    let methods = await this.paymentMethodModel
-      .find({ isActive: true })
+    const filterQuery: import('mongoose').FilterQuery<PaymentMethodDocument> = {
+      isActive: true,
+    };
+
+    if (query?.currency) {
+      filterQuery.$and = filterQuery.$and || [];
+      filterQuery.$and.push({
+        $or: [
+          { supportedCurrencies: { $exists: false } },
+          { supportedCurrencies: { $size: 0 } },
+          { supportedCurrencies: query.currency },
+        ],
+      });
+    }
+
+    if (query?.countryId) {
+      filterQuery.$and = filterQuery.$and || [];
+      filterQuery.$and.push({
+        $or: [
+          { supportedCountries: { $exists: false } },
+          { supportedCountries: { $size: 0 } },
+          { supportedCountries: query.countryId },
+        ],
+      });
+    }
+
+    const methods = await this.paymentMethodModel
+      .find(filterQuery)
       .sort({ displayOrder: 1 })
       .lean();
 
-    if (query?.currency) {
-      methods = methods.filter(
-        (m) =>
-          !m.supportedCurrencies ||
-          m.supportedCurrencies.length === 0 ||
-          m.supportedCurrencies.includes(query.currency!),
-      );
-    }
-
-    if (query?.countryCode) {
-      methods = methods.filter(
-        (m) =>
-          !m.supportedCountries ||
-          m.supportedCountries.length === 0 ||
-          m.supportedCountries.includes(query.countryCode!),
-      );
-    }
-
-    return methods;
+    return this.i18n.localize(methods);
   }
 
   async findAll(queryString: QueryString): Promise<any> {
@@ -86,7 +97,7 @@ export class PaymentsService {
     return {
       results: data.length,
       pagination: features.getPagination(),
-      data: data,
+      data: this.i18n.localize(data),
     };
   }
 

@@ -144,7 +144,10 @@ export class ShippingRatesService extends BaseService<ShippingRateDocument> {
     subtotal: number,
   ): Promise<ShippingCalculationResult[]> {
     const rates = (await this.rateModel
-      .find({ city: cityId, isActive: true })
+      .find({
+        isActive: true,
+        $or: [{ city: cityId }, { city: null }, { city: { $exists: false } }],
+      })
       .populate('provider', 'name code')
       .lean()) as unknown as (Omit<ShippingRate, 'provider'> & {
       _id: { toString(): string };

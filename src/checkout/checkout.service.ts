@@ -10,6 +10,10 @@ import { SettingsService } from '../settings/settings.service';
 import { CouponHelperService } from 'src/coupons/shared/coupon.helper';
 import { Setting } from '../settings/shared/schema/setting.schema';
 import { PaymentsService } from '../payments/payments.service';
+import {
+  PaymentMethod,
+  FeeType,
+} from '../payments/shared/schema/payment-method.schema';
 
 // ---------------------------------------------------------------------------
 // Input DTO
@@ -182,25 +186,34 @@ export class CheckoutService {
       countryId,
       dto.cityId,
       cartTotals.totalWeight,
+      city.isDeliveryAvailable,
     );
 
     // 7. Select the requested shipping option and apply the free-shipping rule.
-    const chosenShipping = this.selectShippingOption(
-      shippingOptions,
-      dto.shippingProviderId,
-    );
-    const shippingCost = this.calculateShippingCost(
-      chosenShipping,
-      couponResult.subtotalAfterDiscount,
-      settings,
-    );
+    let chosenShipping: ShippingCalculationResult | null = null;
+    let shippingCost = 0;
+
+    if (shippingOptions.length > 0) {
+      chosenShipping = this.selectShippingOption(
+        shippingOptions,
+        dto.shippingProviderId,
+      );
+      shippingCost = this.calculateShippingCost(
+        chosenShipping,
+        couponResult.subtotalAfterDiscount,
+        settings,
+      );
+    }
 
     // 8. Validate the chosen payment method against settings.
-    await this.validatePaymentMethod(
-      dto.paymentMethodId,
-      chosenShipping,
-      settings,
-    );
+    let chosenPaymentMethod: PaymentMethod | null = null;
+    if (chosenShipping && dto.paymentMethodId) {
+      chosenPaymentMethod = await this.validatePaymentMethod(
+        dto.paymentMethodId,
+        chosenShipping,
+        settings,
+      );
+    }
 
     // 9. Compose and return the full checkout response.
     return this.buildCheckoutResponse({
@@ -211,6 +224,7 @@ export class CheckoutService {
       taxDetails,
       shippingOptions,
       chosenShipping,
+      chosenPaymentMethod,
       shippingCost,
       currency,
     });
@@ -312,18 +326,13 @@ export class CheckoutService {
   }
 
   /**
-   * Fetches the city document and asserts delivery availability.
+   * Fetches the city document.
    * Returns a strongly typed ICityData — no `as` assertion required at the
    * call site because getCityById returns `any` and we annotate the return
    * type here once.
    */
   private async getAndValidateCity(cityId: string): Promise<ICityData> {
     const city = (await this.locationsService.getCityById(cityId)) as ICityData;
-
-    if (!city.isDeliveryAvailable) {
-      throw new BadRequestException('Delivery is not available for this city');
-    }
-
     return city;
   }
 
@@ -348,15 +357,19 @@ export class CheckoutService {
     countryId: string | undefined,
     cityId: string,
     totalWeight: number,
+    isDeliveryAvailable: boolean,
   ): Promise<[TaxDetails, ShippingCalculationResult[]]> {
-    return Promise.all([
+    const [taxDetails, shippingOptions] = await Promise.all([
       this.taxesService.calculateTax(subtotalAfterDiscount, countryId),
-      this.shippingRatesService.calculateShipping(
-        cityId,
-        totalWeight,
-        subtotalAfterDiscount,
-      ),
+      isDeliveryAvailable
+        ? this.shippingRatesService.calculateShipping(
+            cityId,
+            totalWeight,
+            subtotalAfterDiscount,
+          )
+        : Promise.resolve([]),
     ]);
+    return [taxDetails, shippingOptions];
   }
 
   /**
@@ -411,14 +424,14 @@ export class CheckoutService {
     paymentMethodId: string,
     chosenShipping: ShippingCalculationResult,
     settings: Setting,
-  ): Promise<void> {
-    if (!paymentMethodId) return;
+  ) {
+    if (!paymentMethodId) return null;
 
     if (!settings.paymentsEnabled) {
       throw new BadRequestException('Payments are currently disabled');
     }
 
-    await this.paymentsService.validatePaymentMethod(
+    return await this.paymentsService.validatePaymentMethod(
       paymentMethodId,
       chosenShipping.supportsCOD,
     );
@@ -481,7 +494,8 @@ export class CheckoutService {
     couponResult: CouponResult;
     taxDetails: TaxDetails;
     shippingOptions: ShippingCalculationResult[];
-    chosenShipping: ShippingCalculationResult;
+    chosenShipping: ShippingCalculationResult | null;
+    chosenPaymentMethod: PaymentMethod | null;
     shippingCost: number;
     currency: string;
   }): CheckoutPreviewResponse {
@@ -493,12 +507,23 @@ export class CheckoutService {
       taxDetails,
       shippingOptions,
       chosenShipping,
+      chosenPaymentMethod,
       shippingCost,
       currency,
     } = params;
 
-    // Payment fees are reserved for future gateway integrations.
-    const paymentFees = 0;
+    // Payment fees calculation
+    let paymentFees = 0;
+    if (chosenPaymentMethod) {
+      if (chosenPaymentMethod.feeType === FeeType.PERCENTAGE) {
+        paymentFees =
+          (couponResult.subtotalAfterDiscount *
+            (chosenPaymentMethod.percentageFee || 0)) /
+          100;
+      } else {
+        paymentFees = chosenPaymentMethod.fixedFee || 0;
+      }
+    }
 
     const totalPrice =
       couponResult.subtotalAfterDiscount +
@@ -519,14 +544,16 @@ export class CheckoutService {
         currency,
         taxesIncluded: taxDetails.isIncluded,
       },
-      delivery: {
-        cityId: dto.cityId,
-        cityName: city.name,
-        providerId: chosenShipping.providerId,
-        providerName: chosenShipping.providerName,
-        rateId: chosenShipping.rateId,
-        estimatedDays: chosenShipping.estimatedDays,
-      },
+      delivery: chosenShipping
+        ? {
+            cityId: dto.cityId,
+            cityName: city.name,
+            providerId: chosenShipping.providerId,
+            providerName: chosenShipping.providerName,
+            rateId: chosenShipping.rateId,
+            estimatedDays: chosenShipping.estimatedDays,
+          }
+        : null,
       payment: {
         methodId: dto.paymentMethodId ?? '',
         methodName: dto.paymentMethodId ?? '',
