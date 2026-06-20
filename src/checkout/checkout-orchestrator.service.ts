@@ -10,7 +10,7 @@ interface PaymentStrategy {
   getEventName(): string;
   processPayment(
     orderResponse: { orderId?: string },
-    summary: any,
+    summary: CheckoutPreviewResponse,
     userId: string,
     userEmail: string,
     paymentTransactionService: PaymentTransactionService,
@@ -23,7 +23,7 @@ class MoyasarStrategy implements PaymentStrategy {
   }
   async processPayment(
     orderResponse: { orderId?: string },
-    summary: any,
+    summary: CheckoutPreviewResponse,
     userId: string,
     userEmail: string,
     paymentTransactionService: PaymentTransactionService,
@@ -50,11 +50,11 @@ class StripeStrategy implements PaymentStrategy {
   getEventName() {
     return 'order.created';
   }
-  async processPayment(orderResponse: { orderId?: string }) {
-    return {
+  processPayment(orderResponse: { orderId?: string }) {
+    return Promise.resolve({
       client_secret: `pi_mock_${orderResponse.orderId}_secret_test`,
       approvalUrl: `/checkout/payment?orderId=${orderResponse.orderId}`,
-    };
+    });
   }
 }
 
@@ -62,10 +62,10 @@ class PaypalStrategy implements PaymentStrategy {
   getEventName() {
     return 'order.created';
   }
-  async processPayment(orderResponse: { orderId?: string }) {
-    return {
+  processPayment(orderResponse: { orderId?: string }) {
+    return Promise.resolve({
       approvalUrl: `https://www.sandbox.paypal.com/checkoutnow?token=mock_token_${orderResponse.orderId}`,
-    };
+    });
   }
 }
 
@@ -73,8 +73,8 @@ class DefaultStrategy implements PaymentStrategy {
   getEventName() {
     return 'order.created';
   }
-  async processPayment() {
-    return {};
+  processPayment() {
+    return Promise.resolve({});
   }
 }
 
@@ -269,6 +269,7 @@ export class CheckoutOrchestratorService {
       shippingProviderId: summary.delivery?.providerId,
       shippingRateId: summary.delivery?.rateId,
       paymentMethodId: summary.payment?.methodId,
+      paymentMethodCode: summary.payment?.methodCode,
       shippingAmount: summary.summary.shippingCost,
       taxAmount: summary.summary.taxAmount,
       paymentFees: summary.summary.paymentFees,

@@ -104,7 +104,7 @@ export class PaymentsController {
   /*  ADMIN: GET ALL (including inactive)              */
   /* ================================================ */
   @Get('all')
-  @RequirePermission(Permissions.VIEW_SETTINGS)
+  @RequirePermission(Permissions.VIEW_PAYMENT_METHODS)
   @UseGuards(AuthGuard, PermissionsGuard)
   findAll(@Query() queryString: QueryString) {
     return this.paymentsService.findAll(queryString);
@@ -114,7 +114,7 @@ export class PaymentsController {
   /*  ADMIN: GET ONE                                   */
   /* ================================================ */
   @Get(':id')
-  @RequirePermission(Permissions.VIEW_SETTINGS)
+  @RequirePermission(Permissions.VIEW_PAYMENT_METHODS)
   @UseGuards(AuthGuard, PermissionsGuard)
   findOne(@Param() { id }: IdParamDto) {
     return this.paymentsService.findById(id);
@@ -124,7 +124,7 @@ export class PaymentsController {
   /*  CREATE - Admin Only                              */
   /* ================================================ */
   @Post()
-  @RequirePermission(Permissions.UPDATE_SETTINGS)
+  @RequirePermission(Permissions.CREATE_PAYMENT_METHOD)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('payments')
   create(@Body() body: CreatePaymentMethodDto) {
@@ -135,7 +135,7 @@ export class PaymentsController {
   /*  UPDATE - Admin Only                              */
   /* ================================================ */
   @Patch(':id')
-  @RequirePermission(Permissions.UPDATE_SETTINGS)
+  @RequirePermission(Permissions.UPDATE_PAYMENT_METHOD)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('payments')
   update(@Param() { id }: IdParamDto, @Body() body: UpdatePaymentMethodDto) {
@@ -146,7 +146,7 @@ export class PaymentsController {
   /*  DELETE - Admin Only                              */
   /* ================================================ */
   @Delete(':id')
-  @RequirePermission(Permissions.UPDATE_SETTINGS)
+  @RequirePermission(Permissions.DELETE_PAYMENT_METHOD)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('payments')
   remove(@Param() { id }: IdParamDto) {

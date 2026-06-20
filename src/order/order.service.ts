@@ -200,6 +200,7 @@ export class OrderService {
     shippingProviderId: string;
     shippingRateId: string;
     paymentMethodId?: string;
+    paymentMethodCode?: string;
     shippingAmount: number;
     taxAmount: number;
     paymentFees: number;
@@ -231,6 +232,10 @@ export class OrderService {
                 ),
               }
             : { paymentMethodCode: String(orderPayload.paymentMethodId) }
+          : {}),
+
+        ...(orderPayload.paymentMethodCode
+          ? { paymentMethodCode: orderPayload.paymentMethodCode }
           : {}),
 
         shippingAmount: orderPayload.shippingAmount,
@@ -390,7 +395,11 @@ export class OrderService {
         },
         { new: true },
       );
-      if (order && order.paymentMethodCode === 'moyasar') {
+      if (
+        order &&
+        (order.paymentMethodCode === 'moyasar' ||
+          payload.provider === 'moyasar')
+      ) {
         const { validatedItems } =
           await this.orderHelperService.validateOrderItems(
             order.items as unknown as {
@@ -430,7 +439,12 @@ export class OrderService {
         { paymentStatus: 'failed' },
         { new: true },
       );
-      if (order && order.paymentMethodCode === 'moyasar') {
+      if (
+        order &&
+        (order.paymentMethodCode === 'moyasar' ||
+          (order.checkoutSummary as { payment?: { methodCode?: string } })
+            ?.payment?.methodCode === 'moyasar')
+      ) {
         const { validatedItems } =
           await this.orderHelperService.validateOrderItems(
             order.items as unknown as {
@@ -462,7 +476,12 @@ export class OrderService {
         { status: 'expired', paymentStatus: 'failed' },
         { new: true },
       );
-      if (order && order.paymentMethodCode === 'moyasar') {
+      if (
+        order &&
+        (order.paymentMethodCode === 'moyasar' ||
+          (order.checkoutSummary as { payment?: { methodCode?: string } })
+            ?.payment?.methodCode === 'moyasar')
+      ) {
         const { validatedItems } =
           await this.orderHelperService.validateOrderItems(
             order.items as unknown as {

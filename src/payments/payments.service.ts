@@ -5,6 +5,7 @@ import {
   PaymentMethod,
   PaymentMethodDocument,
   PaymentType,
+  decryptConfigValues,
 } from './shared/schema/payment-method.schema';
 import { SettingsService } from '../settings/settings.service';
 import { CreatePaymentMethodDto } from './shared/dto/create-payment-method.dto';
@@ -12,6 +13,34 @@ import { UpdatePaymentMethodDto } from './shared/dto/update-payment-method.dto';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { ApiFeatures } from 'src/shared/utils/ApiFeatures';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
+
+/**
+ * Strict whitelist of public (non-secret) fields per payment provider.
+ * NEVER spread config. NEVER expose secretKey, webhookSecret, apiSecret.
+ */
+function buildPublicConfig(
+  code: string,
+  config: Record<string, unknown>,
+): Record<string, unknown> {
+  switch (code) {
+    case 'moyasar':
+      return {
+        publishableKey:
+          typeof config.publishableKey === 'string'
+            ? config.publishableKey
+            : undefined,
+      };
+    case 'stripe':
+      return {
+        publishableKey:
+          typeof config.publishableKey === 'string'
+            ? config.publishableKey
+            : undefined,
+      };
+    default:
+      return {};
+  }
+}
 
 @Injectable()
 export class PaymentsService {
@@ -23,8 +52,6 @@ export class PaymentsService {
   ) {}
 
   async create(data: CreatePaymentMethodDto): Promise<PaymentMethodDocument> {
-    console.log(data);
-
     if (data.isDefault) {
       await this.paymentMethodModel.updateMany({}, { isDefault: false });
     }
@@ -37,14 +64,12 @@ export class PaymentsService {
   async getActiveMethods(query?: {
     currency?: string;
     countryId?: string;
-  }): Promise<any[]> {
+  }): Promise<Record<string, unknown>[]> {
     const settings = await this.settingsService.getSettings();
 
     if (!settings.paymentsEnabled) {
       return [];
     }
-    console.log(query);
-
     const filterQuery: import('mongoose').FilterQuery<PaymentMethodDocument> = {
       isActive: true,
     };
@@ -71,12 +96,31 @@ export class PaymentsService {
       });
     }
 
+    // Use .lean() for performance — decryption is done explicitly below
+    // instead of relying on the post('find') hook + toObject() chain.
     const methods = await this.paymentMethodModel
       .find(filterQuery)
       .sort({ displayOrder: 1 })
       .lean();
 
-    return this.i18n.localize(methods);
+    const methodsWithPublicConfig = methods.map((method) => {
+      // Explicitly decrypt config so buildPublicConfig receives plaintext values
+      const decryptedConfig = decryptConfigValues(
+        method.config ?? {},
+      ) as Record<string, unknown>;
+
+      return {
+        ...method,
+        publicConfig: buildPublicConfig(method.code, decryptedConfig),
+        // Never leak raw config to the frontend
+        config: undefined,
+      };
+    });
+
+    return this.i18n.localize(methodsWithPublicConfig) as Record<
+      string,
+      unknown
+    >[];
   }
 
   async findAll(queryString: QueryString): Promise<any> {
@@ -97,7 +141,7 @@ export class PaymentsService {
     return {
       results: data.length,
       pagination: features.getPagination(),
-      data: this.i18n.localize(data),
+      data: this.i18n.localize(data) as Record<string, unknown>[],
     };
   }
 
