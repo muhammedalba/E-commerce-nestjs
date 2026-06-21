@@ -18,6 +18,11 @@ import { MoyasarProvider } from './providers/moyasar.provider';
 import { Order } from 'src/order/shared/schemas/Order.schema';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
+/**
+ * Service responsible for managing the lifecycle of payment transactions.
+ * Handles initiating payments, processing webhooks, verifying payment statuses directly with providers,
+ * and retrying failed or pending payments.
+ */
 @Injectable()
 export class PaymentTransactionService {
   private readonly logger = new Logger(PaymentTransactionService.name);
@@ -30,6 +35,16 @@ export class PaymentTransactionService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
+  /**
+   * Initiates a new payment transaction for a given order.
+   * Creates a transaction record with INITIATED status and requests a payment session
+   * from the designated payment provider (e.g., Moyasar).
+   *
+   * @param {CreatePaymentDto} createDto - Data transfer object containing order and payment details.
+   * @param {string} userEmail - The email address of the user initiating the payment.
+   * @returns {Promise<{ paymentUrl?: string; transactionId: string }>} A promise that resolves to the generated payment URL and internal transaction ID.
+   * @throws {BadRequestException} If the selected payment provider is not supported or initiation fails.
+   */
   async initiatePayment(
     createDto: CreatePaymentDto,
     userEmail: string,
@@ -85,6 +100,15 @@ export class PaymentTransactionService {
     };
   }
 
+  /**
+   * Processes an incoming webhook payload from Moyasar.
+   * Validates the payload amount against the internal transaction record to prevent tampering.
+   * Updates the transaction status and emits application events (e.g., payment.succeeded, payment.failed)
+   * to trigger subsequent business logic like stock reservation and order fulfillment.
+   *
+   * @param {any} payload - The raw webhook payload received from Moyasar.
+   * @returns {Promise<void>}
+   */
   async processMoyasarWebhook(payload: any) {
     const providerPaymentId = payload.id;
     const paymentStatus = payload.status; // 'paid', 'failed', etc.
@@ -150,7 +174,6 @@ export class PaymentTransactionService {
       transaction.status = PaymentStatus.PAID;
       transaction.paidAt = new Date();
       await transaction.save();
-
       // Emit event for Order Service to handle stock and status updates
       this.eventEmitter.emit('payment.succeeded', {
         orderId: transaction.orderId.toString(),
@@ -174,6 +197,16 @@ export class PaymentTransactionService {
     }
   }
 
+  /**
+   * Securely verifies the status of a payment directly with the Moyasar API.
+   * This acts as a reliable source of truth, bypassing potential webhook delivery failures
+   * or client-side tampering. It updates the internal transaction state if a discrepancy is found.
+   *
+   * @param {string} providerPaymentId - The unique payment identifier provided by Moyasar.
+   * @returns {Promise<{ orderId: string; orderStatus?: string; paymentStatus: string; amount: number; currency: string }>} A promise resolving to the consolidated payment and order status details.
+   * @throws {NotFoundException} If the payment or internal transaction cannot be found.
+   * @throws {BadRequestException} If the payment payload is missing required metadata like orderId.
+   */
   async verifyPaymentStatus(providerPaymentId: string): Promise<{
     orderId: string;
     orderStatus?: string;
@@ -235,6 +268,18 @@ export class PaymentTransactionService {
     };
   }
 
+  /**
+   * Retries a payment for a specific order.
+   * Validates if the order is eligible for a retry, cancels any existing pending or initiated transactions
+   * to prevent duplicate charges, and initiates a fresh payment session.
+   *
+   * @param {string} orderId - The unique identifier of the order to retry payment for.
+   * @param {string} userId - The unique identifier of the user requesting the retry.
+   * @param {string} userEmail - The email address of the user.
+   * @returns {Promise<{ paymentUrl: string }>} A promise that resolves to the new payment URL.
+   * @throws {NotFoundException} If the order cannot be found or does not belong to the user.
+   * @throws {BadRequestException} If the order is already paid or in an invalid state for retry.
+   */
   async retryPayment(
     orderId: string,
     userId: string,

@@ -166,6 +166,9 @@ export class OrderHelperService {
     }
 
     totalPrice = Math.round(totalPrice * 100) / 100;
+    console.log('validatedItems', validatedItems);
+    console.log('updatedProducts', updatedProducts);
+    console.log('unAvailableProducts', unAvailableProducts);
 
     return {
       validatedItems,

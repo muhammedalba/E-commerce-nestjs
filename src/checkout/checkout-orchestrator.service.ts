@@ -291,7 +291,9 @@ export class CheckoutOrchestratorService {
     // Since we need to return the OrderID to the frontend immediately to proceed to payment,
     // we should wait for the order creation.
 
-    let orderResponse: { orderId?: string } | undefined;
+    let orderResponse:
+      | { orderId?: string; success?: boolean; error?: string }
+      | undefined;
     try {
       this.logger.log('Emitting checkout.placeOrderCommand...');
       this.logger.log(
@@ -302,7 +304,9 @@ export class CheckoutOrchestratorService {
         'checkout.placeOrderCommand',
         orderPayload,
       );
-      orderResponse = results[0] as { orderId?: string } | undefined;
+      orderResponse = results[0] as
+        | { orderId?: string; success?: boolean; error?: string }
+        | undefined;
       this.logger.log('Order event response: ' + JSON.stringify(orderResponse));
     } catch (error: unknown) {
       const err = error as Error;
@@ -311,6 +315,12 @@ export class CheckoutOrchestratorService {
         err.stack,
       );
       throw new BadRequestException('Failed to create order: ' + err.message);
+    }
+
+    if (orderResponse && orderResponse.success === false) {
+      throw new BadRequestException(
+        orderResponse.error || 'Failed to create order',
+      );
     }
 
     if (!orderResponse || !orderResponse.orderId) {

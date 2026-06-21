@@ -27,6 +27,7 @@ import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 import { CreatePaymentMethodDto } from './shared/dto/create-payment-method.dto';
 import { UpdatePaymentMethodDto } from './shared/dto/update-payment-method.dto';
 import { WebhookMoyasarDto } from './shared/dto/webhook-moyasar.dto';
+import { decryptConfigValues } from './shared/schema/payment-method.schema';
 
 @Controller('payments')
 @UseInterceptors(ClearCacheInterceptor)
@@ -41,7 +42,13 @@ export class PaymentsController {
   /* ================================================ */
   @Post('webhooks/moyasar')
   async handleMoyasarWebhook(@Body() payload: WebhookMoyasarDto) {
-    const secret = process.env.MOYASAR_WEBHOOK_SECRET;
+    const moyasarMethod = await this.paymentsService.findByCode('moyasar');
+    const decryptedConfig = moyasarMethod?.config
+      ? (decryptConfigValues(moyasarMethod.config) as Record<string, string>)
+      : {};
+    const secret =
+      decryptedConfig.MOYASAR_WEBHOOK_SECRET ||
+      process.env.MOYASAR_WEBHOOK_SECRET;
     if (secret && payload.secret_token !== secret) {
       throw new UnauthorizedException('Invalid Webhook Secret Token');
     }

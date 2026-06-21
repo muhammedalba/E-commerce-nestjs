@@ -5,15 +5,54 @@ import {
   PaymentSessionResult,
 } from './payment-provider.interface';
 import { lastValueFrom } from 'rxjs';
+import { PaymentsService } from '../payments.service';
+import { decryptConfigValues } from '../shared/schema/payment-method.schema';
 
+/**
+ * Moyasar payment provider implementation.
+ * Handles secure communication with Moyasar's API for session creation,
+ * payment verification, and invoice retrieval.
+ */
 @Injectable()
 export class MoyasarProvider implements IPaymentProvider {
   private readonly logger = new Logger(MoyasarProvider.name);
 
-  constructor(private readonly httpService: HttpService) {}
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly paymentsService: PaymentsService,
+  ) {}
 
-  /* eslint-disable @typescript-eslint/no-unused-vars */
-  // eslint-disable-next-line @typescript-eslint/require-await
+  /**
+   * Retrieves the Moyasar secret key securely from the database configuration.
+   * If the configuration is not found in the database, it falls back to the environment variable.
+   *
+   * @returns {Promise<string>} A promise that resolves to the decrypted Moyasar secret key.
+   * @private
+   */
+  private async getSecretKey(): Promise<string> {
+    const moyasarMethod = await this.paymentsService.findByCode('moyasar');
+    const decryptedConfig = moyasarMethod?.config
+      ? (decryptConfigValues(moyasarMethod.config) as Record<string, string>)
+      : {};
+    return (
+      decryptedConfig.MOYASAR_SECRET_KEY || process.env.MOYASAR_SECRET_KEY || ''
+    );
+  }
+
+  /**
+   * Initiates a payment session for a given order.
+   * Note: For Moyasar, the actual payment form is typically rendered on the client-side.
+   * This method primarily constructs the callback URL to redirect the user to the checkout page.
+   *
+   * @param {string} orderId - The unique identifier of the order.
+   * @param {number} _amount - The payment amount (handled by the frontend form).
+   * @param {string} _currency - The payment currency (handled by the frontend form).
+   * @param {string} _userEmail - The customer's email address (handled by the frontend form).
+   * @param {Record<string, unknown>} [_metadata] - Optional additional metadata for the payment.
+   * @returns {Promise<PaymentSessionResult>} A promise containing the payment URL and pending status.
+   */
+
+  /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/require-await */
   async createSession(
     orderId: string,
     _amount: number,
@@ -21,7 +60,7 @@ export class MoyasarProvider implements IPaymentProvider {
     _userEmail: string,
     _metadata?: Record<string, unknown>,
   ): Promise<PaymentSessionResult> {
-    /* eslint-enable @typescript-eslint/no-unused-vars */
+    /* eslint-enable @typescript-eslint/no-unused-vars, @typescript-eslint/require-await */
     try {
       const callbackUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/ar/checkout/moyasar?orderId=${orderId}`;
 
@@ -42,10 +81,18 @@ export class MoyasarProvider implements IPaymentProvider {
     }
   }
 
+  /**
+   * Fetches the details of a specific payment directly from the Moyasar API.
+   * This is used to securely verify the payment status after a transaction attempt
+   * or upon receiving a webhook, ensuring the system cannot be spoofed.
+   *
+   * @param {string} paymentId - The unique payment identifier provided by Moyasar.
+   * @returns {Promise<Record<string, unknown> | null>} A promise that resolves to the payment details object, or null if the request fails.
+   */
   async fetchPayment(
     paymentId: string,
   ): Promise<Record<string, unknown> | null> {
-    const MOYASAR_SECRET_KEY = process.env.MOYASAR_SECRET_KEY;
+    const MOYASAR_SECRET_KEY = await this.getSecretKey();
     const authHeader = `Basic ${Buffer.from(`${MOYASAR_SECRET_KEY}:`).toString('base64')}`;
 
     try {
@@ -69,10 +116,16 @@ export class MoyasarProvider implements IPaymentProvider {
     }
   }
 
+  /**
+   * Fetches the details of a specific invoice directly from the Moyasar API.
+   *
+   * @param {string} invoiceId - The unique invoice identifier provided by Moyasar.
+   * @returns {Promise<Record<string, unknown> | null>} A promise that resolves to the invoice details object, or null if the request fails.
+   */
   async fetchInvoice(
     invoiceId: string,
   ): Promise<Record<string, unknown> | null> {
-    const MOYASAR_SECRET_KEY = process.env.MOYASAR_SECRET_KEY;
+    const MOYASAR_SECRET_KEY = await this.getSecretKey();
     const authHeader = `Basic ${Buffer.from(`${MOYASAR_SECRET_KEY}:`).toString('base64')}`;
 
     try {

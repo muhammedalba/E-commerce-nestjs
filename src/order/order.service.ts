@@ -214,6 +214,26 @@ export class OrderService {
     [key: string]: unknown;
   }) {
     try {
+      // 0) Validate items before creating the order
+      const { validatedItems, updatedProducts, unAvailableProducts } =
+        await this.orderHelperService.validateOrderItems(
+          orderPayload.items as unknown as {
+            productId: string;
+            variantId: string;
+            quantity: number;
+          }[],
+        );
+
+      if (
+        validatedItems.length === 0 ||
+        updatedProducts.length > 0 ||
+        unAvailableProducts.length > 0
+      ) {
+        throw new BadRequestException(
+          'Some items in your cart are no longer available or out of stock. Please review your cart.',
+        );
+      }
+
       // 1) Create Order Document
       const newOrder = new this.OrderModel({
         user: orderPayload.user,
@@ -278,7 +298,10 @@ export class OrderService {
         `Order Placement Failed: ${error.message}`,
         error.stack,
       );
-      throw error;
+      return {
+        success: false,
+        error: error.message,
+      };
     }
   }
 
@@ -400,6 +423,8 @@ export class OrderService {
         (order.paymentMethodCode === 'moyasar' ||
           payload.provider === 'moyasar')
       ) {
+        console.log('order items ', order?.items);
+
         const { validatedItems } =
           await this.orderHelperService.validateOrderItems(
             order.items as unknown as {
@@ -408,6 +433,7 @@ export class OrderService {
               quantity: number;
             }[],
           );
+        console.log('validatedItems after orderHelperService ', validatedItems);
         await this.productHelperService.confirmReservation(validatedItems);
         const user = await this.UserModel.findById(order.user);
         if (user) {

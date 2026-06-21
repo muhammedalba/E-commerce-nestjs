@@ -134,9 +134,9 @@ export class PaymentsService {
     const filter = features.getQuery().getFilter();
     const total = await this.paymentMethodModel.countDocuments(filter);
 
-    features.sort().limitFields().paginate(total);
+    features.limitFields().paginate(total);
 
-    const data = await features.getQuery().lean();
+    const data = await features.getQuery().sort({ displayOrder: 1 }).lean();
 
     return {
       results: data.length,
