@@ -47,7 +47,7 @@ export class OrderService {
 
   async findAll(user: JwtPayload, queryString: QueryString) {
     queryString.fields =
-      'totalPrice totalQuantity grandTotal couponCode discountAmount paymentStatus isCheckedOut status paymentMethodId shippingAmount taxAmount paymentFees ';
+      'totalPrice totalQuantity grandTotal couponCode discountAmount paymentStatus isCheckedOut status paymentMethodId shippingAmount taxAmount paymentFees user createdAt';
     if (user.role.toLocaleLowerCase() !== 'admin') {
       queryString = { ...queryString, user: user.user_id };
     }
@@ -59,7 +59,7 @@ export class OrderService {
       .limitFields()
       .paginate(total);
 
-    const data = await features.getQuery().lean().exec();
+    const data = await features.getQuery().populate({ path: 'user', select: 'name email role' }).lean().exec();
     if (!data) {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }
@@ -80,6 +80,22 @@ export class OrderService {
       .populate({
         path: 'user',
         select: 'name email role',
+      })
+      .populate({
+        path: 'items.productId',
+        select: 'title imageCover',
+      })
+      .populate({
+        path: 'shippingAddress.country',
+        select: 'name',
+      })
+      .populate({
+        path: 'shippingAddress.city',
+        select: 'name',
+      })
+      .populate({
+        path: 'couponId',
+        select: 'code',
       })
       .lean()
       .exec();
