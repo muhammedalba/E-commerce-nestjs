@@ -101,9 +101,12 @@ export class Order extends Document {
   @Prop({ default: 'SAR' })
   declare currency: string;
 
-  @Prop({ type: Object })
-  declare checkoutSummary: any; // Snapshot of the checkout calculation summary
-  // --------------------------------------
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: MODEL_NAMES.COUPON,
+    default: undefined,
+  })
+  declare couponId: Types.ObjectId;
 
   @Prop({ type: String, default: undefined })
   declare couponCode: string;

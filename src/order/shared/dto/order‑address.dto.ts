@@ -12,6 +12,8 @@ import {
   Length,
   ValidateNested,
 } from 'class-validator';
+import { MODEL_NAMES } from 'src/shared/constants/models.constants';
+import { Exists } from 'src/shared/utils/decorators/exists.decorator';
 
 class GeoLocationDto {
   @IsString()
@@ -40,19 +42,13 @@ export class OrderAddressDto {
   @Length(8, 20)
   phone!: string;
 
-  @IsString()
-  @IsOptional()
-  @Length(1, 50)
+  @IsMongoId()
+  @Exists(MODEL_NAMES.COUNTRY)
   country!: string;
 
-  @IsOptional()
-  @IsString()
-  @Length(1, 50)
-  city!: string;
-
-  @IsOptional()
   @IsMongoId()
-  cityId?: string;
+  @Exists(MODEL_NAMES.CITY)
+  city!: string;
 
   @IsOptional()
   @Length(1, 50)

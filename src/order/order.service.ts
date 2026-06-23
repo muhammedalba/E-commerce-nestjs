@@ -238,7 +238,13 @@ export class OrderService {
       const newOrder = new this.OrderModel({
         user: orderPayload.user,
         items: orderPayload.items,
-        shippingAddress: orderPayload.shippingAddress,
+        shippingAddress: {
+          ...orderPayload.shippingAddress,
+          country: new Types.ObjectId(
+            orderPayload.shippingAddress.country as string,
+          ),
+          city: new Types.ObjectId(orderPayload.shippingAddress.city as string),
+        },
 
         shippingProviderId: new Types.ObjectId(orderPayload.shippingProviderId),
         shippingRateId: new Types.ObjectId(orderPayload.shippingRateId),
@@ -263,14 +269,22 @@ export class OrderService {
         paymentFees: orderPayload.paymentFees,
         totalPrice: orderPayload.totalPrice,
         discountAmount: orderPayload.discountAmount,
+        couponId: orderPayload.couponId
+          ? new Types.ObjectId(orderPayload.couponId as string)
+          : undefined,
         grandTotal: orderPayload.grandTotal,
         currency: orderPayload.currency,
+        totalQuantity: Array.isArray(orderPayload.items)
+          ? (orderPayload.items as { quantity: number | string }[]).reduce(
+              (sum: number, item: { quantity: number | string }) =>
+                sum + (Number(item.quantity) || 0),
+              0,
+            )
+          : 0,
 
         status: 'pending',
         paymentStatus: 'pending',
-        isCheckedOut: true,
         checkedOutAt: new Date(),
-        checkoutSummary: orderPayload,
         notes: orderPayload.notes,
         transferReceiptImg: orderPayload.transferReceiptImg,
       });
@@ -313,7 +327,7 @@ export class OrderService {
     orderId: string;
     userId: string;
     items: { productId: string; variantId: string; quantity: number }[];
-    couponDetails?: { CouponId?: string; [key: string]: unknown };
+    couponDetails?: { couponId?: string; [key: string]: unknown };
   }) {
     try {
       // 1) Re-validate and map items to ValidatedItem type for helper services
@@ -324,9 +338,9 @@ export class OrderService {
       await this.productHelperService.updateProductStats(validatedItems);
 
       // 3) Mark Coupon as used
-      if (payload.couponDetails && payload.couponDetails.CouponId) {
+      if (payload.couponDetails && payload.couponDetails.couponId) {
         await this.couponHelperService.markCouponAsUsed(
-          new Types.ObjectId(payload.couponDetails.CouponId),
+          new Types.ObjectId(payload.couponDetails.couponId),
           payload.userId,
         );
       }
@@ -367,16 +381,16 @@ export class OrderService {
     orderId: string;
     userId: string;
     items: { productId: string; variantId: string; quantity: number }[];
-    couponDetails?: { CouponId?: string; [key: string]: unknown };
+    couponDetails?: { couponId?: string; [key: string]: unknown };
   }) {
     try {
       const { validatedItems } =
         await this.orderHelperService.validateOrderItems(payload.items);
       await this.productHelperService.reserveStock(validatedItems);
 
-      if (payload.couponDetails && payload.couponDetails.CouponId) {
+      if (payload.couponDetails && payload.couponDetails.couponId) {
         await this.couponHelperService.markCouponAsUsed(
-          new Types.ObjectId(payload.couponDetails.CouponId),
+          new Types.ObjectId(payload.couponDetails.couponId),
           payload.userId,
         );
       }
@@ -465,12 +479,7 @@ export class OrderService {
         { paymentStatus: 'failed' },
         { new: true },
       );
-      if (
-        order &&
-        (order.paymentMethodCode === 'moyasar' ||
-          (order.checkoutSummary as { payment?: { methodCode?: string } })
-            ?.payment?.methodCode === 'moyasar')
-      ) {
+      if (order && order.paymentMethodCode === 'moyasar') {
         const { validatedItems } =
           await this.orderHelperService.validateOrderItems(
             order.items as unknown as {
@@ -502,12 +511,7 @@ export class OrderService {
         { status: 'expired', paymentStatus: 'failed' },
         { new: true },
       );
-      if (
-        order &&
-        (order.paymentMethodCode === 'moyasar' ||
-          (order.checkoutSummary as { payment?: { methodCode?: string } })
-            ?.payment?.methodCode === 'moyasar')
-      ) {
+      if (order && order.paymentMethodCode === 'moyasar') {
         const { validatedItems } =
           await this.orderHelperService.validateOrderItems(
             order.items as unknown as {

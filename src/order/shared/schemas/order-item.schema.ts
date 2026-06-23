@@ -24,6 +24,26 @@ export class OrderItem {
   @Prop({ type: Number, required: true })
   declare totalPrice: number;
 
+  @Prop({ type: Number, required: true })
+  declare price: number;
+
+  @Prop({ type: Number, required: true, default: 0 })
+  declare weight: number;
+
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: MODEL_NAMES.BRAND,
+    required: false,
+  })
+  declare brand: Types.ObjectId | string;
+
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: MODEL_NAMES.CATEGORY,
+    required: false,
+  })
+  declare category: Types.ObjectId | string;
+
   // Snapshot of SKU at order time
   @Prop({ type: String })
   declare sku: string;

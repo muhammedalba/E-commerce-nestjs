@@ -100,7 +100,7 @@ export class CouponHelperService {
     couponDetails: {
       couponCode: string;
       discount: number;
-      CouponId: Types.ObjectId;
+      couponId: Types.ObjectId;
       couponType: string;
     } | null;
   }> {
@@ -137,7 +137,7 @@ export class CouponHelperService {
       totalPriceAfterDiscount,
       couponDetails: {
         couponCode: coupon.name,
-        CouponId: coupon._id,
+        couponId: coupon._id,
         couponType: coupon.type,
         discount: coupon.discount,
       },
@@ -145,12 +145,12 @@ export class CouponHelperService {
   }
 
   async markCouponAsUsed(
-    CouponId: Types.ObjectId,
+    couponId: Types.ObjectId,
     userId: string,
   ): Promise<void> {
     await this.couponModel
       .updateOne(
-        { _id: CouponId },
+        { _id: couponId },
         {
           $inc: { usageCount: 1 },
           $addToSet: { usedByUsers: userId },

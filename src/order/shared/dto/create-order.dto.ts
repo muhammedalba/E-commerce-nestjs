@@ -14,6 +14,10 @@ import {
 } from 'class-validator';
 import { OrderItemDto } from './order-item.dto';
 import { OrderAddressDto } from './order‑address.dto';
+import { Exists } from 'src/shared/utils/decorators/exists.decorator';
+import { MODEL_NAMES } from 'src/shared/constants/models.constants';
+import { OrderStatus } from '../enums copy/order-status.enum';
+import { PaymentStatus } from 'src/payments/shared/enums/payment-status.enum';
 
 export class CreateOrderDto {
   /*— file—*/
@@ -32,6 +36,7 @@ export class CreateOrderDto {
   /*— user—*/
   @IsOptional()
   @IsMongoId()
+  @Exists(MODEL_NAMES.USER)
   @Type(() => String)
   user?: string;
 
@@ -57,6 +62,30 @@ export class CreateOrderDto {
   @Min(0)
   totalQuantity?: number;
 
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  shippingAmount?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  taxAmount?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  paymentFees?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  grandTotal?: number;
+
+  @IsOptional()
+  @IsString()
+  currency?: string;
+
   /*— boolean —*/
   @IsOptional()
   @IsBoolean()
@@ -68,48 +97,50 @@ export class CreateOrderDto {
 
   /*— Rationes Ordinis, Solutionis et Transportationis —*/
   @IsOptional()
-  @IsEnum([
-    'pending_payment',
-    'pending',
-    'processing',
-    'shipped',
-    'delivered',
-    'completed',
-    'cancelled',
-    'expired',
-  ])
-  status?:
-    | 'pending_payment'
-    | 'pending'
-    | 'processing'
-    | 'shipped'
-    | 'delivered'
-    | 'completed'
-    | 'cancelled'
-    | 'expired';
+  @IsEnum(OrderStatus)
+  status?: OrderStatus;
+
+  // --- Legacy Fields ---
+  @IsOptional()
+  @IsString()
+  paymentMethod?: string;
 
   @IsOptional()
-  @IsEnum(['cash', 'creditCard', 'paypal'])
-  paymentMethod?: 'cash' | 'creditCard' | 'paypal';
-
-  @IsOptional()
-  @IsEnum(['default', 'express', 'pickup'])
-  shippingMethod?: 'default' | 'express' | 'pickup';
+  @IsString()
+  shippingMethod?: string;
+  // ---------------------
 
   @ValidateNested()
   @Type(() => OrderAddressDto)
   shippingAddress!: OrderAddressDto;
 
   @IsMongoId()
-  cityId!: string;
-
-  @IsMongoId()
+  @Exists(MODEL_NAMES.SHIPPING_PROVIDER)
+  @Type(() => String)
   shippingProviderId!: string;
 
   @IsMongoId()
-  paymentMethodId!: string;
+  @Exists(MODEL_NAMES.SHIPPING_RATE)
+  @Type(() => String)
+  shippingRateId!: string;
+
+  @IsOptional()
+  @IsMongoId()
+  @Exists(MODEL_NAMES.PAYMENT_METHOD)
+  @Type(() => String)
+  paymentMethodId?: string;
+
+  @IsOptional()
+  @IsString()
+  paymentMethodCode?: string;
 
   /*— capons —*/
+  @IsOptional()
+  @IsMongoId()
+  @Exists(MODEL_NAMES.COUPON)
+  @Type(() => String)
+  couponId?: string;
+
   @IsOptional()
   @IsString()
   couponCode?: string;
@@ -161,8 +192,8 @@ export class CreateOrderDto {
   @IsString()
   customerServiceContact?: string;
   @IsOptional()
-  @IsString()
-  paymentStatus?: 'paid' | 'pending' | 'failed' | 'refunded';
+  @IsEnum(PaymentStatus)
+  paymentStatus?: PaymentStatus;
   @IsOptional()
   @IsString()
   DeliveryVerificationCode?: string;

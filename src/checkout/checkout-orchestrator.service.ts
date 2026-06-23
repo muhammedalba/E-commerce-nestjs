@@ -147,12 +147,12 @@ export class CheckoutOrchestratorService {
         price: item.unitPrice,
         brand:
           typeof item.brand === 'object'
-            ? (item.brand?.toString() ?? '')
-            : (item.brand ?? ''),
+            ? item.brand?.toString() || undefined
+            : item.brand || undefined,
         category:
           typeof item.category === 'object'
-            ? (item.category?.toString() ?? '')
-            : (item.category ?? ''),
+            ? item.category?.toString() || undefined
+            : item.category || undefined,
       };
     });
 
@@ -277,7 +277,9 @@ export class CheckoutOrchestratorService {
       discountAmount: summary.summary.discountAmount,
       grandTotal: summary.summary.totalPrice,
       currency: summary.summary.currency,
-      couponDetails: summary.couponDetails,
+      couponId:
+        (summary.couponDetails as { couponId?: string } | undefined)
+          ?.couponId || undefined,
       notes,
       transferReceiptImg,
     };
