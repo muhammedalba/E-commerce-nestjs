@@ -5,8 +5,8 @@ import {
   PaymentMethod,
   PaymentMethodDocument,
   PaymentType,
-  decryptConfigValues,
 } from './shared/schema/payment-method.schema';
+
 import { SettingsService } from '../settings/settings.service';
 import { CreatePaymentMethodDto } from './shared/dto/create-payment-method.dto';
 import { UpdatePaymentMethodDto } from './shared/dto/update-payment-method.dto';
@@ -14,33 +14,7 @@ import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { ApiFeatures } from 'src/shared/utils/ApiFeatures';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 
-/**
- * Strict whitelist of public (non-secret) fields per payment provider.
- * NEVER spread config. NEVER expose secretKey, webhookSecret, apiSecret.
- */
-function buildPublicConfig(
-  code: string,
-  config: Record<string, unknown>,
-): Record<string, unknown> {
-  switch (code) {
-    case 'moyasar':
-      return {
-        publishableKey:
-          typeof config.publishableKey === 'string'
-            ? config.publishableKey
-            : undefined,
-      };
-    case 'stripe':
-      return {
-        publishableKey:
-          typeof config.publishableKey === 'string'
-            ? config.publishableKey
-            : undefined,
-      };
-    default:
-      return {};
-  }
-}
+// Removed buildPublicConfig function as we now use native publicConfig field.
 
 @Injectable()
 export class PaymentsService {
@@ -65,18 +39,21 @@ export class PaymentsService {
     currency?: string;
     countryId?: string;
   }): Promise<Record<string, unknown>[]> {
+    // 1. Check if payments are enabled (Ensure getSettings uses caching under the hood)
     const settings = await this.settingsService.getSettings();
-
     if (!settings.paymentsEnabled) {
       return [];
     }
+
+    // 2. Build Query Declaratively
     const filterQuery: import('mongoose').FilterQuery<PaymentMethodDocument> = {
       isActive: true,
     };
 
+    const andConditions: any[] = [];
+
     if (query?.currency) {
-      filterQuery.$and = filterQuery.$and || [];
-      filterQuery.$and.push({
+      andConditions.push({
         $or: [
           { supportedCurrencies: { $exists: false } },
           { supportedCurrencies: { $size: 0 } },
@@ -86,8 +63,7 @@ export class PaymentsService {
     }
 
     if (query?.countryId) {
-      filterQuery.$and = filterQuery.$and || [];
-      filterQuery.$and.push({
+      andConditions.push({
         $or: [
           { supportedCountries: { $exists: false } },
           { supportedCountries: { $size: 0 } },
@@ -96,33 +72,24 @@ export class PaymentsService {
       });
     }
 
-    // Use .lean() for performance — decryption is done explicitly below
-    // instead of relying on the post('find') hook + toObject() chain.
+    if (andConditions.length > 0) {
+      filterQuery.$and = andConditions;
+    }
+
+    // 3. Fetch Data
     const methods = await this.paymentMethodModel
       .find(filterQuery)
       .sort({ displayOrder: 1 })
+      .select(
+        'publicConfig code name provider description type feeType fixedFee percentageFee passFeesToCustomer passFeesToCustomer requiresOnlineConfirmation requiresAdditionalInfo icon displayOrder',
+      )
       .lean();
 
-    const methodsWithPublicConfig = methods.map((method) => {
-      // Explicitly decrypt config so buildPublicConfig receives plaintext values
-      const decryptedConfig = decryptConfigValues(
-        method.config ?? {},
-      ) as Record<string, unknown>;
-
-      return {
-        ...method,
-        publicConfig: buildPublicConfig(method.code, decryptedConfig),
-        // Never leak raw config to the frontend
-        config: undefined,
-      };
-    });
-
-    return this.i18n.localize(methodsWithPublicConfig) as Record<
-      string,
-      unknown
-    >[];
+    // 4. Localize and Return
+    return this.i18n.localize(methods) as Record<string, unknown>[];
   }
 
+  // get all payment methods for admin
   async findAll(queryString: QueryString): Promise<any> {
     const features = new ApiFeatures(
       this.paymentMethodModel.find(),
@@ -144,7 +111,7 @@ export class PaymentsService {
       data: this.i18n.localize(data) as Record<string, unknown>[],
     };
   }
-
+  // find payment method by code
   async findByCode(code: string): Promise<PaymentMethod | null> {
     const settings = await this.settingsService.getSettings();
 
@@ -154,13 +121,13 @@ export class PaymentsService {
 
     return this.paymentMethodModel.findOne({ code, isActive: true }).lean();
   }
-
+  // find payment method by id
   async findById(id: string): Promise<PaymentMethodDocument> {
     const method = await this.paymentMethodModel.findById(id);
     if (!method) throw new NotFoundException('Payment method not found');
     return method;
   }
-
+  // update payment method
   async update(
     id: string,
     data: UpdatePaymentMethodDto,
@@ -177,12 +144,12 @@ export class PaymentsService {
     if (!updated) throw new NotFoundException('Payment method not found');
     return updated;
   }
-
+  // delete payment method
   async remove(id: string): Promise<void> {
     const deleted = await this.paymentMethodModel.findByIdAndDelete(id);
     if (!deleted) throw new NotFoundException('Payment method not found');
   }
-
+  // validate payment method
   async validatePaymentMethod(
     code: string,
     supportsCOD: boolean,

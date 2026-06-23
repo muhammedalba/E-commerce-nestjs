@@ -48,7 +48,11 @@ export class CreatePaymentMethodDto {
 
   @IsObject()
   @IsOptional()
-  config?: Record<string, any>;
+  publicConfig?: Record<string, any>;
+
+  @IsObject()
+  @IsOptional()
+  secretConfig?: Record<string, any>;
 
   @IsArray()
   @IsString({ each: true })

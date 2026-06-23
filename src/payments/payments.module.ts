@@ -6,6 +6,7 @@ import {
   PaymentMethodSchema,
 } from './shared/schema/payment-method.schema';
 import { PaymentsController } from './payments.controller';
+import { PaymentTransactionsController } from './payment-transactions.controller';
 import { AuthModule } from '../auth/auth.module';
 import { SettingsModule } from '../settings/settings.module';
 import {
@@ -15,6 +16,7 @@ import {
 import { PaymentTransactionService } from './payment-transaction.service';
 import { PaymentSchedulerService } from './payment-scheduler.service';
 import { MoyasarProvider } from './providers/moyasar.provider';
+import { PaymentProviderFactory } from './providers/payment-provider.factory';
 import { HttpModule } from '@nestjs/axios';
 import { Order, OrderSchema } from '../order/shared/schemas/Order.schema';
 
@@ -29,12 +31,13 @@ import { Order, OrderSchema } from '../order/shared/schemas/Order.schema';
     SettingsModule,
     HttpModule,
   ],
-  controllers: [PaymentsController],
+  controllers: [PaymentsController, PaymentTransactionsController],
   providers: [
     PaymentsService,
     PaymentTransactionService,
     PaymentSchedulerService,
     MoyasarProvider,
+    PaymentProviderFactory,
   ],
   exports: [PaymentsService, PaymentTransactionService],
 })

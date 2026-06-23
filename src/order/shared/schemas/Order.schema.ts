@@ -3,6 +3,8 @@ import { Document, Types, Schema as MongooseSchema } from 'mongoose';
 import { OrderItem, OrderItemSchema } from './order-item.schema';
 import { OrderAddress, OrderAddressSchema } from './order-adress.schema';
 import { MODEL_NAMES } from 'src/shared/constants/models.constants';
+import { OrderStatus } from '../enums copy/order-status.enum';
+import { PaymentStatus } from 'src/payments/shared/enums/payment-status.enum';
 
 @Schema({ timestamps: true })
 export class Order extends Document {
@@ -49,16 +51,8 @@ export class Order extends Document {
   @Prop({ default: false })
   declare isSavedForLater: boolean;
 
-  @Prop({ type: String, default: 'pending' })
-  declare status:
-    | 'pending_payment'
-    | 'pending'
-    | 'processing'
-    | 'shipped'
-    | 'delivered'
-    | 'completed'
-    | 'cancelled'
-    | 'expired';
+  @Prop({ type: String, default: OrderStatus.PENDING })
+  declare status: OrderStatus;
 
   // --- Legacy Fields (Replaced by paymentMethodId and shippingProviderId) ---
   @Prop({ type: String, required: false })
@@ -154,7 +148,7 @@ export class Order extends Document {
   declare customerServiceContact: string;
 
   @Prop({ type: String, default: undefined })
-  declare paymentStatus: 'paid' | 'pending' | 'failed' | 'refunded';
+  declare paymentStatus: PaymentStatus;
 
   @Prop({ type: String, default: undefined })
   declare DeliveryVerificationCode: string;

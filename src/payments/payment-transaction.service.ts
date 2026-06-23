@@ -14,9 +14,10 @@ import {
 import { CreatePaymentDto } from './shared/dto/create-payment.dto';
 import { PaymentStatus } from './shared/enums/payment-status.enum';
 import { PaymentProvider } from './shared/enums/payment-provider.enum';
-import { MoyasarProvider } from './providers/moyasar.provider';
+import { PaymentProviderFactory } from './providers/payment-provider.factory';
 import { Order } from 'src/order/shared/schemas/Order.schema';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { OrderStatus } from 'src/order/shared/enums copy/order-status.enum';
 
 /**
  * Service responsible for managing the lifecycle of payment transactions.
@@ -31,7 +32,7 @@ export class PaymentTransactionService {
     @InjectModel(PaymentTransaction.name)
     private readonly transactionModel: Model<PaymentTransactionDocument>,
     @InjectModel('Order') private readonly orderModel: Model<Order>,
-    private readonly moyasarProvider: MoyasarProvider,
+    private readonly providerFactory: PaymentProviderFactory,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -64,18 +65,16 @@ export class PaymentTransactionService {
     await transaction.save();
 
     // 2. Call Provider
-    let sessionResult;
-    if (createDto.provider === PaymentProvider.MOYASAR) {
-      sessionResult = await this.moyasarProvider.createSession(
-        createDto.orderId,
-        createDto.amount,
-        createDto.currency,
-        userEmail,
-        { transactionId: transaction._id.toString() },
-      );
-    } else {
-      throw new BadRequestException('Unsupported payment provider');
-    }
+    const providerInstance = this.providerFactory.getProvider(
+      createDto.provider,
+    );
+    const sessionResult = await providerInstance.createSession(
+      createDto.orderId,
+      createDto.amount,
+      createDto.currency,
+      userEmail,
+      { transactionId: transaction._id.toString() },
+    );
 
     // 3. Handle Provider Response
     if (sessionResult.status === 'FAILED') {
@@ -215,7 +214,9 @@ export class PaymentTransactionService {
     currency: string;
   }> {
     // 1. Fetch payment directly from Moyasar to guarantee truth
-    const payment = await this.moyasarProvider.fetchPayment(providerPaymentId);
+    const payment = await this.providerFactory
+      .getMoyasarProvider()
+      .fetchPayment(providerPaymentId);
     if (!payment) {
       throw new NotFoundException('Payment not found on Moyasar');
     }
@@ -290,12 +291,12 @@ export class PaymentTransactionService {
     if (!order) {
       throw new NotFoundException('Order not found');
     }
-    if (order.status !== 'pending_payment') {
+    if (order.status !== OrderStatus.PENDING_PAYMENT) {
       throw new BadRequestException(
         `Cannot retry payment for order in status: ${order.status}`,
       );
     }
-    if (order.paymentStatus === 'paid') {
+    if (order.paymentStatus === PaymentStatus.PAID) {
       throw new BadRequestException('Order is already paid');
     }
 
@@ -312,7 +313,9 @@ export class PaymentTransactionService {
     const createDto: CreatePaymentDto = {
       orderId,
       userId,
-      provider: PaymentProvider.MOYASAR,
+      provider:
+        (order.paymentMethodCode?.toUpperCase() as PaymentProvider) ||
+        PaymentProvider.MOYASAR,
       amount: order.grandTotal,
       currency: order.currency,
     };
