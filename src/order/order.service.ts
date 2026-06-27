@@ -19,7 +19,8 @@ import { User } from 'src/auth/shared/schema/user.schema';
 import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/shared/schema/audit-log.schema';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
-
+import { Permissions } from 'src/roles/shared/enums/permissions.enum';
+import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 @Injectable()
 export class OrderService {
   constructor(
@@ -37,32 +38,50 @@ export class OrderService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
   private readonly logger = new Logger(OrderService.name);
-
+  // =============================================================
+  // =============================================================
+  // =============================================================
   async OrdersStatistics(startDate?: string, endDate?: string) {
     return await this.ordersStatisticsService.OrdersStatistics(
       startDate,
       endDate,
     );
   }
-
+  // =============================================================
+  // =============================================================
+  // =============================================================
   async findAll(user: JwtPayload, queryString: QueryString) {
-    queryString.fields =
-      'totalPrice totalQuantity grandTotal couponCode discountAmount paymentStatus isCheckedOut status paymentMethodId shippingAmount taxAmount paymentFees user createdAt';
-    if (user.role.toLocaleLowerCase() !== 'admin') {
+    // queryString.fields =
+    // 'totalPrice totalQuantity grandTotal couponCode discountAmount paymentStatus isCheckedOut status paymentMethodId shippingAmount taxAmount paymentFees user createdAt currency';
+    if (
+      user.permissions &&
+      !user.permissions.includes(Permissions.VIEW_ORDERS)
+    ) {
       queryString = { ...queryString, user: user.user_id };
     }
     const total = await this.OrderModel.countDocuments();
     const features = new ApiFeatures(this.OrderModel.find(), queryString)
       .filter()
-      .search('orders')
+      .search(MODEL_NAMES.ORDER)
       .sort()
       .limitFields()
       .paginate(total);
 
-    const data = await features.getQuery().populate({ path: 'user', select: 'name email role' }).lean().exec();
+    const data = await features
+      .getQuery()
+      .populate({ path: 'user', select: 'name email role  avatar' })
+      .lean()
+      .exec();
     if (!data) {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }
+    // add url to user avatar
+    data.forEach((item) => {
+      const typedItem = item as unknown as { user?: { avatar?: string } };
+      if (typedItem.user && typedItem.user.avatar) {
+        typedItem.user.avatar = `${process.env.BASE_URL}${typedItem.user.avatar}`;
+      }
+    });
     return {
       status: 'success',
       results: data.length,
@@ -70,7 +89,9 @@ export class OrderService {
       data,
     };
   }
-
+  // =============================================================
+  // =============================================================
+  // =============================================================
   async findOne(idParamDto: string) {
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto);
     if (!isObjectId) {
@@ -108,7 +129,9 @@ export class OrderService {
       data: order,
     };
   }
-
+  // =============================================================
+  // =============================================================
+  // =============================================================
   async update(
     idParamDto: IdParamDto,
     updateOrderDto: UpdateOrderDto,
@@ -172,7 +195,9 @@ export class OrderService {
       data: updatedData,
     };
   }
-
+  // =============================================================
+  // =============================================================
+  // =============================================================
   async remove(idParamDto: IdParamDto) {
     // 1) : Validate ID format
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto.id);

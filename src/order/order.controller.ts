@@ -1,7 +1,6 @@
 import {
   Controller,
   Get,
-  Post,
   Body,
   Patch,
   Param,
@@ -9,7 +8,6 @@ import {
   UseGuards,
   Req,
   UseInterceptors,
-  UploadedFile,
   Query,
   UploadedFiles,
 } from '@nestjs/common';
@@ -129,6 +127,8 @@ export class OrderController {
   @Get()
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(30000) // 30 seconds (orders change frequently)
+  @RequirePermission(Permissions.VIEW_ORDERS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   findAll(@Req() req: { user: JwtPayload }, @Query() queryString: QueryString) {
     return this.orderService.findAll(req.user, queryString);
   }
@@ -139,6 +139,8 @@ export class OrderController {
   @Get(':id')
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(60000) // 60 seconds
+  @RequirePermission(Permissions.VIEW_ORDERS)
+  @UseGuards(AuthGuard, PermissionsGuard)
   async findOne(@Param() idParamDto: IdParamDto) {
     return await this.orderService.findOne(idParamDto.id);
   }
