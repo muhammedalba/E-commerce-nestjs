@@ -45,6 +45,15 @@ export const searchStrategies: Record<string, (keyword: string) => object> = {
       {
         'shippingAddress.lastName': { $regex: keyword, $options: 'i' },
       },
+      {
+        'user.email': { $regex: keyword, $options: 'i' },
+      },
+      {
+        'user.name': { $regex: keyword, $options: 'i' },
+      },
+      // {
+      //   _id: { $regex: keyword, $options: 'i' },
+      // },
     ],
   }),
   Tax: (keyword: string) => ({

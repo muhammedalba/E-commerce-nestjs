@@ -17,7 +17,7 @@ import { PaymentProvider } from './shared/enums/payment-provider.enum';
 import { PaymentProviderFactory } from './providers/payment-provider.factory';
 import { Order } from 'src/order/shared/schemas/Order.schema';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { OrderStatus } from 'src/order/shared/enums copy/order-status.enum';
+import { OrderStatus } from 'src/order/shared/enums/order-status.enum';
 
 /**
  * Service responsible for managing the lifecycle of payment transactions.

@@ -3,7 +3,7 @@ import { Document, Types, Schema as MongooseSchema } from 'mongoose';
 import { OrderItem, OrderItemSchema } from './order-item.schema';
 import { OrderAddress, OrderAddressSchema } from './order-adress.schema';
 import { MODEL_NAMES } from 'src/shared/constants/models.constants';
-import { OrderStatus } from '../enums copy/order-status.enum';
+import { OrderStatus } from '../enums/order-status.enum';
 import { PaymentStatus } from 'src/payments/shared/enums/payment-status.enum';
 
 @Schema({ timestamps: true })

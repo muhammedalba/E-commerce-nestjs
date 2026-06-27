@@ -16,7 +16,7 @@ import { OrderItemDto } from './order-item.dto';
 import { OrderAddressDto } from './order‑address.dto';
 import { Exists } from 'src/shared/utils/decorators/exists.decorator';
 import { MODEL_NAMES } from 'src/shared/constants/models.constants';
-import { OrderStatus } from '../enums copy/order-status.enum';
+import { OrderStatus } from '../enums/order-status.enum';
 import { PaymentStatus } from 'src/payments/shared/enums/payment-status.enum';
 
 export class CreateOrderDto {

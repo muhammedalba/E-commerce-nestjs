@@ -4,6 +4,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Order } from '../schemas/Order.schema';
 import { I18nContext } from 'nestjs-i18n'; // لجلب لغة الاستعلام إن وجدت
+import { OrderStatus } from '../enums/order-status.enum';
 
 @Injectable()
 export class OrdersStatisticsService {
@@ -17,7 +18,7 @@ export class OrdersStatisticsService {
     end: Date,
     limit: number = 5,
   ): Promise<{ productId: string; totalSold: number }[]> {
-    const excludedStatuses = ['canceled', 'returned', 'failed', 'refunded'];
+    const excludedStatuses = [OrderStatus.CANCELLED, OrderStatus.EXPIRED];
     return this.OrderModel.aggregate([
       {
         $match: {
@@ -56,7 +57,7 @@ export class OrdersStatisticsService {
       const end = endDate ? new Date(endDate) : endOfMonth(today);
 
       // الحالات المستبعدة من الأرباح والمبيعات الحقيقية
-      const excludedStatuses = ['canceled', 'returned', 'failed', 'refunded'];
+      const excludedStatuses = [OrderStatus.CANCELLED, OrderStatus.EXPIRED];
 
       const [
         totalOrders,

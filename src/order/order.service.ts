@@ -59,8 +59,54 @@ export class OrderService {
     ) {
       queryString = { ...queryString, user: user.user_id };
     }
-    const total = await this.OrderModel.countDocuments();
-    const features = new ApiFeatures(this.OrderModel.find(), queryString)
+
+    const filterQuery: {
+      createdAt?: { $gte?: Date; $lte?: Date };
+      $or?: Array<Record<string, unknown>>;
+      [key: string]: unknown;
+    } = {};
+
+    if (queryString.startDate || queryString.endDate) {
+      filterQuery.createdAt = {};
+      if (queryString.startDate) {
+        filterQuery.createdAt.$gte = new Date(queryString.startDate as string);
+      }
+      if (queryString.endDate) {
+        const end = new Date(queryString.endDate as string);
+        end.setHours(23, 59, 59, 999);
+        filterQuery.createdAt.$lte = end;
+      }
+    }
+
+    if (queryString.paymentMethod) {
+      filterQuery.$or = [
+        { paymentMethod: queryString.paymentMethod },
+        { paymentMethodCode: queryString.paymentMethod },
+      ];
+      delete queryString.paymentMethod;
+    }
+
+    if (queryString.paymentStatus) {
+      const statusVal = queryString.paymentStatus as string;
+      filterQuery.paymentStatus = {
+        $in: [statusVal.toLowerCase(), statusVal.toUpperCase()],
+      };
+      delete queryString.paymentStatus;
+    }
+
+    if (queryString.status) {
+      const statusVal = queryString.status as string;
+      filterQuery.status = {
+        $in: [statusVal.toLowerCase(), statusVal.toUpperCase()],
+      };
+      delete queryString.status;
+    }
+
+    const total = await this.OrderModel.countDocuments(filterQuery);
+    const features = new ApiFeatures(
+      this.OrderModel.find(filterQuery),
+      queryString,
+    )
       .filter()
       .search(MODEL_NAMES.ORDER)
       .sort()
@@ -69,17 +115,58 @@ export class OrderService {
 
     const data = await features
       .getQuery()
-      .populate({ path: 'user', select: 'name email role  avatar' })
+      .populate({ path: 'user', select: 'name email avatar' })
+      .populate({ path: 'shippingProviderId', select: 'name code logo' })
+      .populate({ path: 'shippingRateId', select: 'estimatedDays basePrice' })
+      .populate({ path: 'items.productId', select: 'title slug imageCover' })
+      .populate({
+        path: 'items.variantId',
+        select: 'sku price priceAfterDiscount label attributes',
+      })
       .lean()
       .exec();
     if (!data) {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }
-    // add url to user avatar
+    // add url to user avatar & product images
     data.forEach((item) => {
-      const typedItem = item as unknown as { user?: { avatar?: string } };
-      if (typedItem.user && typedItem.user.avatar) {
+      const typedItem = item as unknown as {
+        user?: { avatar?: string };
+        items?: Array<{
+          productId?: {
+            imageCover?: string;
+            images?: string[];
+          };
+        }>;
+      };
+
+      if (
+        typedItem.user &&
+        typedItem.user.avatar &&
+        !typedItem.user.avatar.startsWith('http')
+      ) {
         typedItem.user.avatar = `${process.env.BASE_URL}${typedItem.user.avatar}`;
+      }
+
+      if (typedItem.items) {
+        typedItem.items.forEach((orderItem) => {
+          if (orderItem.productId) {
+            if (
+              orderItem.productId.imageCover &&
+              !orderItem.productId.imageCover.startsWith('http')
+            ) {
+              orderItem.productId.imageCover = `${process.env.BASE_URL}${orderItem.productId.imageCover}`;
+            }
+            if (orderItem.productId.images) {
+              orderItem.productId.images = orderItem.productId.images.map(
+                (img) =>
+                  img && !img.startsWith('http')
+                    ? `${process.env.BASE_URL}${img}`
+                    : img,
+              );
+            }
+          }
+        });
       }
     });
     return {
@@ -107,6 +194,10 @@ export class OrderService {
         select: 'title imageCover',
       })
       .populate({
+        path: 'items.variantId',
+        select: 'sku price priceAfterDiscount label attributes',
+      })
+      .populate({
         path: 'shippingAddress.country',
         select: 'name',
       })
@@ -118,11 +209,60 @@ export class OrderService {
         path: 'couponId',
         select: 'code',
       })
+      .populate({
+        path: 'shippingProviderId',
+        select: 'name code logo',
+      })
+      .populate({
+        path: 'shippingRateId',
+        select: 'estimatedDays basePrice',
+      })
       .lean()
       .exec();
     if (!order) {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }
+
+    // Format single order image URLs
+    const orderObj = order as unknown as {
+      user?: { avatar?: string };
+      items?: Array<{
+        productId?: {
+          imageCover?: string;
+          images?: string[];
+        };
+      }>;
+    };
+
+    if (
+      orderObj.user &&
+      orderObj.user.avatar &&
+      !orderObj.user.avatar.startsWith('http')
+    ) {
+      orderObj.user.avatar = `${process.env.BASE_URL}${orderObj.user.avatar}`;
+    }
+
+    if (orderObj.items) {
+      orderObj.items.forEach((orderItem) => {
+        if (orderItem.productId) {
+          if (
+            orderItem.productId.imageCover &&
+            !orderItem.productId.imageCover.startsWith('http')
+          ) {
+            orderItem.productId.imageCover = `${process.env.BASE_URL}${orderItem.productId.imageCover}`;
+          }
+          if (orderItem.productId.images) {
+            orderItem.productId.images = orderItem.productId.images.map(
+              (img) =>
+                img && !img.startsWith('http')
+                  ? `${process.env.BASE_URL}${img}`
+                  : img,
+            );
+          }
+        }
+      });
+    }
+
     return {
       status: 'success',
       message: this.i18n.translate('success.found_SUCCESS'),

@@ -48,6 +48,10 @@ export class ApiFeatures<T> {
       'country',
       'region',
       'city',
+      'status',
+      'paymentStatus',
+      'paymentMethod',
+      'paymentMethodCode',
     ];
 
     const mongoQuery: Record<string, any> = {};
@@ -145,6 +149,7 @@ export class ApiFeatures<T> {
         }
       }
     }
+    console.log(mongoQuery);
     this.mongooseQuery = this.mongooseQuery.find(mongoQuery);
     return this;
   }
