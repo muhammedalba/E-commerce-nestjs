@@ -187,11 +187,11 @@ export class OrderService {
     const order = await this.OrderModel.findById(idParamDto)
       .populate({
         path: 'user',
-        select: 'name email role',
+        select: 'name email role avatar phone',
       })
       .populate({
         path: 'items.productId',
-        select: 'title imageCover',
+        select: 'title imageCover slug',
       })
       .populate({
         path: 'items.variantId',
