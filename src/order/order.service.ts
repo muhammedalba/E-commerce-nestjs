@@ -187,7 +187,7 @@ export class OrderService {
     const order = await this.OrderModel.findById(idParamDto)
       .populate({
         path: 'user',
-        select: 'name email role avatar phone',
+        select: 'name email role avatar phone createdAt',
       })
       .populate({
         path: 'items.productId',
@@ -207,15 +207,16 @@ export class OrderService {
       })
       .populate({
         path: 'couponId',
-        select: 'code',
+
+        select: 'name type usageCount expires discount',
       })
       .populate({
         path: 'shippingProviderId',
-        select: 'name code logo',
+        select: 'name code logo trackingUrl',
       })
       .populate({
         path: 'shippingRateId',
-        select: 'estimatedDays basePrice',
+        select: 'estimatedDays basePrice  baseWeight additionalKgPrice',
       })
       .lean()
       .exec();
@@ -226,6 +227,7 @@ export class OrderService {
     // Format single order image URLs
     const orderObj = order as unknown as {
       user?: { avatar?: string };
+      shippingProviderId?: { logo?: string };
       items?: Array<{
         productId?: {
           imageCover?: string;
@@ -262,7 +264,13 @@ export class OrderService {
         }
       });
     }
-
+    if (
+      orderObj.shippingProviderId &&
+      orderObj.shippingProviderId?.logo &&
+      !orderObj.shippingProviderId?.logo.startsWith('http')
+    ) {
+      orderObj.shippingProviderId.logo = `${process.env.BASE_URL}${orderObj.shippingProviderId.logo}`;
+    }
     return {
       status: 'success',
       message: this.i18n.translate('success.found_SUCCESS'),
