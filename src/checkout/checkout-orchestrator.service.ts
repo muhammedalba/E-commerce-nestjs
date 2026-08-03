@@ -228,6 +228,8 @@ export class CheckoutOrchestratorService {
           postalCode?: string;
           additionalInfo?: string;
           addressType?: string;
+          companyName?: string;
+          vendorVatNo?: string;
         };
       };
     };
@@ -259,6 +261,8 @@ export class CheckoutOrchestratorService {
       postalCode: sessionAddress.postalCode || 'N/A',
       additionalInfo: sessionAddress.additionalInfo,
       addressType: sessionAddress.addressType || 'home',
+      companyName: sessionAddress.companyName,
+      vendorVatNo: sessionAddress.vendorVatNo,
     };
 
     const orderPayload = {

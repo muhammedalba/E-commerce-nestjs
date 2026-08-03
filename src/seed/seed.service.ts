@@ -35,15 +35,21 @@ export class SeedService {
       contactInfo: {
         email: 'info@code-props.com',
         phones: ['+966598909991'],
-        address: {
-          ar: 'الرياض، المملكة العربية السعودية',
-          en: 'Riyadh, Saudi Arabia',
-        },
         workingDays: {
           ar: 'من الاثنين الى الجمعة',
           en: 'from Monday to Friday',
         },
         workingHours: { ar: 'من 8 صباحا الى 6 مساء', en: 'from 8 AM to 6 PM' },
+      },
+      businessAddress: {
+        country: { ar: 'المملكة العربية السعودية', en: 'Saudi Arabia' },
+        city: { ar: 'الرياض', en: 'Riyadh' },
+        area: { ar: 'الصحافة', en: 'Al Sahafah' },
+        street: { ar: 'طريق الملك فهد', en: 'King Fahd Road' },
+        mailBox: '12345',
+        poBox: '54321',
+        vatNo: '100000000000003',
+        crNo: '1010000000',
       },
       paymentsEnabled: true,
       freeShippingThreshold: 0,

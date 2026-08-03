@@ -80,6 +80,11 @@ export class OrderAddressDto {
   companyName?: string;
 
   @IsOptional()
+  @IsString()
+  @Length(0, 100)
+  vendorVatNo?: string;
+
+  @IsOptional()
   @IsObject()
   @ValidateNested()
   @Type(() => GeoLocationDto)

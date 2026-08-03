@@ -99,7 +99,6 @@ export class Setting {
     default: {
       email: '',
       phones: [],
-      address: { ar: '', en: '' },
       workingDays: { ar: '', en: '' },
       workingHours: { ar: '', en: '' },
     },
@@ -107,9 +106,32 @@ export class Setting {
   declare contactInfo: {
     email: string;
     phones: string[];
-    address?: FieldLocalizeDto;
     workingDays?: FieldLocalizeDto;
     workingHours?: FieldLocalizeDto;
+  };
+
+  @Prop({
+    type: Object,
+    default: {
+      country: { ar: '', en: '' },
+      city: { ar: '', en: '' },
+      area: { ar: '', en: '' },
+      street: { ar: '', en: '' },
+      mailBox: '',
+      poBox: '',
+      vatNo: '',
+      crNo: '',
+    },
+  })
+  declare businessAddress: {
+    country: FieldLocalizeDto;
+    city: FieldLocalizeDto;
+    area: FieldLocalizeDto;
+    street: FieldLocalizeDto;
+    mailBox: string;
+    poBox: string;
+    vatNo: string;
+    crNo: string;
   };
 
   // ميزات المتجر

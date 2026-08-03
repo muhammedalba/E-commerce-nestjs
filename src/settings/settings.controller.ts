@@ -61,6 +61,7 @@ export class SettingsController {
       'maintenanceMode',
       'socialLinks',
       'contactInfo',
+      'businessAddress',
       'gateways',
       'bankTransferDetails',
       'features',

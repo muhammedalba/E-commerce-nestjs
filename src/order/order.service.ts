@@ -21,6 +21,36 @@ import { AuditAction } from '../audit/shared/schema/audit-log.schema';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Permissions } from 'src/roles/shared/enums/permissions.enum';
 import { MODEL_NAMES } from 'src/shared/constants/models.constants';
+import { withBaseUrl } from 'src/shared/utils/with-base-url.util';
+// 1. تعريف الأنواع بشكل دقيق وصريح 
+interface UserPopulated {
+  avatar?: string;
+  [key: string]: unknown;
+}
+
+interface ShippingProviderPopulated {
+  logo?: string;
+  [key: string]: unknown;
+}
+
+interface ProductPopulated {
+  imageCover?: string;
+  images?: string[];
+  [key: string]: unknown;
+}
+
+interface OrderItemPopulated {
+  productId?: ProductPopulated;
+  [key: string]: unknown;
+}
+
+export interface PopulatedOrderData {
+  user?: UserPopulated;
+  transferReceiptImg?: string;
+  shippingProviderId?: ShippingProviderPopulated;
+  items?: OrderItemPopulated[];
+  [key: string]: unknown;
+}
 @Injectable()
 export class OrderService {
   constructor(
@@ -179,101 +209,172 @@ export class OrderService {
   // =============================================================
   // =============================================================
   // =============================================================
+  // async findOne(idParamDto: string) {
+  //   // 1. استخدام التحقق المعياري لـ Mongo ObjectId
+  //   if (!Types.ObjectId.isValid(idParamDto)) {
+  //     throw new BadRequestException('Invalid order ID');
+  //   }
+
+  //   // 2. تنفيذ الاستعلام مع lean ووضع images في الـ select
+  //   const order = await this.OrderModel.findById(idParamDto)
+  //     .populate({
+  //       path: 'user',
+  //       select: 'name email role avatar phone createdAt',
+  //     })
+  //     .populate({
+  //       path: 'items.productId',
+  //       select: 'title imageCover slug images',
+  //     })
+  //     .populate({
+  //       path: 'items.variantId',
+  //       select: 'sku price priceAfterDiscount label attributes',
+  //     })
+  //     .populate({
+  //       path: 'shippingAddress.country',
+  //       select: 'name',
+  //     })
+  //     .populate({
+  //       path: 'shippingAddress.city',
+  //       select: 'name',
+  //     })
+  //     .populate({
+  //       path: 'couponId',
+  //       select: 'name type usageCount expires discount',
+  //     })
+  //     .populate({
+  //       path: 'shippingProviderId',
+  //       select: 'name code logo trackingUrl',
+  //     })
+  //     .populate({
+  //       path: 'shippingRateId',
+  //       select: 'estimatedDays basePrice baseWeight additionalKgPrice',
+  //     })
+  //     .lean()
+  //     .exec();
+
+  //   if (!order) {
+  //     throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
+  //   }
+
+  //   // 3. تنسيق روابط الصور بشكل نظيف ومباشر باستخدام withBaseUrl
+  //   const orderObj = order as unknown as {
+  //     user?: { avatar?: string };
+  //     shippingProviderId?: { logo?: string };
+  //     transferReceiptImg?: string;
+  //     items?: Array<{
+  //       productId?: {
+  //         imageCover?: string;
+  //         images?: string[];
+  //       };
+  //     }>;
+  //   };
+
+  //   if (orderObj.user?.avatar) {
+  //     orderObj.user.avatar = withBaseUrl(orderObj.user.avatar) as string;
+  //   }
+
+  //   if (orderObj.transferReceiptImg) {
+  //     orderObj.transferReceiptImg = withBaseUrl(
+  //       orderObj.transferReceiptImg,
+  //     ) as string;
+  //   }
+
+  //   if (orderObj.shippingProviderId?.logo) {
+  //     orderObj.shippingProviderId.logo = withBaseUrl(
+  //       orderObj.shippingProviderId.logo,
+  //     ) as string;
+  //   }
+
+  //   if (Array.isArray(orderObj.items)) {
+  //     orderObj.items.forEach((item) => {
+  //       if (item.productId) {
+  //         if (item.productId.imageCover) {
+  //           item.productId.imageCover = withBaseUrl(
+  //             item.productId.imageCover,
+  //           ) as string;
+  //         }
+  //         if (item.productId.images) {
+  //           item.productId.images = item.productId.images
+  //             .map((img) => withBaseUrl(img))
+  //             .filter((img): img is string => img != null);
+  //         }
+  //       }
+  //     });
+  //   }
+
+  //   return {
+  //     status: 'success',
+  //     message: this.i18n.translate('success.found_SUCCESS'),
+  //     data: order,
+  //   };
+  // }
+
+  // 2. الدالة المُحسنة
   async findOne(idParamDto: string) {
-    const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto);
-    if (!isObjectId) {
+    if (!Types.ObjectId.isValid(idParamDto)) {
       throw new BadRequestException('Invalid order ID');
     }
-    const order = await this.OrderModel.findById(idParamDto)
-      .populate({
-        path: 'user',
-        select: 'name email role avatar phone createdAt',
-      })
-      .populate({
-        path: 'items.productId',
-        select: 'title imageCover slug',
-      })
-      .populate({
-        path: 'items.variantId',
-        select: 'sku price priceAfterDiscount label attributes',
-      })
-      .populate({
-        path: 'shippingAddress.country',
-        select: 'name',
-      })
-      .populate({
-        path: 'shippingAddress.city',
-        select: 'name',
-      })
-      .populate({
-        path: 'couponId',
 
-        select: 'name type usageCount expires discount',
-      })
-      .populate({
-        path: 'shippingProviderId',
-        select: 'name code logo trackingUrl',
-      })
-      .populate({
-        path: 'shippingRateId',
-        select: 'estimatedDays basePrice  baseWeight additionalKgPrice',
-      })
+    // استخدام (as unknown as PopulatedOrderData) لقطع سلسلة any القادمة من Mongoose نهائياً
+    const order = (await this.OrderModel.findById(idParamDto)
+      .populate([
+        { path: 'user', select: 'name email role avatar phone createdAt' },
+        { path: 'items.productId', select: 'title imageCover slug images' },
+        {
+          path: 'items.variantId',
+          select: 'sku price priceAfterDiscount label attributes',
+        },
+        { path: 'shippingAddress.country', select: 'name' },
+        { path: 'shippingAddress.city', select: 'name' },
+        { path: 'couponId', select: 'name type usageCount expires discount' },
+        { path: 'shippingProviderId', select: 'name code logo trackingUrl' },
+        {
+          path: 'shippingRateId',
+          select: 'estimatedDays basePrice baseWeight additionalKgPrice',
+        },
+      ])
       .lean()
-      .exec();
+      .exec()) as unknown as PopulatedOrderData | null;
+
     if (!order) {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }
 
-    // Format single order image URLs
-    const orderObj = order as unknown as {
-      user?: { avatar?: string };
-      shippingProviderId?: { logo?: string };
-      items?: Array<{
-        productId?: {
-          imageCover?: string;
-          images?: string[];
-        };
-      }>;
-    };
-
-    if (
-      orderObj.user &&
-      orderObj.user.avatar &&
-      !orderObj.user.avatar.startsWith('http')
-    ) {
-      orderObj.user.avatar = `${process.env.BASE_URL}${orderObj.user.avatar}`;
+    // الآن order.user ليس any بل UserPopulated | undefined، مما يرضي ESLint تماماً
+    if (order.user?.avatar) {
+      order.user.avatar = String(withBaseUrl(order.user.avatar));
     }
 
-    if (orderObj.items) {
-      orderObj.items.forEach((orderItem) => {
-        if (orderItem.productId) {
-          if (
-            orderItem.productId.imageCover &&
-            !orderItem.productId.imageCover.startsWith('http')
-          ) {
-            orderItem.productId.imageCover = `${process.env.BASE_URL}${orderItem.productId.imageCover}`;
-          }
-          if (orderItem.productId.images) {
-            orderItem.productId.images = orderItem.productId.images.map(
-              (img) =>
-                img && !img.startsWith('http')
-                  ? `${process.env.BASE_URL}${img}`
-                  : img,
-            );
-          }
+    if (order.transferReceiptImg) {
+      order.transferReceiptImg = String(withBaseUrl(order.transferReceiptImg));
+    }
+
+    if (order.shippingProviderId?.logo) {
+      order.shippingProviderId.logo = String(
+        withBaseUrl(order.shippingProviderId.logo),
+      );
+    }
+
+    if (Array.isArray(order.items)) {
+      for (const item of order.items) {
+        const product = item.productId;
+        if (!product) continue;
+
+        if (product.imageCover) {
+          product.imageCover = String(withBaseUrl(product.imageCover));
         }
-      });
+
+        if (Array.isArray(product.images)) {
+          product.images = product.images
+            .map((img) => String(withBaseUrl(img)))
+            .filter((img): img is string => Boolean(img));
+        }
+      }
     }
-    if (
-      orderObj.shippingProviderId &&
-      orderObj.shippingProviderId?.logo &&
-      !orderObj.shippingProviderId?.logo.startsWith('http')
-    ) {
-      orderObj.shippingProviderId.logo = `${process.env.BASE_URL}${orderObj.shippingProviderId.logo}`;
-    }
+
     return {
       status: 'success',
-      message: this.i18n.translate('success.found_SUCCESS'),
+      message: String(this.i18n.translate('success.found_SUCCESS')),
       data: order,
     };
   }

@@ -50,17 +50,50 @@ class ContactInfoDto {
   @IsOptional()
   @ValidateNested()
   @Type(() => FieldLocalizeDto)
-  address?: FieldLocalizeDto;
-
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => FieldLocalizeDto)
   workingDays?: FieldLocalizeDto;
 
   @IsOptional()
   @ValidateNested()
   @Type(() => FieldLocalizeDto)
   workingHours?: FieldLocalizeDto;
+}
+
+class BusinessAddressDto {
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => FieldLocalizeDto)
+  country?: FieldLocalizeDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => FieldLocalizeDto)
+  city?: FieldLocalizeDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => FieldLocalizeDto)
+  area?: FieldLocalizeDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => FieldLocalizeDto)
+  street?: FieldLocalizeDto;
+
+  @IsString()
+  @IsOptional()
+  mailBox?: string;
+
+  @IsString()
+  @IsOptional()
+  poBox?: string;
+
+  @IsString()
+  @IsOptional()
+  vatNo?: string;
+
+  @IsString()
+  @IsOptional()
+  crNo?: string;
 }
 
 class StoreFeaturesDto {
@@ -161,6 +194,11 @@ export class UpdateSettingDto {
   @Type(() => ContactInfoDto)
   @IsOptional()
   contactInfo?: ContactInfoDto;
+
+  @ValidateNested()
+  @Type(() => BusinessAddressDto)
+  @IsOptional()
+  businessAddress?: BusinessAddressDto;
 
   @ValidateNested()
   @Type(() => StoreFeaturesDto)

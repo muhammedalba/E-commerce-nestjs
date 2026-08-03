@@ -44,6 +44,9 @@ export class OrderAddress {
 
   @Prop({ type: String, required: false })
   declare companyName: string; // Optional field for company name
+
+  @Prop({ type: String, required: false })
+  declare vendorVatNo: string; // Optional field for vendor VAT number
   @Prop({
     type: {
       type: String,
