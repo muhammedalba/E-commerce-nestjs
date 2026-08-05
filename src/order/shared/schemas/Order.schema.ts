@@ -30,6 +30,13 @@ export class Order extends Document {
   declare DeliveryReceiptImage: string;
 
   @Prop({
+    required: false,
+    type: 'string',
+    trim: true,
+  })
+  declare deliveryReceiptNumber: string;
+
+  @Prop({
     type: MongooseSchema.Types.ObjectId,
     ref: MODEL_NAMES.USER,
     required: true,

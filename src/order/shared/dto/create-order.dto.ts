@@ -33,6 +33,10 @@ export class CreateOrderDto {
   @IsString()
   DeliveryReceiptImage?: string;
 
+  @IsOptional()
+  @IsString()
+  deliveryReceiptNumber?: string;
+
   /*— user—*/
   @IsOptional()
   @IsMongoId()

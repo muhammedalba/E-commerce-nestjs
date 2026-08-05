@@ -22,7 +22,7 @@ import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Permissions } from 'src/roles/shared/enums/permissions.enum';
 import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 import { withBaseUrl } from 'src/shared/utils/with-base-url.util';
-// 1. تعريف الأنواع بشكل دقيق وصريح 
+// 1. تعريف الأنواع بشكل دقيق وصريح
 interface UserPopulated {
   avatar?: string;
   [key: string]: unknown;
@@ -47,6 +47,8 @@ interface OrderItemPopulated {
 export interface PopulatedOrderData {
   user?: UserPopulated;
   transferReceiptImg?: string;
+  InvoicePdf?: string;
+  DeliveryReceiptImage?: string;
   shippingProviderId?: ShippingProviderPopulated;
   items?: OrderItemPopulated[];
   [key: string]: unknown;
@@ -349,6 +351,16 @@ export class OrderService {
       order.transferReceiptImg = String(withBaseUrl(order.transferReceiptImg));
     }
 
+    if (order.InvoicePdf) {
+      order.InvoicePdf = String(withBaseUrl(order.InvoicePdf));
+    }
+
+    if (order.DeliveryReceiptImage) {
+      order.DeliveryReceiptImage = String(
+        withBaseUrl(order.DeliveryReceiptImage),
+      );
+    }
+
     if (order.shippingProviderId?.logo) {
       order.shippingProviderId.logo = String(
         withBaseUrl(order.shippingProviderId.logo),
@@ -413,6 +425,44 @@ export class OrderService {
       updateOrderDto.InvoicePdf = newPdfPath;
     }
 
+    if (files.DeliveryReceiptImage) {
+      const newReceiptImagePath = await this.fileUploadService.updateFile(
+        files.DeliveryReceiptImage[0] as MulterFileType,
+        'orders',
+        order,
+        order.DeliveryReceiptImage,
+      );
+      updateOrderDto.DeliveryReceiptImage = newReceiptImagePath;
+    }
+
+    if (
+      updateOrderDto.DeliveryReceiptImage === '' ||
+      updateOrderDto.DeliveryReceiptImage === null
+    ) {
+      if (order.DeliveryReceiptImage) {
+        try {
+          await this.fileUploadService.deleteFile(order.DeliveryReceiptImage);
+        } catch (err) {
+          this.logger.warn?.(
+            `Failed to delete DeliveryReceiptImage: ${String(err)}`,
+          );
+        }
+      }
+    }
+
+    if (
+      updateOrderDto.InvoicePdf === '' ||
+      updateOrderDto.InvoicePdf === null
+    ) {
+      if (order.InvoicePdf) {
+        try {
+          await this.fileUploadService.deleteFile(order.InvoicePdf);
+        } catch (err) {
+          this.logger.warn?.(`Failed to delete InvoicePdf: ${String(err)}`);
+        }
+      }
+    }
+
     const updatedData = await this.OrderModel.findByIdAndUpdate(
       { _id: idParamDto.id },
       { $set: updateOrderDto },
@@ -421,18 +471,18 @@ export class OrderService {
 
     if (
       updatedData &&
-      (updateOrderDto.status === 'completed' ||
-        updateOrderDto.status === 'cancelled')
+      ((updateOrderDto.status as string) === 'completed' ||
+        (updateOrderDto.status as string) === 'cancelled')
     ) {
       const orderUserIdStr = updatedData.user.toString();
       this.eventEmitter.emit(`user.notification.${orderUserIdStr}`, {
         userId: orderUserIdStr,
         action:
-          updateOrderDto.status === 'completed'
+          (updateOrderDto.status as string) === 'completed'
             ? 'ORDER_DELIVERED'
             : 'ORDER_CANCELED',
         message:
-          updateOrderDto.status === 'completed'
+          (updateOrderDto.status as string) === 'completed'
             ? this.i18n.translateAll('notification.ORDER_DELIVERED')
             : this.i18n.translateAll('notification.ORDER_CANCELED'),
         payload: { orderId: updatedData._id },
