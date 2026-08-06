@@ -148,6 +148,8 @@ export class OrderService {
     const data = await features
       .getQuery()
       .populate({ path: 'user', select: 'name email avatar' })
+      .populate({ path: 'shippingAddress.country', select: 'name' })
+      .populate({ path: 'shippingAddress.city', select: 'name' })
       .populate({ path: 'shippingProviderId', select: 'name code logo' })
       .populate({ path: 'shippingRateId', select: 'estimatedDays basePrice' })
       .populate({ path: 'items.productId', select: 'title slug imageCover' })

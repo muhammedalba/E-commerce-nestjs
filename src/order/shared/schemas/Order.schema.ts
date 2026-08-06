@@ -145,6 +145,10 @@ export class Order extends Document {
   @Prop({ type: Boolean, default: false })
   declare isDeleted: boolean;
 
+  // رقم الفاتورة التسلسلي — يزداد تلقائياً مع كل طلب
+  @Prop({ type: Number })
+  declare invoiceNumber: number;
+
   @Prop({ type: String, default: undefined })
   declare notes: string;
 
@@ -165,3 +169,21 @@ export class Order extends Document {
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);
+
+// الزيادة التلقائية لرقم الفاتورة بشكل حتمي وآمن للطلبات المتزامنة تلقائياً
+OrderSchema.pre('save', async function (next) {
+  if (this.isNew && !this.invoiceNumber) {
+    const countersCollection = this.db.collection<{ _id: string; seq: number }>(
+      'counters',
+    );
+    const counter = await countersCollection.findOneAndUpdate(
+      { _id: 'invoiceNumber' },
+      { $inc: { seq: 1 } },
+      { upsert: true, returnDocument: 'after' },
+    );
+
+    const seq = (counter as { seq?: number } | null)?.seq ?? 1;
+    this.invoiceNumber = seq;
+  }
+  next();
+});
