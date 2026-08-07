@@ -58,9 +58,6 @@ export class Order extends Document {
   @Prop({ default: false })
   declare isSavedForLater: boolean;
 
-  @Prop({ type: String, default: OrderStatus.PENDING })
-  declare status: OrderStatus;
-
   // --- Legacy Fields (Replaced by paymentMethodId and shippingProviderId) ---
   @Prop({ type: String, required: false })
   declare paymentMethod: string;
@@ -121,6 +118,12 @@ export class Order extends Document {
   @Prop({ type: Number, default: 0 })
   declare discountAmount: number;
 
+  @Prop({ type: String, default: OrderStatus.PENDING })
+  declare status: OrderStatus;
+
+  @Prop({ type: String, default: undefined })
+  declare paymentStatus: PaymentStatus;
+
   @Prop({ type: Date, default: undefined })
   declare completedAt: Date;
 
@@ -131,6 +134,15 @@ export class Order extends Document {
   declare processingAt: Date;
 
   @Prop({ type: Date, default: undefined })
+  declare shippedAt: Date;
+
+  @Prop({ type: Date, default: undefined })
+  declare deliveredAt: Date;
+
+  @Prop({ type: Date, default: undefined })
+  declare paidAt: Date;
+
+  @Prop({ type: Date, default: undefined })
   declare checkedOutAt: Date;
 
   @Prop({ type: Date, default: undefined })
@@ -138,6 +150,9 @@ export class Order extends Document {
 
   @Prop({ type: Date, default: undefined })
   declare updatedAt: Date;
+
+  @Prop({ type: String, default: undefined })
+  declare deliveryDate: string;
 
   @Prop({ type: Date, default: undefined })
   declare deletedAt: Date;
@@ -153,16 +168,10 @@ export class Order extends Document {
   declare notes: string;
 
   @Prop({ type: String, default: undefined })
-  declare deliveryDate: string;
-
-  @Prop({ type: String, default: undefined })
   declare deliveryName: string;
 
   @Prop({ type: String, default: undefined })
   declare customerServiceContact: string;
-
-  @Prop({ type: String, default: undefined })
-  declare paymentStatus: PaymentStatus;
 
   @Prop({ type: String, default: undefined })
   declare DeliveryVerificationCode: string;

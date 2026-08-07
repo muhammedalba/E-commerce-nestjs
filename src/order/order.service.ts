@@ -70,6 +70,45 @@ export class OrderService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
   private readonly logger = new Logger(OrderService.name);
+
+  /**
+   * يبني كائن الـ timestamps المناسب بناءً على الحالة الجديدة.
+   * يجب استدعاؤه مع كل تعديل على status أو paymentStatus لضمان الاتساق.
+   */
+  private buildStatusTimestamps(
+    status?: string,
+    paymentStatus?: string,
+  ): Record<string, Date> {
+    const now = new Date();
+    const timestamps: Record<string, Date> = {};
+
+    if (status) {
+      switch (status) {
+        case 'processing':
+          timestamps.processingAt = now;
+          break;
+        case 'completed':
+          timestamps.completedAt = now;
+          break;
+        case 'cancelled':
+        case 'expired':
+          timestamps.cancelledAt = now;
+          break;
+        case 'shipped':
+          timestamps.shippedAt = now;
+          break;
+        case 'delivered':
+          timestamps.deliveredAt = now;
+          break;
+      }
+    }
+
+    if (paymentStatus === 'PAID') {
+      timestamps.paidAt = now;
+    }
+
+    return timestamps;
+  }
   // =============================================================
   // =============================================================
   // =============================================================
@@ -416,7 +455,7 @@ export class OrderService {
     if (!order) {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }
-    // 2) if file is exits
+    // 2) if file is exits (This feature has not been implemented yet; the invoice cannot be downloaded. )
     if (files.InvoicePdf) {
       const newPdfPath = await this.fileUploadService.updateFile(
         files.InvoicePdf[0] as MulterFileType,
@@ -465,9 +504,15 @@ export class OrderService {
       }
     }
 
+    // حساب timestamps المناسبة بناءً على الحالة الجديدة
+    const statusTimestamps = this.buildStatusTimestamps(
+      updateOrderDto.status as string | undefined,
+      updateOrderDto.paymentStatus as string | undefined,
+    );
+
     const updatedData = await this.OrderModel.findByIdAndUpdate(
       { _id: idParamDto.id },
-      { $set: updateOrderDto },
+      { $set: { ...updateOrderDto, ...statusTimestamps } },
       { new: true, runValidators: true },
     );
 
@@ -765,12 +810,13 @@ export class OrderService {
   }) {
     this.logger.log(`Handling payment.succeeded for order ${payload.orderId}`);
     try {
+      const timestamps = this.buildStatusTimestamps('processing', 'PAID');
       const order = await this.OrderModel.findByIdAndUpdate(
         payload.orderId,
         {
           status: 'processing',
-          paymentStatus: 'paid',
-          paidAt: new Date(),
+          paymentStatus: 'PAID',
+          ...timestamps,
         },
         { new: true },
       );
@@ -816,9 +862,10 @@ export class OrderService {
   async handlePaymentFailed(payload: { orderId: string; reason: string }) {
     this.logger.log(`Handling payment.failed for order ${payload.orderId}`);
     try {
+      const timestamps = this.buildStatusTimestamps(undefined, 'FAILED');
       const order = await this.OrderModel.findByIdAndUpdate(
         payload.orderId,
-        { paymentStatus: 'failed' },
+        { paymentStatus: 'FAILED', ...timestamps },
         { new: true },
       );
       if (order && order.paymentMethodCode === 'moyasar') {
@@ -848,9 +895,10 @@ export class OrderService {
   async handlePaymentExpired(payload: { orderId: string }) {
     this.logger.log(`Handling payment.expired for order ${payload.orderId}`);
     try {
+      const timestamps = this.buildStatusTimestamps('expired', 'FAILED');
       const order = await this.OrderModel.findByIdAndUpdate(
         payload.orderId,
-        { status: 'expired', paymentStatus: 'failed' },
+        { status: 'expired', paymentStatus: 'FAILED', ...timestamps },
         { new: true },
       );
       if (order && order.paymentMethodCode === 'moyasar') {

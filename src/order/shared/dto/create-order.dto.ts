@@ -167,6 +167,22 @@ export class CreateOrderDto {
   @IsDate()
   @Type(() => Date)
   processingAt?: Date;
+
+  @IsOptional()
+  @IsDate()
+  @Type(() => Date)
+  shippedAt?: Date;
+
+  @IsOptional()
+  @IsDate()
+  @Type(() => Date)
+  deliveredAt?: Date;
+
+  @IsOptional()
+  @IsDate()
+  @Type(() => Date)
+  paidAt?: Date;
+
   @IsOptional()
   @IsDate()
   @Type(() => Date)
