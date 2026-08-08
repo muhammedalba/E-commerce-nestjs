@@ -9,6 +9,7 @@ import { I18nService } from 'nestjs-i18n';
 import { Request, Response, NextFunction } from 'express';
 
 async function bootstrap() {
+  console.log('Starting application');
   const app = await NestFactory.create(AppModule);
   // allowed origins
   const allowedOrigins = [
