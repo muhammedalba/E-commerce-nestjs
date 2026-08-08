@@ -66,7 +66,7 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'x-lang'],
   });
 
-  await app.listen(process.env.PORT ?? 4000);
+  await app.listen(process.env.PORT || 3000, '0.0.0.0');
 }
 bootstrap().catch((err) => {
   console.error('Error during application bootstrap:', err);
