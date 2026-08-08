@@ -136,7 +136,7 @@ UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
 
   if (typeof this.password === 'string') {
-    const saltOrRounds = process.env.saltOrRounds || '10';
+    const saltOrRounds = process.env.SALTORROUNDS || '10';
     const hash = await bcrypt.hash(this.password, parseInt(saltOrRounds, 10));
     this.password = hash;
   }
@@ -150,7 +150,7 @@ UserSchema.pre('findOneAndUpdate', async function (next) {
   if (update && typeof update === 'object' && '$set' in update) {
     // Check if the password field is being updated
     if (update?.$set?.password && typeof update.$set.password === 'string') {
-      const saltOrRounds = process.env.saltOrRounds || '10';
+      const saltOrRounds = process.env.SALTORROUNDS || '10';
       const hash = await bcrypt.hash(
         update?.$set?.password,
         parseInt(saltOrRounds, 10),
