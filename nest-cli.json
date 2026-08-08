@@ -7,7 +7,7 @@
     "assets": [
       {
         "include": "i18n/**/*",
-        "watchAssets": true
+        "watchAssets": false
       }
     ]
   }
