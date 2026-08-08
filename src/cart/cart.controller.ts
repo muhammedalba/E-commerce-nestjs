@@ -10,7 +10,6 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { ValidateCouponDto } from './shared/dto/validate-coupon.dto';
 import { CacheTTL } from '@nestjs/cache-manager';
 import { CartService } from './cart.service';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
@@ -52,6 +51,16 @@ export class CartController {
       req.user.user_id,
       updateCartDto,
     );
+  }
+
+  @Delete('remove/:productId/:variantId')
+  @ClearCache('cart')
+  removeItemVariant(
+    @Req() req: { user: JwtPayload },
+    @Param('productId') productId: string,
+    @Param('variantId') variantId: string,
+  ) {
+    return this.cartService.removeItem(req.user.user_id, productId, variantId);
   }
 
   @Delete('remove/:productId')

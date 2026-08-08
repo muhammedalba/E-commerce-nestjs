@@ -197,7 +197,97 @@ export class CheckoutOrchestratorService {
   }
 
   async applyCoupon(userId: string, couponCode: string) {
-    await this.sessionService.updateSession(userId, { couponCode });
+    // Remove coupon from session if empty string is sent (remove action)
+    if (!couponCode || couponCode.trim() === '') {
+      return this.removeCoupon(userId);
+    }
+
+    // ✅ Validate BEFORE saving: get current session and run preview with the new code.
+    // If the coupon is invalid/expired, the checkoutService will throw a BadRequestException
+    // and the session will NOT be updated — preventing the "stuck error" bug.
+    const currentSession = await this.sessionService.getSession(userId);
+    const cartData = await this.cartService.getCart(userId);
+    const cart = cartData as {
+      items?: {
+        product?: { _id?: { toString(): string } } | string;
+        variant?:
+          | {
+              _id?: { toString(): string };
+              attributes?: { weight?: { value?: number; unit?: string } };
+            }
+          | string;
+        quantity: number;
+        unitPrice: number;
+        brand?: { toString(): string } | string;
+        category?: { toString(): string } | string;
+      }[];
+    };
+
+    if (!cart || !cart.items || cart.items.length === 0) {
+      throw new BadRequestException('Cart is empty');
+    }
+
+    const items = cart.items.map((item) => {
+      const p = item.product as { _id?: { toString(): string } } | undefined;
+      const v = item.variant as
+        | {
+            _id?: { toString(): string };
+            attributes?: { weight?: { value?: number; unit?: string } };
+          }
+        | undefined;
+      const productId = p?._id
+        ? p._id.toString()
+        : typeof item.product === 'string'
+          ? item.product
+          : '';
+      const variantId = v?._id
+        ? v._id.toString()
+        : typeof item.variant === 'string'
+          ? item.variant
+          : '';
+      return {
+        productId,
+        variantId,
+        quantity: item.quantity,
+        weight: v?.attributes?.weight?.value ?? 0,
+        price: item.unitPrice,
+        brand:
+          typeof item.brand === 'object'
+            ? item.brand?.toString() || undefined
+            : item.brand || undefined,
+        category:
+          typeof item.category === 'object'
+            ? item.category?.toString() || undefined
+            : item.category || undefined,
+      };
+    });
+
+    // This will throw if the coupon is invalid/expired — session remains unchanged
+    await this.checkoutService.getCheckoutPreview(
+      {
+        cityId: currentSession.cityId || '',
+        paymentMethodId: currentSession.paymentMethodId || '',
+        shippingProviderId: currentSession.shippingProviderId || '',
+        couponCode: couponCode.trim(),
+        items,
+      },
+      userId,
+    );
+
+    // ✅ Only save to session AFTER successful validation
+    await this.sessionService.updateSession(userId, {
+      couponCode: couponCode.trim(),
+    });
+    return this.getSummary(userId);
+  }
+
+  async removeCoupon(userId: string) {
+    // Explicitly remove couponCode from session by setting it to undefined
+    const currentSession = await this.sessionService.getSession(userId);
+    const { couponCode: _removed, ...sessionWithoutCoupon } = currentSession;
+    void _removed;
+    await this.sessionService.clearSession(userId);
+    await this.sessionService.updateSession(userId, sessionWithoutCoupon);
     return this.getSummary(userId);
   }
 

@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Delete,
   Body,
   UseGuards,
   Req,
@@ -64,6 +65,11 @@ export class CheckoutController {
     @Req() req: { user: { user_id: string } },
   ) {
     return this.orchestrator.applyCoupon(req.user.user_id, couponCode);
+  }
+
+  @Delete('coupon')
+  async removeCoupon(@Req() req: { user: { user_id: string } }) {
+    return this.orchestrator.removeCoupon(req.user.user_id);
   }
 
   @Post('place-order')
