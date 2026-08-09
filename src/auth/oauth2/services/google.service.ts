@@ -61,6 +61,8 @@ export class GoogleService {
       };
       // 3) generate access token
       Tokens = await this.tokenService.generate_Tokens(userId);
+      console.log('tokens', Tokens);
+
       //4) send token to cookies
       this.cookieService.setCookies(
         res,

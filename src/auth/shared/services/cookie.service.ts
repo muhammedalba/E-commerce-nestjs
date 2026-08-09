@@ -13,6 +13,7 @@ export class CookieService {
     },
   ): void {
     res.setHeader('Authorization', `Bearer ${tokens.access_token}`);
+
     res.cookie('access_token', tokens.access_token, {
       httpOnly: true,
       secure: this.isProd,
