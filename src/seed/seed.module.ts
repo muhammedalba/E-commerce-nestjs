@@ -7,7 +7,10 @@ import { PaymentsModule } from '../payments/payments.module';
 import { TaxesModule } from '../taxes/taxes.module';
 import { RolesModule } from '../roles/roles.module';
 import { Controller, Get } from '@nestjs/common';
+import { UsersModule } from 'src/users/users.module';
 // http://localhost:4000/api/v1/seed
+// http://localhost:4000/api/v1/seed/ksa
+
 @Controller('seed')
 export class SeedController {
   constructor(private readonly seedService: SeedService) {}
@@ -33,6 +36,7 @@ export class SeedController {
     PaymentsModule,
     TaxesModule,
     RolesModule,
+    UsersModule,
   ],
   controllers: [SeedController],
   providers: [SeedService],

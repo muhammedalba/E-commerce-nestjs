@@ -51,6 +51,45 @@ export class UsersService extends BaseService<UserDocument> {
   }
 
   /**
+   * Creates a new admin user account in the system with optional avatar upload.
+   * This method is used by the roles seeder service to create the admin user.
+   *
+   * @param createUserDto - Data transfer object containing the user's registration details.
+   * @param file - Optional uploaded avatar image file.
+   * @returns The newly created user document.
+   * @throws {ForbiddenException} If attempting to assign a role level at or above the creator's level.
+   */
+  async createAdminUser(): Promise<User | void> {
+    const adminEmail = process.env.ADMIN_EMAIL || 'codepropstec@gmail.com';
+    const adminPassword = process.env.ADMIN_PASSWORD || '1111111';
+    const adminName = process.env.ADMIN_NAME || 'Super Admin';
+
+    // 1- Check if the super admin user already exists
+    const SuperAdminUser = await this.userModel.findOne({
+      email: adminEmail,
+    });
+
+    if (!SuperAdminUser) {
+      // 2- Get the super admin role
+      const SuperAdminRole = await this.roleModel.findOne({
+        name: 'SuperAdmin',
+      });
+      if (!SuperAdminRole) {
+        throw new NotFoundException('SuperAdmin role not found');
+      }
+      // 3- Create the super admin user
+      await this.userModel.create({
+        email: adminEmail,
+        password: adminPassword,
+        confirmPassword: adminPassword,
+        name: adminName,
+        role: SuperAdminRole._id,
+        isActive: true,
+      });
+    }
+  }
+
+  /**
    * Retrieves user registration statistics aggregated over a specified date range.
    *
    * @param startDate - Optional ISO date string marking the beginning of the aggregation range.

@@ -10,6 +10,7 @@ import { TaxesService } from '../taxes/taxes.service';
 import { PaymentType } from '../payments/shared/schema/payment-method.schema';
 import { KSA_DATA } from './ksa-data';
 import { RolesSeederService } from '../roles/services/roles-seeder.service';
+import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class SeedService {
@@ -22,6 +23,7 @@ export class SeedService {
     private readonly paymentsService: PaymentsService,
     private readonly taxesService: TaxesService,
     private readonly rolesSeederService: RolesSeederService,
+    private readonly userService: UsersService,
   ) {}
 
   async runSeed() {
@@ -71,6 +73,9 @@ export class SeedService {
 
     // 0. Seed Roles
     await this.rolesSeederService.seedRoles();
+    // seed super admin
+    await this.userService.createAdminUser();
+
     // 1. Seed Settings
     await this.settingsService.updateSettings(SETTINGS_DEFAULTS, undefined);
     // 2. Seed Tax (VAT 16%)
@@ -136,19 +141,23 @@ export class SeedService {
     }
 
     // 7. Seed Shipping Rate
-    let rate = await this.connection
+    // عند عمل داتا وهمية يجب اضافة ?.toString() الى دالة createRate في ملف shipping-rates.service.ts  لحقل  fieldValue: data.city.tostring()),
+    const rate = await this.connection
       .collection('shippingrates')
       .findOne({ city: city._id, provider: provider._id });
+    console.log('🚀 ~ SeedService ~ runSeed ~ provider:', provider._id);
+    console.log('🚀 ~ SeedService ~ runSeed ~ city:', city._id);
+
     if (!rate) {
       await this.shippingRatesService.createRate({
-        provider: provider._id as any,
-        city: city._id as any,
+        provider: provider._id.toString(),
+        city: city._id.toString(),
         basePrice: 25,
         baseWeight: 15,
         additionalKgPrice: 2,
         estimatedDays: '2-3 أيام',
         supportsCOD: true,
-      } as any);
+      });
     }
 
     // 8. Seed Payment Methods

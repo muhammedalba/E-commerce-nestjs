@@ -11,7 +11,7 @@ export const MongooseConfig = MongooseModule.forRootAsync({
     }
     return {
       uri,
-      dbName: 'nest-commerce',
+      dbName: 'skyGalaxy',
     };
   },
   inject: [ConfigService],

@@ -68,10 +68,9 @@ async function bootstrap() {
 
   // await app.listen(process.env.PORT || 3000, '0.0.0.0');
   const port = Number(process.env.PORT) || 3000;
-  await app.listen(port, '0.0.0.0');
+  await app.listen(port);
   console.log(`Application running on port ${port}`);
 }
 bootstrap().catch((err) => {
   console.error('Error during application bootstrap:', err);
-  process.exit(1);
 });

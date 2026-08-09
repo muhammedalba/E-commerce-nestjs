@@ -2,12 +2,14 @@ import mongoose from 'mongoose';
 import * as dotenv from 'dotenv';
 import { KSA_DATA } from '../src/seed/ksa-data';
 
-dotenv.config();
+//   npx tsx  scripts/seed-ksa-cli.ts
 
+dotenv.config();
 async function run() {
-  await mongoose.connect(
-    process.env.MONGODB_URI || 'mongodb://localhost:27017/nest-commerce',
-  );
+  console.log('Mongo URI:', process.env.MONGODB_URI);
+  await mongoose.connect(process.env.MONGODB_URI!, {
+    dbName: 'skyGalaxy',
+  });
   console.log('Connected to MongoDB');
 
   const Country = mongoose.connection.collection('countries');

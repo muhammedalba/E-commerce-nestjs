@@ -108,9 +108,7 @@ export class RolesSeederService implements OnModuleInit {
       {
         name: 'User',
         description: 'Regular registered user',
-        permissions: [
-          Permissions.ACCESS_DASHBOARD, // Or whatever baseline access is needed
-        ],
+        permissions: [],
         isSystemDefined: true,
         level: 1,
       },
