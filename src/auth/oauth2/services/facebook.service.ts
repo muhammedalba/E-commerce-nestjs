@@ -51,13 +51,13 @@ export class FacebookService {
       });
       const userId = {
         user_id: newUser._id.toString(),
-        role: 'User',
+        role: userRole?.name || 'User',
         level: userRole ? userRole.level : 1,
         email: newUser.email,
         permissions: userRole ? userRole.permissions : [],
       };
       // 3) generate access token
-      Tokens = await this.tokenService.generate_Tokens(userId, '1h');
+      Tokens = await this.tokenService.generate_Tokens(userId);
       //4) send token to cookies
 
       this.cookieService.setCookies(

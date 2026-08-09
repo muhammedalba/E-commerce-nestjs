@@ -23,6 +23,7 @@ export class GoogleService {
 
   async googleLogin(googleUser: OAuthUser, res: Response) {
     const { email, name, picture } = googleUser;
+    console.log({ googleUser });
 
     // 1) check user is use
     const user = await this.userModel
@@ -53,19 +54,20 @@ export class GoogleService {
       });
       const userId = {
         user_id: newUser._id.toString(),
-        role: 'User',
+        role: userRole?.name || 'User',
         level: userRole ? userRole.level : 1,
         email: newUser.email,
         permissions: userRole ? userRole.permissions : [],
       };
       // 3) generate access token
-      Tokens = await this.tokenService.generate_Tokens(userId, '1h');
+      Tokens = await this.tokenService.generate_Tokens(userId);
       //4) send token to cookies
       this.cookieService.setCookies(
         res,
         Tokens,
         //  'user', name, picture
       );
+      console.log('new user created successfully ', newUser);
       res.redirect(`${process.env.FRONTEND_ORIGIN}`);
     } else {
       if (!user.isActive) {
