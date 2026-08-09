@@ -48,15 +48,18 @@ export class AuthController {
 
   @Get('google/redirect')
   @UseGuards(GoogleAuthGuard)
-  googleAuthRedirect(
+  async googleAuthRedirect(
     @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<any> {
+    @Res() res: Response,
+    // @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
     const user = (req as any).user;
+
     if (!user) {
       throw new BadRequestException('User information is missing.');
     }
-    return this.authService.googleLogin(user as unknown as OAuthUser, res);
+
+    await this.authService.googleLogin(user as OAuthUser, res);
   }
   // ------------ =============================== ---------- //
   // ------------ ======  FACEBOOK AUTH  ====== ---------- //

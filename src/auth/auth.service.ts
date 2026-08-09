@@ -123,8 +123,8 @@ export class AuthService {
   /* ------------ =============================== ---------- */
   /* ------------ ======  GOOGLE LOGIN  ====== ---------- */
   /* ------------ =============================== ---------- */
-  async googleLogin(googleUser: OAuthUser, res: Response) {
-    return await this.googleService.googleLogin(googleUser, res);
+  async googleLogin(googleUser: OAuthUser, res: Response): Promise<void> {
+    await this.googleService.googleLogin(googleUser, res);
   }
 
   /* ------------ =============================== ---------- */
