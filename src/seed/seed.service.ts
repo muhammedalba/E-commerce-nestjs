@@ -28,47 +28,151 @@ export class SeedService {
 
   async runSeed() {
     console.log('🌱 Starting Database Seeding...');
+
     const SETTINGS_DEFAULTS = {
-      siteName: { ar: 'كود بروبس', en: 'codeProps' },
-      siteDescription: { ar: '', en: '' },
+      // Singleton key
+      key: 'global',
+
+      // Store information
+      siteName: {
+        ar: 'متجري',
+        en: 'My Store',
+      },
+
+      siteDescription: {
+        ar: 'متجر إلكتروني متكامل يوفر لك تجربة تسوق سهلة وآمنة.',
+        en: 'A complete online store providing an easy and secure shopping experience.',
+      },
+
+      // Branding
+      logo: 'default.png',
+      favicon: 'default.png',
+
+      // Currency
       currencyCode: 'SAR',
       currencySymbol: 'ر.س',
       exchangeRate: 1,
+
+      // SEO
+      metaTitle: {
+        ar: 'متجري | متجر إلكتروني',
+        en: 'My Store | Online Store',
+      },
+
+      metaDescription: {
+        ar: 'تسوق عبر متجرنا الإلكتروني واحصل على أفضل المنتجات والخدمات.',
+        en: 'Shop online and discover our products and services.',
+      },
+
+      googleAnalyticsId: '',
+
+      // Social Media
+      socialLinks: {
+        facebook: '',
+        instagram: '',
+        twitter: '',
+        linkedin: '',
+        youtube: '',
+        tiktok: '',
+        whatsapp: '',
+      },
+
+      // Contact information
       contactInfo: {
-        email: 'info@code-props.com',
-        phones: ['+966598909991'],
+        email: '',
+        phones: [],
+
         workingDays: {
-          ar: 'من الاثنين الى الجمعة',
-          en: 'from Monday to Friday',
+          ar: 'من الاثنين إلى الجمعة',
+          en: 'Monday to Friday',
         },
-        workingHours: { ar: 'من 8 صباحا الى 6 مساء', en: 'from 8 AM to 6 PM' },
+
+        workingHours: {
+          ar: 'من 8 صباحًا إلى 6 مساءً',
+          en: 'From 8 AM to 6 PM',
+        },
       },
+
+      // Business address
       businessAddress: {
-        country: { ar: 'المملكة العربية السعودية', en: 'Saudi Arabia' },
-        city: { ar: 'الرياض', en: 'Riyadh' },
-        area: { ar: 'الصحافة', en: 'Al Sahafah' },
-        street: { ar: 'طريق الملك فهد', en: 'King Fahd Road' },
-        mailBox: '12345',
-        poBox: '54321',
-        vatNo: '100000000000003',
-        crNo: '1010000000',
+        country: {
+          ar: 'المملكة العربية السعودية',
+          en: 'Saudi Arabia',
+        },
+
+        city: {
+          ar: 'الرياض',
+          en: 'Riyadh',
+        },
+
+        area: {
+          ar: 'الصحافة',
+          en: 'Al Sahafah',
+        },
+
+        street: {
+          ar: 'طريق الملك فهد',
+          en: 'King Fahd Road',
+        },
+
+        mailBox: '',
+        poBox: '',
+
+        vatNo: '',
+        crNo: '',
       },
-      paymentsEnabled: true,
-      freeShippingThreshold: 0,
-      vatRate: 15,
-      taxesIncluded: false,
+
+      // Store features
       features: {
         reviews: true,
         coupons: true,
         guestCheckout: true,
         wishlist: true,
       },
+
+      // Shipping
+      freeShippingThreshold: 0,
+
+      // Taxes
+      vatRate: 15,
+      taxesIncluded: false,
+
+      // Minimum order
+      minOrderAmount: 0,
+
+      // Payments
+      paymentsEnabled: true,
+
+      // Bank transfer
+      bankTransferDetails: {
+        bankName: '',
+        accountName: '',
+        accountNumber: '',
+        iban: '',
+      },
+
+      // Advanced system settings
+      debugMode: false,
+
+      // Registration
+      allowRegistration: true,
+
+      // Automatic backup
+      autoBackup: false,
+
+      // Google Maps
+      googleMapsApiKey: '',
+
+      // Maintenance
       maintenanceMode: false,
+
       maintenanceMessage: {
         ar: 'الموقع قيد الصيانة',
         en: 'Site under maintenance',
       },
-      allowRegistration: true,
+
+      // Inventory
+      inventoryAlertsEnabled: true,
     };
 
     // 0. Seed Roles
@@ -151,7 +255,7 @@ export class SeedService {
     if (!rate) {
       await this.shippingRatesService.createRate({
         provider: provider._id.toString(),
-        city: city._id.toString(),
+        // city: city._id.toString(),
         basePrice: 25,
         baseWeight: 15,
         additionalKgPrice: 2,
