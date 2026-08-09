@@ -60,9 +60,10 @@ export class UsersService extends BaseService<UserDocument> {
    * @throws {ForbiddenException} If attempting to assign a role level at or above the creator's level.
    */
   async createAdminUser(): Promise<User | void> {
-    const adminEmail = process.env.ADMIN_EMAIL || 'codepropstec@gmail.com';
-    const adminPassword = process.env.ADMIN_PASSWORD || '1111111';
-    const adminName = process.env.ADMIN_NAME || 'Super Admin';
+    const adminEmail =
+      process.env.SUPER_ADMIN_EMAIL || 'codepropstec@gmail.com';
+    const adminPassword = process.env.SUPER_ADMIN_PASSWORD || '1111111';
+    const adminName = process.env.SUPER_ADMIN_NAME || 'Super Admin';
 
     // 1- Check if the super admin user already exists
     const SuperAdminUser = await this.userModel.findOne({
