@@ -70,7 +70,6 @@ export class GoogleService {
         //  'user', name, picture
       );
       console.log('new user created successfully ', newUser);
-      res.redirect(`${process.env.FRONTEND_ORIGIN}`);
     } else {
       if (!user.isActive) {
         throw new BadRequestException(
@@ -97,6 +96,6 @@ export class GoogleService {
         // user.avatar,
       );
     }
-    res.redirect(`${process.env.FRONTEND_ORIGIN}`);
+    return res.redirect(`${process.env.FRONTEND_ORIGIN}`);
   }
 }
