@@ -122,8 +122,6 @@ export class OrderService {
   // =============================================================
   // =============================================================
   async findAll(user: JwtPayload, queryString: QueryString) {
-    // queryString.fields =
-    // 'totalPrice totalQuantity grandTotal couponCode discountAmount paymentStatus isCheckedOut status paymentMethodId shippingAmount taxAmount paymentFees user createdAt currency';
     if (
       user.permissions &&
       !user.permissions.includes(Permissions.VIEW_ORDERS)
