@@ -148,7 +148,6 @@ export class CartService {
       .select('isUnlimitedStock isActive title brand category')
       .lean()
       .exec();
-
     if (!product || !product.isActive) {
       throw new BadRequestException('المنتج غير موجود أو غير نشط');
     }

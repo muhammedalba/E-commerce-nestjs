@@ -155,6 +155,8 @@ export class PaymentsService {
     supportsCOD: boolean,
   ): Promise<PaymentMethod> {
     const method = await this.findByCode(code);
+    console.log(method);
+    console.log(code);
 
     if (!method) {
       throw new NotFoundException(`Payment method "${code}" is not available`);

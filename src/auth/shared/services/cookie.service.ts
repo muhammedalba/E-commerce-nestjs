@@ -18,7 +18,7 @@ export class CookieService {
       httpOnly: true,
       secure: this.isProd,
       sameSite: this.isProd ? 'none' : 'lax',
-      domain: '.skygalaxy.shop',
+      ...(this.isProd && { domain: '.skygalaxy.shop' }),
       path: '/',
       maxAge: 1 * 24 * 60 * 60 * 1000, // 1 day
     });
@@ -27,7 +27,7 @@ export class CookieService {
       httpOnly: true,
       secure: this.isProd,
       sameSite: this.isProd ? 'none' : 'lax',
-      domain: '.skygalaxy.shop',
+      ...(this.isProd && { domain: '.skygalaxy.shop' }),
       path: '/api/v1/auth/refresh-token',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7d
     });
@@ -36,7 +36,7 @@ export class CookieService {
       httpOnly: false,
       secure: this.isProd,
       sameSite: this.isProd ? 'none' : 'lax',
-      domain: '.skygalaxy.shop',
+      ...(this.isProd && { domain: '.skygalaxy.shop' }),
       path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7d
     });
@@ -47,7 +47,7 @@ export class CookieService {
       httpOnly: true,
       secure: this.isProd,
       sameSite: this.isProd ? 'none' : 'lax',
-      domain: '.skygalaxy.shop',
+      ...(this.isProd && { domain: '.skygalaxy.shop' }),
       path: '/',
     });
 
@@ -55,7 +55,7 @@ export class CookieService {
       httpOnly: true,
       secure: this.isProd,
       sameSite: this.isProd ? 'none' : 'lax',
-      domain: '.skygalaxy.shop',
+      ...(this.isProd && { domain: '.skygalaxy.shop' }),
       path: '/api/v1/auth/refresh-token',
     });
 
@@ -63,7 +63,7 @@ export class CookieService {
       httpOnly: false,
       secure: this.isProd,
       sameSite: this.isProd ? 'none' : 'lax',
-      domain: '.skygalaxy.shop',
+      ...(this.isProd && { domain: '.skygalaxy.shop' }),
       path: '/',
     });
 

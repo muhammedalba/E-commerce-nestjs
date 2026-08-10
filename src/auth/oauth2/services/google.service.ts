@@ -96,6 +96,7 @@ export class GoogleService {
         // user.avatar,
       );
     }
+
     return res.redirect(`${process.env.FRONTEND_ORIGIN}`);
   }
 }

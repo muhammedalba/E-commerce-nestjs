@@ -84,6 +84,7 @@ export class CartController {
     @Req() req: { user: JwtPayload },
     @Body('items') items: CreateCartDto[],
   ) {
+    console.log(items, 'items');
     return await this.cartService.syncCart(req.user.user_id, items);
   }
 

@@ -131,6 +131,6 @@ export class AuthService {
   /* ------------ ======  FACEBOOK LOGIN  ====== ---------- */
   /* ------------ =============================== ---------- */
   async facebookLogin(facebookUser: FacebookOAuthUser, res: Response) {
-    return await this.facebookService.facebookLogin(facebookUser, res);
+    await this.facebookService.facebookLogin(facebookUser, res);
   }
 }

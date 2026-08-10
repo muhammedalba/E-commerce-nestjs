@@ -70,15 +70,15 @@ export class AuthController {
 
   @Get('facebook/redirect')
   @UseGuards(FacebookAuthGuard)
-  facebookLoginRedirect(
+  async facebookLoginRedirect(
     @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+    @Res() res: Response,
+  ): Promise<void> {
     const user = (req as any).user;
     if (!user) {
       throw new BadRequestException('User information is missing.');
     }
-    return this.authService.facebookLogin(
+    await this.authService.facebookLogin(
       user as unknown as FacebookOAuthUser,
       res,
     );

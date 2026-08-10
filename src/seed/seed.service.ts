@@ -265,13 +265,25 @@ export class SeedService {
     }
 
     // 8. Seed Payment Methods
+
+    // ---------------------------
+    // 1) بطاقة بنكية (Moyasar)
+    // ---------------------------
     const existingCard = await this.connection
       .collection('paymentmethods')
       .findOne({ code: 'card' });
+
     if (!existingCard) {
       await this.paymentsService.create({
-        name: 'مدى / بطاقة ائتمانية',
-        code: 'card',
+        name: {
+          ar: 'الدفع بالبطاقة البنكية',
+          en: 'Pay with Bank Card',
+        },
+        description: {
+          ar: 'يمكنك الدفع باستخدام بطاقات مدى، فيزا، أو ماستركارد عبر بوابة ميسر.',
+          en: 'Pay securely using Mada, Visa, or Mastercard through Moyasar gateway.',
+        },
+        code: 'moyasar',
         type: PaymentType.CARD,
         provider: 'MOYASAR',
         displayOrder: 1,
@@ -280,12 +292,23 @@ export class SeedService {
       } as any);
     }
 
+    // ---------------------------
+    // 2) الدفع عند الاستلام (COD)
+    // ---------------------------
     const existingCod = await this.connection
       .collection('paymentmethods')
       .findOne({ code: 'cod' });
+
     if (!existingCod) {
       await this.paymentsService.create({
-        name: 'الدفع عند الاستلام',
+        name: {
+          ar: 'الدفع عند الاستلام',
+          en: 'Cash on Delivery',
+        },
+        description: {
+          ar: 'يمكنك الدفع نقدًا عند استلام الطلب. قد يتم تطبيق رسوم إضافية لهذه الخدمة.',
+          en: 'Pay in cash when your order is delivered. Additional service fees may apply.',
+        },
         code: 'cod',
         type: PaymentType.CASH_ON_DELIVERY,
         provider: 'COD',
@@ -295,12 +318,23 @@ export class SeedService {
       } as any);
     }
 
+    // ---------------------------
+    // 3) التحويل البنكي
+    // ---------------------------
     const existingBankTransfer = await this.connection
       .collection('paymentmethods')
       .findOne({ code: 'bankTransfer' });
+
     if (!existingBankTransfer) {
       await this.paymentsService.create({
-        name: 'تحويل بنكي',
+        name: {
+          ar: 'تحويل بنكي إلى حسابنا',
+          en: 'Bank Transfer to Our Account',
+        },
+        description: {
+          ar: 'يمكنك تحويل المبلغ إلى حسابنا البنكي وإرسال الإيصال لإتمام الطلب.',
+          en: 'You can transfer the amount to our bank account and send the receipt to complete your order.',
+        },
         code: 'bankTransfer',
         type: PaymentType.BANK_TRANSFER,
         provider: 'BANK_TRANSFER',

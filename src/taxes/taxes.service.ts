@@ -26,35 +26,29 @@ export class TaxesService extends BaseService<TaxDocument> {
     super(taxModel, i18n, fileUploadService);
   }
 
-  async findByCountry(countryId: string) {
-    if (!countryId) {
-      throw new BadRequestException(this.t('exception.NOT_FOUND'));
+  async findByCountry(countryId?: string) {
+    console.log(countryId);
+
+    if (countryId && Types.ObjectId.isValid(countryId)) {
+      const countryQuery = new Types.ObjectId(countryId);
+
+      // 1. Search by country first
+      const listByCountry = await this.taxModel
+        .find({
+          country: countryQuery,
+          isActive: true,
+        })
+        .select('percentage isIncludedInPrice country')
+        .lean();
+
+      // Mongoose .find() always returns an array, so we only check length
+      if (listByCountry.length > 0) return listByCountry;
     }
-    // convert country id to object id
-    const countryQuery = Types.ObjectId.isValid(countryId)
-      ? new Types.ObjectId(countryId)
-      : countryId;
-
-    // 1. Search by country first
-    const listByCountry = await this.taxModel
-      .find({
-        country: countryQuery,
-        isActive: true,
-      })
-      .select('percentage isIncludedInPrice country')
-      .lean();
-
-    // Mongoose .find() always returns an array, so we only check length
-    if (listByCountry.length > 0) return listByCountry;
 
     // 2. Search for the general tax if no tax was found for the country
     const generalTax = await this.taxModel
       .find({
-        $or: [
-          { country: { $exists: false } },
-          { country: null },
-          { country: '' },
-        ],
+        $or: [{ country: { $exists: false } }, { country: null }],
         isActive: true,
       })
       .select('percentage isIncludedInPrice country')
@@ -181,15 +175,12 @@ export class TaxesService extends BaseService<TaxDocument> {
     let taxPercentage = 0;
     let isIncluded = false;
 
-    // 1. إذا تم تمرير دولة، نبحث عن ضريبة مخصصة لها أولاً
-    if (countryId) {
-      const countryTax = await this.findByCountry(countryId);
-      if (countryTax) {
-        taxPercentage = countryTax[0].percentage;
-        isIncluded = countryTax[0].isIncludedInPrice;
-      }
-    } else {
-      throw new BadRequestException(this.t('exception.NOT_FOUND'));
+    // 1. نبحث عن الضريبة المناسبة (سواء بالدولة أو العامة أو إعدادات المتجر)
+    const countryTax = await this.findByCountry(countryId);
+    console.log(countryTax);
+    if (countryTax && countryTax.length > 0) {
+      taxPercentage = countryTax[0].percentage;
+      isIncluded = countryTax[0].isIncludedInPrice;
     }
 
     if (taxPercentage <= 0) {

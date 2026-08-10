@@ -59,21 +59,7 @@ export class FacebookService {
       // 3) generate access token
       Tokens = await this.tokenService.generate_Tokens(userId);
       //4) send token to cookies
-
-      this.cookieService.setCookies(
-        res,
-        Tokens,
-        // 'user',
-        // newUser.name,
-        // newUser.avatar,
-      );
-
-      return {
-        status: 'success',
-        message: this.i18n.translate('success.LOGIN_SUCCESS'),
-        data: { ...newUser.toObject(), password: undefined },
-        access_token: Tokens.access_token,
-      };
+      this.cookieService.setCookies(res, Tokens);
     } else {
       if (!user.isActive) {
         throw new BadRequestException(
@@ -101,11 +87,6 @@ export class FacebookService {
       );
     }
 
-    return {
-      status: 'success',
-      message: this.i18n.translate('success.LOGIN_SUCCESS'),
-      data: user,
-      access_token: Tokens.access_token,
-    };
+    return res.redirect(`${process.env.FRONTEND_ORIGIN}`);
   }
 }

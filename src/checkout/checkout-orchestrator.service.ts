@@ -442,7 +442,8 @@ export class CheckoutOrchestratorService {
       paypal: new PaypalStrategy(),
     };
 
-    const strategy = strategies[methodCode] || new DefaultStrategy();
+    const strategy =
+      strategies[methodCode.toLowerCase().trim()] || new DefaultStrategy();
 
     this.eventEmitter.emit(strategy.getEventName(), {
       orderId: orderResponse.orderId,
