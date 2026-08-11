@@ -67,9 +67,11 @@ interface TaxDetails {
  * Avoids unsafe `as ICityData` assertions.
  */
 export interface ICityData {
+  _id?: string;
   isDeliveryAvailable: boolean;
   /** Populated country object or raw ObjectId string. */
   country: { _id?: string } | string | undefined;
+  region: { _id?: string } | string | undefined;
   name: { ar?: string; en?: string } | string;
 }
 
@@ -176,14 +178,18 @@ export class CheckoutService {
       );
     }
 
-    // 5. Validate city and extract the linked country ID.
+    // 5. Validate city and extract location IDs.
     const city = await this.getAndValidateCity(dto.cityId);
     const countryId = this.extractCountryId(city);
+    const regionId = this.extractRegionId(city);
+    const cityId = city._id?.toString() || dto.cityId;
 
     // 6. Run tax and shipping calculations concurrently — no dependency between them.
     const [taxDetails, shippingOptions] = await this.calculateTaxesAndShipping(
       couponResult.subtotalAfterDiscount,
       countryId,
+      regionId,
+      cityId,
       dto.cityId,
       cartTotals.totalWeight,
       city.isDeliveryAvailable,
@@ -348,6 +354,17 @@ export class CheckoutService {
   }
 
   /**
+   * Derives a plain region ID string from the populated city document.
+   * Handles both populated objects ({ _id }) and raw string references.
+   */
+  private extractRegionId(city: ICityData): string | undefined {
+    const regionData = city.region;
+    return typeof regionData === 'object'
+      ? regionData?._id?.toString()
+      : regionData?.toString();
+  }
+
+  /**
    * Fires tax and shipping calculations concurrently — they are independent
    * computations that both depend on previously resolved values but not on
    * each other.
@@ -355,15 +372,22 @@ export class CheckoutService {
   private async calculateTaxesAndShipping(
     subtotalAfterDiscount: number,
     countryId: string | undefined,
-    cityId: string,
+    regionId: string | undefined,
+    cityId: string | undefined,
+    lookupCityId: string,
     totalWeight: number,
     isDeliveryAvailable: boolean,
   ): Promise<[TaxDetails, ShippingCalculationResult[]]> {
     const [taxDetails, shippingOptions] = await Promise.all([
-      this.taxesService.calculateTax(subtotalAfterDiscount, countryId),
+      this.taxesService.calculateTax(
+        subtotalAfterDiscount,
+        countryId,
+        regionId,
+        cityId,
+      ),
       isDeliveryAvailable
         ? this.shippingRatesService.calculateShipping(
-            cityId,
+            lookupCityId,
             totalWeight,
             subtotalAfterDiscount,
           )

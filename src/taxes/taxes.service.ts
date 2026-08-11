@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types, FilterQuery } from 'mongoose';
-import { Tax, TaxDocument } from './shared/schema/tax.schema';
+import { Tax, TaxDocument, TaxScope } from './shared/schema/tax.schema';
 import { CreateTaxDto, UpdateTaxDto } from './shared/dto/tax.dto';
 import { SettingsService } from '../settings/settings.service';
 import { BaseService } from 'src/shared/utils/service/base.service';
@@ -13,12 +13,18 @@ import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { FileUploadService } from 'src/file-upload/file-upload.service';
+import { Region, RegionDocument } from '../locations/shared/schema/region.schema';
+import { City, CityDocument } from '../locations/shared/schema/city.schema';
 
 @Injectable()
 export class TaxesService extends BaseService<TaxDocument> {
   constructor(
     @InjectModel(Tax.name)
     private readonly taxModel: Model<TaxDocument>,
+    @InjectModel(Region.name)
+    private readonly regionModel: Model<RegionDocument>,
+    @InjectModel(City.name)
+    private readonly cityModel: Model<CityDocument>,
     private readonly settingsService: SettingsService,
     protected readonly i18n: CustomI18nService,
     protected readonly fileUploadService: FileUploadService,
@@ -26,46 +32,90 @@ export class TaxesService extends BaseService<TaxDocument> {
     super(taxModel, i18n, fileUploadService);
   }
 
-  async findByCountry(countryId?: string) {
-    console.log(countryId);
-
-    if (countryId && Types.ObjectId.isValid(countryId)) {
-      const countryQuery = new Types.ObjectId(countryId);
-
-      // 1. Search by country first
-      const listByCountry = await this.taxModel
+  /**
+   * Finds the most specific applicable tax based on location hierarchy:
+   * City -> Region -> Country -> Global -> Settings Fallback
+   */
+  async findApplicableTax(
+    countryId?: string,
+    regionId?: string,
+    cityId?: string,
+  ) {
+    // 1. Search by City if cityId is valid
+    if (
+      cityId &&
+      Types.ObjectId.isValid(cityId) &&
+      regionId &&
+      Types.ObjectId.isValid(regionId) &&
+      countryId &&
+      Types.ObjectId.isValid(countryId)
+    ) {
+      const cityTax = await this.taxModel
         .find({
-          country: countryQuery,
+          scope: TaxScope.CITY,
+          country: new Types.ObjectId(countryId),
+          region: new Types.ObjectId(regionId),
+          city: new Types.ObjectId(cityId),
           isActive: true,
         })
-        .select('percentage isIncludedInPrice country')
+        .select('percentage isIncludedInPrice country region city scope')
         .lean();
-
-      // Mongoose .find() always returns an array, so we only check length
-      if (listByCountry.length > 0) return listByCountry;
+      if (cityTax.length > 0) return cityTax;
     }
 
-    // 2. Search for the general tax if no tax was found for the country
-    const generalTax = await this.taxModel
+    // 2. Search by Region if regionId is valid
+    if (
+      regionId &&
+      Types.ObjectId.isValid(regionId) &&
+      countryId &&
+      Types.ObjectId.isValid(countryId)
+    ) {
+      const regionTax = await this.taxModel
+        .find({
+          scope: TaxScope.REGION,
+          country: new Types.ObjectId(countryId),
+          region: new Types.ObjectId(regionId),
+          isActive: true,
+        })
+        .select('percentage isIncludedInPrice country region city scope')
+        .lean();
+      if (regionTax.length > 0) return regionTax;
+    }
+
+    // 3. Search by Country if countryId is valid
+    if (countryId && Types.ObjectId.isValid(countryId)) {
+      const countryTax = await this.taxModel
+        .find({
+          scope: TaxScope.COUNTRY,
+          country: new Types.ObjectId(countryId),
+          isActive: true,
+        })
+        .select('percentage isIncludedInPrice country region city scope')
+        .lean();
+      if (countryTax.length > 0) return countryTax;
+    }
+
+    // 4. Search by Global
+    const globalTax = await this.taxModel
       .find({
-        $or: [{ country: { $exists: false } }, { country: null }],
+        scope: TaxScope.GLOBAL,
         isActive: true,
       })
-      .select('percentage isIncludedInPrice country')
+      .select('percentage isIncludedInPrice country region city scope')
       .lean();
+    if (globalTax.length > 0) return globalTax;
 
-    if (generalTax.length > 0) return generalTax;
-
-    // 3. Search for the general tax in the settings if the above failed
+    // 5. Fallback to settings
     const settings = await this.settingsService.getSettings();
-
-    // Optional Chaining
     if (settings?.vatRate > 0) {
       return [
         {
           percentage: settings.vatRate,
           isIncludedInPrice: settings.taxesIncluded,
           country: null,
+          region: null,
+          city: null,
+          scope: TaxScope.GLOBAL,
         },
       ];
     }
@@ -74,53 +124,130 @@ export class TaxesService extends BaseService<TaxDocument> {
   }
 
   /**
-   * Validates tax uniqueness based on country or global name.
-   * @param dto - The tax data (create or update)
-   * @param id - Optional ID to exclude (for updates)
+   * Backward compatible wrapper for findByCountry endpoint/callers
+   */
+  async findByCountry(countryId?: string) {
+    return this.findApplicableTax(countryId);
+  }
+
+  /**
+   * Validates tax uniqueness and location relationships.
    */
   private async validateTaxUniqueness(
     dto: CreateTaxDto | UpdateTaxDto,
     id?: string,
   ) {
+    let scope = dto.scope;
     let country = dto.country;
+    let region = dto.region;
+    let city = dto.city;
     let name = dto.name;
     let isActive = dto.isActive;
 
     if (id) {
       const current = await this.taxModel.findById(id).lean();
       if (!current) throw new NotFoundException(this.t('exception.NOT_FOUND'));
-      if (country === undefined)
+      if (scope === undefined) scope = current.scope;
+      if (country === undefined) {
         country = current.country ? current.country.toString() : undefined;
+      }
+      if (region === undefined) {
+        region = current.region ? current.region.toString() : undefined;
+      }
+      if (city === undefined) {
+        city = current.city ? current.city.toString() : undefined;
+      }
       if (name === undefined) name = current.name;
       if (isActive === undefined) isActive = current.isActive;
     } else {
-      if (isActive === undefined) isActive = true; // default when creating
+      if (isActive === undefined) isActive = true;
     }
 
     // No conflict if the tax is inactive
     if (!isActive) return;
+
+    // Verify geographical hierarchy relationships
+    if (scope === TaxScope.REGION || scope === TaxScope.CITY) {
+      if (!country || !region) {
+        throw new BadRequestException(this.t('exception.TAX_SCOPE_INVALID'));
+      }
+      const regionDoc = await this.regionModel.findById(region).lean();
+      if (!regionDoc) {
+        throw new BadRequestException(this.t('exception.REGION_NOT_FOUND'));
+      }
+      const regionCountryId = (
+        regionDoc.country as unknown as Types.ObjectId
+      ).toString();
+      if (regionCountryId !== country) {
+        throw new BadRequestException(
+          this.t('exception.REGION_COUNTRY_MISMATCH'),
+        );
+      }
+    }
+
+    if (scope === TaxScope.CITY) {
+      if (!country || !region || !city) {
+        throw new BadRequestException(this.t('exception.TAX_SCOPE_INVALID'));
+      }
+      const cityDoc = await this.cityModel.findById(city).lean();
+      if (!cityDoc) {
+        throw new BadRequestException(this.t('exception.CITY_NOT_FOUND'));
+      }
+      const cityRegionId = (
+        cityDoc.region as unknown as Types.ObjectId
+      ).toString();
+      if (cityRegionId !== region) {
+        throw new BadRequestException(this.t('exception.CITY_REGION_MISMATCH'));
+      }
+      const cityCountryId = (
+        cityDoc.country as unknown as Types.ObjectId
+      ).toString();
+      if (cityCountryId !== country) {
+        throw new BadRequestException(
+          this.t('exception.CITY_COUNTRY_MISMATCH'),
+        );
+      }
+    }
 
     const query: FilterQuery<TaxDocument> = {
       isActive: true,
       _id: id ? { $ne: id } : { $exists: true },
     };
 
-    if (!country) {
-      // Global Tax: Check name uniqueness among global active taxes
-      query.country = null;
+    if (scope === TaxScope.GLOBAL) {
+      query.scope = TaxScope.GLOBAL;
       query.name = name;
 
       const exists = await this.taxModel.exists(query);
       if (exists) {
         throw new BadRequestException(this.t('exception.TAX_NAME_EXISTS'));
       }
-    } else {
-      // Country Tax: Only one active tax rule per country
+    } else if (scope === TaxScope.COUNTRY) {
+      query.scope = TaxScope.COUNTRY;
       query.country = country;
 
       const exists = await this.taxModel.exists(query);
       if (exists) {
         throw new BadRequestException(this.t('exception.TAX_COUNTRY_EXISTS'));
+      }
+    } else if (scope === TaxScope.REGION) {
+      query.scope = TaxScope.REGION;
+      query.country = country;
+      query.region = region;
+
+      const exists = await this.taxModel.exists(query);
+      if (exists) {
+        throw new BadRequestException(this.t('exception.TAX_REGION_EXISTS'));
+      }
+    } else if (scope === TaxScope.CITY) {
+      query.scope = TaxScope.CITY;
+      query.country = country;
+      query.region = region;
+      query.city = city;
+
+      const exists = await this.taxModel.exists(query);
+      if (exists) {
+        throw new BadRequestException(this.t('exception.TAX_CITY_EXISTS'));
       }
     }
   }
@@ -131,17 +258,15 @@ export class TaxesService extends BaseService<TaxDocument> {
   }
 
   async findAll(queryString: QueryString): Promise<any> {
-    console.log(queryString);
-
     return this.findAllDoc(Tax.name, queryString, {
-      path: 'country',
+      path: 'country region city',
       select: 'name code',
     });
   }
 
   async findOne(id: IdParamDto): Promise<TaxDocument> {
     return this.findOneDoc(id, '', false, {
-      path: 'country',
+      path: 'country region city',
       select: 'name code',
     });
   }
@@ -161,11 +286,13 @@ export class TaxesService extends BaseService<TaxDocument> {
   }
 
   /**
-   * حساب الضريبة بناءً على الدولة أو الإعدادات العامة
+   * Calculate tax based on city, region, country, global, or settings fallback
    */
   async calculateTax(
     subtotal: number,
     countryId?: string,
+    regionId?: string,
+    cityId?: string,
   ): Promise<{
     taxPercentage: number;
     taxAmount: number;
@@ -175,12 +302,15 @@ export class TaxesService extends BaseService<TaxDocument> {
     let taxPercentage = 0;
     let isIncluded = false;
 
-    // 1. نبحث عن الضريبة المناسبة (سواء بالدولة أو العامة أو إعدادات المتجر)
-    const countryTax = await this.findByCountry(countryId);
-    console.log(countryTax);
-    if (countryTax && countryTax.length > 0) {
-      taxPercentage = countryTax[0].percentage;
-      isIncluded = countryTax[0].isIncludedInPrice;
+    // Find the applicable tax
+    const applicableTax = await this.findApplicableTax(
+      countryId,
+      regionId,
+      cityId,
+    );
+    if (applicableTax && applicableTax.length > 0) {
+      taxPercentage = applicableTax[0].percentage;
+      isIncluded = applicableTax[0].isIncludedInPrice;
     }
 
     if (taxPercentage <= 0) {
@@ -196,12 +326,9 @@ export class TaxesService extends BaseService<TaxDocument> {
     let totalWithTax = subtotal;
 
     if (isIncluded) {
-      // إذا كانت الضريبة مشمولة: السعر يحتوي الضريبة بالفعل
-      // المعادلة: Amount - (Amount / (1 + Rate))
       taxAmount = subtotal - subtotal / (1 + taxPercentage / 100);
       totalWithTax = subtotal;
     } else {
-      // إذا كانت الضريبة غير مشمولة: تضاف للسعر
       taxAmount = (subtotal * taxPercentage) / 100;
       totalWithTax = subtotal + taxAmount;
     }

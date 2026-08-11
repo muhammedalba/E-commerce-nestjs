@@ -7,6 +7,7 @@ import { ShippingService } from '../shipping/shipping.service';
 import { ShippingRatesService } from '../shipping/shipping-rates.service';
 import { PaymentsService } from '../payments/payments.service';
 import { TaxesService } from '../taxes/taxes.service';
+import { TaxScope } from '../taxes/shared/schema/tax.schema';
 import { PaymentType } from '../payments/shared/schema/payment-method.schema';
 import { KSA_DATA } from './ksa-data';
 import { RolesSeederService } from '../roles/services/roles-seeder.service';
@@ -192,6 +193,7 @@ export class SeedService {
         percentage: 16,
         isActive: true,
         isIncludedInPrice: false,
+        scope: TaxScope.GLOBAL,
       });
     }
 
