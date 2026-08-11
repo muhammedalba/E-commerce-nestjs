@@ -14,12 +14,21 @@ import {
   ShippingRate,
   ShippingRateSchema,
 } from './shared/schema/shipping-rate.schema';
+import {
+  Country,
+  CountrySchema,
+} from '../locations/shared/schema/country.schema';
+import { Region, RegionSchema } from '../locations/shared/schema/region.schema';
+import { City, CitySchema } from '../locations/shared/schema/city.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: ShippingProvider.name, schema: ShippingProviderSchema },
       { name: ShippingRate.name, schema: ShippingRateSchema },
+      { name: Country.name, schema: CountrySchema },
+      { name: Region.name, schema: RegionSchema },
+      { name: City.name, schema: CitySchema },
     ]),
     AuthModule,
     FileUploadDiskStorageModule,

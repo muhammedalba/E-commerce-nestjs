@@ -13,7 +13,10 @@ import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { FileUploadService } from 'src/file-upload/file-upload.service';
-import { Region, RegionDocument } from '../locations/shared/schema/region.schema';
+import {
+  Region,
+  RegionDocument,
+} from '../locations/shared/schema/region.schema';
 import { City, CityDocument } from '../locations/shared/schema/city.schema';
 
 @Injectable()

@@ -8,6 +8,7 @@ import { ShippingRatesService } from '../shipping/shipping-rates.service';
 import { PaymentsService } from '../payments/payments.service';
 import { TaxesService } from '../taxes/taxes.service';
 import { TaxScope } from '../taxes/shared/schema/tax.schema';
+import { ShippingRateScope } from '../shipping/shared/schema/shipping-rate.schema';
 import { PaymentType } from '../payments/shared/schema/payment-method.schema';
 import { KSA_DATA } from './ksa-data';
 import { RolesSeederService } from '../roles/services/roles-seeder.service';
@@ -257,7 +258,7 @@ export class SeedService {
     if (!rate) {
       await this.shippingRatesService.createRate({
         provider: provider._id.toString(),
-        // city: city._id.toString(),
+        scope: ShippingRateScope.GLOBAL,
         basePrice: 25,
         baseWeight: 15,
         additionalKgPrice: 2,

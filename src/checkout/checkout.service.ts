@@ -390,6 +390,8 @@ export class CheckoutService {
             lookupCityId,
             totalWeight,
             subtotalAfterDiscount,
+            countryId,
+            regionId,
           )
         : Promise.resolve([]),
     ]);
