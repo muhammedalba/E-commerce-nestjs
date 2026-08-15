@@ -22,10 +22,7 @@ export class ClearCacheInterceptor implements NestInterceptor {
     private readonly reflector: Reflector,
   ) {}
 
-  async intercept(
-    context: ExecutionContext,
-    next: CallHandler,
-  ): Promise<Observable<any>> {
+  intercept<T>(context: ExecutionContext, next: CallHandler<T>): Observable<T> {
     const resources = this.reflector.get<string[]>(
       CLEAR_CACHE_RESOURCES,
       context.getHandler(),
@@ -36,7 +33,7 @@ export class ClearCacheInterceptor implements NestInterceptor {
     }
 
     return next.handle().pipe(
-      concatMap(async (data) => {
+      concatMap(async (data: T) => {
         try {
           await this.clearCacheForResources(resources);
         } catch (error) {
@@ -48,76 +45,99 @@ export class ClearCacheInterceptor implements NestInterceptor {
   }
 
   private async clearCacheForResources(resources: string[]): Promise<void> {
-    const cm = this.cacheManager as any;
+    const cm = this.cacheManager as unknown as Record<string, unknown>;
+    let clearedAny = false;
 
-    // Strategy 1: Try to access the underlying store for Redis or compatible stores
-    const store = cm.store || cm.stores?.[0];
+    // Strategy 1: Iterate cache-manager v6 Keyv stores (Memory or Redis)
+    const rawStores = cm.stores || (cm.store ? [cm.store] : []);
+    const stores = Array.isArray(rawStores)
+      ? (rawStores as Record<string, unknown>[])
+      : [];
+    console.log('stores', stores);
 
-    if (store) {
-      // Check if it's a Redis-backed store
-      const client = store.client || store._client;
+    console.log('------------------------------------------------');
+    for (const s of stores) {
+      // 1a) Try Keyv async iterator (standard for cache-manager v6)
+      console.log('s', s);
+      console.log('------------------------------------------------');
+
+      console.log('s.iterator', s.iterator);
+
+      if (typeof s.iterator === 'function') {
+        try {
+          const iteratorFn = s.iterator as () => AsyncIterable<
+            [string, unknown]
+          >;
+          for await (const [key] of iteratorFn.call(s)) {
+            if (
+              typeof key === 'string' &&
+              resources.some((r) => key.includes(`${r}:`))
+            ) {
+              await this.cacheManager.del(key);
+              clearedAny = true;
+            }
+          }
+        } catch (e) {
+          this.logger.error('Error iterating cache keys:', e);
+        }
+      }
+
+      // 1b) Try internal Map store (_store or opts.store)
+      const opts = s.opts as Record<string, unknown> | undefined;
+      const map = (opts?.store || s._store) as Map<string, unknown> | undefined;
+      if (map instanceof Map) {
+        for (const key of Array.from(map.keys())) {
+          if (
+            typeof key === 'string' &&
+            resources.some((r) => key.includes(`${r}:`))
+          ) {
+            map.delete(key);
+            clearedAny = true;
+          }
+        }
+      }
+
+      // 1c) Try Redis client if attached to store
+      const optsStore = opts?.store as Record<string, unknown> | undefined;
+      const client = (s.client ||
+        s._client ||
+        optsStore?.client ||
+        optsStore?._client) as
+        | {
+            keys?: (p: string) => Promise<string[]>;
+            del?: (...k: string[]) => Promise<number>;
+          }
+        | undefined;
       if (
         client &&
         typeof client.keys === 'function' &&
         typeof client.del === 'function'
       ) {
         for (const resource of resources) {
-          const keys = await client.keys(`${resource}:*`);
-          if (keys.length > 0) {
+          const keys = await client.keys(`*${resource}:*`);
+          if (keys && keys.length > 0) {
             await client.del(...keys);
+            clearedAny = true;
           }
-        }
-        this.logger.log(`🧹 Redis cache cleared for: ${resources.join(', ')}`);
-        return;
-      }
-
-      // Check if the store itself has keys() (e.g. lru-cache based memory store)
-      if (typeof store.keys === 'function') {
-        try {
-          const allKeys = await store.keys();
-          if (Array.isArray(allKeys)) {
-            for (const resource of resources) {
-              const matched = allKeys.filter(
-                (k: string) =>
-                  typeof k === 'string' && k.startsWith(`${resource}:`),
-              );
-              for (const key of matched) {
-                await this.cacheManager.del(key);
-              }
-            }
-            this.logger.log(
-              `🧹 Memory cache cleared for: ${resources.join(', ')}`,
-            );
-            return;
-          }
-        } catch {
-          // keys() not supported or errored, fall through
         }
       }
     }
 
-    // Strategy 2: Try reset() to clear all cache (cache-manager v5/v6 compatibility)
-    if (typeof cm.reset === 'function') {
-      await cm.reset();
-      this.logger.log(`🧹 Cache reset for: ${resources.join(', ')}`);
+    if (clearedAny) {
+      this.logger.log(`🧹 Cache cleared for: ${resources.join(', ')}`);
       return;
     }
 
-    // Strategy 3: For cache-manager v7 with Keyv adapter, use clear()
+    // Strategy 2: Fallback to clear() or reset() if targeted key clearing didn't find matching keys
     if (typeof cm.clear === 'function') {
-      await cm.clear();
-      this.logger.log(`🧹 Cache cleared (full) for: ${resources.join(', ')}`);
+      await (cm.clear as () => Promise<void>)();
+      this.logger.log(`🧹 Full cache cleared for: ${resources.join(', ')}`);
       return;
     }
 
-    // Strategy 4: Access internal Keyv stores and clear them
-    if (cm._stores) {
-      for (const s of cm._stores) {
-        if (typeof s.clear === 'function') {
-          await s.clear();
-        }
-      }
-      this.logger.log(`🧹 Keyv stores cleared for: ${resources.join(', ')}`);
+    if (typeof cm.reset === 'function') {
+      await (cm.reset as () => Promise<void>)();
+      this.logger.log(`🧹 Full cache reset for: ${resources.join(', ')}`);
       return;
     }
 
