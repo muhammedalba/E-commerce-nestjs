@@ -102,14 +102,14 @@ export const TaxSchema = SchemaFactory.createForClass(Tax);
  * (Mirrors the previous index behaviour for global taxes.)
  */
 TaxSchema.index(
-  { scope: 1, name: 1 },
+  { scope: 1 },
   {
     unique: true,
     partialFilterExpression: {
       scope: TaxScope.GLOBAL,
       isActive: true,
     },
-    name: 'uniq_active_global_tax_name',
+    name: 'uniq_active_global_tax',
   },
 );
 

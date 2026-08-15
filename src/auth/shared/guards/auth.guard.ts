@@ -13,8 +13,9 @@ import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { User } from '../schema/user.schema';
 import { JwtPayload } from '../types/jwt-payload.interface';
 
-interface SafeRequest extends Request {
+interface SafeRequest extends Omit<Request, 'user'> {
   cookies: Record<string, string>;
+  user?: JwtPayload;
 }
 
 @Injectable()
@@ -27,7 +28,7 @@ export class AuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     //1) Extract the request from the context
-    const request = context.switchToHttp().getRequest<Request>();
+    const request = context.switchToHttp().getRequest<SafeRequest>();
     //2) Extract the token from the request header
 
     const token = this.extractTokenFromHeader(request);
@@ -81,7 +82,7 @@ export class AuthGuard implements CanActivate {
       }
     }
 
-    (request as any).user = payload;
+    request.user = payload;
 
     return true;
   }

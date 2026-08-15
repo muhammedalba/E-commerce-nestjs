@@ -1,5 +1,6 @@
 export enum roles {
-  ADMIN = 'admin',
-  MANAGER = 'manager',
-  USER = 'user',
+  ADMIN = 'Admin',
+  MANAGER = 'Manager',
+  USER = 'User',
+  SUPER_ADMIN = 'Super Admin',
 }

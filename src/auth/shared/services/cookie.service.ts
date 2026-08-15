@@ -17,7 +17,12 @@ export class CookieService {
     res.cookie('access_token', tokens.access_token, {
       httpOnly: true,
       secure: this.isProd,
-      sameSite: this.isProd ? 'none' : 'lax',
+      // 'lax' is safe here because:
+      // 1) CORS is restricted to an allowlist (no wildcard origin) in main.ts
+      // 2) OAuth redirects (Google/Facebook) are GET requests, which 'lax' allows
+      // 3) Frontend and backend share the .skygalaxy.shop domain
+      // 'none' is NOT required and was unnecessarily broadening CSRF attack surface
+      sameSite: 'lax',
       ...(this.isProd && { domain: '.skygalaxy.shop' }),
       path: '/',
       maxAge: 1 * 24 * 60 * 60 * 1000, // 1 day
@@ -26,7 +31,7 @@ export class CookieService {
     res.cookie('refresh_token', tokens.refresh_Token, {
       httpOnly: true,
       secure: this.isProd,
-      sameSite: this.isProd ? 'none' : 'lax',
+      sameSite: 'strict',
       ...(this.isProd && { domain: '.skygalaxy.shop' }),
       path: '/api/v1/auth/refresh-token',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7d
@@ -35,7 +40,7 @@ export class CookieService {
     res.cookie('is_logged_in', 'true', {
       httpOnly: false,
       secure: this.isProd,
-      sameSite: this.isProd ? 'none' : 'lax',
+      sameSite: 'lax',
       ...(this.isProd && { domain: '.skygalaxy.shop' }),
       path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7d
@@ -46,7 +51,7 @@ export class CookieService {
     res.clearCookie('access_token', {
       httpOnly: true,
       secure: this.isProd,
-      sameSite: this.isProd ? 'none' : 'lax',
+      sameSite: 'lax',
       ...(this.isProd && { domain: '.skygalaxy.shop' }),
       path: '/',
     });
@@ -54,7 +59,7 @@ export class CookieService {
     res.clearCookie('refresh_token', {
       httpOnly: true,
       secure: this.isProd,
-      sameSite: this.isProd ? 'none' : 'lax',
+      sameSite: 'strict',
       ...(this.isProd && { domain: '.skygalaxy.shop' }),
       path: '/api/v1/auth/refresh-token',
     });
@@ -62,7 +67,7 @@ export class CookieService {
     res.clearCookie('is_logged_in', {
       httpOnly: false,
       secure: this.isProd,
-      sameSite: this.isProd ? 'none' : 'lax',
+      sameSite: 'lax',
       ...(this.isProd && { domain: '.skygalaxy.shop' }),
       path: '/',
     });

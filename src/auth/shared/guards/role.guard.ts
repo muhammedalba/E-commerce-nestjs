@@ -36,7 +36,8 @@ export class RoleGuard implements CanActivate {
     ]);
     // check if user has required role  or admin role  (for example)
     const hasRequiredRole: boolean = requiredRoles.some(
-      (role) => user?.role.toString() === role.toString(),
+      (role) =>
+        user?.role.toString().toLowerCase() === role.toString().toLowerCase(),
     );
 
     if (!hasRequiredRole) {

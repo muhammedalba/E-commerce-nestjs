@@ -1,0 +1,170 @@
+AUTH MODULE AUDIT
+1. Current Architecture
+The Authentication module (AuthModule) relies on a standard Controller-Service pattern, backed by Mongoose for data persistence and @nestjs/jwt for token generation.
+
+File and Dependency Map:
+
+Controllers:
+AuthController: Acts as the API boundary for all auth operations.
+Services:
+AuthService: Facade service that delegates tasks to underlying services.
+AuthCredentialService: Handles registration, login, and logout.
+UserProfileService: Handles retrieving/updating profiles, changing passwords, and refreshing tokens.
+PasswordResetService: Handles the three-step forgot-password flow.
+TokenService: Generates JWTs and stores refresh tokens.
+CookieService: Handles setting and clearing auth cookies.
+GoogleService & FacebookService: OAuth handlers.
+Guards:
+AuthGuard: Verifies JWT from header or cookie and checks isActive and passwordChangeAt.
+RoleGuard: Checks if the user's role (from JWT payload) matches the required roles.
+Models/Schemas:
+User: Primary user schema with pre('save') and pre('findOneAndUpdate') hooks for bcrypt hashing.
+RefreshToken: Stores UUID refresh tokens in plaintext.
+Role: Populated role document.
+2. Authentication Flows
+Registration: Validates input -> Checks email existence -> Handles file upload for avatar -> Hashes password via Mongoose hook -> Generates access/refresh tokens -> Sets cookies.
+Login: Verifies credentials via bcrypt.compare -> Checks isActive -> Updates lastLogin -> Generates tokens -> Sets cookies.
+Authenticated Request: AuthGuard extracts token from Authorization header or access_token cookie -> Verifies JWT signature -> Fetches user from DB to verify isActive and validates iat against passwordChangeAt.
+Refresh Token: Extracts refresh_token from cookies -> Validates existence and expiry in DB -> Deletes old refresh token -> Generates new token pair -> Sets new cookies.
+Logout: Requires authentication -> Deletes refresh token from DB -> Clears all auth cookies.
+Password Reset:
+/forgot-password: Generates a 6-digit code -> Hashes with sha256 -> Saves to DB with 10m expiry and sets verificationCode = false -> Enqueues email.
+/verify-Pass-Reset-Code: Hashes provided code -> Searches DB for matching hash -> Sets user's verificationCode = true.
+/reset-password: Checks if user exists by email -> Verifies verificationCode === true -> Updates password -> Logs user in and sends success email.
+3. Authorization Architecture
+Authorization is decoupled from Authentication but relies on the JWT payload.
+
+RoleGuard uses reflection to get required roles and compares them against user.role from the JWT payload.
+Gap: The payload is only refreshed when generating a new token. Because access tokens live for 1 day (1d), a user's role or permissions changes in the DB will not take effect until the access token expires or is refreshed.
+4. Security Findings
+ID: SEC-01 Severity: P0 = Critical Category: Broken Access Control / Account Takeover File: password-reset.service.ts Function/Class: resetPassword & verify_Pass_Reset_Code Problem: The password reset flow suffers from state confusion and missing request binding. verify_Pass_Reset_Code only requires the 6-digit code (not the email) and sets a global verificationCode = true on the matching user. resetPassword takes an email and new password, but does NOT require the code. It simply checks if verificationCode is true. Evidence: Code in verify_Pass_Reset_Code updates user.verificationCode = true. resetPassword checks if (!user.verificationCode) throw Error. Impact: An attacker can brute-force the 6-digit code in verify_Pass_Reset_Code (1,000,000 combinations, no rate limiting). Once successful, they can immediately call resetPassword with the victim's email and a new password. Alternatively, if a legitimate user successfully verifies their code, there is a 10-minute window where an attacker knowing the victim's email can call resetPassword to hijack the account. Recommended solution: Pass the 6-digit code directly to resetPassword and verify it there, eliminating the stateful verificationCode boolean. Ensure queries match both email AND passwordResetCode to prevent cross-user code collisions. Behavior-change risk: High. The frontend will need to send the code in the final step.
+
+ID: SEC-02 Severity: P0 = Critical Category: Broken Access Control File: user-profile.service.ts Function/Class: changeMyPassword Problem: The endpoint allows an authenticated user to change their password without providing their current password. Evidence: changeMyPassword takes UpdateUserDto containing only the new password, and executes findByIdAndUpdate immediately. Impact: If a user leaves their device unlocked, or if an attacker successfully executes a CSRF or XSS attack, they can change the user's password and permanently lock the legitimate user out of the account. Recommended solution: Require the currentPassword in the DTO and verify it via bcrypt.compare before updating the password. Behavior-change risk: High. Frontend must add a "Current Password" field.
+
+[FIXED] ID: SEC-03 Severity: P0 = Critical Category: CSRF (Cross-Site Request Forgery) File: cookie.service.ts Function/Class: setCookies Resolution: access_token cookie changed from sameSite: 'none' to sameSite: 'lax'. OAuth (Google/Facebook) do NOT require sameSite: 'none' — OAuth redirects are GET requests which 'lax' handles correctly. The CORS configuration in main.ts was already restricted to an explicit allowlist (not wildcard '*'), providing defense-in-depth. All three cookies are now: access_token → 'lax', refresh_token → 'strict' (scoped to /api/v1/auth/refresh-token), is_logged_in → 'lax'.
+
+ID: SEC-04 Severity: P1 = High Category: User Enumeration File: auth-credential.service.ts, password-reset.service.ts Function/Class: register, forgotPassword Problem: Endpoint responses explicitly reveal whether an email is registered or not (e.g., returning exception.EMAIL_EXISTS or exception.USER_NOT_FOUND). Evidence: Exception messages specifically indicate if a user is not found during password reset. Impact: Attackers can harvest registered email addresses for phishing or credential stuffing attacks. Recommended solution: Use generic responses for password resets (e.g., "If an account exists, an email has been sent"). Behavior-change risk: Low.
+
+[FIXED] ID: SEC-05 Severity: P1 = High Category: Missing Token Revocation (Theft Detection) File: user-profile.service.ts Function/Class: refreshToken Resolution: Implemented Refresh Token Rotation with atomic theft detection. refreshToken now uses findOneAndDelete (single atomic DB operation) — if the token is not found (already consumed), all cookies are cleared and 401 is returned immediately. The old two-step findOne + deleteOne race condition is eliminated. A MongoDB TTL index (expires: '0s') was added to the RefreshToken schema so expired documents are automatically purged by the database, preventing accumulation.
+
+5. JWT / Token Findings
+Access Token TTL: 1 day (1d) is extremely long for an access token, especially since it embeds permissions. A compromised token remains valid for 24 hours. (Recommend reducing to 15-30 minutes).
+Refresh Token Storage: Refresh tokens are stored in plaintext in the database. If the DB is dumped, attackers can use them. (Recommend hashing refresh tokens in the DB using bcrypt/sha256).
+Stale Claims: Role and permissions are stored in the JWT payload. Since tokens live for 1 day, permission revocations take up to 24 hours to take effect because AuthGuard does not re-fetch the role from the DB.
+6. Cookie / Session Findings
+Security Flags: httpOnly and secure are correctly applied in production.
+sameSite: Uses 'none' in production, creating significant CSRF exposure.
+Domain: Scope is restricted to .skygalaxy.shop, which is good, but allows sibling subdomains to read/write the cookie.
+7. Password Security Findings
+Hashing: Uses bcrypt correctly via Mongoose pre-save and pre-findOneAndUpdate hooks.
+Reset Invalidation: passwordChangeAt is updated during password changes, and AuthGuard correctly rejects JWTs issued before the password change.
+Logging: Passwords are appropriately excluded using @Exclude() and .select('-password'), minimizing leakage risks.
+8. Database Findings
+Inefficient Queries: verify_Pass_Reset_Code looks up a user globally using only the 6-digit code hash, causing unnecessary DB scanning and potential collisions.
+[FIXED] Race Conditions: refreshToken previously fetched the token and deleted it in two separate queries. This is now resolved — the atomic findOneAndDelete operation ensures only one concurrent request can consume a token, preventing duplicate token generation.
+9. Performance Findings
+AuthGuard hits the database for every single authenticated request to check passwordChangeAt and isActive. Given the 1-day JWT TTL, this mitigates some staleness, but it introduces significant DB overhead for every API call. (Recommend caching this status in Redis or relying purely on short-lived JWTs).
+10. Code Quality Findings
+Duplicated Fetching: refreshToken, getMe, and AuthGuard all manually fetch the user from the DB with varying projections. Each query uses a minimal projection suited to its purpose, so this is not a data waste issue. The recommended fix is Redis caching for isActive/passwordChangeAt in AuthGuard to reduce DB hits per request.
+[NOT A BUG] Role Mismatches: The audit claimed role.enum.ts uses lowercase ('user', 'admin') causing errors in RoleGuard comparisons. This is INCORRECT. RoleGuard applies .toLowerCase() to both user.role and the required role before comparing — making the comparison case-insensitive and safe regardless of casing. role.enum.ts actually uses PascalCase ('User', 'Admin'). No bug exists.
+Over-Abstraction: AuthService delegates to 5 sub-services acting as a passthrough facade. This is an intentional architectural decision providing a single injection point for controllers and simplifying future middleware additions. No refactoring recommended in an active production project.
+11. Error Handling Findings
+Errors are localized properly using CustomI18nService.
+No sensitive stack traces were detected in the direct error throwing logic, but input validation relies on NestJS ValidationPipe which might leak DTO structure details.
+12. Testing Gaps
+Testing files were not visible, but critical E2E tests are missing for:
+
+Password Reset State Confusion (Brute-forcing step 2, bypassing step 2).
+CSRF attempts on updateMe and changeMyPassword.
+Refresh token race conditions.
+13. Documentation Gaps
+Missing JSDoc: AuthCredentialService and TokenService lack documentation regarding their security contracts (e.g., explaining why refresh tokens are explicitly deleted).
+14. Dead Code Candidates
+File handling in updateMe possesses complex rollback logic (deleteFile.catch(() => {})) that appears brittle. If updateUserDto.avatar = 'null' is sent, the code constructs a hardcoded default path instead of letting the DB default handle it.
+15. Authentication Invariants
+These rules must never be broken during refactoring:
+
+Passwords must be hashed via the Mongoose hook; services must never hash manually to prevent double-hashing.
+changeMyPassword MUST invalidate existing refresh tokens and update passwordChangeAt.
+verify_Pass_Reset_Code MUST NOT enable a persistent "authorized" state on the User model.
+JWT validation MUST enforce passwordChangeAt > iat.
+Reused refresh tokens MUST trigger family revocation.
+16. Recommended Refactoring Plan
+Critical (P0): Refactor /reset-password to require the 6-digit code and verify it atomically, removing verificationCode from the database schema entirely.
+Critical (P0): Add oldPassword requirement to changeMyPassword.
+[FIXED] Critical (P0): Fix sameSite: 'none' CSRF vulnerabilities. Resolution: access_token cookie changed from sameSite: 'none' to sameSite: 'lax' in cookie.service.ts. OAuth (Google/Facebook) redirects are GET requests which 'lax' fully supports — 'none' was never required for OAuth. CORS in main.ts is already restricted to an explicit allowlist (no wildcard), providing a second layer of protection. The refresh_token (sameSite: 'strict') and is_logged_in (sameSite: 'lax') cookies were already correctly configured.
+[FIXED] High (P1): Rate-limiting applied to all sensitive Auth endpoints via @Throttle decorator: login (5/min), register (3/min), forgot-password (3/min), verify-Pass-Reset-Code (5/min), reset-password (5/min), refresh-token (10/min), changeMyPassword (5/min). Safe endpoints (logout, me-profile, updateMe, OAuth) use @SkipThrottle. ThrottlerGuard is already registered globally via APP_GUARD.
+[PARTIALLY FIXED] High (P1): Refresh token theft detection implemented via atomic findOneAndDelete — a reused token triggers immediate session termination and 401. JWT TTL shortening (from 1d to 15m) is PENDING as it requires frontend coordination for silent refresh logic.
+Medium (P2): Hash refresh tokens in the database.
+Medium (P2): Stop leaking account existence on register and forgot-password.
+
+----------------------------------------------------------------------------------------
+BRANDS MODULE AUDIT
+1. Current Architecture
+The Brands module leverages a robust inheritance pattern where BrandsService extends a generic BaseService. This architecture significantly reduces boilerplate for CRUD operations, file handling, and localization.
+
+File and Dependency Map:
+
+Controllers:
+BrandsController: API boundary for Brands CRUD and statistics.
+Services:
+BrandsService: Inherits BaseService<BrandDocument>, configuring it with the Brand model, image field mappings, and slug generation based on name.en.
+BrandsStatistics: Simple helper service to count total brands.
+BaseService (Shared): Handles the actual MongoDB queries, pagination (ApiFeatures), slugification, error handling, and file rollback logic.
+Modules:
+BrandsModule: Imports MongooseModule for the Brand schema, FileUploadDiskStorageModule, and AuthModule.
+Schemas:
+Brand: Contains name (localized object), slug, and image.
+DTOs:
+CreateBrandDto and UpdateBrandDto for validating the name (English/Arabic) and image.
+2. API Flows
+Create (POST):
+Uploads file (image) via Multer -> Generates slug from name.en -> Checks if name.en is unique -> Inserts into DB -> Clears brands cache.
+Read (GET):
+Supports fetching all (with pagination/filters) or single by ID/Slug. Caches results for 60 seconds.
+Statistics (GET):
+Returns countDocuments(). Caches for 5 minutes.
+Update (PATCH):
+Updates DB document -> Replaces image on disk (if new file provided) -> Clears brands cache.
+Delete (DELETE):
+Fetches document to get image path -> Deletes file from disk -> Deletes document from DB -> Clears brands cache.
+3. Authorization Architecture
+Authorization is strictly enforced using AuthGuard and PermissionsGuard.
+State-changing endpoints and statistics are protected with granular permissions:
+Permissions.CREATE_BRAND
+Permissions.UPDATE_BRAND
+Permissions.DELETE_BRAND
+Permissions.VIEW_DASHBOARD_STATS
+Public read endpoints (findAll and findOne) do not require authentication, which is correct for an e-commerce platform.
+4. Security Findings
+ID: SEC-BR-01 Severity: P2 = Medium Category: Denial of Service (Logical Failure) File: base.service.ts Function/Class: deleteOneDoc Problem: During a DELETE operation, the code attempts to delete the associated image file from disk. If the file deletion fails (e.g., the file is already missing, file system permissions changed, or path is corrupt), a BadGatewayException is thrown, and the database deletion (this.model.deleteOne) is aborted. Evidence:
+
+typescript
+
+try { await this.fileUploadService.deleteFile(imagePath); } 
+catch (error) { throw new BadGatewayException(...); }
+await this.model.deleteOne({ _id: doc._id }); // Never reached if file deletion fails
+Impact: An admin cannot delete a brand if its image file is missing or corrupted on the server. The brand becomes undeletable via the API. Recommended solution: Catch the file deletion error, log a warning, and proceed with deleteOne to ensure the database record is removed even if the file is already gone. Behavior-change risk: Low. It strictly improves system resilience.
+
+ID: SEC-BR-02 Severity: P2 = Medium Category: Cross-Site Request Forgery (CSRF) File: brands.controller.ts Function/Class: create, updateBrand, remove Problem: As identified in the Auth module audit, the use of sameSite: 'none' on the access token cookie leaves all state-changing endpoints vulnerable to CSRF. Impact: If an admin with CREATE_BRAND or DELETE_BRAND permissions visits a malicious site, an attacker can forge requests to delete or deface brands. Recommended solution: Enforce Anti-CSRF tokens globally for all authenticated mutations, or restrict sameSite to 'lax' or 'strict'. Behavior-change risk: Medium (Requires frontend coordination).
+
+ID: SEC-BR-03 Severity: P3 = Low Category: Data Validation / Path Traversal Prevention File: brands.service.ts Function/Class: create, updateBrand Problem: The application assumes name.en will always be provided and uses it for both uniqueness checks and slug generation. If an API request somehow circumvents this (or provides an empty string), it could generate an empty slug. Impact: Minor application instability or collision on empty slugs. Recommended solution: Ensure CreateBrandDto enforces name.en as a strictly required, non-empty string.
+
+5. Database Findings
+Indexes: The Brand schema lacks an explicit unique index on name.en. Uniqueness is manually enforced via BaseService.isFieldTaken. Under high concurrency, manual uniqueness checks (Model.exists() followed by Model.create()) are susceptible to race conditions.
+Recommendation: Add a unique compound index or a sparse unique index on name.en in the MongoDB schema to let the database enforce atomicity.
+6. Performance Findings
+Caching: Excellent usage of NestJS CacheManager. CacheTTL and ClearCacheInterceptor are well-implemented to reduce database load on public-facing endpoints.
+Slug Generation: Handled synchronously via slugify, which is fast and efficient.
+7. Code Quality Findings
+BaseService Abstraction: The abstraction is highly effective and keeps the BrandsService clean. However, BaseService has hardcoded logic for specific modules (e.g., modelName === 'users' or this.model.modelName === 'Tax'). This violates the Open/Closed Principle.
+Recommendation: Instead of hardcoding model names inside BaseService, pass error message keys or transformation callbacks via the options object from the child service.
+Type Safety: Use of (CreateDataDto as any)[this.slugSourceField] in BaseService bypasses TypeScript's type checking.
+8. Testing Gaps
+E2E E-commerce caching tests: Verify that calling POST /brands accurately purges the cache for GET /brands immediately.
+Error handling tests: Verify that if file upload succeeds but database insertion fails (e.g., due to duplicate name), the uploaded file is successfully rolled back/deleted from disk.
+9. Recommended Refactoring Plan
+High (P2): Fix deleteOneDoc in BaseService so it does not block database record deletion if the associated image file is already missing.
+High (P2): Implement CSRF protection across the application to protect admin-level operations like Brand deletion.
+Medium (P3): Move uniqueness enforcement to the database layer (MongoDB Unique Indexes) to prevent race conditions during concurrent creations.
+Medium (P3): Refactor BaseService to remove hardcoded module names ('User', 'Tax'), injecting these configurations from the child services instead to maintain a clean generic architecture.

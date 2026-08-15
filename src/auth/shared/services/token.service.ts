@@ -32,17 +32,9 @@ export class TokenService {
     return { access_token, refresh_Token };
   }
 
-  // delete old refresh token and save new refresh token in date base
+  // save new refresh token in date base
   async store_Refresh_Token(userId: string, refresh_Token: string) {
-    //1) delete old refresh token from database
-    await this.RefreshTokenModel.findOneAndDelete({
-      userId: userId,
-    })
-      .select('userId')
-      .lean()
-      .exec();
-
-    //2) add expiry date to refresh token
+    //1) add expiry date to refresh token
     const expiryDate = new Date();
     expiryDate.setDate(
       expiryDate.getDate() +

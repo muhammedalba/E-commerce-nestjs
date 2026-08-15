@@ -287,8 +287,8 @@ export class UserProfileService {
       );
     }
 
-    //1) find refresh token from database
-    const tokenDoc = await this.RefreshTokenModel.findOne({
+    //1) Atomically delete the refresh token — if it's already gone, someone stole it.
+    const tokenDoc = await this.RefreshTokenModel.findOneAndDelete({
       refresh_Token: refreshToken,
     })
       .select('refresh_Token expiryDate userId')
@@ -296,17 +296,20 @@ export class UserProfileService {
       .exec();
 
     if (!tokenDoc) {
+      // Token not found: it was already consumed or never existed.
+      // Treat as potential theft — revoke ALL tokens for this user as a safety measure.
+      // We find the userId from a revoked-token fallback is not possible here,
+      // so we simply reject the request. Frontend should redirect to login.
+      this.cookieService.clearCookies(res);
       throw new UnauthorizedException(
         this.i18n.translate('exception.REFRESH_TOKEN_INVALID'),
       );
     }
+
     // check expiryDate refresh token
     const isExpired = tokenDoc.expiryDate.getTime() < Date.now();
     if (isExpired) {
-      // delete old refresh token
-      await this.RefreshTokenModel.deleteOne({
-        refresh_Token: refreshToken,
-      });
+      // Token was already deleted above; just clear cookies.
       this.cookieService.clearCookies(res);
       throw new UnauthorizedException(
         this.i18n.translate('exception.REFRESH_TOKEN_EXPIRED'),

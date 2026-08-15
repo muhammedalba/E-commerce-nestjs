@@ -21,6 +21,7 @@ export class RefreshToken {
   @Prop({
     required: true,
     type: Date,
+    expires: '0s', // Automatically delete document when expiryDate is reached
   })
   declare expiryDate: Date;
 }

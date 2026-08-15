@@ -219,7 +219,6 @@ export class TaxesService extends BaseService<TaxDocument> {
 
     if (scope === TaxScope.GLOBAL) {
       query.scope = TaxScope.GLOBAL;
-      query.name = name;
 
       const exists = await this.taxModel.exists(query);
       if (exists) {

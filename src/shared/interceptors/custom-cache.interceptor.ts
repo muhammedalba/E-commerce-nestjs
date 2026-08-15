@@ -1,5 +1,6 @@
 import { CacheInterceptor } from '@nestjs/cache-manager';
 import { ExecutionContext, Injectable } from '@nestjs/common';
+import { Request } from 'express';
 
 /**
  * Custom cache interceptor that includes the request language in the cache key.
@@ -8,7 +9,9 @@ import { ExecutionContext, Injectable } from '@nestjs/common';
 @Injectable()
 export class CustomCacheInterceptor extends CacheInterceptor {
   protected trackBy(context: ExecutionContext): string | undefined {
-    const request = context.switchToHttp().getRequest();
+    const request = context
+      .switchToHttp()
+      .getRequest<Request & { user?: { user_id: string } }>();
     const httpMethod = request.method;
 
     // Only cache GET requests
@@ -19,12 +22,14 @@ export class CustomCacheInterceptor extends CacheInterceptor {
     const pathParts = request.path.split('/');
     const resource = pathParts[3] || 'global';
 
+    const langHeader =
+      request.headers['x-lang'] || request.headers['accept-language'];
     const lang =
-      request.headers['x-lang'] || request.headers['accept-language'] || 'ar';
+      (Array.isArray(langHeader) ? langHeader[0] : langHeader) || 'ar';
 
     const userId = request.user?.user_id || 'guest';
 
-    const baseKey = super.trackBy(context);
+    const baseKey = super.trackBy(context) as string | undefined;
     return baseKey
       ? `${resource}:${baseKey}:lang=${lang}:user=${userId}`
       : undefined;

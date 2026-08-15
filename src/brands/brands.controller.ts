@@ -37,9 +37,9 @@ export class BrandsController {
   // ------------ ======  create brand   ====== ---------- //
   // ------------ =============================== ---------- //
   @Post()
-  @ClearCache('brands')
   @RequirePermission(Permissions.CREATE_BRAND)
   @UseGuards(AuthGuard, PermissionsGuard)
+  @ClearCache('brands')
   @UseInterceptors(FileInterceptor('image'))
   async create(
     @Body() createBrandDto: CreateBrandDto,

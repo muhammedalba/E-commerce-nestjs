@@ -179,8 +179,8 @@ export class PasswordResetService {
       await this.mailQueue.add('send-reset-success', {
         email: user.email,
         name: user.name,
-        supportLink: `${process.env.BASE_URL}/auth/login`,
-        loginLink: `${process.env.BASE_URL}/auth/login`,
+        supportLink: `${process.env.CLIENT_URL}/login`,
+        loginLink: `${process.env.CLIENT_URL}/login`,
         message: this.i18n.translate('success.SUCCESS_RESET_PASSWORD'),
         lang: this.i18n.getLang(),
       });
