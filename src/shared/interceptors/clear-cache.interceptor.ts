@@ -53,15 +53,9 @@ export class ClearCacheInterceptor implements NestInterceptor {
     const stores = Array.isArray(rawStores)
       ? (rawStores as Record<string, unknown>[])
       : [];
-    console.log('stores', stores);
 
-    console.log('------------------------------------------------');
     for (const s of stores) {
       // 1a) Try Keyv async iterator (standard for cache-manager v6)
-      console.log('s', s);
-      console.log('------------------------------------------------');
-
-      console.log('s.iterator', s.iterator);
 
       if (typeof s.iterator === 'function') {
         try {

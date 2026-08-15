@@ -7,7 +7,6 @@ import { ConfigService } from '@nestjs/config';
 import { Setting, SettingDocument } from './shared/schema/setting.schema';
 import { UpdateSettingDto } from './shared/dto/update-setting.dto';
 import { FileUploadService } from 'src/file-upload/file-upload.service';
-import { MulterFilesType } from 'src/shared/utils/interfaces/fileInterface';
 
 const SETTINGS_CACHE_KEY = 'settings:global';
 const SETTINGS_DOC_KEY = 'global';
@@ -98,11 +97,11 @@ export class SettingsService {
    */
   async updateSettings(
     dto: UpdateSettingDto,
-    files?: { favicon?: MulterFilesType; logo?: MulterFilesType },
+    files?: { favicon?: Express.Multer.File[]; logo?: Express.Multer.File[] },
   ): Promise<Setting> {
     const currentSettings = await this.getSettings();
     // 5. التخلص من 'any' واستخدام Partial لضمان Type Safety
-    const updateData: Record<string, any> = { ...dto };
+    const updateData: Record<string, unknown> = { ...dto };
     const imageFields = ['favicon', 'logo'] as const;
 
     // 6. استخدام Promise.all لمعالجة رفع الصور بالتوازي (Parallel) لتحسين السرعة
@@ -110,7 +109,7 @@ export class SettingsService {
       imageFields.map(async (key) => {
         const fileArray = files?.[key];
         const file = fileArray?.[0];
-        const dtoValue = (dto as any)[key];
+        const dtoValue = dto[key];
         const oldPath = currentSettings[key as keyof Setting] as string;
 
         if (file) {
@@ -126,12 +125,15 @@ export class SettingsService {
           // CASE B: Image Deleted
           if (oldPath) {
             // 7. تسجيل الخطأ بدلاً من تجاهله تماماً
-            await this.fileUploadService.deleteFile(oldPath).catch((err) => {
-              this.logger.error(
-                `Failed to delete old ${key}: ${oldPath}`,
-                err.stack,
-              );
-            });
+            await this.fileUploadService
+              .deleteFile(oldPath)
+              .catch((err: unknown) => {
+                const stack = err instanceof Error ? err.stack : undefined;
+                this.logger.error(
+                  `Failed to delete old ${key}: ${oldPath}`,
+                  stack,
+                );
+              });
           }
           updateData[key] = null;
         } else {
@@ -221,10 +223,11 @@ export class SettingsService {
           `[ISR] Failed to trigger revalidation for tag: ${tag}. Status: ${response.status} - ${error}`,
         );
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const stack = err instanceof Error ? err.stack : undefined;
       this.logger.error(
         `[ISR] Network error while triggering revalidation for tag: ${tag}`,
-        err.stack,
+        stack,
       );
     }
   }

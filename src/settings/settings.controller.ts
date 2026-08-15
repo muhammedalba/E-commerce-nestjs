@@ -20,7 +20,6 @@ import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ParseBodyJsonInterceptor } from 'src/shared/interceptors/parse-body-json.interceptor';
 import { ParseFileFieldsPipe } from 'src/shared/files/ParseFileFieldsPipe';
-import { MulterFilesType } from 'src/shared/utils/interfaces/fileInterface';
 
 @Controller('settings')
 @UseInterceptors(ClearCacheInterceptor)
@@ -87,7 +86,7 @@ export class SettingsController {
         ],
       ),
     )
-    files: { favicon?: MulterFilesType; logo?: MulterFilesType },
+    files: { favicon?: Express.Multer.File[]; logo?: Express.Multer.File[] },
     @Body() updateSettingDto: UpdateSettingDto,
   ) {
     return await this.settingsService.updateSettings(updateSettingDto, files);
