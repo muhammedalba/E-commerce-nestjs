@@ -61,8 +61,7 @@ export const searchStrategies: Record<string, (keyword: string) => object> = {
   }),
   ShippingProvider: (keyword: string) => ({
     $or: [
-      { 'name.en': { $regex: keyword, $options: 'i' } },
-      { 'name.ar': { $regex: keyword, $options: 'i' } },
+      { name: { $regex: keyword, $options: 'i' } },
       { code: { $regex: keyword, $options: 'i' } },
     ],
   }),

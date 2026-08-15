@@ -29,3 +29,7 @@ export class Brand {
 }
 export type BrandDocument = HydratedDocument<Brand>;
 export const BrandSchema = SchemaFactory.createForClass(Brand);
+
+// Enforce uniqueness at the database level to prevent race conditions
+// under high concurrency (avoids the TOCTOU gap in manual exists() + create() checks).
+BrandSchema.index({ 'name.en': 1 }, { unique: true, sparse: true });

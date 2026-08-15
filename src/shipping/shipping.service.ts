@@ -61,12 +61,12 @@ export class ShippingService extends BaseService<ShippingProviderDocument> {
     data: CreateShippingProviderDto,
     file?: MulterFileType,
   ): Promise<ShippingProviderDocument> {
-    return (await this.createOneDoc(data, file, ShippingProvider.name, {
+    return await this.createOneDoc(data, file, {
       fileFieldName: 'logo',
       checkField: 'name',
       fieldValue: data.name,
       useDefaultFile: true,
-    })) as ShippingProviderDocument;
+    });
   }
 
   /**
@@ -75,7 +75,7 @@ export class ShippingService extends BaseService<ShippingProviderDocument> {
    * @returns An object containing the localized providers and pagination info.
    */
   async getProviders(query: QueryString): Promise<any> {
-    return await this.findAllDoc(ShippingProvider.name, query);
+    return await this.findAllDoc(query);
   }
 
   /**
@@ -96,16 +96,15 @@ export class ShippingService extends BaseService<ShippingProviderDocument> {
       idParam,
       data,
       file,
-      ShippingProvider.name,
       'name logo code trackingUrl isActive',
       {
         fileFieldName: 'logo',
         checkField: 'name',
-        fieldValue: (data as any).name,
+        fieldValue: data.name,
       },
     );
     if (!updated) throw new NotFoundException('Shipping provider not found');
-    return updated as ShippingProviderDocument;
+    return updated;
   }
 
   /**

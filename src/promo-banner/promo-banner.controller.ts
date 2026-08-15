@@ -28,7 +28,7 @@ import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 @Controller('promo-banner')
 @UseInterceptors(ClearCacheInterceptor)
 export class PromoBannerController {
-  constructor(private readonly promoBannerService: PromoBannerService) { }
+  constructor(private readonly promoBannerService: PromoBannerService) {}
 
   // ------------------------------------------------------
   // ---------------- get active banners ------------------

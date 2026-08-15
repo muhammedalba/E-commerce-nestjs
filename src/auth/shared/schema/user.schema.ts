@@ -125,6 +125,7 @@ export class User {
 }
 export type UserDocument = HydratedDocument<User>;
 export const UserSchema = SchemaFactory.createForClass(User);
+
 // ─── Auto-exclude soft-deleted documents ─────────────────
 UserSchema.pre(['find', 'countDocuments'], function () {
   if (this.getFilter().isActive === undefined) {
@@ -162,12 +163,3 @@ UserSchema.pre('findOneAndUpdate', async function (next) {
 
   next();
 });
-
-//update , findOne and findAll
-// UserSchema.post('init', function (doc) {
-//   if (doc.avatar && doc.name) {
-//     if (!doc.avatar.startsWith(process.env.BASE_URL ?? 'http')) {
-//       doc.avatar = `${process.env.BASE_URL}${doc.avatar}`;
-//     }
-//   }
-// });

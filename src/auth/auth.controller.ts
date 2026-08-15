@@ -62,7 +62,6 @@ export class AuthController {
   async googleAuthRedirect(
     @Req() req: GoogleRequest,
     @Res() res: Response,
-    // @Res({ passthrough: true }) res: Response,
   ): Promise<void> {
     const user = req.user;
 

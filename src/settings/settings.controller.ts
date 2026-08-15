@@ -21,17 +21,56 @@ import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ParseBodyJsonInterceptor } from 'src/shared/interceptors/parse-body-json.interceptor';
 import { ParseFileFieldsPipe } from 'src/shared/files/ParseFileFieldsPipe';
 
+/**
+ * Controller that exposes the application-wide settings API.
+ *
+ * Base route: `PATCH /settings`
+ *
+ * | Method | Route | Access | Description |
+ * |--------|-------|--------|-------------|
+ * | GET | `/settings` | Public | Retrieve current settings |
+ * | PATCH | `/settings` | Admin | Update settings (with optional file uploads) |
+ * | PATCH | `/settings/clear-cache` | Admin | Flush server-side settings cache |
+ *
+ * @remarks
+ * The controller is decorated with {@link ClearCacheInterceptor} at the class
+ * level, which automatically removes relevant cache entries after every
+ * mutating request.
+ */
 @Controller('settings')
 @UseInterceptors(ClearCacheInterceptor)
 export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
+
+  /**
+   * Accepted file upload fields for image assets.
+   * Each field is limited to a single file (`maxCount: 1`).
+   */
   private static readonly imageSize = [
     { name: 'favicon', maxCount: 1 },
     { name: 'logo', maxCount: 1 },
   ];
-  /* ================================================ */
-  /*  GET SETTINGS - Public (للجميع)                  */
-  /* ================================================ */
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // GET /settings
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Returns the current global application settings.
+   *
+   * **Access:** Public – no authentication required.
+   *
+   * **Caching:** Responses are cached by {@link CustomCacheInterceptor} for
+   * 1 hour (`3 600 000 ms`). The cache is automatically invalidated whenever
+   * settings are updated or {@link clearCache} is called.
+   *
+   * @returns The global {@link Setting} object, served from cache when available.
+   *
+   * @example
+   * ```http
+   * GET /settings
+   * ```
+   */
   @Get()
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(3600000) // 1 hour
@@ -39,9 +78,46 @@ export class SettingsController {
     return await this.settingsService.getSettings();
   }
 
-  /* ================================================ */
-  /*  UPDATE SETTINGS - Admin Only (للإدمن فقط)       */
-  /* ================================================ */
+  // ─────────────────────────────────────────────────────────────────────────────
+  // PATCH /settings
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Updates the global application settings.
+   *
+   * **Access:** Admin only – requires the `UPDATE_SETTINGS` permission.
+   *
+   * **Request format:** `multipart/form-data` (to support file uploads).
+   * Complex JSON fields (e.g. `socialLinks`, `contactInfo`) must be sent as
+   * serialised JSON strings; they are automatically parsed by
+   * {@link ParseBodyJsonInterceptor}.
+   *
+   * **File uploads:**
+   * - `favicon` – Site favicon. Max size: 1 MB. Accepted: `png`, `jpeg`, `webp`, `pdf`.
+   * - `logo`    – Site logo.    Max size: 1 MB. Accepted: `png`, `jpeg`, `webp`, `pdf`.
+   *
+   * Both file fields are optional. To explicitly **delete** an existing image,
+   * send the corresponding DTO field with the value `"null"` (string) or `null`.
+   *
+   * **Side effects:**
+   * - Invalidates the server-side settings cache.
+   * - Triggers Next.js ISR revalidation for the `settings` and
+   *   `public-settings` cache tags.
+   *
+   * @param files           - Uploaded files grouped by field name.
+   * @param updateSettingDto - Validated update payload.
+   * @returns The updated {@link Setting} document.
+   *
+   * @example
+   * ```http
+   * PATCH /settings
+   * Content-Type: multipart/form-data
+   *
+   * siteName={"en":"My Shop","ar":"متجري"}
+   * logo=<binary>
+   * vatRate=15
+   * ```
+   */
   @Patch()
   @RequirePermission(Permissions.UPDATE_SETTINGS)
   @UseGuards(AuthGuard, PermissionsGuard)
@@ -92,9 +168,32 @@ export class SettingsController {
     return await this.settingsService.updateSettings(updateSettingDto, files);
   }
 
-  /* ================================================ */
-  /*  CLEAR CACHE - Admin Only                        */
-  /* ================================================ */
+  // ─────────────────────────────────────────────────────────────────────────────
+  // PATCH /settings/clear-cache
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Manually flushes the server-side settings cache.
+   *
+   * **Access:** Admin only – requires the `UPDATE_SETTINGS` permission.
+   *
+   * Use this endpoint when the underlying settings document has been modified
+   * externally (e.g. via a database migration or seed script) and the cached
+   * version needs to be discarded immediately without performing a full update.
+   *
+   * **Side effects:**
+   * - Deletes the `settings:global` cache entry.
+   * - Triggers Next.js ISR revalidation for the `settings` and
+   *   `public-settings` cache tags.
+   *
+   * @returns `{ success: true }` on successful cache invalidation.
+   *
+   * @example
+   * ```http
+   * PATCH /settings/clear-cache
+   * Authorization: Bearer <admin-token>
+   * ```
+   */
   @Patch('clear-cache')
   @RequirePermission(Permissions.UPDATE_SETTINGS)
   @UseGuards(AuthGuard, PermissionsGuard)

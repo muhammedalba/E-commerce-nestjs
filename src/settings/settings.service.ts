@@ -8,10 +8,31 @@ import { Setting, SettingDocument } from './shared/schema/setting.schema';
 import { UpdateSettingDto } from './shared/dto/update-setting.dto';
 import { FileUploadService } from 'src/file-upload/file-upload.service';
 
+/** Cache key used to store/retrieve the global settings object. */
 const SETTINGS_CACHE_KEY = 'settings:global';
-const SETTINGS_DOC_KEY = 'global';
-const SETTINGS_CACHE_TTL = 3600000; // 1 hour in ms
 
+/** Mongoose document key that identifies the single global settings document. */
+const SETTINGS_DOC_KEY = 'global';
+
+/** Cache TTL for settings in milliseconds (1 hour). */
+const SETTINGS_CACHE_TTL = 3600000;
+
+/**
+ * Service responsible for managing application-wide settings.
+ *
+ * Implements a **Cache-Aside** pattern:
+ * - Reads are served from an in-memory cache (TTL = 1 h).
+ * - Writes invalidate the cache and trigger Next.js ISR revalidation.
+ *
+ * The service stores a **single** MongoDB document keyed by `"global"` and
+ * enriches it at read-time with runtime flags derived from other collections
+ * (`hasCustomShippingRates`, `hasCustomTaxes`).
+ *
+ * @remarks
+ * Exported by {@link SettingsModule} so that it can be consumed by
+ * `CheckoutModule`, `OrderModule`, and any other feature that needs
+ * access to global configuration values.
+ */
 @Injectable()
 export class SettingsService {
   private readonly logger = new Logger(SettingsService.name);
@@ -30,26 +51,48 @@ export class SettingsService {
     private readonly connection: Connection,
   ) {}
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // READ
+  // ─────────────────────────────────────────────────────────────────────────────
+
   /**
-   * جلب الإعدادات - يبحث في الـ Cache أولاً، إذا لم يجد يبحث في MongoDB
+   * Retrieves the global application settings.
+   *
+   * **Cache-Aside flow:**
+   * 1. Return the cached value if it exists.
+   * 2. Otherwise, upsert the settings document in MongoDB (creates a default
+   *    document on first run if none exists).
+   * 3. Enrich the result with two computed flags that reflect whether custom
+   *    shipping rates or tax rules have been configured:
+   *    - `hasCustomShippingRates` – `true` when at least one active `ShippingRate` doc exists.
+   *    - `hasCustomTaxes` – `true` when at least one active `Tax` doc exists.
+   * 4. Persist the enriched result to cache (TTL = {@link SETTINGS_CACHE_TTL}).
+   *
+   * @returns A plain {@link Setting} object (lean, not a Mongoose Document).
+   *
+   * @example
+   * ```typescript
+   * const settings = await this.settingsService.getSettings();
+   * console.log(settings.siteName);
+   * ```
    */
   async getSettings(): Promise<Setting> {
-    // 3. إرجاع كائن عادي (Setting) بدلاً من Document
-    // 1. فحص الـ Cache
+    // 1. Cache hit – fast path
     const cached = await this.cacheManager.get<Setting>(SETTINGS_CACHE_KEY);
     if (cached) return cached;
 
-    // 2. جلب من MongoDB أو إنشاء سجل افتراضي (Upsert)
+    // 2. Upsert the single global document (creates defaults on first run)
     const settings = await this.settingModel.findOneAndUpdate(
       { key: SETTINGS_DOC_KEY },
       { $setOnInsert: { key: SETTINGS_DOC_KEY } },
-      // 4. استخدام lean: true لتحسين الأداء وتقليل استهلاك الذاكرة
+      // lean: true improves performance and reduces memory consumption
       { upsert: true, new: true, lean: true },
     );
 
     let hasCustomShippingRates = false;
     let hasCustomTaxes = false;
 
+    // 3a. Computed flag: custom shipping rates
     try {
       if (this.connection.models['ShippingRate']) {
         const result = await this.connection.models['ShippingRate']
@@ -63,6 +106,7 @@ export class SettingsService {
       this.logger.error('Failed to check custom shipping rates', e);
     }
 
+    // 3b. Computed flag: custom taxes
     try {
       if (this.connection.models['Tax']) {
         const result = await this.connection.models['Tax']
@@ -82,7 +126,7 @@ export class SettingsService {
       hasCustomTaxes,
     } as unknown as Setting;
 
-    // 3. تخزين في الـ Cache
+    // 4. Populate cache for subsequent reads
     await this.cacheManager.set(
       SETTINGS_CACHE_KEY,
       settingsWithCustoms,
@@ -92,19 +136,49 @@ export class SettingsService {
     return settingsWithCustoms;
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // WRITE
+  // ─────────────────────────────────────────────────────────────────────────────
+
   /**
-   * تحديث الإعدادات وإلغاء الـ Cache
+   * Updates the global application settings and invalidates the cache.
+   *
+   * Image fields (`favicon`, `logo`) are handled with three distinct strategies
+   * based on what is provided in the request:
+   *
+   * | Scenario | Result |
+   * |---|---|
+   * | New file uploaded | Old file deleted from disk, new path saved |
+   * | DTO value is `"null"` or `null` | Old file deleted from disk, field set to `null` |
+   * | No file and no explicit `null` | Field unchanged (excluded from `$set`) |
+   *
+   * Image uploads are processed **in parallel** via `Promise.all` to minimise
+   * round-trip latency.
+   *
+   * After saving, the server-side cache is deleted and Next.js ISR revalidation
+   * is triggered for the `settings` and `public-settings` cache tags.
+   *
+   * @param dto       - Validated payload containing the fields to update.
+   * @param files     - Optional uploaded files keyed by field name.
+   *                    Each field is an array produced by NestJS
+   *                    `FileFieldsInterceptor`; only `[0]` is consumed.
+   * @returns The updated settings document as a plain {@link Setting} object.
+   *
+   * @example
+   * ```typescript
+   * const updated = await this.settingsService.updateSettings(dto, files);
+   * console.log(updated.logo); // '/uploads/Setting/logo-abc123.webp'
+   * ```
    */
   async updateSettings(
     dto: UpdateSettingDto,
     files?: { favicon?: Express.Multer.File[]; logo?: Express.Multer.File[] },
   ): Promise<Setting> {
     const currentSettings = await this.getSettings();
-    // 5. التخلص من 'any' واستخدام Partial لضمان Type Safety
     const updateData: Record<string, unknown> = { ...dto };
     const imageFields = ['favicon', 'logo'] as const;
 
-    // 6. استخدام Promise.all لمعالجة رفع الصور بالتوازي (Parallel) لتحسين السرعة
+    // Process image uploads in parallel for better performance
     await Promise.all(
       imageFields.map(async (key) => {
         const fileArray = files?.[key];
@@ -113,7 +187,7 @@ export class SettingsService {
         const oldPath = currentSettings[key as keyof Setting] as string;
 
         if (file) {
-          // CASE A: New File Uploaded
+          // CASE A: New file uploaded – replace old file on disk
           const newPath = await this.fileUploadService.updateFile(
             file,
             Setting.name,
@@ -122,9 +196,8 @@ export class SettingsService {
           );
           updateData[key] = newPath;
         } else if (dtoValue === 'null' || dtoValue === null) {
-          // CASE B: Image Deleted
+          // CASE B: Explicit deletion – remove old file from disk
           if (oldPath) {
-            // 7. تسجيل الخطأ بدلاً من تجاهله تماماً
             await this.fileUploadService
               .deleteFile(oldPath)
               .catch((err: unknown) => {
@@ -137,30 +210,47 @@ export class SettingsService {
           }
           updateData[key] = null;
         } else {
-          // CASE C: No change
+          // CASE C: No change – exclude field from the update payload
           delete updateData[key];
         }
       }),
     );
 
-    // 5) Save the document
+    // Persist changes to the database
     const updatedDoc = await this.settingModel.findOneAndUpdate(
       { key: SETTINGS_DOC_KEY },
       { $set: updateData },
-      { upsert: true, new: true, lean: true }, // استخدام lean هنا أيضاً
+      { upsert: true, new: true, lean: true },
     );
 
-    // إلغاء الـ Cache لإجبار إعادة جلب البيانات في الطلب القادم
+    // Invalidate the server-side cache
     await this.cacheManager.del(SETTINGS_CACHE_KEY);
 
-    // تنبيه الفرونت إيند بتحديث الكاش الخاص به (ISR)
+    // Notify the frontend to regenerate statically cached pages (ISR)
     await this.triggerRevalidation('settings,public-settings');
 
     return updatedDoc as Setting;
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // HELPER READS (consumed by other modules)
+  // ─────────────────────────────────────────────────────────────────────────────
+
   /**
-   * جلب حد الشحن المجاني فقط - مستخدم في CheckoutService
+   * Returns the configured free-shipping order threshold.
+   *
+   * Delegates to {@link getSettings} so the result is served from cache.
+   * Falls back to `0` when the field has not been set yet.
+   *
+   * @returns Minimum order total (in the store's base currency) required for
+   *          free shipping, or `0` if not configured.
+   *
+   * @example
+   * ```typescript
+   * // In CheckoutService:
+   * const threshold = await this.settingsService.getFreeShippingThreshold();
+   * const isFree = cartTotal >= threshold;
+   * ```
    */
   async getFreeShippingThreshold(): Promise<number> {
     const settings = await this.getSettings();
@@ -168,7 +258,19 @@ export class SettingsService {
   }
 
   /**
-   * فحص هل الموقع في وضع الصيانة
+   * Checks whether the site is currently in maintenance mode.
+   *
+   * When `true`, the frontend should display a maintenance page and block
+   * all non-admin operations.
+   *
+   * @returns `true` if maintenance mode is active, `false` otherwise.
+   *
+   * @example
+   * ```typescript
+   * if (await this.settingsService.isMaintenanceMode()) {
+   *   throw new ServiceUnavailableException('Site is under maintenance');
+   * }
+   * ```
    */
   async isMaintenanceMode(): Promise<boolean> {
     const settings = await this.getSettings();
@@ -176,16 +278,45 @@ export class SettingsService {
   }
 
   /**
-   * فحص هل تنبيهات نقص المخزون مفعّلة (للسلة فقط)
-   * يستخدم الـ Cache تلقائياً عبر getSettings()
+   * Checks whether low-stock inventory alerts are enabled.
+   *
+   * Used by the cart and order flows to decide whether to emit inventory
+   * warning notifications. Defaults to `true` if the flag has not been
+   * explicitly configured.
+   *
+   * @returns `true` if inventory alerts are enabled (default), `false` if
+   *          they have been disabled by an administrator.
+   *
+   * @example
+   * ```typescript
+   * if (await this.settingsService.isInventoryAlertsEnabled()) {
+   *   await this.notificationService.sendLowStockAlert(productId);
+   * }
+   * ```
    */
   async isInventoryAlertsEnabled(): Promise<boolean> {
     const settings = await this.getSettings();
     return settings.inventoryAlertsEnabled ?? true;
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // CACHE MANAGEMENT
+  // ─────────────────────────────────────────────────────────────────────────────
+
   /**
-   * مسح كافة التخزين المؤقت للإعدادات
+   * Manually flushes the settings cache and triggers ISR revalidation.
+   *
+   * Useful when an external process modifies the underlying settings document
+   * directly (e.g. a database migration or seed script) and the cache needs to
+   * be invalidated without going through {@link updateSettings}.
+   *
+   * @returns An object `{ success: true }` upon successful cache invalidation.
+   *
+   * @example
+   * ```typescript
+   * // Via HTTP: PATCH /settings/clear-cache
+   * await this.settingsService.clearCache();
+   * ```
    */
   async clearCache(): Promise<{ success: boolean }> {
     await this.cacheManager.del(SETTINGS_CACHE_KEY);
@@ -193,6 +324,27 @@ export class SettingsService {
     return { success: true };
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // PRIVATE HELPERS
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Sends an HTTP POST request to the Next.js ISR revalidation endpoint.
+   *
+   * This allows the frontend to immediately regenerate any statically cached
+   * pages that depend on the provided cache `tag` without waiting for the
+   * next scheduled revalidation cycle.
+   *
+   * The method is a **best-effort** operation: if the frontend URL or the
+   * shared secret are not configured, revalidation is silently skipped.
+   * Network errors are caught and logged without propagating to the caller.
+   *
+   * @param tag - Comma-separated Next.js cache tags to revalidate
+   *              (e.g. `"settings,public-settings"`).
+   * @returns `void` – callers should not depend on the outcome.
+   *
+   * @internal
+   */
   private async triggerRevalidation(tag: string): Promise<void> {
     const frontendUrl = this.configService.get<string>('FRONTEND_ORIGIN');
     const secret = this.configService.get<string>('REVALIDATE_SECRET');

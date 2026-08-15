@@ -47,7 +47,19 @@ export class UsersService extends BaseService<UserDocument> {
     protected readonly usersStatistics: UsersStatistics,
     private readonly eventEmitter: EventEmitter2,
   ) {
-    super(userModel, i18n, fileUploadService);
+    super(userModel, i18n, fileUploadService, {
+      defaultFileName: 'avatar.png',
+      fieldTakenExceptionKey: 'exception.EMAIL_EXISTS',
+      postCreateTransform: (doc: Record<string, unknown>) => {
+        const raw =
+          'toObject' in doc && typeof doc.toObject === 'function'
+            ? (doc as { toObject: () => Record<string, unknown> }).toObject()
+            : { ...doc };
+        delete raw.password;
+        delete raw.__v;
+        return raw;
+      },
+    });
   }
 
   /**
@@ -125,7 +137,7 @@ export class UsersService extends BaseService<UserDocument> {
       );
     }
 
-    return await this.createOneDoc(createUserDto, file, User.name, {
+    return await this.createOneDoc(createUserDto, file, {
       fileFieldName: 'avatar',
       checkField: 'email',
       fieldValue: createUserDto.email,
@@ -141,7 +153,7 @@ export class UsersService extends BaseService<UserDocument> {
    * @returns A paginated result object containing user documents and metadata.
    */
   async getUsers(queryString: QueryString): Promise<any> {
-    return await this.findAllDoc(User.name, queryString, {
+    return await this.findAllDoc(queryString, {
       path: 'role',
       select: 'name level',
     });
@@ -203,7 +215,6 @@ export class UsersService extends BaseService<UserDocument> {
       idParamDto,
       updateUserDto,
       file,
-      User.name,
       selectedFields,
       {
         checkField: 'email',

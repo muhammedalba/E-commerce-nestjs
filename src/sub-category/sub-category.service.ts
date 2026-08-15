@@ -39,15 +39,10 @@ export class SubCategoryService extends BaseService<SubCategoryDocument> {
   // ------------ ======  CREATE SUP CATEGORY  ====== ---------- //
   // ------------ =============================== ---------- //
   async create(createSubCategoryDto: CreateSubCategoryDto): Promise<any> {
-    return await this.createOneDoc(
-      createSubCategoryDto,
-      undefined,
-      SubCategory.name,
-      {
-        checkField: 'name.en',
-        fieldValue: createSubCategoryDto.name.en,
-      },
-    );
+    return await this.createOneDoc(createSubCategoryDto, undefined, {
+      checkField: 'name.en',
+      fieldValue: createSubCategoryDto.name.en,
+    });
   }
 
   // ------------ =============================== ---------- //
@@ -55,7 +50,6 @@ export class SubCategoryService extends BaseService<SubCategoryDocument> {
   // ------------ =============================== ---------- //
   async findAll(queryString: QueryString, allLangs: boolean) {
     return await this.findAllDoc(
-      SubCategory.name,
       queryString,
       {
         path: 'category',
@@ -84,7 +78,6 @@ export class SubCategoryService extends BaseService<SubCategoryDocument> {
       idParamDto,
       updateCategoryDto,
       undefined,
-      SubCategory.name,
       selectedFields,
       {
         checkField: 'name.en',

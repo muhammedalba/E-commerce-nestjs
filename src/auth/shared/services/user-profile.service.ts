@@ -99,6 +99,7 @@ export class UserProfileService {
       .findById(user_id)
       .select('avatar email isActive phone')
       .lean();
+
     if (!user) {
       throw new BadRequestException(
         this.i18n.translate('exception.USER_NOT_FOUND'),
@@ -121,6 +122,7 @@ export class UserProfileService {
         );
       }
     }
+
     if (!updateUserDto.phone) {
       updateUserDto.phone = user.phone;
     }
@@ -237,8 +239,8 @@ export class UserProfileService {
       await this.mailQueue.add('send-reset-success', {
         email: user.email,
         name: user.name,
-        supportLink: `${process.env.BASE_URL}/login`,
-        loginLink: `${process.env.BASE_URL}/login`,
+        supportLink: `${process.env.FRONTEND_ORIGIN}/login`,
+        loginLink: `${process.env.FRONTEND_ORIGIN}/login`,
         message: 'Password reset successfully',
       });
     } catch {

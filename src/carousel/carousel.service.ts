@@ -14,9 +14,7 @@ import { FileUploadService } from 'src/file-upload/file-upload.service';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
-import { Request } from 'express';
 
-type file = Request['file'];
 @Injectable()
 export class CarouselService extends BaseService<CarouselDocument> {
   protected override readonly logger = new Logger(CarouselService.name);
@@ -35,9 +33,9 @@ export class CarouselService extends BaseService<CarouselDocument> {
   async createCarousel(
     createCarouselDto: CreateCarouselDto,
     files: {
-      carouselSm: file;
-      carouselMd: file;
-      carouselLg: file;
+      carouselSm?: Express.Multer.File[];
+      carouselMd?: Express.Multer.File[];
+      carouselLg?: Express.Multer.File[];
     },
   ) {
     // check if there is active banner
@@ -69,10 +67,7 @@ export class CarouselService extends BaseService<CarouselDocument> {
       //2) save files to disk
       const savedPaths = await Promise.all(
         requiredKeys.map((key) =>
-          this.fileUploadService.saveFileToDisk(
-            files[key]?.[0] as file,
-            Carousel.name,
-          ),
+          this.fileUploadService.saveFileToDisk(files[key]?.[0], Carousel.name),
         ),
       );
 
@@ -114,12 +109,7 @@ export class CarouselService extends BaseService<CarouselDocument> {
     pagination: any;
     data: Carousel[];
   }> {
-    return await this.findAllDoc(
-      Carousel.name,
-      queryString,
-      undefined,
-      allLangs,
-    );
+    return await this.findAllDoc(queryString, undefined, allLangs);
   }
 
   // ------------ =============================== ---------- //
@@ -137,9 +127,9 @@ export class CarouselService extends BaseService<CarouselDocument> {
     idParamDto: IdParamDto,
     updateCarouselDto: UpdateCarouselDto,
     files: {
-      carouselSm?: file;
-      carouselMd?: file;
-      carouselLg?: file;
+      carouselSm?: Express.Multer.File[];
+      carouselMd?: Express.Multer.File[];
+      carouselLg?: Express.Multer.File[];
     },
   ): Promise<Carousel> {
     const { id } = idParamDto;
@@ -187,7 +177,7 @@ export class CarouselService extends BaseService<CarouselDocument> {
 
     for (const key of imageFields) {
       // Note: files[key] is actually an array because of FileFieldsInterceptor
-      const fileArray = (files as any)[key];
+      const fileArray = files[key];
       const file = fileArray?.[0] || null;
 
       if (file) {

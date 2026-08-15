@@ -32,7 +32,9 @@ export class TaxesService extends BaseService<TaxDocument> {
     protected readonly i18n: CustomI18nService,
     protected readonly fileUploadService: FileUploadService,
   ) {
-    super(taxModel, i18n, fileUploadService);
+    super(taxModel, i18n, fileUploadService, {
+      fieldTakenExceptionKey: 'exception.COUNTRY_EXISTS',
+    });
   }
 
   /**
@@ -256,11 +258,11 @@ export class TaxesService extends BaseService<TaxDocument> {
 
   async create(dto: CreateTaxDto): Promise<TaxDocument> {
     await this.validateTaxUniqueness(dto);
-    return this.createOneDoc(dto, undefined, Tax.name);
+    return this.createOneDoc(dto, undefined);
   }
 
   async findAll(queryString: QueryString): Promise<any> {
-    return this.findAllDoc(Tax.name, queryString, {
+    return this.findAllDoc(queryString, {
       path: 'country region city',
       select: 'name code',
     });
@@ -275,12 +277,7 @@ export class TaxesService extends BaseService<TaxDocument> {
 
   async update(id: IdParamDto, dto: UpdateTaxDto): Promise<TaxDocument> {
     await this.validateTaxUniqueness(dto, id.id);
-    return (await this.updateOneDoc(
-      id,
-      dto,
-      undefined,
-      Tax.name,
-    )) as TaxDocument;
+    return (await this.updateOneDoc(id, dto, undefined)) as TaxDocument;
   }
 
   async remove(id: IdParamDto): Promise<void> {

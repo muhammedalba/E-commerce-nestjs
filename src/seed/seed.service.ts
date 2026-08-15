@@ -387,7 +387,7 @@ export class SeedService {
       if (!region) {
         region = await this.locationsService.createRegion({
           name: regionData.region,
-          country: country._id as any,
+          country: country._id,
         } as any);
       }
 
@@ -396,13 +396,13 @@ export class SeedService {
         const cities = await this.locationsService.getCitiesByRegion(
           region._id.toString(),
         );
-        let city = cities.find((c) => c.name?.ar === cityData.ar);
+        const city = cities.find((c) => c.name?.ar === cityData.ar);
 
         if (!city) {
           await this.locationsService.createCity({
             name: cityData,
-            region: region._id as any,
-            country: country._id as any,
+            region: region._id,
+            country: country._id,
             isDeliveryAvailable: true,
           } as any);
         }

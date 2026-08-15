@@ -130,7 +130,8 @@ export class FileUploadService {
   withBaseUrl(
     input: string | null | undefined | (string | null | undefined)[],
   ): string | null | undefined | (string | null | undefined)[] {
-    return _withBaseUrl(input as any);
+    if (Array.isArray(input)) return _withBaseUrl(input);
+    return _withBaseUrl(input);
   }
 
   // ===========================================================

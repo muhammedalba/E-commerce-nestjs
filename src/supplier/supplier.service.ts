@@ -21,7 +21,9 @@ export class SupplierService extends BaseService<SupplierDocument> {
     protected readonly i18n: CustomI18nService,
     protected readonly supplierStatistics: SupplierStatistics,
   ) {
-    super(SupplierModel, i18n, fileUploadService);
+    super(SupplierModel, i18n, fileUploadService, {
+      defaultFileName: 'avatar.png',
+    });
   }
   // ------------ =============================== ---------- //
   // ------------ ======  GET statistics  ====== ---------- //
@@ -36,7 +38,7 @@ export class SupplierService extends BaseService<SupplierDocument> {
     createSupplierDto: CreateSupplierDto,
     file: MulterFileType,
   ): Promise<any> {
-    return await this.createOneDoc(createSupplierDto, file, Supplier.name, {
+    return await this.createOneDoc(createSupplierDto, file, {
       fileFieldName: 'avatar',
       checkField: 'name',
       fieldValue: createSupplierDto.name.trim(),
@@ -47,7 +49,7 @@ export class SupplierService extends BaseService<SupplierDocument> {
   // ------------ ======  GET ALL SUPPLIERS  ====== ---------- //
   // ------------ =============================== ---------- //
   async get_Suppliers(queryString: QueryString): Promise<any> {
-    return await this.findAllDoc(Supplier.name, queryString, undefined, false);
+    return await this.findAllDoc(queryString, undefined, false);
   }
   // ------------ =============================== ---------- //
   // ------------ ======  GET SUPPLIER BY ID  ====== ---------- //
@@ -68,7 +70,6 @@ export class SupplierService extends BaseService<SupplierDocument> {
       idParamDto,
       UpdateSupplierDto,
       file,
-      Supplier.name,
       selectedFields,
       {
         checkField: 'name',

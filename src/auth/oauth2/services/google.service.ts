@@ -23,7 +23,6 @@ export class GoogleService {
 
   async googleLogin(googleUser: OAuthUser, res: Response) {
     const { email, name, picture } = googleUser;
-    console.log({ googleUser });
 
     // 1) check user is use
     const user = await this.userModel
@@ -61,15 +60,12 @@ export class GoogleService {
       };
       // 3) generate access token
       Tokens = await this.tokenService.generate_Tokens(userId);
-      console.log('tokens', Tokens);
-
       //4) send token to cookies
       this.cookieService.setCookies(
         res,
         Tokens,
         //  'user', name, picture
       );
-      console.log('new user created successfully ', newUser);
     } else {
       if (!user.isActive) {
         throw new BadRequestException(

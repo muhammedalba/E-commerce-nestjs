@@ -38,7 +38,7 @@ export class CategoriesService extends BaseService<CategoryDocument> {
     createCategoryDto: CreateCategoryDto,
     file: MulterFileType,
   ): Promise<any> {
-    return await this.createOneDoc(createCategoryDto, file, Category.name, {
+    return await this.createOneDoc(createCategoryDto, file, {
       fileFieldName: 'image',
       checkField: 'name.en',
       fieldValue: createCategoryDto.name.en,
@@ -61,12 +61,7 @@ export class CategoriesService extends BaseService<CategoryDocument> {
       path: 'SubCategories',
       select: 'name slug id',
     };
-    return await this.findAllDoc(
-      Category.name,
-      queryString,
-      populate,
-      allLangs,
-    );
+    return await this.findAllDoc(queryString, populate, allLangs);
   }
 
   // ------------ =============================== ---------- //
@@ -89,7 +84,6 @@ export class CategoriesService extends BaseService<CategoryDocument> {
       idParamDto,
       updateCategoryDto,
       file,
-      Category.name,
       selectedFields,
       {
         checkField: 'name.en',

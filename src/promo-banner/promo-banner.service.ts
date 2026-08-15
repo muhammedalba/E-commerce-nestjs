@@ -94,7 +94,7 @@ export class PromoBannerService {
       }
     }
     const data = await this.promoBannerModel.create(promoBannerDto);
-    return this.i18n.localize(data);
+    return { data: this.i18n.localize(data) };
   }
 
   // ----------------------------------------------------------------
@@ -131,7 +131,7 @@ export class PromoBannerService {
     // 4) save the document (Mongoose will automatically run the validators when using save)
     const updatedBanner = await banner.save();
 
-    return this.i18n.localize(updatedBanner);
+    return { data: this.i18n.localize(updatedBanner), status: 'success' };
   }
 
   // ----------------------------------------------------------------

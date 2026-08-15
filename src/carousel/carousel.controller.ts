@@ -17,7 +17,6 @@ import { CarouselService } from './carousel.service';
 import { CreateCarouselDto } from './shared/dto/create-carousel.dto';
 import { UpdateCarouselDto } from './shared/dto/update-carousel.dto';
 
-import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { ParseFileFieldsPipe } from 'src/shared/files/ParseFileFieldsPipe';
@@ -26,12 +25,10 @@ import { RequirePermission } from 'src/roles/shared/decorators/require-permissio
 import { Permissions } from 'src/roles/shared/enums/permissions.enum';
 import { PermissionsGuard } from 'src/roles/shared/guards/permissions.guard';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
-import { Request } from 'express';
 import { MaxFileCount } from 'src/shared/files/constants/file-count.constants';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
-type file = Request['file'];
 
 @Controller('carousel')
 @UseInterceptors(ClearCacheInterceptor)
@@ -65,9 +62,9 @@ export class CarouselController {
       ),
     )
     files: {
-      carouselLg: file;
-      carouselMd: file;
-      carouselSm: file;
+      carouselLg: Express.Multer.File[];
+      carouselMd: Express.Multer.File[];
+      carouselSm: Express.Multer.File[];
     },
   ): Promise<any> {
     if (!files.carouselLg || !files.carouselMd || !files.carouselSm) {
@@ -126,9 +123,9 @@ export class CarouselController {
       ),
     )
     files: {
-      carouselLg?: MulterFileType;
-      carouselMd?: MulterFileType;
-      carouselSm?: MulterFileType;
+      carouselLg?: Express.Multer.File[];
+      carouselMd?: Express.Multer.File[];
+      carouselSm?: Express.Multer.File[];
     },
     @Param() idParamDto: IdParamDto,
     @Body() updateCarouselDto: UpdateCarouselDto,

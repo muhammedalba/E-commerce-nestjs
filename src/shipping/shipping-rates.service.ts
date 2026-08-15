@@ -67,19 +67,29 @@ export class ShippingRatesService extends BaseService<ShippingRateDocument> {
 
     if (id) {
       const current = await this.rateModel.findById(id).lean();
+
       if (!current) throw new NotFoundException(this.t('exception.NOT_FOUND'));
+
       if (scope === undefined) scope = current.scope;
       if (country === undefined) {
-        country = current.country ? current.country.toString() : undefined;
+        country = current.country
+          ? (current.country as unknown as Types.ObjectId).toString()
+          : undefined;
       }
       if (region === undefined) {
-        region = current.region ? current.region.toString() : undefined;
+        region = current.region
+          ? (current.region as unknown as Types.ObjectId).toString()
+          : undefined;
       }
       if (city === undefined) {
-        city = current.city ? current.city.toString() : undefined;
+        city = current.city
+          ? (current.city as unknown as Types.ObjectId).toString()
+          : undefined;
       }
       if (provider === undefined) {
-        provider = current.provider ? current.provider.toString() : undefined;
+        provider = current.provider
+          ? (current.provider as unknown as Types.ObjectId).toString()
+          : undefined;
       }
       if (isActive === undefined) isActive = current.isActive;
     } else {
@@ -185,7 +195,7 @@ export class ShippingRatesService extends BaseService<ShippingRateDocument> {
    */
   async createRate(data: CreateShippingRateDto): Promise<ShippingRateDocument> {
     await this.validateShippingUniqueness(data);
-    return this.createOneDoc(data, undefined, ShippingRate.name);
+    return this.createOneDoc(data, undefined);
   }
 
   /**
@@ -194,7 +204,7 @@ export class ShippingRatesService extends BaseService<ShippingRateDocument> {
   async getRates(query: QueryString): Promise<unknown> {
     const features = new ApiFeatures(this.rateModel.find(), query)
       .filter()
-      .search(ShippingRate.name);
+      .search(this.modelName);
 
     const filter = features.getQuery().getFilter();
     const total = await this.rateModel.countDocuments(filter);
@@ -221,7 +231,6 @@ export class ShippingRatesService extends BaseService<ShippingRateDocument> {
    */
   async getRatesByCity(cityId: string) {
     return await this.findAllDoc(
-      ShippingRate.name,
       { city: cityId, isActive: 'true' },
       { path: 'provider', select: 'name code logo trackingUrl' },
     );
@@ -235,13 +244,7 @@ export class ShippingRatesService extends BaseService<ShippingRateDocument> {
     data: UpdateShippingRateDto,
   ): Promise<ShippingRateDocument> {
     await this.validateShippingUniqueness(data, id);
-    const updated = await this.updateOneDoc(
-      { id },
-      data,
-      undefined,
-      ShippingRate.name,
-      '',
-    );
+    const updated = await this.updateOneDoc({ id }, data, undefined, '');
     return updated as ShippingRateDocument;
   }
 

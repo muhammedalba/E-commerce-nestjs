@@ -81,14 +81,14 @@ export class CustomI18nService {
    * @param allLangs - If true, returns the full translation object instead of localized string
    * @returns The localized and formatted data
    */
-  localize(data: any, allLangs: boolean = false) {
+  localize<T = unknown>(data: T, allLangs: boolean = false): T {
     if (!data) return data;
     const lang = this.getLang();
 
     /**
      * Internal recursive processor for nested items
      */
-    const processItem = (obj: any): any => {
+    const processItem = (obj: unknown): unknown => {
       // 1. Return if not an object or null
       if (!obj || typeof obj !== 'object') return obj;
 
@@ -98,22 +98,28 @@ export class CustomI18nService {
 
       // 3. Process Arrays
       if (Array.isArray(obj)) {
-        return obj.map((item) => processItem(item));
+        return obj.map((item: unknown) => processItem(item));
       }
 
       // 4. Convert Mongoose Documents to plain objects
-      const raw = obj.toObject ? obj.toObject() : { ...obj };
+      const targetObj = obj as Record<string, unknown> & {
+        toObject?: () => Record<string, unknown>;
+      };
+      const raw: Record<string, unknown> =
+        typeof targetObj.toObject === 'function'
+          ? targetObj.toObject()
+          : { ...targetObj };
 
       // 5. Dynamically iterate over object keys
       for (const key in raw) {
-        let value = raw[key];
+        const value = raw[key];
 
         // A) Process Media/File fields
         if (this.fileFields.has(key) && value) {
           if (Array.isArray(value)) {
-            raw[key] = withBaseUrl(value);
+            raw[key] = withBaseUrl(value as (string | null | undefined)[]);
           } else {
-            raw[key] = withBaseUrl(value);
+            raw[key] = withBaseUrl(value as string | null | undefined);
           }
           continue;
         }
@@ -123,11 +129,16 @@ export class CustomI18nService {
           !allLangs &&
           value &&
           typeof value === 'object' &&
-          !Array.isArray(value) &&
-          (value['ar'] !== undefined || value['en'] !== undefined)
+          !Array.isArray(value)
         ) {
-          raw[key] = value[lang] || value['en'] || value['ar'] || value;
-          continue;
+          const valObj = value as Record<string, unknown>;
+          if (valObj['ar'] !== undefined || valObj['en'] !== undefined) {
+            raw[key] = (valObj[lang] ??
+              valObj['en'] ??
+              valObj['ar'] ??
+              value) as string | number | boolean | Record<string, unknown>;
+            continue;
+          }
         }
 
         // C) Recursively process nested objects/relationships
@@ -139,8 +150,10 @@ export class CustomI18nService {
       return raw;
     };
 
-    return Array.isArray(data)
-      ? data.map((item) => processItem(item))
-      : processItem(data);
+    return (
+      Array.isArray(data)
+        ? data.map((item: unknown) => processItem(item))
+        : processItem(data)
+    ) as T;
   }
 }

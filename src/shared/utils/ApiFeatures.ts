@@ -81,7 +81,7 @@ export class ApiFeatures<T> {
       const idFields = ['category', 'brand', 'supplier', 'subcategories'];
       const currentKey = key.toLowerCase();
       if (idFields.includes(currentKey)) {
-        const val = queryObj[key];
+        const val: unknown = queryObj[key];
         if (typeof val === 'string' && val.length > 0) {
           const ids = val
             .split(',')
@@ -114,19 +114,23 @@ export class ApiFeatures<T> {
           mongoQuery[field] = {};
         }
 
-        const value = queryObj[key];
-        if (operator === 'in' || operator === 'nin') {
+        const value: unknown = queryObj[key];
+        const fieldObj = mongoQuery[field] as Record<string, unknown>;
+        if (
+          (operator === 'in' || operator === 'nin') &&
+          typeof value === 'string'
+        ) {
           const values = value.split(',');
           // Cast to ObjectId if they look like IDs
-          mongoQuery[field][`$${operator}`] = values.map((v) =>
+          fieldObj[`$${operator}`] = values.map((v) =>
             /^[0-9a-fA-F]{24}$/.test(v.trim())
               ? new Types.ObjectId(v.trim())
               : v.trim(),
           );
-        } else {
+        } else if (typeof value === 'string' || typeof value === 'number') {
           const num = Number(value);
           if (!isNaN(num)) {
-            mongoQuery[field][`$${operator}`] = num;
+            fieldObj[`$${operator}`] = num;
           }
         }
       }
@@ -137,7 +141,7 @@ export class ApiFeatures<T> {
     // -----------------------------------------
     for (const key in queryObj) {
       if (allowedFilters.includes(key) && !(key in mongoQuery)) {
-        let val = queryObj[key];
+        let val: unknown = queryObj[key];
 
         if (val === 'true') val = true;
         if (val === 'false') val = false;
@@ -149,7 +153,6 @@ export class ApiFeatures<T> {
         }
       }
     }
-    console.log(mongoQuery);
     this.mongooseQuery = this.mongooseQuery.find(mongoQuery);
     return this;
   }
