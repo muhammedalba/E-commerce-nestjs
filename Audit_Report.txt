@@ -78,7 +78,7 @@ Password Reset State Confusion (Brute-forcing step 2, bypassing step 2).
 CSRF attempts on updateMe and changeMyPassword.
 Refresh token race conditions.
 13. Documentation Gaps
-Missing JSDoc: AuthCredentialService and TokenService lack documentation regarding their security contracts (e.g., explaining why refresh tokens are explicitly deleted).
+[FIXED] Missing JSDoc: AuthCredentialService and TokenService now have full JSDoc documentation covering: class-level security contracts, per-method @description, @security notes (including why the old token is NOT deleted in store_Refresh_Token and how theft detection works), @param, @returns, and @throws for every public method.
 14. Dead Code Candidates
 File handling in updateMe possesses complex rollback logic (deleteFile.catch(() => {})) that appears brittle. If updateUserDto.avatar = 'null' is sent, the code constructs a hardcoded default path instead of letting the DB default handle it.
 15. Authentication Invariants

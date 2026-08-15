@@ -134,7 +134,6 @@ export class AuthController {
   /* ------------ ======  LOGOUT  ====== ------------------- */
   /* ------------ =============================== ---------- */
   @Post('logout')
-  @SkipThrottle()
   @UseGuards(AuthGuard)
   async logout(
     @Req() request: { user: JwtPayload },
