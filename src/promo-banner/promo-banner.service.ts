@@ -57,6 +57,7 @@ export class PromoBannerService {
   async getActiveBanner(): Promise<any> {
     const promo = await this.promoBannerModel
       .findOne({ isActive: true })
+      .lean()
       .exec();
     if (!promo) {
       throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
@@ -69,7 +70,7 @@ export class PromoBannerService {
   // -----------------GET BANNER BY ID--------------------------------
 
   async getBanner(id: string, allLangs: boolean = false): Promise<any> {
-    const promo = await this.promoBannerModel.findById(id).exec();
+    const promo = await this.promoBannerModel.findById(id).lean().exec();
     if (!promo) {
       throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
     }

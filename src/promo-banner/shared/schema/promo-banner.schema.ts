@@ -22,6 +22,15 @@ export class PromoBanner {
 export const PromoBannerSchema = SchemaFactory.createForClass(PromoBanner);
 export type PromoBannerDocument = HydratedDocument<PromoBanner>;
 
+PromoBannerSchema.index(
+  { isActive: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isActive: true },
+    name: 'unique_active_promo_banner',
+  },
+);
+
 // ─── Auto-exclude soft-deleted documents ─────────────────
 PromoBannerSchema.pre(['find', 'countDocuments'], function () {
   if (this.getFilter().isActive === undefined) {

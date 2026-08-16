@@ -16,6 +16,17 @@ import { TokenService } from 'src/auth/shared/services/token.service';
 import { User } from '../schema/user.schema';
 import { Role } from 'src/roles/shared/schemas/role.schema';
 
+/**
+ * Coordinates the email-based password reset workflow.
+ *
+ * @description The current implementation is a three-step flow:
+ * request a reset code, verify the code, then submit a new password. The reset
+ * code is stored as a SHA-256 hash and delivered asynchronously through BullMQ.
+ *
+ * @security Password hashing is handled by the `UserSchema` `pre('save')` hook
+ * when the new password is assigned. Reset state is stored on the user document
+ * via `passwordResetCode`, `passwordResetExpires`, and `verificationCode`.
+ */
 @Injectable()
 export class PasswordResetService {
   constructor(
@@ -25,6 +36,22 @@ export class PasswordResetService {
     private readonly i18n: CustomI18nService,
   ) {}
 
+  /**
+   * Starts a password reset request for a known active user.
+   *
+   * @description Finds the account by email, enforces a 10-minute per-user email
+   * cooldown, generates a six-digit reset code, stores a SHA-256 hash of that code
+   * with a 10-minute expiry, and queues the email delivery job.
+   *
+   * @security The raw reset code is only sent to the mail queue and is not stored
+   * in the database. If queueing fails, reset fields are cleared to avoid leaving
+   * a valid code that the user never received.
+   *
+   * @param forgotPasswordDto - Validated payload containing the account email.
+   * @returns A success status and localized message after the email job is queued.
+   * @throws {BadRequestException} If the account is missing, blocked, or still in cooldown.
+   * @throws {BadGatewayException} If the reset email job cannot be queued.
+   */
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
     // 1 ) get user by email
     const user = await this.userModel
@@ -108,6 +135,19 @@ export class PasswordResetService {
     };
   }
 
+  /**
+   * Verifies a submitted password-reset code.
+   *
+   * @description Hashes the submitted six-digit code, finds a user with a matching
+   * non-expired reset-code hash, and marks the reset state as verified.
+   *
+   * @security This method does not return the matched user and does not expose the
+   * stored reset hash. The verification flag is consumed later by `resetPassword`.
+   *
+   * @param resetCode - Validated reset-code payload.
+   * @returns A success status and localized message when the code is valid.
+   * @throws {BadRequestException} If the code is invalid or expired.
+   */
   async verify_Pass_Reset_Code(resetCode: ResetCodeDto) {
     //1)  get user based on reset code
     const hashedResetCode = crypto
@@ -137,6 +177,23 @@ export class PasswordResetService {
       message: this.i18n.translate('success.RESET_CODE_VALID'),
     };
   }
+
+  /**
+   * Completes a verified password reset and issues a temporary access token.
+   *
+   * @description Finds the user by email, checks that the reset flow was verified
+   * and not expired, stores the new password through the Mongoose hashing hook,
+   * clears reset fields, issues a short-lived access token, and queues a success
+   * notification email.
+   *
+   * @security Do not bypass the schema hook when changing this method; assigning
+   * `user.password` followed by `save()` is what guarantees hashing here.
+   *
+   * @param LoginUserDto - Validated email and replacement password payload.
+   * @returns A success status, localized message, and access token.
+   * @throws {BadRequestException} If the user is missing or reset verification expired.
+   * @throws {BadGatewayException} If the success email job cannot be queued.
+   */
   async resetPassword(LoginUserDto: LoginUserDto) {
     // 1) get user by email
     const user = await this.userModel

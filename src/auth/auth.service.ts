@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CreateUserDto } from 'src/users/shared/dto/create-user.dto';
 import { ForgotPasswordDto } from './shared/dto/forgot-password.dto';
 import { LoginUserDto } from './shared/dto/login-user.dto';
@@ -19,8 +19,6 @@ import {
 
 @Injectable()
 export class AuthService {
-  private readonly logger = new Logger(AuthService.name);
-
   constructor(
     private readonly authCredentialService: AuthCredentialService,
     private readonly passwordResetService: PasswordResetService,

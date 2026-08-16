@@ -19,6 +19,23 @@ import { Role } from 'src/roles/shared/schemas/role.schema';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { Response } from 'express';
 import * as path from 'path';
+
+/**
+ * Handles first-party credential authentication flows.
+ *
+ * @description This service owns registration, email/password login, and logout.
+ * Password hashing is intentionally delegated to the `UserSchema` Mongoose hooks,
+ * while token creation and cookie configuration are delegated to `TokenService`
+ * and `CookieService`.
+ *
+ * @security
+ * - Passwords must never be returned to clients. Every response explicitly removes
+ *   the password field after user creation or credential lookup.
+ * - Registration always assigns the default `User` role from the database, so a
+ *   client-provided role in `CreateUserDto` is not trusted for public signup.
+ * - Login uses a generic invalid-credentials error for missing users and password
+ *   mismatches to avoid leaking which part of the credential pair failed.
+ */
 @Injectable()
 export class AuthCredentialService {
   private readonly logger = new Logger(AuthCredentialService.name);
@@ -34,6 +51,27 @@ export class AuthCredentialService {
     private readonly cookieService: CookieService,
   ) {}
 
+  /**
+   * Registers a new local user, issues tokens, and stores auth cookies.
+   *
+   * @description Workflow:
+   * 1. Rejects duplicate email addresses.
+   * 2. Stores an uploaded avatar or falls back to the default avatar path.
+   * 3. Resolves the default `User` role and assigns it to the new account.
+   * 4. Creates the user; password hashing runs through the Mongoose `pre('save')` hook.
+   * 5. Generates an access token and refresh token, then writes auth cookies.
+   *
+   * @security The role accepted by `CreateUserDto` is overwritten with the default
+   * role. Keep that invariant during refactors so public registration cannot create
+   * privileged accounts.
+   *
+   * @param createUserDto - Validated public registration payload.
+   * @param file - Optional avatar file accepted by the controller-level file pipe.
+   * @param res - Express response used to set auth cookies and authorization header.
+   * @returns The created user data with role details and access token, excluding password and `__v`.
+   * @throws {BadRequestException} If the email is already registered.
+   * @throws {InternalServerErrorException} If avatar persistence fails.
+   */
   async register(
     createUserDto: CreateUserDto,
     file: MulterFileType,
@@ -96,6 +134,21 @@ export class AuthCredentialService {
     return userWithTokens;
   }
 
+  /**
+   * Authenticates a user with email/password credentials.
+   *
+   * @description Loads only fields needed for authentication, compares the supplied
+   * password with the stored bcrypt hash, updates `lastLogin`, issues a token pair,
+   * and writes the configured auth cookies.
+   *
+   * @security Missing users and password mismatches intentionally return the same
+   * invalid-login error. Blocked accounts are rejected before token issuance.
+   *
+   * @param loginUserDto - Validated email/password login payload.
+   * @param res - Express response used to set auth cookies and authorization header.
+   * @returns The authenticated user payload with access token and without password.
+   * @throws {BadRequestException} If credentials are invalid or the account is blocked.
+   */
   async login(loginUserDto: LoginUserDto, res: Response): Promise<any> {
     const { email, password } = loginUserDto;
     const user = (await this.userModel
@@ -161,6 +214,21 @@ export class AuthCredentialService {
     return userResponse;
   }
 
+  /**
+   * Logs out the authenticated user by revoking a refresh token and clearing cookies.
+   *
+   * @description Deletes one refresh-token document for the authenticated user's ID
+   * and clears all browser auth cookies through `CookieService`.
+   *
+   * @security This method relies on `AuthGuard` to supply `req.user`. It currently
+   * revokes one stored refresh token for the user, so callers should not treat this
+   * as an explicit "logout all devices" operation unless that behavior is changed.
+   *
+   * @param req - Request-like object containing the authenticated JWT payload.
+   * @param res - Express response used to clear auth cookies and authorization header.
+   * @returns A localized logout success message.
+   * @throws {BadRequestException} If no authenticated user is present or logout fails.
+   */
   async logout(
     req: { user: { user_id: string } },
     res: Response,

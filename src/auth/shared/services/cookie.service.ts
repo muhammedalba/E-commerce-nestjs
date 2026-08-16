@@ -1,10 +1,36 @@
 import { Injectable } from '@nestjs/common';
 import { Response } from 'express';
 
+/**
+ * Centralizes authentication cookie configuration.
+ *
+ * @description All services that issue or clear auth state should use this service
+ * so cookie names, paths, SameSite policy, production domain, and max-age values
+ * remain consistent across login, registration, OAuth, refresh, and logout flows.
+ *
+ * @security The access and refresh tokens are stored in `httpOnly` cookies. The
+ * `is_logged_in` cookie is deliberately readable by JavaScript and must only be
+ * treated as a UI hint, never as proof of authentication.
+ */
 @Injectable()
 export class CookieService {
   private readonly isProd = process.env.NODE_ENV === 'production';
 
+  /**
+   * Writes the access token, refresh token, and UI login-state cookie.
+   *
+   * @description Also mirrors the access token into the `Authorization` response
+   * header for clients that read tokens from headers immediately after login.
+   *
+   * @security
+   * - `access_token`: `httpOnly`, path `/`, SameSite `lax`.
+   * - `refresh_token`: `httpOnly`, path limited to `/api/v1/auth/refresh-token`,
+   *   SameSite `strict` to reduce cross-site refresh attempts.
+   * - Production cookies use the shared `.skygalaxy.shop` domain.
+   *
+   * @param res - Express response used to write cookies and headers.
+   * @param tokens - Freshly generated access and refresh tokens.
+   */
   setCookies(
     res: Response,
     tokens: {
@@ -47,6 +73,15 @@ export class CookieService {
     });
   }
 
+  /**
+   * Clears all authentication cookies using matching cookie attributes.
+   *
+   * @description Cookie deletion must use the same path/domain/SameSite settings
+   * used when setting the cookies; otherwise browsers can keep stale auth cookies.
+   * This method also clears the response `Authorization` header.
+   *
+   * @param res - Express response used to clear cookies and headers.
+   */
   clearCookies(res: Response): void {
     res.clearCookie('access_token', {
       httpOnly: true,
