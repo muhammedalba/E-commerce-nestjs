@@ -6,22 +6,11 @@ export class Coupon {
   @Prop({
     type: String,
     required: true,
-    unique: true,
     minlength: 3,
     maxlength: 20,
     trim: true,
   })
   declare name: string;
-
-  @Prop({
-    type: String,
-
-    unique: true,
-    minlength: 3,
-    maxlength: 20,
-    trim: true,
-  })
-  declare slug: string; // Slug can be added later if needed
 
   @Prop({ required: true, enum: ['percentage', 'fixed'] })
   declare type: 'percentage' | 'fixed';
@@ -60,6 +49,7 @@ export class Coupon {
 export const CouponSchema = SchemaFactory.createForClass(Coupon);
 export type CouponDocument = HydratedDocument<Coupon>;
 
+CouponSchema.index({ name: 1 }, { unique: true, sparse: true });
 // ─── Auto-exclude soft-deleted documents ─────────────────
 CouponSchema.pre(['find', 'countDocuments'], function () {
   if (this.getFilter().active === undefined) {

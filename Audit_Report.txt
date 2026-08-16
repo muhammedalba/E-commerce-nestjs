@@ -168,3 +168,191 @@ High (P2): Fix deleteOneDoc in BaseService so it does not block database record 
 High (P2): Implement CSRF protection across the application to protect admin-level operations like Brand deletion.
 Medium (P3): Move uniqueness enforcement to the database layer (MongoDB Unique Indexes) to prevent race conditions during concurrent creations.
 Medium (P3): Refactor BaseService to remove hardcoded module names ('User', 'Tax'), injecting these configurations from the child services instead to maintain a clean generic architecture.
+
+
+
+===============================================
+ Coupons Module — Audit Report
+Date: 2026-08-16
+Module Path: d:\skyGalaxy_v2\server\src\coupons
+Scope: Architecture · Security · Business Logic · Code Quality
+
+📁 Module Structure
+
+coupons/
+├── coupons.module.ts
+├── coupons.controller.ts
+├── coupons.service.ts
+└── shared/
+    ├── Schemas/
+    │   └── coupons.schema.ts
+    ├── dto/
+    │   ├── create-coupon.dto.ts
+    │   └── update-coupon.dto.ts
+    └── coupon.helper.ts
+الملاحظة العامة: الموديول أكثر تعقيداً من الموديولات السابقة بفضل وجود CouponHelperService الذي يُصدَّر ويُستخدم من موديول الـ Order. يوجد منطق أعمق هنا خاص بالخصومات والصلاحية.
+
+🔐 Security Findings
+🔴 SEC-COU-01 — Severity: P2 | Race Condition في حقل name (Coupon Code)
+الملف: 
+coupons.schema.ts
+L6-L14
+
+الوصف:
+حقل name (كود الكوبون) مُعرَّف بـ unique: true في الـ @Prop مباشرة، وهذا يُنشئ index ضمني. الفرق هو أن @Prop({ unique: true }) يُنشئ sparse: false index، مما يعني أن أي null يُسبب خطأ.
+
+لكن المشكلة الأعمق أن CouponsService.create تُجري فحص isFieldTaken('name', ...) قبل إنشاء السجل. هذا يترك نافذة TOCTOU — بين فحص الـ isFieldTaken وإنشاء الكوبون في createOneDoc، يمكن لطلبين متزامنين تجاوز الفحص.
+
+ts
+
+// isFieldTaken يُكتشف أن name غير موجود ✓
+// بين هذه اللحظة وlcreate → طلب آخر يسبقه ✗
+const count = await this.model.countDocuments(query); // ← لا يوجد lock
+// ...
+const newDoc = await this.model.create(CreateDataDto);
+الفرق عن الموديولات الأخرى: في Category وBrand، يوجد index({ unique: true, sparse: true }) مُعرَّف صراحة على مستوى الـ Schema (تم إضافته في جلسات سابقة). هنا unique: true في @Prop يعمل لكنه أقل وضوحاً.
+
+الـ Index موجود، لكن الفحص المسبق isFieldTaken يشوّش الصورة — هل نعتمد على قاعدة البيانات أم الكود؟
+
+الحل: إزالة isFieldTaken من create والاعتماد على الـ DB unique constraint وإمساك الخطأ code 11000 فقط. هذا يعيمل بالفعل في BaseService.createOneDoc الذي يُمسك MongoServerError بكود 11000 بالفعل.
+
+🔴 SEC-COU-02 — Severity: P2 | Race Condition في تطبيق الكوبون (Double Spend)
+الملف: 
+coupon.helper.ts
+L85-L144
+
+الوصف:
+في applyCouponIfAvailable, يتم التحقق من صلاحية الكوبون أولاً ثم تطبيقه لاحقاً. لكن تسجيل الاستخدام (markCouponAsUsed) يحدث في خطوة منفصلة يُناديها موديول الـ Order.
+
+
+1. applyCouponIfAvailable() → التحقق: "هل استُخدم من user؟" → لا ✓
+2. [طلب ثانٍ متزامن] applyCouponIfAvailable() → نفس الفحص → لا ✓  
+3. أول طلب → markCouponAsUsed() → يُسجَّل
+4. ثاني طلب → markCouponAsUsed() → يُسجَّل أيضاً! ← Double Spend ✗
+الأثر: يمكن لمستخدم استخدام نفس الكوبون مرتين في طلبين متزامنين — خسارة مالية مباشرة.
+
+الحل: استخدام findOneAndUpdate مع شرط usedByUsers: { $ne: userId } لتصبح العملية أتومية:
+
+ts
+
+const coupon = await this.couponModel.findOneAndUpdate(
+  { name: couponCode, usedByUsers: { $ne: userId } },
+  { $addToSet: { usedByUsers: userId }, $inc: { usageCount: 1 } },
+  { new: true }
+);
+if (!coupon) throw new BadRequestException('ALREADY_USED or INVALID_COUPON');
+🟡 SEC-COU-03 — Severity: P3 | usageCount قابل للتعديل عبر API
+الملف: 
+create-coupon.dto.ts
+L58-L62
+
+الوصف:
+حقل usageCount مُعرَّف في الـ DTO وقابل للإرسال عند إنشاء أو تحديث الكوبون. هذا يسمح للـ Admin بتعيين usageCount = 0 لكوبون مُستخدم فعلاً لإعادة تفعيله، أو رفعه اصطناعياً.
+
+ts
+
+@IsNumber()
+@Min(0)
+@IsOptional()
+usageCount?: number; // ← يجب أن يكون Server-only field
+الحل: حذف usageCount من الـ DTO وجعله للقراءة فقط (read-only) — لا يجب أن يُحدَّث إلا عبر $inc في markCouponAsUsed.
+
+🟡 SEC-COU-04 — Severity: P3 | usedByUsers قابل للتعديل عبر API
+الملف: 
+create-coupon.dto.ts
+L78-L82
+
+الوصف:
+مثل usageCount، حقل usedByUsers مُعرَّف في الـ DTO. يمكن لأي Admin إرسال مصفوفة بـ user IDs لتسجيلهم كمستخدمين لكوبون — أو مسحه تماماً لإعادة تفعيله لمستخدمين سبق استخدموه.
+
+ts
+
+usedByUsers?: string[]; // ← خطير إذا تم تحديثه مباشرة
+🟡 SEC-COU-05 — Severity: P3 | Soft-delete يطغى على Admin
+الملف: 
+coupons.schema.ts
+L63-L68
+
+الوصف:
+نفس مشكلة الـ Carousel (SEC-CAR-03) — الـ Admin لا يستطيع رؤية الكوبونات غير النشطة (active: false) عبر نفس الـ API. هذا يُصعّب إدارة الكوبونات المعطلة.
+
+🏗️ Architecture Findings
+🟡 ARCH-COU-01 — Severity: P3 | applyTo/applyItems بدون اتساق في التحقق
+الملف: 
+coupon.helper.ts
+L63-L82
+
+الوصف:
+عند applyTo === 'products'، يتم تحديد العناصر المسموح بها من applyItems. لكن المقارنة تتم في الـ Node.js (JavaScript) بدلاً من قاعدة البيانات، مما يعني أن جميع عناصر الطلب يجب أن تكون محددة سلفاً في applyItems. إذا أضاف العميل منتجاً غير مدرج، يُرفض الطلب كاملاً بدلاً من تطبيق الخصم على المنتجات المؤهلة فقط.
+
+الأثر: تجربة مستخدم سيئة — الكوبون يفشل بدل تطبيقه جزئياً.
+
+🟢 ARCH-COU-02 — Severity: P4 | FileUploadDiskStorageModule غير مستخدم
+الملف: 
+coupons.module.ts
+L6, L15
+
+الوصف:
+FileUploadDiskStorageModule يُستورد في الموديول رغم أن موديول الكوبونات لا يتعامل مع أي ملفات — لا صور، لا attachments.
+
+وكذلك FileUploadService يُحقن في CouponsService ويُمرَّر إلى BaseService.
+
+ts
+
+// coupons.module.ts
+FileUploadDiskStorageModule, // ← غير مستخدم
+// coupons.service.ts
+protected readonly fileUploadService: FileUploadService, // ← غير مستخدم
+super(couponModel, i18n, fileUploadService);             // ← غير مستخدم
+🧹 Code Quality Findings
+🟡 CQ-COU-01 — Severity: P3 | خطأ في remove — يستدعي deleteOneDoc بـ 'image'
+الملف: 
+coupons.service.ts
+L64
+
+الوصف:
+دالة remove تمرر 'image' كحقل للملف:
+
+ts
+
+async remove(idParamDto: IdParamDto) {
+  return await this.deleteOneDoc(idParamDto, 'image'); // ← لا يوجد حقل image في Coupon!
+}
+الكوبون ليس لديه حقل image في الـ Schema. هذا لن يُحدث خطأ (لأن deleteOneDoc يتحقق من وجود fileUploadService)، لكنه مُضلِّل وقد يُخفي bugs في المستقبل.
+
+🟢 CQ-COU-02 — Severity: P4 | slugSourceField غير منطقي للكوبونات
+الملف: 
+coupons.service.ts
+L15
+
+الوصف:
+
+ts
+
+protected slugSourceField = 'name'; // ← يُنشئ slug من الاسم
+الكوبونات تُعرَّف بـ name كـ code (مثلاً: SUMMER20). توليد slug منه سيُحوّله إلى summer20. هذا مكرر ولا قيمة له في سياق الكوبونات، حيث الـ name نفسه هو المعرف الفريد.
+
+🟢 CQ-COU-03 — Severity: P5 | validate تفحص active مرتين
+الملف: 
+coupon.helper.ts
+L23-L27
+
+الوصف:
+validateCoupon تتحقق من coupon.active === false يدوياً، لكن الـ findOne المستخدم في applyCouponIfAvailable سيعيد الكوبونات التي نجت من الـ Schema Hook (الذي يُخفي active: false تلقائياً)، مما يجعل الفحص اليدوي لـ !coupon.active مكرراً.
+
+📊 ملخص النتائج
+ID	التصنيف	الخطورة	الوصف
+SEC-COU-01	🔴 Security	P2	Race Condition في الكوبون عند الإنشاء
+SEC-COU-02	🔴 Security	P2	Double Spend — تطبيق الكوبون مرتين متزامنتين
+SEC-COU-03	🟡 Security	P3	usageCount قابل للتعديل عبر API
+SEC-COU-04	🟡 Security	P3	usedByUsers قابل للتعديل عبر API
+SEC-COU-05	🟡 Security	P3	Soft-delete يُخفي الكوبونات عن Admin
+ARCH-COU-01	🟡 Architecture	P3	Partial coupon apply logic غير صحيح
+ARCH-COU-02	🟢 Architecture	P4	FileUploadDiskStorageModule غير مستخدم
+CQ-COU-01	🟡 Code Quality	P3	remove يمرر 'image' لكوبون بلا صورة
+CQ-COU-02	🟢 Code Quality	P4	slugSourceField غير منطقي للكوبونات
+CQ-COU-03	🟢 Code Quality	P5	فحص مكرر لـ active في validateCoupon
+أعلى أولوية للحل الفوري:
+⚡ SEC-COU-02 (Double Spend) — ثغرة مالية خطيرة تتطلب حل أتومي عاجل.
+⚡ SEC-COU-03 + SEC-COU-04 — حقول حساسة مكشوفة عبر API.
+⚡ ARCH-COU-02 — إزالة التبعيات الزائدة (تكررت في sub-category).

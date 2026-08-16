@@ -35,7 +35,22 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message =
         typeof res === 'string'
           ? res
-          : (res as any).message || exception.message;
+          : ((res as Record<string, unknown>).message as string) ||
+            exception.message;
+    } else if (
+      exception &&
+      typeof exception === 'object' &&
+      'code' in exception &&
+      (exception as Record<string, unknown>).code === 11000
+    ) {
+      status = HttpStatus.CONFLICT;
+      const keyValue = (exception as Record<string, unknown>).keyValue as
+        | Record<string, unknown>
+        | undefined;
+      const field = keyValue ? Object.keys(keyValue)[0] : '';
+      message = field
+        ? `The field '${field}' must be unique. Value already exists.`
+        : 'Resource already exists';
     } else if (exception instanceof Error) {
       message = exception.message;
       console.error('💥 Unexpected Server Error:', exception);
@@ -91,7 +106,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
             try {
               translationArgs = JSON.parse(
                 constraintValue.substring(pipeIndex + 1),
-              );
+              ) as Record<string, unknown>;
             } catch {
               translationArgs = {};
             }

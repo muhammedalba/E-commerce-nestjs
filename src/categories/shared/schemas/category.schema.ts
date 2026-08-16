@@ -33,6 +33,12 @@ export class Category {
 }
 export type CategoryDocument = HydratedDocument<Category>;
 export const CategorySchema = SchemaFactory.createForClass(Category);
+
+// Enforce uniqueness at the database level to prevent race conditions
+// under high concurrency (avoids the TOCTOU gap in manual exists() + create() checks).
+CategorySchema.index({ 'name.en': 1 }, { unique: true, sparse: true });
+CategorySchema.index({ slug: 1 }, { unique: true, sparse: true });
+
 CategorySchema.virtual('SubCategories', {
   ref: MODEL_NAMES.SUB_CATEGORY,
   localField: '_id',

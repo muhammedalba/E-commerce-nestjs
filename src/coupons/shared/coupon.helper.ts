@@ -60,10 +60,12 @@ export class CouponHelperService {
       );
     }
 
+    // For scoped coupons: at least one item in the order must be eligible.
+    // Non-eligible items are simply not discounted (handled in applyCouponIfAvailable).
     if (coupon.applyTo !== 'all') {
       const allowedItems = coupon.applyItems || [];
 
-      const isInvalidItem = validatedItems.some((item) => {
+      const hasEligibleItem = validatedItems.some((item) => {
         const value =
           coupon.applyTo === 'brands'
             ? item.product.brand.toString()
@@ -71,10 +73,10 @@ export class CouponHelperService {
               ? item.product.category
               : item.product.id.toString();
 
-        return !allowedItems.includes(value);
+        return allowedItems.includes(value);
       });
 
-      if (isInvalidItem) {
+      if (!hasEligibleItem) {
         throw new BadRequestException(
           this.i18n.translate('exception.coupon.INVALID_ITEMS_IN_ORDER'),
         );
@@ -121,13 +123,31 @@ export class CouponHelperService {
 
     this.validateCoupon(coupon, userId, totalPrice, validatedItems);
 
+    // Determine the price base for discount calculation.
+    // For scoped coupons, discount applies only to eligible items' subtotal.
+    let discountBase = totalPrice;
+    if (coupon.applyTo !== 'all') {
+      const allowedItems = coupon.applyItems || [];
+      discountBase = validatedItems
+        .filter((item) => {
+          const value =
+            coupon.applyTo === 'brands'
+              ? item.product.brand.toString()
+              : coupon.applyTo === 'categories'
+                ? item.product.category
+                : item.product.id.toString();
+          return allowedItems.includes(value);
+        })
+        .reduce((sum, item) => sum + item.price * item.quantity, 0);
+    }
+
     const rawDiscount =
       coupon.type === 'percentage'
-        ? (totalPrice * coupon.discount) / 100
+        ? (discountBase * coupon.discount) / 100
         : coupon.discount;
 
-    //if rawDiscount > totalPrice
-    const discountAmount = Math.min(rawDiscount, totalPrice);
+    // Discount must not exceed the eligible subtotal
+    const discountAmount = Math.min(rawDiscount, discountBase);
 
     const totalPriceAfterDiscount =
       Math.round((totalPrice - discountAmount) * 100) / 100;
@@ -148,14 +168,25 @@ export class CouponHelperService {
     couponId: Types.ObjectId,
     userId: string,
   ): Promise<void> {
-    await this.couponModel
-      .updateOne(
-        { _id: couponId },
-        {
-          $inc: { usageCount: 1 },
-          $addToSet: { usedByUsers: userId },
-        },
-      )
-      .exec();
+    const coupon = await this.couponModel.findOneAndUpdate(
+      {
+        _id: couponId,
+        active: true,
+        usedByUsers: { $ne: userId },
+        $or: [
+          { maxUsage: 0 },
+          { maxUsage: { $exists: false } },
+          { $expr: { $gt: ['$maxUsage', '$usageCount'] } },
+        ],
+      },
+      { $addToSet: { usedByUsers: userId }, $inc: { usageCount: 1 } },
+      { new: true },
+    );
+
+    if (!coupon) {
+      throw new BadRequestException(
+        'ALREADY_USED, EXCEEDED_LIMIT, or INVALID_COUPON',
+      );
+    }
   }
 }

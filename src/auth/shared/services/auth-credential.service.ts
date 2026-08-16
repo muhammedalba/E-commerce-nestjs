@@ -18,7 +18,7 @@ import { User } from '../schema/user.schema';
 import { Role } from 'src/roles/shared/schemas/role.schema';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { Response } from 'express';
-
+import * as path from 'path';
 @Injectable()
 export class AuthCredentialService {
   private readonly logger = new Logger(AuthCredentialService.name);
@@ -49,8 +49,9 @@ export class AuthCredentialService {
         this.i18n.translate('exception.EMAIL_EXISTS'),
       );
     }
+    const uploadsDir = process.env.UPLOADS_FOLDER || 'uploads';
+    let filePath = path.posix.join('/', uploadsDir, User.name, 'avatar.png');
 
-    let filePath = `/${process.env.UPLOADS_FOLDER || 'uploads'}/${User.name}/avatar.png`;
     if (file) {
       try {
         filePath = await this.fileUploadService.saveFileToDisk(file, User.name);
@@ -74,7 +75,7 @@ export class AuthCredentialService {
 
     const userId = {
       user_id: newUser._id.toString(),
-      role: 'User',
+      role: userRole?.name || 'User',
       level: userRole ? userRole.level : 1,
       email: newUser.email,
       permissions: userRole ? userRole.permissions : [],

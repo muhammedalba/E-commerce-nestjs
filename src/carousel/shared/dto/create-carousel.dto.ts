@@ -25,13 +25,13 @@ export class CreateCarouselDto {
 
   @IsOptional()
   @IsString({ message: 'validation.IS_String' })
-  carouselSm!: string;
+  carouselSm?: string;
 
   @IsOptional()
   @IsString({ message: 'validation.IS_String' })
-  carouselMd!: string;
+  carouselMd?: string;
 
   @IsOptional()
   @IsString({ message: 'validation.IS_String' })
-  carouselLg!: string;
+  carouselLg?: string;
 }

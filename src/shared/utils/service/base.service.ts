@@ -74,7 +74,7 @@ export class BaseService<T> {
   constructor(
     protected readonly model: Model<T>,
     protected readonly i18n: CustomI18nService,
-    protected readonly fileUploadService: FileUploadService,
+    protected readonly fileUploadService?: FileUploadService,
     protected readonly serviceOptions: BaseServiceOptions = {},
   ) {}
 
@@ -164,6 +164,15 @@ export class BaseService<T> {
     const targetModelName = modelName ?? this.modelName;
     if (!file) {
       return this.getDefaultFilePath(targetModelName);
+    }
+
+    if (!this.fileUploadService) {
+      this.logger.error(
+        'FileUploadService is not injected, but file upload was requested.',
+      );
+      throw new InternalServerErrorException(
+        this.t('exception.ERROR_FILE_UPLOAD'),
+      );
     }
 
     try {
@@ -294,7 +303,7 @@ export class BaseService<T> {
         !filePath.includes('avatar.png')
       ) {
         this.logger.warn(`DB insertion failed. Rolling back file: ${filePath}`);
-        await this.fileUploadService.deleteFile(filePath).catch(() => {});
+        await this.fileUploadService?.deleteFile(filePath).catch(() => {});
       }
       throw dbError;
     }
@@ -564,7 +573,7 @@ export class BaseService<T> {
     } catch (dbError) {
       if (newFilePath) {
         this.logger.warn(`DB update failed. Rolling back file: ${newFilePath}`);
-        await this.fileUploadService.deleteFile(newFilePath).catch(() => {});
+        await this.fileUploadService?.deleteFile(newFilePath).catch(() => {});
       }
       throw dbError;
     }
@@ -580,7 +589,7 @@ export class BaseService<T> {
    */
   async deleteOneDoc(
     idParamDto: IdParamDto,
-    fileFieldName: string = 'avatar',
+    fileFieldName?: string,
   ): Promise<void> {
     const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto.id);
     if (!isObjectId) {
@@ -602,8 +611,8 @@ export class BaseService<T> {
       throw new NotFoundException(this.t('exception.NOT_FOUND'));
     }
 
-    const imagePath = doc[fileFieldName];
-    if (imagePath) {
+    const imagePath = fileFieldName ? doc[fileFieldName] : undefined;
+    if (imagePath && this.fileUploadService) {
       try {
         await this.fileUploadService.deleteFile(imagePath);
       } catch (error) {

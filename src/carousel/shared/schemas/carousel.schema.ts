@@ -46,36 +46,13 @@ export class Carousel {
 export type CarouselDocument = HydratedDocument<Carousel>;
 export const CarouselSchema = SchemaFactory.createForClass(Carousel);
 
+// Enforce uniqueness at the database level to prevent race conditions
+// under high concurrency (avoids the TOCTOU gap in manual exists() + create() checks).
+CarouselSchema.index({ slug: 1 }, { unique: true, sparse: true });
+
 // ─── Auto-exclude soft-deleted documents ─────────────────
 CarouselSchema.pre(['find', 'countDocuments'], function () {
   if (this.getFilter().isActive === undefined) {
     this.where({ isActive: { $ne: false } });
   }
 });
-
-//update , findOne and findAll add base url to image
-// CarouselSchema.post('init', function (doc: HydratedDocument<Carousel>) {
-//   const hasTranslatedDescription =
-//     doc?.description &&
-//     typeof doc.description === 'object' &&
-//     Object.values(doc.description).some(
-//       (value) => typeof value === 'string' && value.trim() !== '',
-//     );
-
-//   const baseUrl = process.env.BASE_URL ?? '';
-
-//   if (hasTranslatedDescription) {
-//     const keys: Array<'carouselMd' | 'carouselSm' | 'carouselLg'> = [
-//       'carouselMd',
-//       'carouselSm',
-//       'carouselLg',
-//     ];
-
-//     keys.forEach((key) => {
-//       const path = doc[key];
-//       if (typeof path === 'string' && !path.startsWith(baseUrl)) {
-//         doc[key] = `${baseUrl}${path}`;
-//       }
-//     });
-//   }
-// });

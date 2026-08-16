@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Model, Types } from 'mongoose';
+import { HydratedDocument } from 'mongoose';
 
 @Schema({ timestamps: true })
 export class Supplier {
@@ -49,6 +49,8 @@ export class Supplier {
 }
 export type SupplierDocument = HydratedDocument<Supplier>;
 export const SupplierSchema = SchemaFactory.createForClass(Supplier);
+SupplierSchema.index({ name: 1 }, { unique: true, sparse: true });
+SupplierSchema.index({ slug: 1 }, { unique: true, sparse: true });
 
 // ─── Auto-exclude soft-deleted documents ─────────────────
 SupplierSchema.pre(['find', 'countDocuments'], function () {
@@ -56,11 +58,3 @@ SupplierSchema.pre(['find', 'countDocuments'], function () {
     this.where({ isActive: { $ne: false } });
   }
 });
-
-//update , findOne and findAll
-// SupplierSchema.post('init', function (doc) {
-
-//   if (doc.avatar && !doc.avatar.startsWith(process.env.BASE_URL ?? 'http')) {
-//     doc.avatar = `${process.env.BASE_URL}${doc.avatar}`;
-//   }
-// });

@@ -57,9 +57,9 @@ export class SubCategoryController {
   // ------------ =============================== ---------- //
   // ------------ ======  GET ALL SUP CATEGORIES STATISTICS ====== ---------- //
   // ------------ =============================== ---------- //
+  @Get('statistics')
   @RequirePermission(Permissions.VIEW_DASHBOARD_STATS)
   @UseGuards(AuthGuard, PermissionsGuard)
-  @Get('statistics')
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(300000) // 5 minutes
   findStatistics() {
@@ -83,10 +83,10 @@ export class SubCategoryController {
   // ------------ =============================== ---------- //
   // ------------ ======  UPDATE SUP CATEGORY  ====== ---------- //
   // ------------ =============================== ---------- //
+  @Patch(':id')
   @RequirePermission(Permissions.UPDATE_SUB_CATEGORY)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('sub-category')
-  @Patch(':id')
   update(
     @Param() idParamDto: IdParamDto,
     @Body() updateSubCategoryDto: UpdateSubCategoryDto,
@@ -97,10 +97,10 @@ export class SubCategoryController {
   // ------------ =============================== ---------- //
   // ------------ ======  DELETE SUP CATEGORY  ====== ---------- //
   // ------------ =============================== ---------- //
+  @Delete(':id')
   @RequirePermission(Permissions.DELETE_SUB_CATEGORY)
   @UseGuards(AuthGuard, PermissionsGuard)
   @ClearCache('sub-category')
-  @Delete(':id')
   remove(@Param() idParamDto: IdParamDto) {
     return this.SubCategoryService.remove(idParamDto);
   }

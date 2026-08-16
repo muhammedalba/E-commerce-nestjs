@@ -58,11 +58,6 @@ export class CreateCouponDto {
   @IsNumber()
   @Min(0)
   @IsOptional()
-  usageCount?: number;
-
-  @IsNumber()
-  @Min(0)
-  @IsOptional()
   maxUsage?: number;
 
   @IsNumber()
@@ -74,10 +69,4 @@ export class CreateCouponDto {
   @Min(0)
   @IsOptional()
   maxOrderAmount?: number;
-
-  @IsArray()
-  @IsString({ each: true })
-  @ArrayUnique()
-  @IsOptional()
-  usedByUsers?: string[];
 }

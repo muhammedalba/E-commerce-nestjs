@@ -50,8 +50,8 @@ export class CategoriesController {
   // ------------ =============================== ---------- //
   @RequirePermission(Permissions.CREATE_CATEGORY)
   @UseGuards(AuthGuard, PermissionsGuard)
-  @ClearCache('categories')
   @Post()
+  @ClearCache('categories')
   @UseInterceptors(FileInterceptor('image'))
   async create(
     @Body() createCategoryDto: CreateCategoryDto,
@@ -94,8 +94,8 @@ export class CategoriesController {
   // ------------ =============================== ---------- //
   @RequirePermission(Permissions.UPDATE_CATEGORY)
   @UseGuards(AuthGuard, PermissionsGuard)
-  @ClearCache('categories')
   @Patch(':id')
+  @ClearCache('categories')
   @UseInterceptors(FileInterceptor('image'))
   async update(
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], false))
@@ -115,8 +115,8 @@ export class CategoriesController {
   // ------------ =============================== ---------- //
   @RequirePermission(Permissions.DELETE_CATEGORY)
   @UseGuards(AuthGuard, PermissionsGuard)
-  @ClearCache('categories')
   @Delete(':id')
+  @ClearCache('categories', 'sub-category')
   async remove(@Param() idParamDto: IdParamDto) {
     return await this.categoryService.deleteOne(idParamDto);
   }

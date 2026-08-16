@@ -13,7 +13,7 @@ import {
   Category,
   CategorySchema,
 } from 'src/categories/shared/schemas/category.schema';
-import { FileUploadDiskStorageModule } from 'src/file-upload/file-upload.module';
+
 @Module({
   imports: [
     MongooseModule.forFeatureAsync([
@@ -33,7 +33,6 @@ import { FileUploadDiskStorageModule } from 'src/file-upload/file-upload.module'
       },
     ]),
     AuthModule,
-    FileUploadDiskStorageModule,
   ],
   controllers: [SubCategoryController],
   providers: [SubCategoryService, CustomI18nService, SubCategoriesStatistics],

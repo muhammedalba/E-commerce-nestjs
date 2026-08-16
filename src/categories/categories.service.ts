@@ -2,6 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { CreateCategoryDto } from './shared/dto/create-category.dto';
 import { UpdateCategoryDto } from './shared/dto/update-category.dto';
 import { Category, CategoryDocument } from './shared/schemas/category.schema';
+import {
+  SubCategory,
+  SubCategoryDocument,
+} from 'src/sub-category/shared/schemas/sub-category.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { FileUploadService } from 'src/file-upload/file-upload.service';
@@ -17,6 +21,8 @@ export class CategoriesService extends BaseService<CategoryDocument> {
   protected slugSourceField = 'name';
   constructor(
     @InjectModel(Category.name) private categoryModel: Model<CategoryDocument>,
+    @InjectModel(SubCategory.name)
+    private subCategoryModel: Model<SubCategoryDocument>,
     protected readonly fileUploadService: FileUploadService,
     protected readonly i18n: CustomI18nService,
     protected readonly categoriesStatistics: CategoriesStatisticsService,
@@ -97,6 +103,8 @@ export class CategoriesService extends BaseService<CategoryDocument> {
   // ------------ ======  delete category   ====== ---------- //
   // ------------ =============================== ---------- //
   async deleteOne(idParamDto: IdParamDto) {
-    return await this.deleteOneDoc(idParamDto, 'image');
+    await this.deleteOneDoc(idParamDto, 'image');
+    await this.subCategoryModel.deleteMany({ category: idParamDto.id });
+    return;
   }
 }

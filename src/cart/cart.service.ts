@@ -170,8 +170,8 @@ export class CartService {
     if (!product.isUnlimitedStock && variant.stock < quantity) {
       if (await this.settingsService.isInventoryAlertsEnabled()) {
         await this.inventoryAlertService.checkStockAndAlert(
-          product as any,
-          variant as any,
+          product,
+          variant,
           quantity,
         );
       }
@@ -226,8 +226,8 @@ export class CartService {
             if (!product.isUnlimitedStock && variant.stock < newTotalQty) {
               if (await this.settingsService.isInventoryAlertsEnabled()) {
                 await this.inventoryAlertService.checkStockAndAlert(
-                  product as any,
-                  variant as any,
+                  product,
+                  variant,
                   newTotalQty,
                 );
               }
@@ -305,8 +305,8 @@ export class CartService {
         if (!product.isUnlimitedStock && variant.stock < quantity) {
           if (await this.settingsService.isInventoryAlertsEnabled()) {
             await this.inventoryAlertService.checkStockAndAlert(
-              product as any,
-              variant as any,
+              product,
+              variant,
               quantity,
             );
           }

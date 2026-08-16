@@ -11,7 +11,7 @@ import { BaseService } from 'src/shared/utils/service/base.service';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 
 import { SubCategoriesStatistics } from './shared/sub-categories-helper/sub-categories-statistics.service';
-import { FileUploadService } from 'src/file-upload/file-upload.service';
+
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 
@@ -21,11 +21,10 @@ export class SubCategoryService extends BaseService<SubCategoryDocument> {
   constructor(
     @InjectModel(SubCategory.name)
     private SubCategoryModel: Model<SubCategoryDocument>,
-    protected readonly fileUploadService: FileUploadService,
     protected readonly i18n: CustomI18nService,
     protected readonly SubCategoriesStatistics: SubCategoriesStatistics,
   ) {
-    super(SubCategoryModel, i18n, fileUploadService);
+    super(SubCategoryModel, i18n, undefined, undefined);
   }
 
   // ------------ =============================== ---------- //
@@ -73,12 +72,12 @@ export class SubCategoryService extends BaseService<SubCategoryDocument> {
     idParamDto: IdParamDto,
     updateCategoryDto: UpdateSubCategoryDto,
   ): Promise<any> {
-    const selectedFields = 'image';
+    // const selectedFields = 'image';
     return await this.updateOneDoc(
       idParamDto,
       updateCategoryDto,
       undefined,
-      selectedFields,
+      undefined,
       {
         checkField: 'name.en',
         fieldValue: updateCategoryDto.name?.en,
@@ -90,6 +89,6 @@ export class SubCategoryService extends BaseService<SubCategoryDocument> {
   // ------------ ======  DELETE SUP CATEGORY  ====== ---------- //
   // ------------ =============================== ---------- //
   async remove(idParamDto: IdParamDto) {
-    return await this.deleteOneDoc(idParamDto, 'image');
+    return await this.deleteOneDoc(idParamDto);
   }
 }

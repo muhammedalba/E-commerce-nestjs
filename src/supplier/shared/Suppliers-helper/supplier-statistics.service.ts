@@ -2,16 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Supplier, SupplierDocument } from '../schema/Supplier.schema';
-import {
-  Product,
-  ProductDocument,
-} from 'src/products/shared/schemas/Product.schema';
 
 @Injectable()
 export class SupplierStatistics {
   constructor(
     @InjectModel(Supplier.name) private supplierModel: Model<SupplierDocument>,
-    @InjectModel(Product.name) private productModel: Model<ProductDocument>,
   ) {}
 
   async suppliers_statistics() {

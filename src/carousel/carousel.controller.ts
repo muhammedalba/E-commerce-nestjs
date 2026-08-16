@@ -10,7 +10,6 @@ import {
   UseInterceptors,
   UploadedFiles,
   UseGuards,
-  BadRequestException,
 } from '@nestjs/common';
 import { CacheTTL } from '@nestjs/cache-manager';
 import { CarouselService } from './carousel.service';
@@ -67,9 +66,6 @@ export class CarouselController {
       carouselSm: Express.Multer.File[];
     },
   ): Promise<any> {
-    if (!files.carouselLg || !files.carouselMd || !files.carouselSm) {
-      throw new BadRequestException('All carousel images are required.');
-    }
     return await this.carouselService.createCarousel(createCarouselDto, {
       carouselLg: files.carouselLg,
       carouselMd: files.carouselMd,

@@ -38,18 +38,6 @@ export class CarouselService extends BaseService<CarouselDocument> {
       carouselLg?: Express.Multer.File[];
     },
   ) {
-    // check if there is active banner
-    // if (createCarouselDto.isActive) {
-    //   const isCarouselExist = await this.CarouselModel.exists({
-    //     isActive: true,
-    //   });
-    //   if (isCarouselExist) {
-    //     throw new BadRequestException(
-    //       this.i18n.translate('exception.ALREADY_EXISTS_ACTIVE_CAROUSEL'),
-    //     );
-    //   }
-    // }
-
     // generate unique slug for description
     const newSlug = this.generateSlug(createCarouselDto.description);
     await this.isFieldTaken('slug', newSlug);
@@ -57,20 +45,54 @@ export class CarouselService extends BaseService<CarouselDocument> {
     //1) check if the files is not empty
     const requiredKeys = ['carouselSm', 'carouselMd', 'carouselLg'] as const;
 
-    for (const key of requiredKeys) {
-      if (!files[key] || !files[key][0]) {
-        throw new BadRequestException(`Image ${key} is required.`);
+    const results = await Promise.allSettled(
+      requiredKeys.map((key) =>
+        this.fileUploadService.saveFileToDisk(files[key]?.[0], Carousel.name),
+      ),
+    );
+
+    const savedPaths: string[] = [];
+    let uploadError: unknown = null;
+
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        if (result.value) {
+          savedPaths.push(result.value);
+        }
+      } else {
+        uploadError = result.reason as unknown;
       }
     }
 
-    try {
-      //2) save files to disk
-      const savedPaths = await Promise.all(
-        requiredKeys.map((key) =>
-          this.fileUploadService.saveFileToDisk(files[key]?.[0], Carousel.name),
-        ),
-      );
+    if (uploadError) {
+      // Rollback: delete any successfully saved files
+      if (savedPaths.length > 0) {
+        await Promise.all(
+          savedPaths.map((path) =>
+            this.fileUploadService
+              .deleteFile(path)
+              .catch((err) =>
+                this.logger.error(
+                  `Failed to delete orphaned file: ${path}`,
+                  err,
+                ),
+              ),
+          ),
+        ).catch(() => {});
+      }
+      if (uploadError instanceof Error) {
+        throw uploadError;
+      }
+      let errorMessage = 'Unknown upload error';
+      if (typeof uploadError === 'string') {
+        errorMessage = uploadError;
+      } else if (uploadError !== null && uploadError !== undefined) {
+        errorMessage = JSON.stringify(uploadError);
+      }
+      throw new Error(errorMessage);
+    }
 
+    try {
       // 3) add the saved paths to the DTO
       [
         createCarouselDto.carouselSm,
@@ -81,16 +103,36 @@ export class CarouselService extends BaseService<CarouselDocument> {
       //5) create the document in the database
       const newDoc = await this.CarouselModel.create(createCarouselDto);
       //6) add the base URL to the image paths
-      const baseUrl = process.env.BASE_URL || '';
-      newDoc.carouselSm = `${baseUrl}${createCarouselDto.carouselSm}`;
-      newDoc.carouselMd = `${baseUrl}${createCarouselDto.carouselMd}`;
-      newDoc.carouselLg = `${baseUrl}${createCarouselDto.carouselLg}`;
+      newDoc.carouselSm = this.fileUploadService.withBaseUrl(
+        createCarouselDto.carouselSm,
+      ) as string;
+      newDoc.carouselMd = this.fileUploadService.withBaseUrl(
+        createCarouselDto.carouselMd,
+      ) as string;
+      newDoc.carouselLg = this.fileUploadService.withBaseUrl(
+        createCarouselDto.carouselLg,
+      ) as string;
 
       //7) return the localized document
       return this.i18n.localize(newDoc);
       // return this.localize(newDoc);
     } catch (error) {
       this.logger.error('Error saving carousel', error);
+      // Rollback: delete saved files since DB save failed
+      if (savedPaths.length > 0) {
+        await Promise.all(
+          savedPaths.map((path) =>
+            this.fileUploadService
+              .deleteFile(path)
+              .catch((err) =>
+                this.logger.error(
+                  `Failed to delete orphaned file: ${path}`,
+                  err,
+                ),
+              ),
+          ),
+        ).catch(() => {});
+      }
       throw new InternalServerErrorException(
         this.i18n.translate('exception.ERROR_SAVE'),
       );
@@ -143,19 +185,6 @@ export class CarouselService extends BaseService<CarouselDocument> {
         }),
       );
     }
-    //  check if there is another active carousel
-    // if (updateCarouselDto.isActive === true && carousel.isActive !== true) {
-    //   const isAnotherActive = await this.CarouselModel.exists({
-    //     isActive: true,
-    //     _id: { $ne: id },
-    //   });
-
-    //   if (isAnotherActive) {
-    //     throw new BadRequestException(
-    //       this.i18n.translate('exception.ALREADY_EXISTS_ACTIVE_CAROUSEL'),
-    //     );
-    //   }
-    // }
 
     // 2) Handle translations for description
     if (updateCarouselDto.description) {
@@ -173,7 +202,6 @@ export class CarouselService extends BaseService<CarouselDocument> {
 
     // 4) Handle Images
     const imageFields = ['carouselSm', 'carouselMd', 'carouselLg'] as const;
-    const baseUrl = process.env.BASE_URL || '';
 
     for (const key of imageFields) {
       // Note: files[key] is actually an array because of FileFieldsInterceptor
@@ -188,28 +216,29 @@ export class CarouselService extends BaseService<CarouselDocument> {
         );
 
         // Delete old file
-        let oldPath = carousel[key];
+        const oldPath = carousel[key];
         if (oldPath) {
-          // Remove base URL if it exists to get relative path for deletion
-          if (baseUrl && oldPath.startsWith(baseUrl)) {
-            oldPath = oldPath.replace(baseUrl, '');
-          }
-          await this.fileUploadService.deleteFile(`.${oldPath}`);
+          await this.fileUploadService.deleteFile(oldPath);
         }
 
         // Update document with RELATIVE path
         carousel[key] = newPath;
-      } else {
-        // If no new file, ensure we don't save the absolute URL back to DB
-        const currentPath = carousel[key];
-        if (currentPath && baseUrl && currentPath.startsWith(baseUrl)) {
-          carousel[key] = currentPath.replace(baseUrl, '');
-        }
       }
     }
 
     // 5) Save the document
     const updatedDoc = await carousel.save();
+
+    // Ensure absolute URLs are returned
+    updatedDoc.carouselSm = this.fileUploadService.withBaseUrl(
+      updatedDoc.carouselSm,
+    ) as string;
+    updatedDoc.carouselMd = this.fileUploadService.withBaseUrl(
+      updatedDoc.carouselMd,
+    ) as string;
+    updatedDoc.carouselLg = this.fileUploadService.withBaseUrl(
+      updatedDoc.carouselLg,
+    ) as string;
 
     // 6) Return localized and absolute-pathed doc
     return this.i18n.localize(updatedDoc);
@@ -236,7 +265,7 @@ export class CarouselService extends BaseService<CarouselDocument> {
     // 3 ) delete the images from disk
     try {
       await Promise.all(
-        imagePaths.map((path) => this.fileUploadService.deleteFile(`.${path}`)),
+        imagePaths.map((path) => this.fileUploadService.deleteFile(path)),
       );
     } catch (error) {
       this.logger.error('Error deleting carousel images', error);

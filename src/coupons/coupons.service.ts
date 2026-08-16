@@ -7,18 +7,16 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Coupon, CouponDocument } from './shared/Schemas/coupons.schema';
 import { Model } from 'mongoose';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
-import { FileUploadService } from 'src/file-upload/file-upload.service';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 
 @Injectable()
 export class CouponsService extends BaseService<CouponDocument> {
-  protected slugSourceField = 'name';
   constructor(
     @InjectModel(Coupon.name) private couponModel: Model<CouponDocument>,
-    protected readonly fileUploadService: FileUploadService,
+
     protected readonly i18n: CustomI18nService,
   ) {
-    super(couponModel, i18n, fileUploadService);
+    super(couponModel, i18n);
   }
   // ------------ =============================== ---------- //
   // ------------ ======  CREATE COUPON   ====== ---------- //
@@ -61,6 +59,6 @@ export class CouponsService extends BaseService<CouponDocument> {
   // ------------ ======  DELETE COUPON   ====== ---------- //
   // ------------ =============================== ---------- //
   async remove(idParamDto: IdParamDto) {
-    return await this.deleteOneDoc(idParamDto, 'image');
+    return await this.deleteOneDoc(idParamDto);
   }
 }

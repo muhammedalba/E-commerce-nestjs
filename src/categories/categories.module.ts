@@ -2,6 +2,10 @@ import { Module } from '@nestjs/common';
 import { FileUploadDiskStorageModule } from 'src/file-upload/file-upload.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Category, CategorySchema } from './shared/schemas/category.schema';
+import {
+  SubCategory,
+  SubCategorySchema,
+} from 'src/sub-category/shared/schemas/sub-category.schema';
 
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { CategoriesController } from './categories.controller';
@@ -18,6 +22,12 @@ import { CategoriesStatisticsService } from './categories-helper/categories-stat
         name: Category.name,
         useFactory() {
           return CategorySchema;
+        },
+      },
+      {
+        name: SubCategory.name,
+        useFactory() {
+          return SubCategorySchema;
         },
       },
     ]),

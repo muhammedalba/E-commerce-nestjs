@@ -34,33 +34,33 @@ export class SupplierService extends BaseService<SupplierDocument> {
   // ------------ =============================== ---------- //
   // ------------ ======  CREATE SUPPLIER   ====== ---------- //
   // ------------ =============================== ---------- //
-  async create_Supplier(
+  async create(
     createSupplierDto: CreateSupplierDto,
     file: MulterFileType,
-  ): Promise<any> {
+  ): Promise<SupplierDocument> {
     return await this.createOneDoc(createSupplierDto, file, {
       fileFieldName: 'avatar',
       checkField: 'name',
-      fieldValue: createSupplierDto.name.trim(),
+      fieldValue: createSupplierDto.name,
       useDefaultFile: true,
     });
   }
   // ------------ =============================== ---------- //
   // ------------ ======  GET ALL SUPPLIERS  ====== ---------- //
   // ------------ =============================== ---------- //
-  async get_Suppliers(queryString: QueryString): Promise<any> {
+  async findAll(queryString: QueryString): Promise<any> {
     return await this.findAllDoc(queryString, undefined, false);
   }
   // ------------ =============================== ---------- //
   // ------------ ======  GET SUPPLIER BY ID  ====== ---------- //
   // ------------ =============================== ---------- //
-  async get_Supplier(idParamDto: IdParamDto) {
+  async findOne(idParamDto: IdParamDto): Promise<SupplierDocument> {
     return await this.findOneDoc(idParamDto, '-__v');
   }
   // ------------ =============================== ---------- //
   // ------------ ======  UPDATE SUPPLIER  ====== ---------- //
   // ------------ =============================== ---------- //
-  async update__Supplier(
+  async update(
     idParamDto: IdParamDto,
     UpdateSupplierDto: UpdateSupplierDto,
     file: MulterFileType,
@@ -81,7 +81,7 @@ export class SupplierService extends BaseService<SupplierDocument> {
   // ------------ =============================== ---------- //
   // ------------ ======  DELETE SUPPLIER  ====== ---------- //
   // ------------ =============================== ---------- //
-  async delete_Supplier(idParamDto: IdParamDto): Promise<void> {
+  async remove(idParamDto: IdParamDto): Promise<void> {
     return await this.deleteOneDoc(idParamDto, 'avatar');
   }
 }

@@ -48,15 +48,15 @@ export class SupplierController {
   // ------------ =============================== ---------- //
   // ------------ =============================== ---------- //
   @Post()
-  @RequirePermission(Permissions.CREATE_SUPPLIER)
   @ClearCache('supplier')
+  @RequirePermission(Permissions.CREATE_SUPPLIER)
   @UseInterceptors(FileInterceptor('avatar'))
   create(
     @Body() createSupplierDto: CreateSupplierDto,
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], false))
     file: MulterFileType,
   ) {
-    return this.supplierService.create_Supplier(createSupplierDto, file);
+    return this.supplierService.create(createSupplierDto, file);
   }
   // ------------ =============================== ---------- //
   // ------------ ======  GET ALL SUPPLIERS  ====== ---------- //
@@ -66,7 +66,7 @@ export class SupplierController {
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(60000) // 60 seconds
   async findAll(@Query() queryString: QueryString): Promise<any> {
-    return await this.supplierService.get_Suppliers(queryString);
+    return await this.supplierService.findAll(queryString);
   }
   // ------------ =============================== ---------- //
   // ------------ ======  GET SUPPLIER BY ID  ====== ---------- //
@@ -76,15 +76,15 @@ export class SupplierController {
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(60000) // 60 seconds
   async findOne(@Param() id: IdParamDto): Promise<any> {
-    return await this.supplierService.get_Supplier(id);
+    return await this.supplierService.findOne(id);
   }
   // ------------ =============================== ---------- //
   // ------------ ======  UPDATE SUPPLIER  ====== ---------- //
   // ------------ =============================== ---------- //
   // ------------ =============================== ---------- //
   @Patch(':id')
-  @RequirePermission(Permissions.UPDATE_SUPPLIER)
   @ClearCache('supplier')
+  @RequirePermission(Permissions.UPDATE_SUPPLIER)
   @UseInterceptors(FileInterceptor('avatar'))
   update(
     @Param() id: IdParamDto,
@@ -92,16 +92,16 @@ export class SupplierController {
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], false))
     file: MulterFileType,
   ) {
-    return this.supplierService.update__Supplier(id, updateSupplierDto, file);
+    return this.supplierService.update(id, updateSupplierDto, file);
   }
   // ------------ =============================== ---------- //
   // ------------ ======  DELETE SUPPLIER  ====== ---------- //
   // ------------ =============================== ---------- //
   // ------------ =============================== ---------- //
   @Delete(':id')
-  @RequirePermission(Permissions.DELETE_SUPPLIER)
   @ClearCache('supplier')
+  @RequirePermission(Permissions.DELETE_SUPPLIER)
   remove(@Param() id: IdParamDto) {
-    return this.supplierService.delete_Supplier(id);
+    return this.supplierService.remove(id);
   }
 }

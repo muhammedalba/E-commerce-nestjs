@@ -33,3 +33,4 @@ export const BrandSchema = SchemaFactory.createForClass(Brand);
 // Enforce uniqueness at the database level to prevent race conditions
 // under high concurrency (avoids the TOCTOU gap in manual exists() + create() checks).
 BrandSchema.index({ 'name.en': 1 }, { unique: true, sparse: true });
+BrandSchema.index({ slug: 1 }, { unique: true, sparse: true });
