@@ -33,8 +33,8 @@ function transformItem<T extends FileAsset | string | null | undefined>(
   if (typeof item === 'object' && item !== null && 'url' in item) {
     return {
       ...item,
-      url: transformSinglePath((item as FileAsset).url) || '',
-    };
+      url: transformSinglePath(item.url) || '',
+    } as unknown as T;
   }
   return item;
 }
