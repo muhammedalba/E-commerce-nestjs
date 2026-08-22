@@ -69,7 +69,7 @@ export class UserProfileService {
       );
     }
     // 1.5) build absolute avatar URL (lean() bypasses Mongoose virtuals/hooks)
-    user.avatar = this.fileUploadService.withBaseUrl(user.avatar) as string;
+    user.avatar = this.fileUploadService.withBaseUrl(user.avatar);
 
     return user;
   }
@@ -127,10 +127,10 @@ export class UserProfileService {
       updateUserDto.phone = user.phone;
     }
 
-    let newAvatarPath: string | undefined;
+    let newAvatarPath: any = undefined;
     // 3) update user avatar if new file is provided
     if (file) {
-      const newAvatarPath = await this.fileUploadService.updateFile(
+      newAvatarPath = await this.fileUploadService.updateFile(
         file,
         User.name,
         user,
@@ -139,8 +139,8 @@ export class UserProfileService {
       // 4) update user avatar
       updateUserDto.avatar = newAvatarPath;
     } else if (
-      updateUserDto.avatar === 'null' ||
-      updateUserDto.avatar === null
+      updateUserDto.avatar === null ||
+      (updateUserDto.avatar as any) === 'null'
     ) {
       if (user.avatar) {
         // ✅ تجاهل خطأ الحذف بصمت حتى لا يتعطل التحديث
@@ -148,12 +148,17 @@ export class UserProfileService {
       }
       // ✅ مسار ديناميكي آمن بدلاً من النص الثابت
       const uploadsDir = process.env.UPLOADS_FOLDER || 'uploads';
-      updateUserDto.avatar = path.posix.join(
+      const defaultRelPath = path.posix.join(
         '/',
         uploadsDir,
         User.name,
         'avatar.png',
       );
+      updateUserDto.avatar = {
+        url: defaultRelPath,
+        publicId: defaultRelPath,
+        provider: 'local',
+      };
     } else {
       // إذا لم يرسل ملف ولم يرسل null، نحذف الحقل من الـ DTO حتى لا يمسح الصورة القديمة
       delete updateUserDto.avatar;
@@ -182,7 +187,7 @@ export class UserProfileService {
       if (updatedUser) {
         updatedUser.avatar = this.fileUploadService.withBaseUrl(
           updatedUser.avatar,
-        ) as string;
+        );
       }
       return updatedUser;
     } catch (error) {

@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import { IsDefined, ValidateNested } from 'class-validator';
 import { HydratedDocument } from 'mongoose';
 import { MODEL_NAMES } from 'src/shared/constants/models.constants';
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
 import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
 
 @Schema({
@@ -25,11 +26,10 @@ export class Category {
 
   @Prop({
     required: false,
-    type: 'string',
-    default: 'default.png',
-    trim: true,
+    type: Object,
+    default: { url: 'default.png', publicId: 'default.png', provider: 'local' },
   })
-  declare image: string | undefined;
+  declare image: FileAsset;
 }
 export type CategoryDocument = HydratedDocument<Category>;
 export const CategorySchema = SchemaFactory.createForClass(Category);

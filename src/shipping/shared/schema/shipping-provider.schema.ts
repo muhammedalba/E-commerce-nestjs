@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
 
 export type ShippingProviderDocument = HydratedDocument<ShippingProvider>;
 
@@ -14,8 +15,11 @@ export class ShippingProvider {
   @Prop({ default: '' })
   declare trackingUrl: string;
 
-  @Prop({ default: 'default.png' })
-  declare logo: string;
+  @Prop({
+    type: Object,
+    default: { url: 'default.png', publicId: 'default.png', provider: 'local' },
+  })
+  declare logo: FileAsset;
 
   @Prop({ default: true })
   declare isActive: boolean;

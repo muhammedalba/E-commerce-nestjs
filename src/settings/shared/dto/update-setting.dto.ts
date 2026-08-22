@@ -272,4 +272,8 @@ export class UpdateSettingDto {
   @IsBoolean()
   @IsOptional()
   inventoryAlertsEnabled?: boolean;
+
+  @IsString()
+  @IsOptional()
+  storageProvider?: 'local' | 'cloudinary';
 }

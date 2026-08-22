@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
 
 @Schema({ timestamps: true })
 export class Carousel {
@@ -23,25 +24,22 @@ export class Carousel {
 
   @Prop({
     required: true,
-    type: 'string',
-    default: 'default.png',
-    trim: true,
+    type: Object,
+    default: { url: 'default.png', publicId: 'default.png', provider: 'local' },
   })
-  declare carouselSm: string;
+  declare carouselSm: FileAsset;
   @Prop({
     required: true,
-    type: 'string',
-    default: 'default.png',
-    trim: true,
+    type: Object,
+    default: { url: 'default.png', publicId: 'default.png', provider: 'local' },
   })
-  declare carouselMd: string;
+  declare carouselMd: FileAsset;
   @Prop({
     required: true,
-    type: 'string',
-    default: 'default.png',
-    trim: true,
+    type: Object,
+    default: { url: 'default.png', publicId: 'default.png', provider: 'local' },
   })
-  declare carouselLg: string;
+  declare carouselLg: FileAsset;
 }
 export type CarouselDocument = HydratedDocument<Carousel>;
 export const CarouselSchema = SchemaFactory.createForClass(Carousel);

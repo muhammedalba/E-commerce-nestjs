@@ -7,10 +7,12 @@ import {
   ProductVariantDocument,
 } from 'src/products/shared/schemas/ProductVariant.schema';
 
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
+
 type ValidatedItem = {
   product: {
     id: Types.ObjectId;
-    imageCover: string;
+    imageCover: FileAsset;
     brand: string;
     category: string;
     title: string;

@@ -10,51 +10,53 @@ import { ApiFeatures } from '../ApiFeatures';
 import { QueryString } from '../interfaces/queryInterface';
 import { FileUploadService } from 'src/file-upload/file-upload.service';
 import { MulterFileType } from '../interfaces/fileInterface';
-import { TranslateOptions } from 'nestjs-i18n';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import * as path from 'path';
 import slugify from 'slugify';
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
 
 /**
  * Interface representing a document with potential file fields.
  */
 interface FileSchema {
-  avatar?: string;
+  avatar?: FileAsset | string;
   email?: string;
-  image?: string;
-  carouselImage?: string;
-  _id: string;
+  image?: FileAsset | string;
+  carouselImage?: FileAsset | string;
 }
 
 /**
- * Configuration options injected by child services to customise BaseService behaviour.
- * Using this interface removes all hardcoded model-name checks from BaseService and
- * follows the Open/Closed Principle — the base class is open for extension via options,
- * but closed for direct modification when adding a new module.
+ * Configuration options for BaseService behavior.
  */
 export interface BaseServiceOptions {
   /**
-   * Optional custom model/module name used for file upload folders and search strategies.
-   * If omitted, defaults automatically to `this.model.modelName`.
+   * Override the model name used for permissions, cache, or logs.
+   * If omitted, `this.model.modelName` is used automatically.
    */
   modelName?: string;
 
   /**
-   * Default image filename used when no file is uploaded.
-   * Use `'avatar.png'` for user/person models, `'default.png'` for all others.
-   * @default 'default.png'
+   * The field on the DTO used to generate the slug (e.g. `'name'`).
+   * When set, `createOneDoc` and `updateOneDoc` will automatically
+   * generate and assign `dto.slug` from this field.
    */
-  defaultFileName?: 'avatar.png' | 'default.png';
+  slugSourceField?: string;
 
   /**
-   * The i18n key thrown by `isFieldTaken` when a duplicate value is detected.
-   * @default 'exception.NAME_EXISTS'
+   * Default filename (e.g. `'default.png'`, `'avatar.png'`) used when no file is uploaded.
+   * Defaults to `'default.png'`.
+   */
+  defaultFileName?: string;
+
+  /**
+   * Translation key to throw when `isFieldTaken` detects a duplicate.
+   * Defaults to `'exception.NAME_EXISTS'`.
    */
   fieldTakenExceptionKey?: string;
 
   /**
-   * Optional transform applied to the raw Mongoose document immediately after
-   * successful creation (e.g. strip sensitive fields like `password` or `__v`).
+   * Hook to transform the created document before localization and return.
+   * Useful for stripping sensitive fields (e.g. password) or appending metadata.
    */
   postCreateTransform?: (
     doc: Record<string, unknown>,
@@ -62,14 +64,13 @@ export interface BaseServiceOptions {
 }
 
 /**
- * Base Service providing common CRUD operations and utility methods for Mongoose models.
- * Includes support for localization, file uploads, and API features (filtering, sorting, pagination).
+ * Base service providing reusable CRUD operations, file handling,
+ * localization, slug generation, and unique field validation.
  *
- * @template T The Mongoose document type.
+ * @template T - The Mongoose document type.
  */
 export class BaseService<T> {
   protected readonly logger = new Logger(this.constructor.name);
-  protected slugSourceField: string | null = null;
 
   constructor(
     protected readonly model: Model<T>,
@@ -90,14 +91,24 @@ export class BaseService<T> {
    * Generates the default file path for a model if no file is uploaded.
    *
    * @param modelName - Optional name of the model (defaults to `this.modelName`).
-   * @returns The relative path to the default image.
+   * @returns The relative path to the default image as a FileAsset.
    */
-  private getDefaultFilePath(modelName?: string): string {
+  private getDefaultFilePath(modelName?: string): FileAsset {
     const targetModelName = modelName ?? this.modelName;
     const uploadsDir = process.env.UPLOADS_FOLDER || 'uploads';
     // Resolved from the child service's options — no hardcoded model names needed.
     const defaultImage = this.serviceOptions.defaultFileName ?? 'default.png';
-    return path.posix.join('/', uploadsDir, targetModelName, defaultImage);
+    const relPath = path.posix.join(
+      '/',
+      uploadsDir,
+      targetModelName,
+      defaultImage,
+    );
+    return {
+      url: relPath,
+      publicId: relPath,
+      provider: 'local',
+    };
   }
 
   /**
@@ -138,10 +149,10 @@ export class BaseService<T> {
    * Helper method to translate messages using the I18n service.
    *
    * @param key - The translation key.
-   * @param option - Translation options (args, etc.).
-   * @returns The translated string.
+   * @param option - Optional translation variables.
+   * @returns The translated string in the current locale.
    */
-  protected t(key: string, option?: TranslateOptions): string {
+  protected t(key: string, option?: any): string {
     return this.i18n.translate(key, option);
   }
 
@@ -151,16 +162,16 @@ export class BaseService<T> {
    * @param file - The uploaded file object.
    * @param modelName - Optional name of the model (defaults to `this.modelName`).
    * @param doc - Optional existing document for update context.
-   * @param oldPath - Optional path of the old file to be replaced.
-   * @returns The path of the uploaded file or the default file path.
+   * @param oldAsset - Optional old file asset to be replaced.
+   * @returns The FileAsset object or default FileAsset.
    * @throws InternalServerErrorException if the upload fails.
    */
   private async handleFileUpload(
     file: MulterFileType,
     modelName?: string,
     doc?: FileSchema,
-    oldPath?: string,
-  ): Promise<string> {
+    oldAsset?: FileAsset | string,
+  ): Promise<FileAsset> {
     const targetModelName = modelName ?? this.modelName;
     if (!file) {
       return this.getDefaultFilePath(targetModelName);
@@ -181,7 +192,7 @@ export class BaseService<T> {
             file,
             targetModelName,
             doc,
-            oldPath,
+            oldAsset,
           )) ?? this.getDefaultFilePath(targetModelName))
         : await this.fileUploadService.saveFileToDisk(file, targetModelName);
     } catch (error) {
@@ -251,10 +262,11 @@ export class BaseService<T> {
       typeof optionsOrModelName === 'string'
         ? optionsOrModelName
         : this.modelName;
+
     const options =
       typeof optionsOrModelName === 'object'
         ? optionsOrModelName
-        : optionsParam;
+        : (optionsParam ?? {});
 
     const {
       fileFieldName = 'avatar',
@@ -262,34 +274,33 @@ export class BaseService<T> {
       fieldValue,
       useDefaultFile = false,
       onlyActive = false,
-    } = options || {};
+    } = options;
 
     if (checkField && fieldValue) {
       await this.isFieldTaken(checkField, fieldValue, undefined, onlyActive);
     }
 
+    const slugSource = this.serviceOptions.slugSourceField;
     if (
-      this.slugSourceField &&
-      (CreateDataDto as Record<string, unknown>)[this.slugSourceField]
+      slugSource &&
+      (CreateDataDto as Record<string, unknown>)[slugSource] &&
+      !(CreateDataDto as Record<string, unknown>).slug
     ) {
       (CreateDataDto as Record<string, unknown>).slug = this.generateSlug(
-        (CreateDataDto as Record<string, unknown>)[this.slugSourceField],
+        (CreateDataDto as Record<string, unknown>)[slugSource],
       );
     }
 
-    let filePath: string | undefined;
+    let fileAsset: FileAsset | undefined;
     if (file || useDefaultFile) {
-      filePath = await this.handleFileUpload(file, targetModelName);
-      CreateDataDto[fileFieldName] = filePath;
+      fileAsset = await this.handleFileUpload(file, targetModelName);
+      CreateDataDto[fileFieldName] = fileAsset;
     }
     try {
       const newDoc = await this.model.create(CreateDataDto);
-
-      const rawDoc = newDoc as unknown as Record<string, unknown>;
-
-      if (filePath) {
-        rawDoc[fileFieldName] = `${process.env.BASE_URL}${filePath}`;
-      }
+      const rawDoc = (newDoc as any).toObject
+        ? (newDoc as any).toObject()
+        : { ...(newDoc as any) };
 
       const newDocFilter: Record<string, unknown> = this.serviceOptions
         .postCreateTransform
@@ -297,13 +308,11 @@ export class BaseService<T> {
         : rawDoc;
       return this.i18n.localize(newDocFilter) as T;
     } catch (dbError) {
-      if (
-        filePath &&
-        !filePath.includes('default.png') &&
-        !filePath.includes('avatar.png')
-      ) {
-        this.logger.warn(`DB insertion failed. Rolling back file: ${filePath}`);
-        await this.fileUploadService?.deleteFile(filePath).catch(() => {});
+      if (fileAsset) {
+        this.logger.warn(
+          `DB insertion failed. Rolling back file: ${JSON.stringify(fileAsset)}`,
+        );
+        await this.fileUploadService?.deleteFile(fileAsset).catch(() => {});
       }
       throw dbError;
     }
@@ -311,12 +320,6 @@ export class BaseService<T> {
 
   /**
    * Retrieves all documents matching the query with support for filtering, sorting, pagination, and population.
-   *
-   * @param arg1 - QueryString parameters OR optional string modelName for legacy callers.
-   * @param arg2 - Population options OR QueryString parameters if modelName was passed first.
-   * @param arg3 - allLangs boolean OR population options.
-   * @param arg4 - allLangs boolean if modelName was passed first.
-   * @returns An object containing the results count, pagination info, and localized data.
    */
   async findAllDoc(
     arg1: QueryString | string,
@@ -368,72 +371,48 @@ export class BaseService<T> {
           .getQuery()
           .populate({ path: populate.path, select: populate.select })
           .lean()
-      : await features.getQuery().lean();
+          .exec()
+      : await features.getQuery().lean().exec();
 
-    if (!data) {
-      throw new BadRequestException(this.t('exception.NOT_FOUND'));
-    }
+    const localizedData = this.i18n.localize(data, allLangs) as T[];
 
     return {
       results: data.length,
       pagination: features.getPagination(),
-      data: this.i18n.localize(data, allLangs) as T[],
+      data: localizedData,
     };
   }
 
   /**
-   * Retrieves a single document by ID or slug with optional population and localization.
-   *
-   * @param idParamDto - Object containing the ID or slug.
-   * @param selected - Space-separated list of fields to select.
-   * @param allLangs - Whether to return values for all languages.
-   * @param populate - Optional population options.
-   * @returns The found and localized document.
-   * @throws NotFoundException if the document is not found.
+   * Retrieves a single document by its ID with support for field selection and population.
    */
   async findOneDoc(
     idParamDto: IdParamDto,
-    selected: string,
+    selectedFields?: string,
     allLangs: boolean = false,
-    populate?: {
-      path: string;
-      select: string;
-    },
+    populate?: { path: string; select: string },
   ): Promise<T> {
-    const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto.id);
+    let query = this.model.findById(idParamDto.id);
 
-    let query = isObjectId
-      ? this.model.findById(idParamDto.id)
-      : this.model.findOne({ slug: idParamDto.id });
-
-    query = query.select(selected);
+    if (selectedFields) {
+      query = query.select(selectedFields);
+    }
 
     if (populate) {
       query = query.populate(populate);
     }
 
-    const doc = await query.lean().exec();
+    const data = await query.lean().exec();
 
-    if (!doc) {
-      throw new NotFoundException(
-        this.t('exception.NOT_FOUND', { args: { variable: idParamDto.id } }),
-      );
+    if (!data) {
+      throw new NotFoundException(this.t('exception.NOT_FOUND'));
     }
 
-    return this.i18n.localize(doc, allLangs) as T;
+    return this.i18n.localize(data, allLangs) as T;
   }
 
   /**
-   * Updates a document by ID with optional file upload and uniqueness checks.
-   *
-   * @param idParamDto - Object containing the document ID.
-   * @param UpdateDataDto - The data to update.
-   * @param file - Optional new file to upload.
-   * @param arg4 - Selected fields string OR optional modelName string for legacy callers.
-   * @param arg5 - Options object OR selected fields string.
-   * @param arg6 - Options object if modelName was explicitly passed as arg4.
-   * @returns The updated and localized document.
-   * @throws NotFoundException if the document is not found.
+   * Updates a single document with optional file replacement and field uniqueness checks.
    */
   async updateOneDoc(
     idParamDto: IdParamDto,
@@ -528,30 +507,29 @@ export class BaseService<T> {
       );
     }
 
-    if (
-      this.slugSourceField &&
-      (UpdateDataDto as Record<string, unknown>)[this.slugSourceField]
-    ) {
+    const slugSource = this.serviceOptions.slugSourceField;
+    if (slugSource && (UpdateDataDto as Record<string, unknown>)[slugSource]) {
       (UpdateDataDto as Record<string, unknown>).slug = this.generateSlug(
-        (UpdateDataDto as Record<string, unknown>)[this.slugSourceField],
+        (UpdateDataDto as Record<string, unknown>)[slugSource],
       );
     }
 
-    let newFilePath: string | undefined;
+    let newFileAsset: FileAsset | undefined;
 
     if (file) {
-      const oldPath = doc[fileFieldName] as string | undefined;
-      newFilePath = await this.handleFileUpload(
+      const oldAsset = doc[fileFieldName] as FileAsset | string | undefined;
+      newFileAsset = await this.handleFileUpload(
         file,
         targetModelName,
         doc as unknown as FileSchema,
-        oldPath,
+        oldAsset,
       );
-      UpdateDataDto[fileFieldName] = newFilePath;
+      UpdateDataDto[fileFieldName] = newFileAsset;
     } else if (
       UpdateDataDto[fileFieldName] !== undefined &&
       (typeof UpdateDataDto[fileFieldName] === 'object' ||
-        UpdateDataDto[fileFieldName] === '{}')
+        UpdateDataDto[fileFieldName] === '{}') &&
+      !('url' in (UpdateDataDto[fileFieldName] || {}))
     ) {
       delete UpdateDataDto[fileFieldName];
     }
@@ -563,35 +541,31 @@ export class BaseService<T> {
         { new: true, runValidators: true, lean: true },
       )) as unknown as Record<string, unknown> | null;
 
-      if (newFilePath && updatedData) {
-        updatedData[fileFieldName] = `${process.env.BASE_URL}${newFilePath}`;
-      }
       return updatedData ? (this.i18n.localize(updatedData) as T) : null;
     } catch (dbError) {
-      if (newFilePath) {
-        this.logger.warn(`DB update failed. Rolling back file: ${newFilePath}`);
-        await this.fileUploadService?.deleteFile(newFilePath).catch(() => {});
+      if (newFileAsset) {
+        this.logger.warn(
+          `DB update failed. Rolling back file: ${JSON.stringify(newFileAsset)}`,
+        );
+        await this.fileUploadService?.deleteFile(newFileAsset).catch(() => {});
       }
       throw dbError;
     }
   }
 
   /**
-   * Deletes a document by ID and removes its associated file from disk.
-   *
-   * @param idParamDto - Object containing the document ID.
-   * @param fileFieldName - The name of the field storing the file path.
-   * @throws NotFoundException if the ID is invalid or document not found.
-   * @note File-deletion failures are logged as warnings but do NOT block DB record removal.
+   * Deletes a document by ID and removes its associated file.
    */
-  async deleteOneDoc(
+  async deleteDoc(
     idParamDto: IdParamDto,
     fileFieldName?: string,
   ): Promise<void> {
-    const isObjectId = /^[0-9a-fA-F]{24}$/.test(idParamDto.id);
-    if (!isObjectId) {
+    const isDocFound = await this.model.exists({ _id: idParamDto.id });
+    if (!isDocFound) {
       throw new NotFoundException(
-        this.t('exception.INVALID', { args: { variable: idParamDto.id } }),
+        this.t(
+          this.serviceOptions.fieldTakenExceptionKey ?? 'exception.NOT_FOUND',
+        ),
       );
     }
 
@@ -599,7 +573,7 @@ export class BaseService<T> {
       .findById(idParamDto.id)
       .select(`${fileFieldName}`)
       .lean()) as
-      | (Record<string, string | undefined> & {
+      | (Record<string, FileAsset | string | undefined> & {
           _id: Types.ObjectId;
         })
       | null;
@@ -608,22 +582,28 @@ export class BaseService<T> {
       throw new NotFoundException(this.t('exception.NOT_FOUND'));
     }
 
-    const imagePath = fileFieldName ? doc[fileFieldName] : undefined;
-    if (imagePath && this.fileUploadService) {
+    const asset = fileFieldName ? doc[fileFieldName] : undefined;
+    if (asset && this.fileUploadService) {
       try {
-        await this.fileUploadService.deleteFile(imagePath);
+        await this.fileUploadService.deleteFile(asset);
       } catch (error) {
-        // Log a warning but do NOT block DB deletion.
-        // The file may already be missing or corrupted on disk;
-        // the database record must still be removed to keep the system consistent.
         this.logger.warn(
-          `Could not delete file "${imagePath}" for document ${doc._id.toString()}. ` +
+          `Could not delete file "${JSON.stringify(asset)}" for document ${doc._id.toString()}. ` +
             `Proceeding with DB record deletion. Error: ${(error as Error).message}`,
         );
       }
     }
 
     await this.model.deleteOne({ _id: doc._id });
-    return;
+  }
+
+  /**
+   * Alias for deleteDoc to support legacy callers.
+   */
+  async deleteOneDoc(
+    idParamDto: IdParamDto,
+    fileFieldName?: string,
+  ): Promise<void> {
+    return this.deleteDoc(idParamDto, fileFieldName);
   }
 }

@@ -138,14 +138,15 @@ export class ProductMutationService {
       const baseUrl = process.env.BASE_URL || '';
       const productResponse = newProduct.toObject();
 
-      productResponse.imageCover = `${baseUrl}${productResponse.imageCover}`;
+      productResponse.imageCover.url = `${baseUrl}${productResponse.imageCover.url}`;
       if (productResponse.images?.length) {
-        productResponse.images = productResponse.images.map(
-          (img) => `${baseUrl}${img}`,
-        );
+        productResponse.images = productResponse.images.map((img) => ({
+          ...img,
+          url: `${baseUrl}${img.url}`,
+        }));
       }
       if (productResponse.infoProductPdf) {
-        productResponse.infoProductPdf = `${baseUrl}${productResponse.infoProductPdf}`;
+        productResponse.infoProductPdf.url = `${baseUrl}${productResponse.infoProductPdf.url}`;
       }
 
       return {

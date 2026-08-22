@@ -19,6 +19,7 @@ import { Role } from 'src/roles/shared/schemas/role.schema';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { Response } from 'express';
 import * as path from 'path';
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
 
 /**
  * Handles first-party credential authentication flows.
@@ -88,11 +89,24 @@ export class AuthCredentialService {
       );
     }
     const uploadsDir = process.env.UPLOADS_FOLDER || 'uploads';
-    let filePath = path.posix.join('/', uploadsDir, User.name, 'avatar.png');
+    const defaultRelPath = path.posix.join(
+      '/',
+      uploadsDir,
+      User.name,
+      'avatar.png',
+    );
+    let avatarAsset: FileAsset = {
+      url: defaultRelPath,
+      publicId: defaultRelPath,
+      provider: 'local',
+    };
 
     if (file) {
       try {
-        filePath = await this.fileUploadService.saveFileToDisk(file, User.name);
+        avatarAsset = await this.fileUploadService.saveFileToDisk(
+          file,
+          User.name,
+        );
       } catch (error) {
         this.logger.error('File upload failed', error);
         throw new InternalServerErrorException(
@@ -100,7 +114,7 @@ export class AuthCredentialService {
         );
       }
     }
-    createUserDto.avatar = filePath;
+    createUserDto.avatar = avatarAsset;
 
     // Fetch default 'User' role
     const userRole = await this.roleModel.findOne({ name: 'User' });
@@ -119,7 +133,7 @@ export class AuthCredentialService {
       permissions: userRole ? userRole.permissions : [],
     };
 
-    newUser.avatar = `${process.env.BASE_URL}${filePath}`;
+    newUser.avatar = this.fileUploadService.withBaseUrl(avatarAsset);
     const Tokens = await this.tokenService.generate_Tokens(userId);
 
     this.cookieService.setCookies(res, Tokens);

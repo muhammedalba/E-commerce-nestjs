@@ -10,6 +10,7 @@ import {
   MulterFileType,
 } from 'src/shared/utils/interfaces/fileInterface';
 import { Product } from '../shared/schemas/Product.schema';
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
 
 /**
  * Handles all file upload / delete operations for products.
@@ -21,14 +22,14 @@ export class ProductFileService {
     private readonly i18n: CustomI18nService,
   ) {}
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────────────────────────
   //  SINGLE FILE UPLOAD
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────────────────────────
 
   async uploadSingleFile(
     file: MulterFileType,
     folder: string,
-  ): Promise<string> {
+  ): Promise<FileAsset> {
     if (!file) {
       throw new BadRequestException(
         this.i18n.translate('exception.FILE_REQUIRED'),
@@ -37,14 +38,14 @@ export class ProductFileService {
     return this.fileUploadService.saveFileToDisk(file, folder);
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────────────────────────
   //  MULTIPLE FILES UPLOAD
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────────────────────────
 
   async uploadMultipleFiles(
     files: MulterFilesType,
     folder: string,
-  ): Promise<string[] | undefined> {
+  ): Promise<FileAsset[] | undefined> {
     if (!files || files.length === 0) return undefined;
     const fileArray = Array.isArray(files)
       ? files
@@ -52,23 +53,23 @@ export class ProductFileService {
     return this.fileUploadService.saveFilesToDisk(fileArray, folder);
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────────────────────────
   //  HANDLE FILES ON CREATE
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────────────────────────
 
   async handleCreateFiles(files: {
     imageCover: MulterFilesType;
     images?: MulterFilesType;
     infoProductPdf?: MulterFilesType;
   }): Promise<{
-    imageCover?: string;
-    images?: string[];
-    infoProductPdf?: string;
+    imageCover?: FileAsset;
+    images?: FileAsset[];
+    infoProductPdf?: FileAsset;
   }> {
     const result: {
-      imageCover?: string;
-      images?: string[];
-      infoProductPdf?: string;
+      imageCover?: FileAsset;
+      images?: FileAsset[];
+      infoProductPdf?: FileAsset;
     } = {};
 
     try {
@@ -77,9 +78,10 @@ export class ProductFileService {
         Array.isArray(files.imageCover) &&
         files.imageCover[0]
       ) {
-        result.imageCover =
-          (await this.uploadSingleFile(files.imageCover[0], Product.name)) ??
-          '';
+        result.imageCover = await this.uploadSingleFile(
+          files.imageCover[0],
+          Product.name,
+        );
       }
 
       if (
@@ -106,29 +108,33 @@ export class ProductFileService {
     return result;
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────────────────────────
   //  HANDLE FILES ON UPDATE
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────────────────────────
 
   async handleUpdateFiles(
     doc: {
-      imageCover?: string;
-      infoProductPdf?: string;
-      images?: string[];
+      imageCover?: FileAsset | string;
+      infoProductPdf?: FileAsset | string;
+      images?: (FileAsset | string)[];
     },
     files: {
       imageCover?: MulterFilesType;
       infoProductPdf?: MulterFilesType;
       images?: MulterFilesType;
     },
-    bodyImages?: string[] | string,
+    bodyImages?: (FileAsset | string)[] | FileAsset | string,
   ): Promise<
-    Partial<{ imageCover: string; infoProductPdf: string; images: string[] }>
+    Partial<{
+      imageCover: FileAsset;
+      infoProductPdf: FileAsset;
+      images: (FileAsset | string)[];
+    }>
   > {
     const result: Partial<{
-      imageCover: string;
-      infoProductPdf: string;
-      images: string[];
+      imageCover: FileAsset;
+      infoProductPdf: FileAsset;
+      images: (FileAsset | string)[];
     }> = {};
 
     try {
@@ -140,42 +146,43 @@ export class ProductFileService {
 
       for (const [key, file] of Object.entries(singleFiles)) {
         if (file && Array.isArray(file) && file[0]) {
-          const newPath = await this.fileUploadService.saveFileToDisk(
+          const newAsset = await this.fileUploadService.saveFileToDisk(
             file[0] as MulterFileType,
             Product.name,
           );
           if (key === 'imageCover' || key === 'infoProductPdf') {
-            const oldPath = doc[key];
-            if (oldPath) {
-              await this.fileUploadService.deleteFile(oldPath);
+            const oldAsset = doc[key as 'imageCover' | 'infoProductPdf'];
+            if (oldAsset) {
+              await this.fileUploadService.deleteFile(oldAsset);
             }
           }
-          (result as any)[key] = newPath;
+          (result as any)[key] = newAsset;
         }
       }
 
       // 2. Parse remaining images from body
-      let remainingImages: string[] = [];
+      let remainingImages: (FileAsset | string)[] = [];
       if (bodyImages) {
-        remainingImages = Array.isArray(bodyImages)
-          ? bodyImages.filter((img) => typeof img === 'string')
-          : [bodyImages];
+        remainingImages = Array.isArray(bodyImages) ? bodyImages : [bodyImages];
       }
 
       // 3. Delete images that are no longer referenced
-      const normalize = (url: string) => {
+      const getNormalizedUrl = (item: FileAsset | string): string => {
+        const raw = typeof item === 'string' ? item : item.url || '';
         try {
-          return new URL(url.trim().toLowerCase()).pathname;
+          return new URL(raw.trim().toLowerCase()).pathname;
         } catch {
-          return url.trim().toLowerCase();
+          return raw.trim().toLowerCase();
         }
       };
 
-      const remainingSet = new Set(remainingImages.map(normalize));
+      const remainingUrlSet = new Set(
+        remainingImages.map(getNormalizedUrl).filter(Boolean),
+      );
 
-      if (doc.images) {
+      if (doc.images && Array.isArray(doc.images)) {
         const imagesToDelete = doc.images.filter(
-          (img) => !remainingSet.has(normalize(img)),
+          (img) => !remainingUrlSet.has(getNormalizedUrl(img)),
         );
         if (imagesToDelete.length > 0) {
           await this.fileUploadService.deleteFiles(imagesToDelete);
@@ -183,7 +190,7 @@ export class ProductFileService {
       }
 
       // 4. Upload new images
-      let newImages: string[] = [];
+      let newImages: FileAsset[] = [];
       if (
         files.images &&
         Array.isArray(files.images) &&
@@ -196,8 +203,7 @@ export class ProductFileService {
       }
 
       // 5. Merge final images (remaining old + new)
-      const remainingArray = Array.from(remainingSet);
-      result.images = [...remainingArray, ...newImages];
+      result.images = [...remainingImages, ...newImages];
     } catch {
       throw new InternalServerErrorException(
         this.i18n.translate('exception.ERROR_SAVE'),
@@ -207,14 +213,14 @@ export class ProductFileService {
     return result;
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────────────────────────
   //  DELETE ALL PRODUCT FILES
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────────────────────────
 
   async deleteProductFiles(doc: {
-    imageCover?: string;
-    infoProductPdf?: string;
-    images?: string[];
+    imageCover?: FileAsset | string;
+    infoProductPdf?: FileAsset | string;
+    images?: (FileAsset | string)[];
   }): Promise<void> {
     if (doc.imageCover) {
       await this.fileUploadService.deleteFile(doc.imageCover);

@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Type } from 'class-transformer';
 import { IsDefined, ValidateNested } from 'class-validator';
 import { HydratedDocument } from 'mongoose';
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
 import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
 
 @Schema({ timestamps: true })
@@ -21,11 +22,10 @@ export class Brand {
 
   @Prop({
     required: false,
-    type: 'string',
-    default: 'default.png',
-    trim: true,
+    type: Object,
+    default: { url: 'default.png', publicId: 'default.png', provider: 'local' },
   })
-  declare image: string | undefined;
+  declare image: FileAsset;
 }
 export type BrandDocument = HydratedDocument<Brand>;
 export const BrandSchema = SchemaFactory.createForClass(Brand);

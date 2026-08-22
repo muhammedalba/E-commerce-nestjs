@@ -1,44 +1,55 @@
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
+
 /**
- * Prepends BASE_URL to a relative file path (or array of paths) only if
- * the value doesn't already start with "http".
+ * Prepends BASE_URL to a relative file path or FileAsset object only if
+ * the url value doesn't already start with "http".
  *
  * This is the **single source of truth** for building absolute asset URLs.
- * Both `FileUploadService` and `CustomI18nService` delegate to this helper,
- * avoiding duplicated logic and scattered `process.env.BASE_URL` checks.
- *
- * @example — single path
- * withBaseUrl('/uploads/User/avatar.webp')
- * // → 'http://localhost:4000/uploads/User/avatar.webp'
- *
- * @example — array of paths
- * withBaseUrl(['/uploads/Product/a.webp', null])
- * // → ['http://localhost:4000/uploads/Product/a.webp', null]
+ * Both `FileUploadService` and `CustomI18nService` delegate to this helper.
  */
 
 const resolveBaseUrl = (): string =>
   process.env.BASE_URL || 'http://localhost:4000';
 
-function transformPath(
-  filePath: string | null | undefined,
+function transformSinglePath(
+  pathOrUrl: string | null | undefined,
 ): string | null | undefined {
-  if (!filePath || filePath.startsWith('http')) return filePath;
+  if (!pathOrUrl || pathOrUrl.startsWith('http')) return pathOrUrl;
   const baseUrl = resolveBaseUrl();
   try {
-    return new URL(filePath, baseUrl).toString();
+    return new URL(pathOrUrl, baseUrl).toString();
   } catch {
-    return `${baseUrl.replace(/\/$/, '')}${filePath}`;
+    return `${baseUrl.replace(/\/$/, '')}${pathOrUrl}`;
   }
 }
 
-export function withBaseUrl(
-  filePath: string | null | undefined,
-): string | null | undefined;
-export function withBaseUrl(
-  filePaths: (string | null | undefined)[],
-): (string | null | undefined)[];
-export function withBaseUrl(
-  input: string | null | undefined | (string | null | undefined)[],
-): string | null | undefined | (string | null | undefined)[] {
-  if (Array.isArray(input)) return input.map(transformPath);
-  return transformPath(input);
+function transformItem<T extends FileAsset | string | null | undefined>(
+  item: T,
+): T {
+  if (!item) return item;
+  if (typeof item === 'string') {
+    return transformSinglePath(item) as T;
+  }
+  if (typeof item === 'object' && item !== null && 'url' in item) {
+    return {
+      ...item,
+      url: transformSinglePath((item as FileAsset).url) || '',
+    };
+  }
+  return item;
+}
+
+export function withBaseUrl<T extends FileAsset | string | null | undefined>(
+  input: T,
+): T;
+export function withBaseUrl<T extends FileAsset | string | null | undefined>(
+  input: T[],
+): T[];
+export function withBaseUrl<T extends FileAsset | string | null | undefined>(
+  input: T | T[],
+): T | T[] {
+  if (Array.isArray(input)) {
+    return input.map((item) => transformItem(item));
+  }
+  return transformItem(input);
 }

@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
 
 @Schema({ timestamps: true })
 export class Supplier {
@@ -26,11 +27,10 @@ export class Supplier {
 
   @Prop({
     required: false,
-    type: 'string',
-    default: 'avatar.png',
-    trim: true,
+    type: Object,
+    default: { url: 'avatar.png', publicId: 'avatar.png', provider: 'local' },
   })
-  declare avatar: string;
+  declare avatar: FileAsset;
 
   @Prop({
     required: false,

@@ -1,30 +1,27 @@
-import {
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-} from '@nestjs/common';
-import * as fs from 'fs/promises';
-import * as sharp from 'sharp';
-import { v4 as uuidv4 } from 'uuid';
+import { Injectable, Inject, forwardRef, Logger } from '@nestjs/common';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { Request } from 'express';
-import * as path from 'path';
 import { withBaseUrl as _withBaseUrl } from 'src/shared/utils/with-base-url.util';
 import {
-  getUploadsRoot,
-  resolveToFilesystem,
-} from 'src/shared/utils/upload-path.util';
+  FileAsset,
+  StorageProviderType,
+} from 'src/shared/schema/file-asset.schema';
+import { LocalStorageProvider } from './providers/local-storage.provider';
+import { CloudinaryStorageProvider } from './providers/cloudinary-storage.provider';
+import { SettingsService } from 'src/settings/settings.service';
 
 type filesType = Request['files'];
 
-// استخدام Record لتعريف الأبعاد لتنظيف الكود والتخلص من الـ Switch
 const IMAGE_DIMENSIONS: Record<string, { width: number; height: number }> = {
   image: { width: 600, height: 600 },
+  imageCover: { width: 600, height: 600 },
+  images: { width: 600, height: 600 },
   avatar: { width: 200, height: 200 },
   carouselSm: { width: 480, height: 240 },
   carouselMd: { width: 800, height: 400 },
   carouselLg: { width: 1200, height: 600 },
   transferReceiptImg: { width: 1200, height: 1024 },
+  DeliveryReceiptImage: { width: 1200, height: 1024 },
   logo: { width: 500, height: 300 },
   favicon: { width: 64, height: 64 },
 };
@@ -32,206 +29,145 @@ const IMAGE_DIMENSIONS: Record<string, { width: number; height: number }> = {
 @Injectable()
 export class FileUploadService {
   private readonly logger = new Logger(FileUploadService.name);
-  private readonly IMAGE_FORMAT = process.env.IMAGE_FORMAT || 'webp';
-  private readonly IMAGE_QUALITY = parseInt(process.env.IMAGE_QUALITY || '80');
+
+  constructor(
+    private readonly localProvider: LocalStorageProvider,
+    private readonly cloudinaryProvider: CloudinaryStorageProvider,
+    @Inject(forwardRef(() => SettingsService))
+    private readonly settingsService: SettingsService,
+  ) {}
+
+  private async getActiveProvider(): Promise<
+    LocalStorageProvider | CloudinaryStorageProvider
+  > {
+    try {
+      const providerType: StorageProviderType =
+        await this.settingsService.getStorageProvider();
+      if (providerType === 'cloudinary') {
+        return this.cloudinaryProvider;
+      }
+    } catch {
+      this.logger.warn(
+        'Failed to resolve storage provider from settings, falling back to local',
+      );
+    }
+    return this.localProvider;
+  }
 
   // ===========================================================
-  // =============  SAVE IMAGE PDF OR FILE TO DISK =============
+  // =============  SAVE IMAGE PDF OR FILE =====================
   // ===========================================================
   async saveFileToDisk(
     file: MulterFileType,
     modelName: string,
-  ): Promise<string> {
-    if (!file?.buffer) return '';
-
-    try {
-      // Use UPLOADS_ROOT (via getUploadsRoot) so the storage location is
-      // independent of the project directory — critical for Hostinger redeployments.
-      const uploadsRoot = getUploadsRoot();
-      const destinationPath = path.join(uploadsRoot, modelName);
-
-      const timestamp = Date.now();
-      const ext = path.extname(file.originalname).toLowerCase();
-      const finalExt = ext === '.pdf' ? '.pdf' : `.${this.IMAGE_FORMAT}`;
-      const filename = `${file.fieldname}-${timestamp}-${uuidv4()}${finalExt}`;
-      const outputPath = path.join(destinationPath, filename);
-
-      await fs.mkdir(destinationPath, { recursive: true });
-
-      if (ext === '.pdf') {
-        await fs.writeFile(outputPath, file.buffer);
-      } else {
-        await this.processAndSaveImage(file, outputPath);
-      }
-
-      // Always return a public URL using the configured route prefix.
-      // This value is stored in MongoDB — it must NEVER contain the filesystem path.
-      const uploadsRoute =
-        `/${process.env.UPLOADS_FOLDER || 'uploads'}`.replace(/\/+$/, '');
-      return `${uploadsRoute}/${modelName}/${filename}`;
-    } catch (error) {
-      this.logger.error(
-        `Error saving file ${file.originalname} to disk`,
-        error,
-      );
-      throw new InternalServerErrorException('Failed to save file to disk');
+  ): Promise<FileAsset> {
+    if (!file?.buffer) {
+      return {
+        url: '',
+        publicId: '',
+        provider: 'local',
+      };
     }
+
+    const provider = await this.getActiveProvider();
+    const dimensions = IMAGE_DIMENSIONS[file.fieldname];
+    return provider.saveFile(file, modelName, dimensions);
   }
 
   // ===========================================================
-  // =============  SAVE IMAGES TO DISK =============
+  // =============  SAVE MULTIPLE FILES ========================
   // ===========================================================
   async saveFilesToDisk(
     files: filesType,
     destinationPath: string,
-  ): Promise<string[]> {
+  ): Promise<FileAsset[]> {
     if (!files?.length) return [];
-
-    try {
-      return await Promise.all(
-        (files as MulterFileType[]).map((file) =>
-          this.saveFileToDisk(file, destinationPath),
+    const provider = await this.getActiveProvider();
+    const fileArray = files as MulterFileType[];
+    return Promise.all(
+      fileArray.map((file) =>
+        provider.saveFile(
+          file,
+          destinationPath,
+          file?.fieldname ? IMAGE_DIMENSIONS[file.fieldname] : undefined,
         ),
-      );
-    } catch (error) {
-      this.logger.error('Error saving files to disk', error);
-      throw new InternalServerErrorException('Failed to save files to disk');
-    }
+      ),
+    );
   }
 
   // ===========================================================
-  // =============  UPDATE FILE TO DISK =============
+  // =============  UPDATE FILE ================================
   // ===========================================================
   async updateFile(
     file: MulterFileType,
     modelName: string,
-    doc: any, // بقيناها حتى لا ينكسر الكود القديم في ملفات أخرى
-    oldPath?: string,
-  ): Promise<string | undefined> {
+    doc: any,
+    oldAsset?: FileAsset | string,
+  ): Promise<FileAsset | undefined> {
     try {
-      // 1. رفع الملف الجديد
-      const newFilePath = await this.saveFileToDisk(file, modelName);
+      // 1. Upload new file via currently active provider
+      const newAsset = await this.saveFileToDisk(file, modelName);
 
-      // 2. حذف الملف القديم باستخدام مساره الدقيق (الآن أصبح آمناً جداً)
-      if (oldPath) {
-        await this.deleteFile(oldPath);
+      // 2. Delete old file from its designated provider (smart delete)
+      if (oldAsset) {
+        await this.deleteFile(oldAsset);
       }
 
-      return newFilePath;
+      return newAsset;
     } catch (error) {
       this.logger.error(`Error updating file for model ${modelName}`, error);
-      throw new InternalServerErrorException('Failed to update file');
+      throw error;
     }
   }
 
   // ===========================================================
   // =============  PREPEND BASE URL TO FILE PATH ==============
   // ===========================================================
-  /**
-   * Delegates to the shared `withBaseUrl` utility.
-   * Accepts a single path or an array of paths.
-   *
-   * @see src/shared/utils/with-base-url.util.ts
-   */
-  withBaseUrl(filePath: string | null | undefined): string | null | undefined;
-  withBaseUrl(
-    filePaths: (string | null | undefined)[],
-  ): (string | null | undefined)[];
-  withBaseUrl(
-    input: string | null | undefined | (string | null | undefined)[],
-  ): string | null | undefined | (string | null | undefined)[] {
-    if (Array.isArray(input)) return _withBaseUrl(input);
+  withBaseUrl<T extends FileAsset | string | null | undefined>(input: T): T;
+  withBaseUrl<T extends FileAsset | string | null | undefined>(input: T[]): T[];
+  withBaseUrl(input: any): any {
     return _withBaseUrl(input);
   }
 
   // ===========================================================
-  // =============  DELETE FILES TO DISK =============
+  // =============  DELETE FILES ===============================
   // ===========================================================
-  async deleteFiles(filePaths: string[]): Promise<[]> {
-    await Promise.all(filePaths.map((filePath) => this.deleteFile(filePath)));
+  async deleteFiles(fileAssetsOrPaths: (FileAsset | string)[]): Promise<[]> {
+    if (!fileAssetsOrPaths?.length) return [];
+    await Promise.all(fileAssetsOrPaths.map((item) => this.deleteFile(item)));
     return [];
   }
 
   // ===========================================================
-  // =============  DELETE FILE TO DISK =============
+  // =============  DELETE FILE ================================
   // ===========================================================
-  async deleteFile(filePath: string): Promise<void> {
-    if (!filePath) {
-      this.logger.warn('No path provided for file deletion.');
+  async deleteFile(assetOrPath: FileAsset | string): Promise<void> {
+    if (!assetOrPath) {
+      this.logger.warn('No asset or path provided for file deletion.');
       return;
     }
 
-    if (filePath.includes('default.png') || filePath.includes('avatar.png')) {
+    const url = typeof assetOrPath === 'string' ? assetOrPath : assetOrPath.url;
+    const provider =
+      typeof assetOrPath === 'object' && assetOrPath !== null
+        ? assetOrPath.provider
+        : undefined;
+
+    if (url && (url.includes('default.png') || url.includes('avatar.png'))) {
       return;
     }
 
-    try {
-      // Normalise: strip base URL prefix so we always work with
-      // a public path like "/uploads/Product/abc.webp".
-      let cleanShortPath = filePath;
-      if (filePath.startsWith('http')) {
-        cleanShortPath = new URL(filePath).pathname;
-      } else {
-        const baseUrl = process.env.BASE_URL || 'http://localhost:4000';
-        cleanShortPath = filePath.replace(baseUrl, '');
-      }
-
-      // Use the secure resolveToFilesystem() utility:
-      //   - validates against path traversal
-      //   - maps /uploads/... → UPLOADS_ROOT/...
-      //   - performs containment check
-      let absolutePath: string;
-      try {
-        absolutePath = resolveToFilesystem(cleanShortPath);
-      } catch (pathError) {
-        this.logger.warn(
-          `Unsafe or invalid path rejected for deletion: "${cleanShortPath}" — ${(pathError as Error).message}`,
-        );
-        return;
-      }
-
-      await fs.access(absolutePath);
-      await fs.unlink(absolutePath);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-        this.logger.error(`Error deleting file ${filePath}`, error);
-      }
-    }
-  }
-
-  // ===========================================================
-  // =============  PROCESS AND SAVE IMAGE TO DISK =============
-  // ===========================================================
-  async processAndSaveImage(
-    file: MulterFileType,
-    outputPath: string,
-  ): Promise<string> {
-    if (!file?.buffer) {
-      throw new InternalServerErrorException('File buffer is undefined');
+    // Smart provider detection:
+    // If provider is explicitly 'cloudinary' or URL points to cloudinary.com
+    if (
+      provider === 'cloudinary' ||
+      (url && url.includes('res.cloudinary.com'))
+    ) {
+      await this.cloudinaryProvider.deleteFile(assetOrPath);
+      return;
     }
 
-    // الاعتماد على كائن الأبعاد بدلاً من الـ Switch
-    const defaultDimensions = { width: 500, height: 500 };
-    const { width, height } =
-      IMAGE_DIMENSIONS[file.fieldname] || defaultDimensions;
-
-    try {
-      await sharp(file.buffer)
-        .resize({
-          width,
-          height,
-          fit: 'inside',
-          withoutEnlargement: true,
-        })
-        .toFormat(this.IMAGE_FORMAT as keyof sharp.FormatEnum, {
-          quality: this.IMAGE_QUALITY,
-        })
-        .toFile(outputPath);
-
-      return outputPath;
-    } catch (error) {
-      this.logger.error('Error resizing image', error);
-      throw new InternalServerErrorException('Failed to resize image');
-    }
+    // Otherwise delete locally
+    await this.localProvider.deleteFile(assetOrPath);
   }
 }

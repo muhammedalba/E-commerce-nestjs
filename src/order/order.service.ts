@@ -22,6 +22,7 @@ import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Permissions } from 'src/roles/shared/enums/permissions.enum';
 import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 import { withBaseUrl } from 'src/shared/utils/with-base-url.util';
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
 // 1. تعريف الأنواع بشكل دقيق وصريح
 interface UserPopulated {
   avatar?: string;
@@ -475,7 +476,8 @@ export class OrderService {
     }
 
     if (
-      updateOrderDto.DeliveryReceiptImage === '' ||
+      !updateOrderDto.DeliveryReceiptImage ||
+      (updateOrderDto.DeliveryReceiptImage as any) === '' ||
       updateOrderDto.DeliveryReceiptImage === null
     ) {
       if (order.DeliveryReceiptImage) {
@@ -490,7 +492,8 @@ export class OrderService {
     }
 
     if (
-      updateOrderDto.InvoicePdf === '' ||
+      !updateOrderDto.InvoicePdf ||
+      (updateOrderDto.InvoicePdf as any) === '' ||
       updateOrderDto.InvoicePdf === null
     ) {
       if (order.InvoicePdf) {
@@ -563,7 +566,7 @@ export class OrderService {
       data.InvoicePdf,
       data.transferReceiptImg,
       data.DeliveryReceiptImage,
-    ].filter((p): p is string => typeof p === 'string');
+    ].filter((p): p is FileAsset => p != null && typeof p === 'object');
 
     if (paths.length) {
       try {

@@ -4,6 +4,7 @@ import * as bcrypt from 'bcrypt';
 import { Exclude } from 'class-transformer';
 import { Role } from 'src/roles/shared/schemas/role.schema';
 import { MODEL_NAMES } from 'src/shared/constants/models.constants';
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
 
 @Schema({ timestamps: true })
 export class User {
@@ -102,11 +103,10 @@ export class User {
 
   @Prop({
     required: false,
-    type: 'string',
-    default: 'default.png',
-    trim: true,
+    type: Object,
+    default: { url: 'default.png', publicId: 'default.png', provider: 'local' },
   })
-  declare avatar: string | undefined;
+  declare avatar: FileAsset;
 
   @Prop({
     required: false,

@@ -5,6 +5,7 @@ import { CartService } from '../cart/cart.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PaymentTransactionService } from '../payments/payment-transaction.service';
 import { PaymentProvider } from '../payments/shared/enums/payment-provider.enum';
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
 
 interface PaymentStrategy {
   getEventName(): string;
@@ -295,7 +296,7 @@ export class CheckoutOrchestratorService {
     userId: string,
     userEmail: string,
     notes?: string,
-    transferReceiptImg?: string,
+    transferReceiptImg?: FileAsset,
   ) {
     // 1. Get final calculated summary
     const summaryData = await this.getSummary(userId);

@@ -51,13 +51,13 @@ export class CarouselService extends BaseService<CarouselDocument> {
       ),
     );
 
-    const savedPaths: string[] = [];
+    const savedAssets: any[] = [];
     let uploadError: unknown = null;
 
     for (const result of results) {
       if (result.status === 'fulfilled') {
         if (result.value) {
-          savedPaths.push(result.value);
+          savedAssets.push(result.value);
         }
       } else {
         uploadError = result.reason as unknown;
@@ -66,14 +66,14 @@ export class CarouselService extends BaseService<CarouselDocument> {
 
     if (uploadError) {
       // Rollback: delete any successfully saved files
-      if (savedPaths.length > 0) {
+      if (savedAssets.length > 0) {
         await Promise.all(
-          savedPaths.map((path) =>
+          savedAssets.map((asset) =>
             this.fileUploadService
-              .deleteFile(path)
+              .deleteFile(asset)
               .catch((err) =>
                 this.logger.error(
-                  `Failed to delete orphaned file: ${path}`,
+                  `Failed to delete orphaned file: ${JSON.stringify(asset)}`,
                   err,
                 ),
               ),
@@ -98,35 +98,34 @@ export class CarouselService extends BaseService<CarouselDocument> {
         createCarouselDto.carouselSm,
         createCarouselDto.carouselMd,
         createCarouselDto.carouselLg,
-      ] = savedPaths;
+      ] = savedAssets;
 
       //5) create the document in the database
       const newDoc = await this.CarouselModel.create(createCarouselDto);
       //6) add the base URL to the image paths
       newDoc.carouselSm = this.fileUploadService.withBaseUrl(
         createCarouselDto.carouselSm,
-      ) as string;
+      ) as any;
       newDoc.carouselMd = this.fileUploadService.withBaseUrl(
         createCarouselDto.carouselMd,
-      ) as string;
+      ) as any;
       newDoc.carouselLg = this.fileUploadService.withBaseUrl(
         createCarouselDto.carouselLg,
-      ) as string;
+      ) as any;
 
       //7) return the localized document
       return this.i18n.localize(newDoc);
-      // return this.localize(newDoc);
     } catch (error) {
       this.logger.error('Error saving carousel', error);
       // Rollback: delete saved files since DB save failed
-      if (savedPaths.length > 0) {
+      if (savedAssets.length > 0) {
         await Promise.all(
-          savedPaths.map((path) =>
+          savedAssets.map((asset) =>
             this.fileUploadService
-              .deleteFile(path)
+              .deleteFile(asset)
               .catch((err) =>
                 this.logger.error(
-                  `Failed to delete orphaned file: ${path}`,
+                  `Failed to delete orphaned file: ${JSON.stringify(asset)}`,
                   err,
                 ),
               ),
@@ -232,13 +231,13 @@ export class CarouselService extends BaseService<CarouselDocument> {
     // Ensure absolute URLs are returned
     updatedDoc.carouselSm = this.fileUploadService.withBaseUrl(
       updatedDoc.carouselSm,
-    ) as string;
+    );
     updatedDoc.carouselMd = this.fileUploadService.withBaseUrl(
       updatedDoc.carouselMd,
-    ) as string;
+    );
     updatedDoc.carouselLg = this.fileUploadService.withBaseUrl(
       updatedDoc.carouselLg,
-    ) as string;
+    );
 
     // 6) Return localized and absolute-pathed doc
     return this.i18n.localize(updatedDoc);

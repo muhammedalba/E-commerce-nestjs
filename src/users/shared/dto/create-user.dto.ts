@@ -14,6 +14,7 @@ import { Transform } from 'class-transformer';
 import { i18nValidationMessage } from 'nestjs-i18n';
 import { Exists } from 'src/shared/utils/decorators/exists.decorator';
 import { MODEL_NAMES } from 'src/shared/constants/models.constants';
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
 
 export class CreateUserDto {
   @IsNotEmpty({ message: i18nValidationMessage('validation.NOT_EMPTY') })
@@ -61,5 +62,5 @@ export class CreateUserDto {
   role?: string;
 
   @IsOptional()
-  avatar?: string;
+  avatar?: FileAsset;
 }

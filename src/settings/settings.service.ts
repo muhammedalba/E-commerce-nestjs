@@ -1,4 +1,10 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  Logger,
+  BadRequestException,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Model, Connection } from 'mongoose';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -7,6 +13,10 @@ import { ConfigService } from '@nestjs/config';
 import { Setting, SettingDocument } from './shared/schema/setting.schema';
 import { UpdateSettingDto } from './shared/dto/update-setting.dto';
 import { FileUploadService } from 'src/file-upload/file-upload.service';
+import {
+  FileAsset,
+  StorageProviderType,
+} from 'src/shared/schema/file-asset.schema';
 
 /** Cache key used to store/retrieve the global settings object. */
 const SETTINGS_CACHE_KEY = 'settings:global';
@@ -45,6 +55,7 @@ export class SettingsService {
     private readonly cacheManager: Cache,
 
     private readonly configService: ConfigService,
+    @Inject(forwardRef(() => FileUploadService))
     private readonly fileUploadService: FileUploadService,
 
     @InjectConnection()
@@ -170,10 +181,31 @@ export class SettingsService {
    * console.log(updated.logo); // '/uploads/Setting/logo-abc123.webp'
    * ```
    */
+  async getStorageProvider(): Promise<StorageProviderType> {
+    try {
+      const settings = await this.getSettings();
+      return settings.storageProvider || 'local';
+    } catch {
+      return 'local';
+    }
+  }
+
   async updateSettings(
     dto: UpdateSettingDto,
     files?: { favicon?: Express.Multer.File[]; logo?: Express.Multer.File[] },
   ): Promise<Setting> {
+    if (dto.storageProvider === 'cloudinary') {
+      const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+      const apiKey = process.env.CLOUDINARY_API_KEY;
+      const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+      if (!cloudName || !apiKey || !apiSecret) {
+        throw new BadRequestException(
+          'Cannot switch to Cloudinary storage. Please configure CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your server environment variables first.',
+        );
+      }
+    }
+
     const currentSettings = await this.getSettings();
     const updateData: Record<string, unknown> = { ...dto };
     const imageFields = ['favicon', 'logo'] as const;
@@ -184,26 +216,29 @@ export class SettingsService {
         const fileArray = files?.[key];
         const file = fileArray?.[0];
         const dtoValue = dto[key];
-        const oldPath = currentSettings[key as keyof Setting] as string;
+        const oldAsset = currentSettings[key as keyof Setting] as
+          | FileAsset
+          | string
+          | undefined;
 
         if (file) {
-          // CASE A: New file uploaded – replace old file on disk
-          const newPath = await this.fileUploadService.updateFile(
+          // CASE A: New file uploaded – replace old file
+          const newAsset = await this.fileUploadService.updateFile(
             file,
             Setting.name,
             currentSettings,
-            oldPath,
+            oldAsset,
           );
-          updateData[key] = newPath;
+          updateData[key] = newAsset;
         } else if (dtoValue === 'null' || dtoValue === null) {
-          // CASE B: Explicit deletion – remove old file from disk
-          if (oldPath) {
+          // CASE B: Explicit deletion – remove old file
+          if (oldAsset) {
             await this.fileUploadService
-              .deleteFile(oldPath)
+              .deleteFile(oldAsset)
               .catch((err: unknown) => {
                 const stack = err instanceof Error ? err.stack : undefined;
                 this.logger.error(
-                  `Failed to delete old ${key}: ${oldPath}`,
+                  `Failed to delete old ${key}: ${JSON.stringify(oldAsset)}`,
                   stack,
                 );
               });

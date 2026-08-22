@@ -5,29 +5,30 @@ import { OrderAddress, OrderAddressSchema } from './order-adress.schema';
 import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 import { OrderStatus } from '../enums/order-status.enum';
 import { PaymentStatus } from 'src/payments/shared/enums/payment-status.enum';
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
 
 @Schema({ timestamps: true })
 export class Order extends Document {
   @Prop({
     required: false,
-    type: 'string',
+    type: Object,
     trim: true,
   })
-  declare transferReceiptImg: string;
+  declare transferReceiptImg: FileAsset;
 
   @Prop({
     required: false,
-    type: 'string',
+    type: Object,
     trim: true,
   })
-  declare InvoicePdf: string;
+  declare InvoicePdf: FileAsset;
 
   @Prop({
     required: false,
-    type: 'string',
+    type: Object,
     trim: true,
   })
-  declare DeliveryReceiptImage: string;
+  declare DeliveryReceiptImage: FileAsset;
 
   @Prop({
     required: false,

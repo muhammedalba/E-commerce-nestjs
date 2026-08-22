@@ -8,10 +8,12 @@ import { Order } from '../schemas/Order.schema';
 
 type OrderDocument = HydratedDocument<Order>;
 
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
+
 type ValidatedItem = {
   product: {
     id: Types.ObjectId;
-    imageCover: string;
+    imageCover: FileAsset;
     brand: string;
     category: string;
     title: string;

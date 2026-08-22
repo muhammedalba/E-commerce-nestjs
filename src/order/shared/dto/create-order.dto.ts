@@ -18,20 +18,18 @@ import { Exists } from 'src/shared/utils/decorators/exists.decorator';
 import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 import { OrderStatus } from '../enums/order-status.enum';
 import { PaymentStatus } from 'src/payments/shared/enums/payment-status.enum';
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
 
 export class CreateOrderDto {
   /*— file—*/
-  @IsString()
   @IsOptional()
-  transferReceiptImg?: string;
+  transferReceiptImg?: FileAsset;
 
   @IsOptional()
-  @IsString()
-  InvoicePdf?: string;
+  InvoicePdf?: FileAsset;
 
   @IsOptional()
-  @IsString()
-  DeliveryReceiptImage?: string;
+  DeliveryReceiptImage?: FileAsset;
 
   @IsOptional()
   @IsString()

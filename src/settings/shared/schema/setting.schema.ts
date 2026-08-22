@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Type } from 'class-transformer';
 import { IsDefined, ValidateNested } from 'class-validator';
 import { HydratedDocument } from 'mongoose';
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
 import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
 
 export type SettingDocument = HydratedDocument<Setting>;
@@ -30,19 +31,24 @@ export class Setting {
 
   @Prop({
     required: false,
-    type: 'string',
-    default: 'default.png',
-    trim: true,
+    type: Object,
+    default: { url: 'default.png', publicId: 'default.png', provider: 'local' },
   })
-  declare logo: string | null;
+  declare logo: FileAsset;
 
   @Prop({
     required: false,
-    type: 'string',
-    default: 'default.png',
-    trim: true,
+    type: Object,
+    default: { url: 'default.png', publicId: 'default.png', provider: 'local' },
   })
-  declare favicon: string | null;
+  declare favicon: FileAsset;
+
+  @Prop({
+    type: String,
+    enum: ['local', 'cloudinary'],
+    default: 'local',
+  })
+  declare storageProvider: 'local' | 'cloudinary';
 
   // إعدادات العملة
   @Prop({ type: String, default: 'SAR' })

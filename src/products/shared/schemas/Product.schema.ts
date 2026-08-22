@@ -8,6 +8,7 @@ import {
   FieldLocalizeDto,
   ArrayLocalizeDto,
 } from 'src/shared/utils/field-locolaized.dto';
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
 
 @Schema({
   timestamps: true,
@@ -53,20 +54,22 @@ export class Product {
 
   // ─── Media ─────────────────────────────────────────────
   @Prop({
-    type: String,
+    type: Object,
     required: [true, 'product imageCover is required'],
   })
-  declare imageCover: string;
+  declare imageCover: FileAsset;
 
   @Prop({
-    type: [String],
+    type: [Object],
+    default: [],
   })
-  declare images: string[] | undefined;
+  declare images: FileAsset[];
 
   @Prop({
-    type: String,
+    type: Object,
+    required: false,
   })
-  declare infoProductPdf: string | undefined;
+  declare infoProductPdf: FileAsset | undefined;
 
   // ─── Classification ────────────────────────────────────
   @Prop({

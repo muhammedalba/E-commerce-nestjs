@@ -14,6 +14,7 @@ import { CheckoutOrchestratorService } from './checkout-orchestrator.service';
 import { AuthGuard } from '../auth/shared/guards/auth.guard';
 import { FileUploadService } from '../file-upload/file-upload.service';
 import { createParseFilePipe } from '../shared/files/files-validation-factory';
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
 
 @Controller('checkout')
 @UseGuards(AuthGuard)
@@ -80,7 +81,7 @@ export class CheckoutController {
     @UploadedFile(createParseFilePipe('1MB', ['png', 'jpeg', 'webp'], false))
     file?: Express.Multer.File,
   ) {
-    let transferReceiptImg: string | undefined;
+    let transferReceiptImg: FileAsset | undefined = undefined;
     if (file) {
       transferReceiptImg = await this.fileUploadService.saveFileToDisk(
         file,
