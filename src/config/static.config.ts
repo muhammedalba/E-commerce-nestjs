@@ -8,11 +8,12 @@ export const StaticConfig = ServeStaticModule.forRootAsync({
     // This decouples the static file serving from the project directory so
     // Hostinger redeployments no longer wipe uploaded files.
     const uploadsPath = getUploadsRoot();
+    const uploadsRoute = `/${process.env.UPLOADS_FOLDER || 'uploads'}`;
 
     return [
       {
         rootPath: uploadsPath,
-        serveRoot: (process.env.UPLOADS_ROUTE || '/uploads').trim(),
+        serveRoot: uploadsRoute.trim(),
         serveStaticOptions: {
           index: false, // Prevent looking for index.html
         },

@@ -154,7 +154,7 @@ export class SeedService {
       },
 
       // Advanced system settings
-      debugMode: false,
+      enablePerformance: false,
 
       // Registration
       allowRegistration: true,

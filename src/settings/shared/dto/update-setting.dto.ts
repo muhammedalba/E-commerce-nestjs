@@ -221,7 +221,7 @@ export class UpdateSettingDto {
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   @IsOptional()
-  debugMode?: boolean;
+  enablePerformance?: boolean;
 
   @Type(() => Number)
   @IsNumber()

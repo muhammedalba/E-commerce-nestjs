@@ -16,7 +16,8 @@ import * as path from 'path';
  */
 export function getUploadsRoot(): string {
   const root = process.env.UPLOADS_ROOT?.trim();
-  if (root) {
+  const nodeEnv = process.env.NODE_ENV;
+  if (root && nodeEnv === 'production') {
     return path.resolve(root); // handles both relative & absolute paths
   }
   // Legacy fallback — keeps local development behaviour identical to before
@@ -29,7 +30,7 @@ export function getUploadsRoot(): string {
  *
  * Security guarantees (Defense in Depth):
  *   1. Rejects any path containing '..' segments BEFORE stripping the prefix.
- *   2. Verifies the path starts with the configured UPLOADS_ROUTE prefix.
+ *   2. Verifies the path starts with the configured uploads route prefix.
  *   3. Extracts the relative part correctly after the prefix.
  *   4. Uses path.resolve() to compute the final absolute path.
  *   5. Containment check — verifies the resolved path is strictly inside UPLOADS_ROOT.
@@ -63,7 +64,10 @@ export function resolveToFilesystem(publicPath: string): string {
   }
 
   // ── Step 2: verify the path starts with the uploads route prefix ────────
-  const route = (process.env.UPLOADS_ROUTE || '/uploads').replace(/\/+$/, '');
+  const route = `/${process.env.UPLOADS_FOLDER || 'uploads'}`.replace(
+    /\/+$/,
+    '',
+  );
   if (!normalised.startsWith(route + '/') && normalised !== route) {
     throw new Error(
       `Path "${publicPath}" does not start with uploads route "${route}"`,

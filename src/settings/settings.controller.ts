@@ -146,7 +146,7 @@ export class SettingsController {
       'allowRegistration',
       'autoBackup',
       'taxesIncluded',
-      'debugMode',
+      'enablePerformance',
       'inventoryAlertsEnabled',
       'paymentsEnabled',
     ]),

@@ -13,16 +13,11 @@ import {
 } from '@nestjs/common';
 import { CacheTTL } from '@nestjs/cache-manager';
 import { OrderService } from './order.service';
-import { CreateOrderDto } from './shared/dto/create-order.dto';
 import { UpdateOrderDto } from './shared/dto/update-order.dto';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
-import {
-  FileFieldsInterceptor,
-  FileInterceptor,
-} from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
-import { createParseFilePipe } from 'src/shared/files/files-validation-factory';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { RequirePermission } from 'src/roles/shared/decorators/require-permission.decorator';

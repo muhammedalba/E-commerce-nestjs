@@ -28,7 +28,7 @@ export class LoggingInterceptor implements NestInterceptor {
         this.settingsService
           .getSettings()
           .then((settings) => {
-            if (!settings?.debugMode) return;
+            if (!settings?.enablePerformance) return;
 
             const response = ctx.getResponse<Response>();
             const statusCode = response.statusCode;

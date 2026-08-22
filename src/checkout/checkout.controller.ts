@@ -84,7 +84,7 @@ export class CheckoutController {
     if (file) {
       transferReceiptImg = await this.fileUploadService.saveFileToDisk(
         file,
-        'orders',
+        'Order',
       );
     }
     return this.orchestrator.placeOrder(

@@ -66,10 +66,8 @@ export class FileUploadService {
 
       // Always return a public URL using the configured route prefix.
       // This value is stored in MongoDB — it must NEVER contain the filesystem path.
-      const uploadsRoute = (process.env.UPLOADS_ROUTE || '/uploads').replace(
-        /\/+$/,
-        '',
-      );
+      const uploadsRoute =
+        `/${process.env.UPLOADS_FOLDER || 'uploads'}`.replace(/\/+$/, '');
       return `${uploadsRoute}/${modelName}/${filename}`;
     } catch (error) {
       this.logger.error(

@@ -185,7 +185,7 @@ export class Setting {
 
   // إعدادات النظام المتقدمة
   @Prop({ type: Boolean, default: false })
-  declare debugMode: boolean;
+  declare enablePerformance: boolean;
   // المفقودة المضافة حديثاً
   @Prop({ type: Boolean, default: true })
   declare allowRegistration: boolean;
