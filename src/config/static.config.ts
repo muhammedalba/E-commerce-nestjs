@@ -1,10 +1,13 @@
 import { ServeStaticModule } from '@nestjs/serve-static';
-import * as path from 'path';
+import { getUploadsRoot } from 'src/shared/utils/upload-path.util';
 
 export const StaticConfig = ServeStaticModule.forRootAsync({
   useFactory: () => {
-    const uploadsFolder = (process.env.UPLOADS_FOLDER || 'uploads').trim();
-    const uploadsPath = path.join(process.cwd(), uploadsFolder);
+    // getUploadsRoot() resolves UPLOADS_ROOT env var (or falls back to the
+    // legacy UPLOADS_FOLDER inside process.cwd() for local development).
+    // This decouples the static file serving from the project directory so
+    // Hostinger redeployments no longer wipe uploaded files.
+    const uploadsPath = getUploadsRoot();
 
     return [
       {

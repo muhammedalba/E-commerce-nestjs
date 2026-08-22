@@ -10,6 +10,10 @@ import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { Request } from 'express';
 import * as path from 'path';
 import { withBaseUrl as _withBaseUrl } from 'src/shared/utils/with-base-url.util';
+import {
+  getUploadsRoot,
+  resolveToFilesystem,
+} from 'src/shared/utils/upload-path.util';
 
 type filesType = Request['files'];
 
@@ -41,8 +45,10 @@ export class FileUploadService {
     if (!file?.buffer) return '';
 
     try {
-      const uploadsDir = process.env.UPLOADS_FOLDER || 'uploads';
-      const destinationPath = path.join(process.cwd(), uploadsDir, modelName);
+      // Use UPLOADS_ROOT (via getUploadsRoot) so the storage location is
+      // independent of the project directory — critical for Hostinger redeployments.
+      const uploadsRoot = getUploadsRoot();
+      const destinationPath = path.join(uploadsRoot, modelName);
 
       const timestamp = Date.now();
       const ext = path.extname(file.originalname).toLowerCase();
@@ -58,7 +64,13 @@ export class FileUploadService {
         await this.processAndSaveImage(file, outputPath);
       }
 
-      return path.posix.join('/', uploadsDir, modelName, filename);
+      // Always return a public URL using the configured route prefix.
+      // This value is stored in MongoDB — it must NEVER contain the filesystem path.
+      const uploadsRoute = (process.env.UPLOADS_ROUTE || '/uploads').replace(
+        /\/+$/,
+        '',
+      );
+      return `${uploadsRoute}/${modelName}/${filename}`;
     } catch (error) {
       this.logger.error(
         `Error saving file ${file.originalname} to disk`,
@@ -156,8 +168,9 @@ export class FileUploadService {
     }
 
     try {
+      // Normalise: strip base URL prefix so we always work with
+      // a public path like "/uploads/Product/abc.webp".
       let cleanShortPath = filePath;
-
       if (filePath.startsWith('http')) {
         cleanShortPath = new URL(filePath).pathname;
       } else {
@@ -165,7 +178,19 @@ export class FileUploadService {
         cleanShortPath = filePath.replace(baseUrl, '');
       }
 
-      const absolutePath = path.join(process.cwd(), cleanShortPath);
+      // Use the secure resolveToFilesystem() utility:
+      //   - validates against path traversal
+      //   - maps /uploads/... → UPLOADS_ROOT/...
+      //   - performs containment check
+      let absolutePath: string;
+      try {
+        absolutePath = resolveToFilesystem(cleanShortPath);
+      } catch (pathError) {
+        this.logger.warn(
+          `Unsafe or invalid path rejected for deletion: "${cleanShortPath}" — ${(pathError as Error).message}`,
+        );
+        return;
+      }
 
       await fs.access(absolutePath);
       await fs.unlink(absolutePath);

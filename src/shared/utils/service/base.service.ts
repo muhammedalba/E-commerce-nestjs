@@ -476,14 +476,11 @@ export class BaseService<T> {
         }
       | undefined;
 
-    if (
-      typeof arg4 === 'string' &&
-      (typeof arg5 === 'string' || (typeof arg5 === 'object' && arg5 !== null))
-    ) {
+    if (typeof arg4 === 'string' && typeof arg5 === 'string') {
       // Legacy signature: updateOneDoc(idParam, updateDto, file, modelName, selectedFields, options)
       targetModelName = arg4;
-      selectedFields = typeof arg5 === 'string' ? arg5 : '';
-      options = arg6 ?? (typeof arg5 === 'object' ? arg5 : undefined);
+      selectedFields = arg5;
+      options = arg6 ?? undefined;
     } else {
       // Clean signature: updateOneDoc(idParam, updateDto, file, selectedFields, options)
       selectedFields = typeof arg4 === 'string' ? arg4 : '';
