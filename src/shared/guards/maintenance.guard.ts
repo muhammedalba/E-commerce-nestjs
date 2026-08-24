@@ -11,8 +11,9 @@ import { JwtService } from '@nestjs/jwt';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { User } from 'src/auth/shared/schema/user.schema';
+import { Role } from 'src/roles/shared/schemas/role.schema';
 import { Request } from 'express';
 import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
 
@@ -30,6 +31,7 @@ export class MaintenanceGuard implements CanActivate {
     private readonly jwtService: JwtService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
     @InjectModel(User.name) private readonly userModel: Model<User>,
+    @InjectModel(Role.name) private readonly roleModel: Model<Role>,
   ) {}
 
   /**
@@ -128,28 +130,43 @@ export class MaintenanceGuard implements CanActivate {
    * @returns An array of assigned permission enums.
    */
   private async getUserPermissions(userId: string): Promise<Permissions[]> {
-    const cacheKey = `user_permissions:${userId}`;
+    // 1. Fetch user to get current roleId
+    const user = await this.userModel.findById(userId).select('role').lean();
+    if (!user || !user.role) return [];
 
-    // 1. Attempt retrieval from cache first
+    let roleId = '';
+    if (user.role instanceof Types.ObjectId) {
+      roleId = user.role.toHexString();
+    } else if (typeof user.role === 'string') {
+      roleId = user.role;
+    } else if (typeof user.role === 'object' && '_id' in user.role) {
+      const roleObj = user.role as { _id: Types.ObjectId | string };
+      roleId =
+        roleObj._id instanceof Types.ObjectId
+          ? roleObj._id.toHexString()
+          : String(roleObj._id);
+    }
+
+    if (!roleId) return [];
+
+    const cacheKey = `role_permissions:${roleId}`;
+
+    // 2. Attempt retrieval from cache first
     const cachedPermissions =
       await this.cacheManager.get<Permissions[]>(cacheKey);
     if (cachedPermissions) {
       return cachedPermissions;
     }
 
-    // 2. Fetch role and permissions from database if cache miss occurs
-    const user = (await this.userModel
-      .findById(userId)
-      .select('role')
-      .populate('role', 'permissions')
-      .lean()) as { role?: { permissions?: Permissions[] } } | null;
+    // 3. Fetch from DB on cache miss
+    const roleDoc = await this.roleModel
+      .findById(roleId)
+      .select('permissions')
+      .lean();
 
-    const fetchedPermissions: Permissions[] =
-      user?.role?.permissions && Array.isArray(user.role.permissions)
-        ? user.role.permissions
-        : [];
+    const fetchedPermissions = roleDoc?.permissions || [];
 
-    // 3. Convert to Set to ensure uniqueness and facilitate dependency injection
+    // 4. Convert to Set to ensure uniqueness and facilitate dependency injection
     const permissionsSet = new Set(fetchedPermissions);
 
     // Enforce permission dependency: automatically include VIEW_SETTINGS if UPDATE_SETTINGS exists
@@ -157,7 +174,7 @@ export class MaintenanceGuard implements CanActivate {
       permissionsSet.add(Permissions.VIEW_SETTINGS);
     }
 
-    // 4. Convert Set back to Array for optimal JSON serialization in cache storage
+    // 5. Convert Set back to Array for optimal JSON serialization in cache storage
     const finalPermissions = Array.from(permissionsSet);
 
     // Store resolved permissions in cache with a 12-hour TTL (43,200,000 ms)

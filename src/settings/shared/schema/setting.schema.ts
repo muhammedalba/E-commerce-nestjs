@@ -4,6 +4,7 @@ import { IsDefined, ValidateNested } from 'class-validator';
 import { HydratedDocument } from 'mongoose';
 import { FileAsset } from 'src/shared/schema/file-asset.schema';
 import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
+import { withBaseUrl } from 'src/shared/utils/with-base-url.util';
 
 export type SettingDocument = HydratedDocument<Setting>;
 
@@ -227,20 +228,19 @@ export class Setting {
 export const SettingSchema = SchemaFactory.createForClass(Setting);
 
 interface SettingUrls {
-  logo?: string;
-  favicon?: string;
+  logo?: FileAsset;
+  favicon?: FileAsset;
 }
 // function prepend base url to logo and favicon
 const prependBaseUrl = (doc: SettingUrls) => {
   if (!doc) return;
-  const baseUrl = process.env.BASE_URL || '';
 
-  if (doc.logo && !doc.logo.startsWith('http')) {
-    doc.logo = `${baseUrl}/${doc.logo.replace(/^\//, '')}`;
+  if (doc.logo) {
+    doc.logo = withBaseUrl(doc.logo);
   }
 
-  if (doc.favicon && !doc.favicon.startsWith('http')) {
-    doc.favicon = `${baseUrl}/${doc.favicon.replace(/^\//, '')}`;
+  if (doc.favicon) {
+    doc.favicon = withBaseUrl(doc.favicon);
   }
 };
 

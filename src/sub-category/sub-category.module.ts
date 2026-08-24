@@ -8,7 +8,6 @@ import {
   SubCategorySchema,
 } from './shared/schemas/sub-category.schema';
 import { SubCategoriesStatistics } from './shared/sub-categories-helper/sub-categories-statistics.service';
-import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import {
   Category,
   CategorySchema,
@@ -16,26 +15,14 @@ import {
 
 @Module({
   imports: [
-    MongooseModule.forFeatureAsync([
-      {
-        name: SubCategory.name,
-        useFactory() {
-          const schema = SubCategorySchema;
-
-          return schema;
-        },
-      },
-      {
-        name: Category.name,
-        useFactory: () => {
-          return CategorySchema;
-        },
-      },
+    MongooseModule.forFeature([
+      { name: SubCategory.name, schema: SubCategorySchema },
+      { name: Category.name, schema: CategorySchema },
     ]),
     AuthModule,
   ],
   controllers: [SubCategoryController],
-  providers: [SubCategoryService, CustomI18nService, SubCategoriesStatistics],
+  providers: [SubCategoryService, SubCategoriesStatistics],
   exports: [MongooseModule],
 })
 export class SubCategoryModule {}

@@ -11,8 +11,6 @@ import { Region, RegionSchema } from '../locations/shared/schema/region.schema';
 import { City, CitySchema } from '../locations/shared/schema/city.schema';
 import { AuthModule } from '../auth/auth.module';
 import { SettingsModule } from '../settings/settings.module';
-import { FileUploadDiskStorageModule } from 'src/file-upload/file-upload.module';
-import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 
 @Module({
   imports: [
@@ -24,10 +22,9 @@ import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
     ]),
     AuthModule,
     SettingsModule,
-    FileUploadDiskStorageModule,
   ],
   controllers: [TaxesController],
-  providers: [TaxesService, CustomI18nService],
+  providers: [TaxesService],
   exports: [TaxesService], // يستخدمه CheckoutModule
 })
 export class TaxesModule {}

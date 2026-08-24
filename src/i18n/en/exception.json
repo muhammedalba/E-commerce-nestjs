@@ -16,6 +16,7 @@
   "EMAIL_EXISTS": "Email is already in use",
   "NOT_LOGGED": "You must be logged in first",
   "NOT_AUTHORIZED": "You do not have permission to access this",
+  "INVALID_CURRENT_PASSWORD": "Current password is incorrect",
   "NOT_FOUND": "{variable} not found",
   "UNAUTHORIZED": "Unauthorized",
   "INVALID": "{variable} is invalid",

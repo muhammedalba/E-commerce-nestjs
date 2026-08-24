@@ -459,7 +459,6 @@ export class OrderService {
       const newPdfPath = await this.fileUploadService.updateFile(
         files.InvoicePdf[0] as MulterFileType,
         this.OrderModel.name,
-        order,
         order.InvoicePdf,
       );
       updateOrderDto.InvoicePdf = newPdfPath;
@@ -469,7 +468,6 @@ export class OrderService {
       const newReceiptImagePath = await this.fileUploadService.updateFile(
         files.DeliveryReceiptImage[0] as MulterFileType,
         this.OrderModel.name,
-        order,
         order.DeliveryReceiptImage,
       );
       updateOrderDto.DeliveryReceiptImage = newReceiptImagePath;

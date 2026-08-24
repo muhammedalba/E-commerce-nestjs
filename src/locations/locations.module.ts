@@ -6,7 +6,6 @@ import { AuthModule } from '../auth/auth.module';
 import { Country, CountrySchema } from './shared/schema/country.schema';
 import { Region, RegionSchema } from './shared/schema/region.schema';
 import { City, CitySchema } from './shared/schema/city.schema';
-import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 
 @Module({
   imports: [
@@ -18,7 +17,7 @@ import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
     AuthModule,
   ],
   controllers: [LocationsController],
-  providers: [LocationsService, CustomI18nService],
+  providers: [LocationsService],
   exports: [LocationsService], //used in ShippingModule and CheckoutModule
 })
 export class LocationsModule {}

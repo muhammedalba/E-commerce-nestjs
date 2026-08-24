@@ -10,13 +10,13 @@ import {
   Req,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { RolesService } from '../services/roles.service';
-import { CreateRoleDto, UpdateRoleDto } from '../shared/dto/role.dto';
-import { Permissions } from '../shared/enums/permissions.enum';
-import { RequirePermission } from '../shared/decorators/require-permission.decorator';
-import { AuthGuard } from '../../auth/shared/guards/auth.guard';
-import { PermissionsGuard } from '../shared/guards/permissions.guard';
-import { JwtPayload } from '../../auth/shared/types/jwt-payload.interface';
+import { RolesService } from './services/roles.service';
+import { CreateRoleDto, UpdateRoleDto } from './shared/dto/role.dto';
+import { Permissions } from './shared/enums/permissions.enum';
+import { RequirePermission } from './shared/decorators/require-permission.decorator';
+import { AuthGuard } from '../auth/shared/guards/auth.guard';
+import { PermissionsGuard } from './shared/guards/permissions.guard';
+import { JwtPayload } from '../auth/shared/types/jwt-payload.interface';
 
 interface AuthenticatedRequest extends Omit<Request, 'user'> {
   user: JwtPayload;
@@ -79,7 +79,10 @@ export class RolesController {
     const isSuperAdmin = req.user.level === 100;
     const permissions = isSuperAdmin
       ? Object.values(Permissions) // SuperAdmin gets all permissions
-      : await this.rolesService.getUserPermissions(req.user.user_id);
+      : await this.rolesService.getUserPermissions(
+          req.user.user_id,
+          req.user.roleId,
+        );
 
     return {
       success: true,

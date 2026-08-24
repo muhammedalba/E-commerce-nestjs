@@ -14,11 +14,14 @@ import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 
 import { RefreshToken } from '../schema/refresh-token.schema';
 import { UpdateUserDto } from 'src/users/shared/dto/update-user.dto';
+import { ChangePasswordDto } from '../dto/change-password.dto';
 import { CookieService } from './cookie.service';
 import { Request, Response } from 'express';
 import { TokenService } from 'src/auth/shared/services/token.service';
 import { User } from '../schema/user.schema';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
+import * as bcrypt from 'bcrypt';
 
 /**
  * Handles authenticated user profile operations and token lifecycle management.
@@ -127,17 +130,18 @@ export class UserProfileService {
       updateUserDto.phone = user.phone;
     }
 
-    let newAvatarPath: any = undefined;
+    let newAvatarPath: FileAsset | undefined = undefined;
     // 3) update user avatar if new file is provided
     if (file) {
       newAvatarPath = await this.fileUploadService.updateFile(
         file,
         User.name,
-        user,
         user.avatar,
       );
       // 4) update user avatar
-      updateUserDto.avatar = newAvatarPath;
+      if (newAvatarPath) {
+        updateUserDto.avatar = { ...newAvatarPath };
+      }
     } else if (
       updateUserDto.avatar === null ||
       (updateUserDto.avatar as any) === 'null'
@@ -214,15 +218,35 @@ export class UserProfileService {
    */
   async changeMyPassword(
     user_id: string,
-    updateUserDto: UpdateUserDto,
+    changePasswordDto: ChangePasswordDto,
   ): Promise<any> {
-    // 1) update user password
+    // 1) find user and select password field
+    const userInDb = await this.userModel.findById(user_id).select('password');
+    if (!userInDb) {
+      throw new BadRequestException(
+        this.i18n.translate('exception.USER_NOT_FOUND'),
+      );
+    }
+
+    // 2) verify current password
+    const isPasswordMatch = await bcrypt.compare(
+      changePasswordDto.currentPassword,
+      userInDb.password,
+    );
+
+    if (!isPasswordMatch) {
+      throw new BadRequestException(
+        this.i18n.translate('exception.INVALID_CURRENT_PASSWORD'),
+      );
+    }
+
+    // 3) update user password
     const user = await this.userModel
       .findByIdAndUpdate(
         { _id: user_id },
         {
           $set: {
-            password: updateUserDto.password,
+            password: changePasswordDto.password,
           },
         },
         { new: true, runValidators: true },
@@ -234,7 +258,7 @@ export class UserProfileService {
         this.i18n.translate('exception.USER_NOT_FOUND'),
       );
     }
-    // 2) check if password is provided  delete  refresh tokens for the user
+    // 4) delete refresh tokens for the user
     try {
       await this.RefreshTokenModel.deleteOne({
         userId: user_id,

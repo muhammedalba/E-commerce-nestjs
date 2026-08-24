@@ -11,6 +11,7 @@ import { Cache } from 'cache-manager';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User } from '../../../auth/shared/schema/user.schema';
+import { Role } from '../schemas/role.schema';
 import { PERMISSIONS_KEY } from '../decorators/require-permission.decorator';
 import { Permissions } from '../enums/permissions.enum';
 import { JwtPayload } from '../../../auth/shared/types/jwt-payload.interface';
@@ -27,6 +28,7 @@ export class PermissionsGuard implements CanActivate {
     private reflector: Reflector,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     @InjectModel(User.name) private userModel: Model<User>,
+    @InjectModel(Role.name) private roleModel: Model<Role>,
     private readonly i18n: CustomI18nService,
   ) {}
 
@@ -62,21 +64,25 @@ export class PermissionsGuard implements CanActivate {
     // Level 100 is SuperAdmin - always passes
     if (userPayload.level === 100) return true;
 
-    const cacheKey = `user_permissions:${userPayload.user_id}`;
+    const roleId = userPayload.roleId;
+    if (!roleId) {
+      throw new ForbiddenException(
+        this.i18n.translate('exception.NOT_AUTHORIZED'),
+      );
+    }
+
+    const cacheKey = `role_permissions:${roleId}`;
     let userPermissions = await this.cacheManager.get<Permissions[]>(cacheKey);
 
     if (!userPermissions) {
-      // Fetch user from DB and populate role with only permissions field
-      const user = (await this.userModel
-        .findById(userPayload.user_id)
-        .select('_id role')
-        .populate('role', 'permissions')
-        .lean()) as { role?: { permissions?: Permissions[] } } | null;
+      // Fetch role directly from DB using roleId
+      const role = await this.roleModel
+        .findById(roleId)
+        .select('permissions')
+        .lean();
 
       const fetchedPermissions: Permissions[] =
-        user && user.role && Array.isArray(user.role.permissions)
-          ? user.role.permissions
-          : [];
+        role && Array.isArray(role.permissions) ? role.permissions : [];
 
       if (
         fetchedPermissions.includes(Permissions.UPDATE_SETTINGS) &&

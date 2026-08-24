@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
-import { AnyBulkWriteOperation, Connection, Model, Types } from 'mongoose';
+import { AnyBulkWriteOperation, Connection, Model } from 'mongoose';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { Product, ProductDocument } from '../shared/schemas/Product.schema';

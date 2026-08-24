@@ -3,6 +3,7 @@ import { CreateUserDto } from 'src/users/shared/dto/create-user.dto';
 import { ForgotPasswordDto } from './shared/dto/forgot-password.dto';
 import { LoginUserDto } from './shared/dto/login-user.dto';
 import { ResetCodeDto } from './shared/dto/reset-code.dto';
+import { ChangePasswordDto } from './shared/dto/change-password.dto';
 import { UpdateUserDto } from 'src/users/shared/dto/update-user.dto';
 import { Request, Response } from 'express';
 import { PasswordResetService } from './shared/services/password-reset.service';
@@ -82,11 +83,11 @@ export class AuthService {
   /* ------------ =============================== ---------- */
   async changeMyPassword(
     req: { user: JwtPayload },
-    updateUserDto: UpdateUserDto,
+    changePasswordDto: ChangePasswordDto,
   ): Promise<any> {
     return await this.userProfileService.changeMyPassword(
       req.user.user_id,
-      updateUserDto,
+      changePasswordDto,
     );
   }
 

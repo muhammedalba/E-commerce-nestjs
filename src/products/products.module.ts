@@ -3,13 +3,11 @@ import { ProductsService } from './products.service';
 import { ProductsController } from './products.controller';
 import { AuthModule } from 'src/auth/auth.module';
 import { MongooseModule } from '@nestjs/mongoose';
-import { FileUploadDiskStorageModule } from 'src/file-upload/file-upload.module';
 import { Product, ProductSchema } from './shared/schemas/Product.schema';
 import {
   ProductVariant,
   ProductVariantSchema,
 } from './shared/schemas/ProductVariant.schema';
-import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 
 import { ProductsStatistics } from './products-helper/products-statistics.service';
 import { AggregationSyncService } from './products-helper/aggregation-sync.service';
@@ -41,51 +39,15 @@ import { InventoryEventListener } from './services/inventory-event.listener';
 
 @Module({
   imports: [
-    FileUploadDiskStorageModule,
     BullModule.registerQueue({ name: 'mail-queue' }),
-    MongooseModule.forFeatureAsync([
-      {
-        name: Product.name,
-        useFactory() {
-          return ProductSchema;
-        },
-      },
-      {
-        name: ProductVariant.name,
-        useFactory: () => {
-          return ProductVariantSchema;
-        },
-      },
-      {
-        name: Supplier.name,
-        useFactory: () => {
-          return SupplierSchema;
-        },
-      },
-      {
-        name: Brand.name,
-        useFactory: () => {
-          return BrandSchema;
-        },
-      },
-      {
-        name: Category.name,
-        useFactory: () => {
-          return CategorySchema;
-        },
-      },
-      {
-        name: SubCategory.name,
-        useFactory: () => {
-          return SubCategorySchema;
-        },
-      },
-      {
-        name: Role.name,
-        useFactory: () => {
-          return RoleSchema;
-        },
-      },
+    MongooseModule.forFeature([
+      { name: Product.name, schema: ProductSchema },
+      { name: ProductVariant.name, schema: ProductVariantSchema },
+      { name: Supplier.name, schema: SupplierSchema },
+      { name: Brand.name, schema: BrandSchema },
+      { name: Category.name, schema: CategorySchema },
+      { name: SubCategory.name, schema: SubCategorySchema },
+      { name: Role.name, schema: RoleSchema },
     ]),
     AuthModule,
     OrderModule,
@@ -102,7 +64,6 @@ import { InventoryEventListener } from './services/inventory-event.listener';
     InventoryAlertService,
     InventoryEventListener,
     // Helpers
-    CustomI18nService,
     ProductsStatistics,
     AggregationSyncService,
   ],

@@ -22,6 +22,7 @@ import { LoginUserDto } from './shared/dto/login-user.dto';
 import { AuthGuard } from './shared/guards/auth.guard';
 import { ForgotPasswordDto } from './shared/dto/forgot-password.dto';
 import { ResetCodeDto } from './shared/dto/reset-code.dto';
+import { ChangePasswordDto } from './shared/dto/change-password.dto';
 import { UpdateUserDto } from 'src/users/shared/dto/update-user.dto';
 import { Request, Response } from 'express';
 import { GoogleAuthGuard } from './oauth2/guards/GoogleAuthGuard';
@@ -201,8 +202,8 @@ export class AuthController {
   @UseGuards(AuthGuard)
   async changeMyPassword(
     @Req() request: { user: JwtPayload },
-    @Body() UpdateUserDto: UpdateUserDto,
+    @Body() changePasswordDto: ChangePasswordDto,
   ): Promise<any> {
-    return await this.authService.changeMyPassword(request, UpdateUserDto);
+    return await this.authService.changeMyPassword(request, changePasswordDto);
   }
 }

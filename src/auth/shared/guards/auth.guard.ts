@@ -8,7 +8,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Request } from 'express';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { User } from '../schema/user.schema';
 import { JwtPayload } from '../types/jwt-payload.interface';
@@ -77,7 +77,7 @@ export class AuthGuard implements CanActivate {
     const tokenIssuedAt = payload.iat;
     //) get the user from the database
     const user = await this.AuthModule.findById(payload.user_id)
-      .select('passwordChangeAt isActive')
+      .select('passwordChangeAt isActive role')
       .lean()
       .exec();
     if (!user) {
@@ -107,7 +107,25 @@ export class AuthGuard implements CanActivate {
       }
     }
 
-    request.user = payload;
+    let roleId: string | undefined;
+    if (user.role) {
+      if (user.role instanceof Types.ObjectId) {
+        roleId = user.role.toHexString();
+      } else if (typeof user.role === 'string') {
+        roleId = user.role;
+      } else if (typeof user.role === 'object' && '_id' in user.role) {
+        const roleObj = user.role as { _id: Types.ObjectId | string };
+        roleId =
+          roleObj._id instanceof Types.ObjectId
+            ? roleObj._id.toHexString()
+            : String(roleObj._id);
+      }
+    }
+
+    request.user = {
+      ...payload,
+      roleId,
+    };
 
     return true;
   }

@@ -191,7 +191,6 @@ export class BaseService<T> {
         ? ((await this.fileUploadService.updateFile(
             file,
             targetModelName,
-            doc,
             oldAsset,
           )) ?? this.getDefaultFilePath(targetModelName))
         : await this.fileUploadService.saveFileToDisk(file, targetModelName);

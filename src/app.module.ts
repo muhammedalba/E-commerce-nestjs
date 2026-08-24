@@ -34,6 +34,8 @@ import { CheckoutModule } from './checkout/checkout.module';
 import { SeedModule } from './seed/seed.module';
 import { RolesModule } from './roles/roles.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { FileUploadDiskStorageModule } from './file-upload/file-upload.module';
+import { SharedModule } from './shared/shared.module';
 import { appProviders } from './app.providers';
 
 @Module({
@@ -89,6 +91,8 @@ import { appProviders } from './app.providers';
     SeedModule,
     RolesModule,
     NotificationsModule,
+    FileUploadDiskStorageModule,
+    SharedModule,
   ],
   controllers: [AppController],
   providers: [...appProviders],

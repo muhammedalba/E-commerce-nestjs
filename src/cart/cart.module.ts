@@ -7,7 +7,6 @@ import { Cart, CartSchema } from './shared/schemas/cart.schema';
 import { AuthModule } from 'src/auth/auth.module';
 import { ProductsModule } from 'src/products/products.module';
 import { SettingsModule } from 'src/settings/settings.module';
-import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import {
   Product,
   ProductSchema,
@@ -31,7 +30,7 @@ import { CouponsModule } from 'src/coupons/coupons.module';
     ]),
   ],
   controllers: [CartController],
-  providers: [CartService, CustomI18nService],
+  providers: [CartService],
   exports: [CartService],
 })
 export class CartModule {}

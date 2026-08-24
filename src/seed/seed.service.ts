@@ -47,8 +47,8 @@ export class SeedService {
       },
 
       // Branding
-      logo: '/uploads/Setting/default.png',
-      favicon: '/uploads/Setting/default.png',
+      // logo: '/uploads/Setting/default.png',
+      // favicon: '/uploads/Setting/default.png',
 
       // Currency
       currencyCode: 'SAR',

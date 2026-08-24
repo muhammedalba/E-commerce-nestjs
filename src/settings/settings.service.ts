@@ -226,7 +226,6 @@ export class SettingsService {
           const newAsset = await this.fileUploadService.updateFile(
             file,
             Setting.name,
-            currentSettings,
             oldAsset,
           );
           updateData[key] = newAsset;

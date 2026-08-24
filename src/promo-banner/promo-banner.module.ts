@@ -6,20 +6,14 @@ import {
 } from './shared/schema/promo-banner.schema';
 import { PromoBannerService } from './promo-banner.service';
 import { PromoBannerController } from './promo-banner.controller';
-import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 
 @Module({
   imports: [
-    MongooseModule.forFeatureAsync([
-      {
-        name: PromoBanner.name,
-        useFactory() {
-          return PromoBannerSchema;
-        },
-      },
+    MongooseModule.forFeature([
+      { name: PromoBanner.name, schema: PromoBannerSchema },
     ]),
   ],
   controllers: [PromoBannerController],
-  providers: [CustomI18nService, PromoBannerService],
+  providers: [PromoBannerService],
 })
 export class PromoBannerModule {}

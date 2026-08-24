@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { FileUploadDiskStorageModule } from 'src/file-upload/file-upload.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Category, CategorySchema } from './shared/schemas/category.schema';
 import {
@@ -7,7 +6,6 @@ import {
   SubCategorySchema,
 } from 'src/sub-category/shared/schemas/sub-category.schema';
 
-import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { CategoriesController } from './categories.controller';
 import { CategoriesService } from './categories.service';
 import { AuthModule } from 'src/auth/auth.module';
@@ -16,26 +14,14 @@ import { CategoriesStatisticsService } from './categories-helper/categories-stat
 @Module({
   imports: [
     AuthModule,
-    FileUploadDiskStorageModule,
-    MongooseModule.forFeatureAsync([
-      {
-        name: Category.name,
-        useFactory() {
-          return CategorySchema;
-        },
-      },
-      {
-        name: SubCategory.name,
-        useFactory() {
-          return SubCategorySchema;
-        },
-      },
+    MongooseModule.forFeature([
+      { name: Category.name, schema: CategorySchema },
+      { name: SubCategory.name, schema: SubCategorySchema },
     ]),
   ],
   controllers: [CategoriesController],
   providers: [
     CategoriesService,
-    CustomI18nService,
     CategoriesStatisticsService,
   ],
   exports: [MongooseModule],

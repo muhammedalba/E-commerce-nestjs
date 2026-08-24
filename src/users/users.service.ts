@@ -237,7 +237,6 @@ export class UsersService extends BaseService<UserDocument> {
     const newRoleId = updateUserDto.role?.toString();
 
     if (newRoleId && oldRoleId !== newRoleId) {
-      await this.cacheManager.del(`user_permissions:${idParamDto.id}`);
       const newRole = await this.roleModel
         .findById(newRoleId)
         .select('permissions')
@@ -277,9 +276,6 @@ export class UsersService extends BaseService<UserDocument> {
     );
 
     const deleteResult = await this.deleteOneDoc(idParamDto, 'avatar');
-
-    // 2. Invalidate permission cache for the deleted user
-    await this.cacheManager.del(`user_permissions:${idParamDto.id}`);
 
     return deleteResult;
   }

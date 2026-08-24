@@ -10,7 +10,6 @@ import { AuditModule } from '../audit/audit.module';
 import { CouponsModule } from '../coupons/coupons.module';
 import { AuthModule } from '../auth/auth.module';
 import { CartModule } from '../cart/cart.module';
-import { FileUploadDiskStorageModule } from '../file-upload/file-upload.module';
 import { CheckoutController } from './checkout.controller';
 import { CheckoutService } from './checkout.service';
 import { CheckoutSessionService } from './checkout-session.service';
@@ -27,7 +26,6 @@ import { CheckoutOrchestratorService } from './checkout-orchestrator.service';
     CouponsModule,
     AuthModule,
     CartModule,
-    FileUploadDiskStorageModule,
     CacheModule.register(),
     // سنحتاج لاحقاً لربطه بـ OrdersModule و ProductsModule
   ],

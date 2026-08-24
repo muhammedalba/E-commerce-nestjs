@@ -3,13 +3,17 @@ import {
   ValidatorConstraintInterface,
   ValidationArguments,
 } from 'class-validator';
-import { CreateUserDto } from '../dto/create-user.dto';
 import { i18nValidationMessage } from 'nestjs-i18n';
+
+interface PasswordMatchObject {
+  password?: string;
+  confirmPassword?: string;
+}
 
 @ValidatorConstraint({ name: 'MatchPassword', async: false })
 export class MatchPasswordValidator implements ValidatorConstraintInterface {
   validate(password: string, args: ValidationArguments): boolean {
-    const object = args.object as CreateUserDto;
+    const object = args.object as PasswordMatchObject;
 
     if (!object.confirmPassword) {
       return false;

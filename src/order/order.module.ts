@@ -10,10 +10,8 @@ import {
   ProductVariant,
   ProductVariantSchema,
 } from 'src/products/shared/schemas/ProductVariant.schema';
-import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { Order, OrderSchema } from './shared/schemas/Order.schema';
 import { AuthModule } from 'src/auth/auth.module';
-import { FileUploadDiskStorageModule } from 'src/file-upload/file-upload.module';
 import {
   Coupon,
   CouponSchema,
@@ -30,7 +28,6 @@ import { AuditModule } from '../audit/audit.module';
 @Module({
   imports: [
     AuthModule,
-    FileUploadDiskStorageModule,
     MongooseModule.forFeature([{ name: Coupon.name, schema: CouponSchema }]),
     MongooseModule.forFeature([{ name: Order.name, schema: OrderSchema }]),
     MongooseModule.forFeature([{ name: Product.name, schema: ProductSchema }]),
@@ -45,7 +42,6 @@ import { AuditModule } from '../audit/audit.module';
   providers: [
     OrderService,
     MarketingStatisticsService,
-    CustomI18nService,
     OrderHelperService,
     OrderEmailService,
     ProductHelperService,

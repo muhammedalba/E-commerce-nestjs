@@ -18,6 +18,10 @@ import {
   resolveToFilesystem,
 } from 'src/shared/utils/upload-path.util';
 
+/**
+ * Provides storage capabilities using the local filesystem.
+ * Handles uploading, image optimization, and deletion of file assets stored locally.
+ */
 @Injectable()
 export class LocalStorageProvider implements IStorageProvider {
   readonly providerType: StorageProviderType = 'local';
@@ -28,6 +32,15 @@ export class LocalStorageProvider implements IStorageProvider {
     10,
   );
 
+  /**
+   * Uploads and optionally optimizes a single file to the local filesystem.
+   *
+   * @param {MulterFileType} file - The file to be uploaded.
+   * @param {string} modelName - The name of the model/entity (used to determine the destination directory).
+   * @param {{ width: number; height: number }} [dimensions] - Optional dimensions to resize the image to.
+   * @returns {Promise<FileAsset>} A promise resolving to the uploaded file asset metadata.
+   * @throws {InternalServerErrorException} If the file buffer is undefined or the file fails to save.
+   */
   async saveFile(
     file: MulterFileType,
     modelName: string,
@@ -73,6 +86,14 @@ export class LocalStorageProvider implements IStorageProvider {
     }
   }
 
+  /**
+   * Uploads multiple files to the local filesystem in parallel.
+   *
+   * @param {MulterFileType[]} files - An array of files to upload.
+   * @param {string} modelName - The name of the model/entity for folder structure organization.
+   * @param {{ width: number; height: number }} [dimensions] - Optional dimensions to resize images to.
+   * @returns {Promise<FileAsset[]>} A promise resolving to an array of uploaded file asset metadata.
+   */
   async saveFiles(
     files: MulterFileType[],
     modelName: string,
@@ -84,6 +105,13 @@ export class LocalStorageProvider implements IStorageProvider {
     );
   }
 
+  /**
+   * Deletes a file asset from the local filesystem.
+   * Skips deletion for default assets like 'default.png' or 'avatar.png'.
+   *
+   * @param {FileAsset | string} assetOrPath - The file asset object or its URL/path.
+   * @returns {Promise<void>} A promise that resolves when the deletion is complete or skipped.
+   */
   async deleteFile(assetOrPath: FileAsset | string): Promise<void> {
     const rawPath =
       typeof assetOrPath === 'string' ? assetOrPath : assetOrPath.url;
@@ -122,11 +150,25 @@ export class LocalStorageProvider implements IStorageProvider {
     }
   }
 
+  /**
+   * Deletes multiple file assets from the local filesystem.
+   *
+   * @param {(FileAsset | string)[]} assetsOrPaths - An array of file assets or their URLs/paths.
+   * @returns {Promise<void>} A promise that resolves when all deletions are complete.
+   */
   async deleteFiles(assetsOrPaths: (FileAsset | string)[]): Promise<void> {
     if (!assetsOrPaths?.length) return;
     await Promise.all(assetsOrPaths.map((item) => this.deleteFile(item)));
   }
 
+  /**
+   * Optimizes an image buffer by resizing and converting it to the designated format.
+   *
+   * @param {Buffer} buffer - The raw image buffer.
+   * @param {string} outputPath - The absolute path where the optimized image will be saved.
+   * @param {{ width: number; height: number }} [dimensions] - Optional dimensions for resizing.
+   * @returns {Promise<void>} A promise resolving when the image processing and saving is complete.
+   */
   private async processImage(
     buffer: Buffer,
     outputPath: string,

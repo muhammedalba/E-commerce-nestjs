@@ -92,26 +92,26 @@ export class RolesService {
     action?: 'FORCE_LOGOUT' | 'REFRESH_PERMISSIONS',
     prefetchedUsers?: { _id: Types.ObjectId | string }[],
   ) {
-    const affectedUsers =
-      prefetchedUsers ||
-      (await this.userModel.find({ role: roleId }).select('_id').lean());
+    // 1. Invalidate the single role-based permissions cache key
+    const roleIdStr = roleId.toString();
+    await this.cacheManager.del(`role_permissions:${roleIdStr}`);
 
-    if (affectedUsers.length > 0) {
-      const roleDoc = await this.roleModel
-        .findById(roleId)
-        .select('permissions')
-        .lean();
-      const permissions = roleDoc?.permissions || [];
-      // to make it case insensitive
-      const CHUNK_SIZE = 500;
-      for (let i = 0; i < affectedUsers.length; i += CHUNK_SIZE) {
-        const chunk = affectedUsers.slice(i, i + CHUNK_SIZE);
-        const cachePromises = chunk.map((user) =>
-          this.cacheManager.del(`user_permissions:${user._id.toString()}`),
-        );
-        await Promise.all(cachePromises);
-        // to make it case insensitive
-        if (action) {
+    // 2. If action is specified, broadcast SSE notifications to affected users
+    if (action) {
+      const affectedUsers =
+        prefetchedUsers ||
+        (await this.userModel.find({ role: roleId }).select('_id').lean());
+
+      if (affectedUsers.length > 0) {
+        const roleDoc = await this.roleModel
+          .findById(roleId)
+          .select('permissions')
+          .lean();
+        const permissions = roleDoc?.permissions || [];
+
+        const CHUNK_SIZE = 500;
+        for (let i = 0; i < affectedUsers.length; i += CHUNK_SIZE) {
+          const chunk = affectedUsers.slice(i, i + CHUNK_SIZE);
           chunk.forEach((user) => {
             const userIdStr = user._id.toString();
             // send notification to user
@@ -346,20 +346,41 @@ export class RolesService {
    * Utilizes caching to minimize database query overhead for repeated permission checks.
    *
    * @param userId - The ID of the user whose permissions are being retrieved.
+   * @param roleId - Optional role ID to bypass user query and read from role cache directly.
    * @returns An array of permission string keys assigned to the user.
    */
-  async getUserPermissions(userId: string): Promise<string[]> {
-    const cacheKey = `user_permissions:${userId}`;
+  async getUserPermissions(userId: string, roleId?: string): Promise<string[]> {
+    let activeRoleId = roleId;
+
+    if (!activeRoleId) {
+      const user = await this.userModel.findById(userId).select('role').lean();
+      if (user && user.role) {
+        if (user.role instanceof Types.ObjectId) {
+          activeRoleId = user.role.toHexString();
+        } else if (typeof user.role === 'string') {
+          activeRoleId = user.role;
+        } else if (typeof user.role === 'object' && '_id' in user.role) {
+          const roleObj = user.role as { _id: Types.ObjectId | string };
+          activeRoleId =
+            roleObj._id instanceof Types.ObjectId
+              ? roleObj._id.toHexString()
+              : String(roleObj._id);
+        }
+      }
+    }
+
+    if (!activeRoleId) return [];
+
+    const cacheKey = `role_permissions:${activeRoleId}`;
     let userPermissions = await this.cacheManager.get<string[]>(cacheKey);
 
     if (!userPermissions) {
-      const user = await this.userModel
-        .findById(userId)
-        .select('role')
-        .populate<{ role: RoleDocument }>('role', 'permissions')
+      const role = await this.roleModel
+        .findById(activeRoleId)
+        .select('permissions')
         .lean();
 
-      const permissionsSet = new Set(user?.role?.permissions || []);
+      const permissionsSet = new Set(role?.permissions || []);
       if (permissionsSet.has(Permissions.UPDATE_SETTINGS)) {
         permissionsSet.add(Permissions.VIEW_SETTINGS);
       }
