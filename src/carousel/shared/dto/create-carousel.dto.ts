@@ -7,6 +7,7 @@ import {
   IsBoolean,
 } from 'class-validator';
 import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
 
 export class CreateCarouselDto {
   @IsDefined()
@@ -24,14 +25,11 @@ export class CreateCarouselDto {
   isActive?: boolean;
 
   @IsOptional()
-  @IsString({ message: 'validation.IS_String' })
-  carouselSm?: string;
+  carouselSm?: FileAsset;
 
   @IsOptional()
-  @IsString({ message: 'validation.IS_String' })
-  carouselMd?: string;
+  carouselMd?: FileAsset;
 
   @IsOptional()
-  @IsString({ message: 'validation.IS_String' })
-  carouselLg?: string;
+  carouselLg?: FileAsset;
 }

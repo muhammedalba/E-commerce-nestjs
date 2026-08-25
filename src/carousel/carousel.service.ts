@@ -14,6 +14,7 @@ import { FileUploadService } from 'src/file-upload/file-upload.service';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
 
 @Injectable()
 export class CarouselService extends BaseService<CarouselDocument> {
@@ -51,7 +52,7 @@ export class CarouselService extends BaseService<CarouselDocument> {
       ),
     );
 
-    const savedAssets: any[] = [];
+    const savedAssets: FileAsset[] = [];
     let uploadError: unknown = null;
 
     for (const result of results) {
@@ -105,13 +106,13 @@ export class CarouselService extends BaseService<CarouselDocument> {
       //6) add the base URL to the image paths
       newDoc.carouselSm = this.fileUploadService.withBaseUrl(
         createCarouselDto.carouselSm,
-      ) as any;
+      );
       newDoc.carouselMd = this.fileUploadService.withBaseUrl(
         createCarouselDto.carouselMd,
-      ) as any;
+      );
       newDoc.carouselLg = this.fileUploadService.withBaseUrl(
         createCarouselDto.carouselLg,
-      ) as any;
+      );
 
       //7) return the localized document
       return this.i18n.localize(newDoc);
@@ -258,8 +259,8 @@ export class CarouselService extends BaseService<CarouselDocument> {
 
     // 2) get the image paths
     const imagePaths = ['carouselSm', 'carouselMd', 'carouselLg']
-      .map((key) => carousel[key as keyof typeof carousel] as string)
-      .filter((path): path is string => typeof path === 'string');
+      .map((key) => carousel[key as keyof typeof carousel] as FileAsset)
+      .filter((path): path is FileAsset => typeof path?.url === 'string');
 
     // 3 ) delete the images from disk
     try {
