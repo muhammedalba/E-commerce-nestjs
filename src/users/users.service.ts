@@ -97,7 +97,11 @@ export class UsersService extends BaseService<UserDocument> {
         confirmPassword: adminPassword,
         name: adminName,
         role: SuperAdminRole._id,
-        avatar: '/uploads/Setting/avatar.png',
+        avatar: {
+          url: '/uploads/User/avatar.png',
+          publicId: 'avatar.png',
+          provider: 'local',
+        },
         isActive: true,
       });
     }

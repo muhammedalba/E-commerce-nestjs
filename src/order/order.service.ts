@@ -212,13 +212,18 @@ export class OrderService {
         }>;
       };
 
-      if (
-        typedItem.user &&
-        typedItem.user.avatar &&
-        typeof typedItem.user.avatar === 'object' &&
-        !typedItem.user.avatar.url?.startsWith('http')
-      ) {
-        typedItem.user.avatar.url = `${process.env.BASE_URL}${typedItem.user.avatar.url}`;
+      if (typedItem.user?.avatar) {
+        // دعم الحالة القديمة: avatar محفوظ كنص مباشر في DB
+        if (typeof (typedItem.user.avatar as unknown) === 'string') {
+          const avatarUrl = typedItem.user.avatar as unknown as string;
+          typedItem.user.avatar = {
+            url: String(withBaseUrl(avatarUrl)),
+          };
+        } else if (typedItem.user.avatar.url) {
+          typedItem.user.avatar.url = String(
+            withBaseUrl(typedItem.user.avatar.url),
+          );
+        }
       }
 
       if (typedItem.items) {
@@ -253,105 +258,6 @@ export class OrderService {
   // =============================================================
   // =============================================================
   // =============================================================
-  // async findOne(idParamDto: string) {
-  //   // 1. استخدام التحقق المعياري لـ Mongo ObjectId
-  //   if (!Types.ObjectId.isValid(idParamDto)) {
-  //     throw new BadRequestException('Invalid order ID');
-  //   }
-
-  //   // 2. تنفيذ الاستعلام مع lean ووضع images في الـ select
-  //   const order = await this.OrderModel.findById(idParamDto)
-  //     .populate({
-  //       path: 'user',
-  //       select: 'name email role avatar phone createdAt',
-  //     })
-  //     .populate({
-  //       path: 'items.productId',
-  //       select: 'title imageCover slug images',
-  //     })
-  //     .populate({
-  //       path: 'items.variantId',
-  //       select: 'sku price priceAfterDiscount label attributes',
-  //     })
-  //     .populate({
-  //       path: 'shippingAddress.country',
-  //       select: 'name',
-  //     })
-  //     .populate({
-  //       path: 'shippingAddress.city',
-  //       select: 'name',
-  //     })
-  //     .populate({
-  //       path: 'couponId',
-  //       select: 'name type usageCount expires discount',
-  //     })
-  //     .populate({
-  //       path: 'shippingProviderId',
-  //       select: 'name code logo trackingUrl',
-  //     })
-  //     .populate({
-  //       path: 'shippingRateId',
-  //       select: 'estimatedDays basePrice baseWeight additionalKgPrice',
-  //     })
-  //     .lean()
-  //     .exec();
-
-  //   if (!order) {
-  //     throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
-  //   }
-
-  //   // 3. تنسيق روابط الصور بشكل نظيف ومباشر باستخدام withBaseUrl
-  //   const orderObj = order as unknown as {
-  //     user?: { avatar?: string };
-  //     shippingProviderId?: { logo?: string };
-  //     transferReceiptImg?: string;
-  //     items?: Array<{
-  //       productId?: {
-  //         imageCover?: string;
-  //         images?: string[];
-  //       };
-  //     }>;
-  //   };
-
-  //   if (orderObj.user?.avatar) {
-  //     orderObj.user.avatar = withBaseUrl(orderObj.user.avatar) as string;
-  //   }
-
-  //   if (orderObj.transferReceiptImg) {
-  //     orderObj.transferReceiptImg = withBaseUrl(
-  //       orderObj.transferReceiptImg,
-  //     ) as string;
-  //   }
-
-  //   if (orderObj.shippingProviderId?.logo) {
-  //     orderObj.shippingProviderId.logo = withBaseUrl(
-  //       orderObj.shippingProviderId.logo,
-  //     ) as string;
-  //   }
-
-  //   if (Array.isArray(orderObj.items)) {
-  //     orderObj.items.forEach((item) => {
-  //       if (item.productId) {
-  //         if (item.productId.imageCover) {
-  //           item.productId.imageCover = withBaseUrl(
-  //             item.productId.imageCover,
-  //           ) as string;
-  //         }
-  //         if (item.productId.images) {
-  //           item.productId.images = item.productId.images
-  //             .map((img) => withBaseUrl(img))
-  //             .filter((img): img is string => img != null);
-  //         }
-  //       }
-  //     });
-  //   }
-
-  //   return {
-  //     status: 'success',
-  //     message: this.i18n.translate('success.found_SUCCESS'),
-  //     data: order,
-  //   };
-  // }
 
   // 2. الدالة المُحسنة
   async findOne(idParamDto: string) {
@@ -383,10 +289,19 @@ export class OrderService {
     if (!order) {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }
-
     // الآن order.user ليس any بل UserPopulated | undefined، مما يرضي ESLint تماماً
-    if (order.user?.avatar?.url) {
-      order.user.avatar.url = String(withBaseUrl(order.user.avatar.url));
+    if (order.user?.avatar) {
+      // دعم الحالة القديمة: avatar محفوظ كنص مباشر في DB
+      if (typeof (order.user.avatar as unknown) === 'string') {
+        const avatarUrl = order.user.avatar as unknown as string;
+        order.user.avatar = {
+          url: String(withBaseUrl(avatarUrl)),
+          publicId: avatarUrl,
+          provider: 'local',
+        };
+      } else if (order.user.avatar.url) {
+        order.user.avatar.url = String(withBaseUrl(order.user.avatar.url));
+      }
     }
 
     if (order.transferReceiptImg?.url) {
