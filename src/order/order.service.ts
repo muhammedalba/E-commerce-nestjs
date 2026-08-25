@@ -25,18 +25,18 @@ import { withBaseUrl } from 'src/shared/utils/with-base-url.util';
 import { FileAsset } from 'src/shared/schema/file-asset.schema';
 // 1. تعريف الأنواع بشكل دقيق وصريح
 interface UserPopulated {
-  avatar?: string;
+  avatar?: FileAsset;
   [key: string]: unknown;
 }
 
 interface ShippingProviderPopulated {
-  logo?: string;
+  logo?: FileAsset;
   [key: string]: unknown;
 }
 
 interface ProductPopulated {
-  imageCover?: string;
-  images?: string[];
+  imageCover?: FileAsset;
+  images?: FileAsset[];
   [key: string]: unknown;
 }
 
@@ -47,9 +47,9 @@ interface OrderItemPopulated {
 
 export interface PopulatedOrderData {
   user?: UserPopulated;
-  transferReceiptImg?: string;
-  InvoicePdf?: string;
-  DeliveryReceiptImage?: string;
+  transferReceiptImg?: FileAsset;
+  InvoicePdf?: FileAsset;
+  DeliveryReceiptImage?: FileAsset;
   shippingProviderId?: ShippingProviderPopulated;
   items?: OrderItemPopulated[];
   [key: string]: unknown;
@@ -203,10 +203,10 @@ export class OrderService {
     // add url to user avatar & product images
     data.forEach((item) => {
       const typedItem = item as unknown as {
-        user?: { avatar?: string };
+        user?: { avatar?: { url: string } };
         items?: Array<{
           productId?: {
-            imageCover?: string;
+            imageCover?: { url: string };
             images?: string[];
           };
         }>;
@@ -215,19 +215,20 @@ export class OrderService {
       if (
         typedItem.user &&
         typedItem.user.avatar &&
-        !typedItem.user.avatar.startsWith('http')
+        typeof typedItem.user.avatar === 'object' &&
+        !typedItem.user.avatar.url?.startsWith('http')
       ) {
-        typedItem.user.avatar = `${process.env.BASE_URL}${typedItem.user.avatar}`;
+        typedItem.user.avatar.url = `${process.env.BASE_URL}${typedItem.user.avatar.url}`;
       }
 
       if (typedItem.items) {
         typedItem.items.forEach((orderItem) => {
           if (orderItem.productId) {
             if (
-              orderItem.productId.imageCover &&
-              !orderItem.productId.imageCover.startsWith('http')
+              orderItem.productId.imageCover?.url &&
+              !orderItem.productId.imageCover?.url.startsWith('http')
             ) {
-              orderItem.productId.imageCover = `${process.env.BASE_URL}${orderItem.productId.imageCover}`;
+              orderItem.productId.imageCover.url = `${process.env.BASE_URL}${orderItem.productId.imageCover?.url}`;
             }
             if (orderItem.productId.images) {
               orderItem.productId.images = orderItem.productId.images.map(
@@ -241,6 +242,7 @@ export class OrderService {
         });
       }
     });
+
     return {
       status: 'success',
       results: data.length,
@@ -383,27 +385,29 @@ export class OrderService {
     }
 
     // الآن order.user ليس any بل UserPopulated | undefined، مما يرضي ESLint تماماً
-    if (order.user?.avatar) {
-      order.user.avatar = String(withBaseUrl(order.user.avatar));
+    if (order.user?.avatar?.url) {
+      order.user.avatar.url = String(withBaseUrl(order.user.avatar.url));
     }
 
-    if (order.transferReceiptImg) {
-      order.transferReceiptImg = String(withBaseUrl(order.transferReceiptImg));
-    }
-
-    if (order.InvoicePdf) {
-      order.InvoicePdf = String(withBaseUrl(order.InvoicePdf));
-    }
-
-    if (order.DeliveryReceiptImage) {
-      order.DeliveryReceiptImage = String(
-        withBaseUrl(order.DeliveryReceiptImage),
+    if (order.transferReceiptImg?.url) {
+      order.transferReceiptImg.url = String(
+        withBaseUrl(order.transferReceiptImg?.url),
       );
     }
 
-    if (order.shippingProviderId?.logo) {
-      order.shippingProviderId.logo = String(
-        withBaseUrl(order.shippingProviderId.logo),
+    if (order.InvoicePdf?.url) {
+      order.InvoicePdf.url = String(withBaseUrl(order.InvoicePdf.url));
+    }
+
+    if (order.DeliveryReceiptImage?.url) {
+      order.DeliveryReceiptImage.url = String(
+        withBaseUrl(order.DeliveryReceiptImage.url),
+      );
+    }
+
+    if (order.shippingProviderId?.logo?.url) {
+      order.shippingProviderId.logo.url = String(
+        withBaseUrl(order.shippingProviderId.logo.url),
       );
     }
 
@@ -412,14 +416,17 @@ export class OrderService {
         const product = item.productId;
         if (!product) continue;
 
-        if (product.imageCover) {
-          product.imageCover = String(withBaseUrl(product.imageCover));
+        if (product.imageCover?.url) {
+          product.imageCover.url = String(withBaseUrl(product.imageCover.url));
         }
 
         if (Array.isArray(product.images)) {
-          product.images = product.images
-            .map((img) => String(withBaseUrl(img)))
-            .filter((img): img is string => Boolean(img));
+          product.images = product.images.filter((img: FileAsset) =>
+            Boolean(img.url),
+          );
+          for (const img of product.images) {
+            img.url = String(withBaseUrl(img.url));
+          }
         }
       }
     }
