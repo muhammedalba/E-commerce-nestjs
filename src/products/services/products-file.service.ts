@@ -163,7 +163,19 @@ export class ProductFileService {
       // 2. Parse remaining images from body
       let remainingImages: (FileAsset | string)[] = [];
       if (bodyImages) {
-        remainingImages = Array.isArray(bodyImages) ? bodyImages : [bodyImages];
+        const rawRemaining = Array.isArray(bodyImages)
+          ? bodyImages
+          : [bodyImages];
+        remainingImages = rawRemaining.map((item) => {
+          if (typeof item === 'string') {
+            try {
+              return JSON.parse(item) as FileAsset;
+            } catch {
+              return item;
+            }
+          }
+          return item;
+        });
       }
 
       // 3. Delete images that are no longer referenced
