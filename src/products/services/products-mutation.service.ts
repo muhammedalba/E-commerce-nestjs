@@ -254,6 +254,35 @@ export class ProductMutationService {
       );
     }
 
+    // BIZ-PROD-01 FIX: Validate attributes of variants being *updated* against allowedAttributes.
+    // We merge the current DB state of each variant with the incoming update payload to produce
+    // the "post-update" picture, then run the same attribute validator used for creation.
+    if (variantOps?.update && variantOps.update.length > 0) {
+      const existingVariants = (doc.variants ?? []) as unknown as Array<{
+        _id: unknown;
+        attributes?: Record<string, unknown>;
+      }>;
+
+      const mergedForValidation = variantOps.update.map((incoming) => {
+        const { _id, ...incomingData } = incoming;
+        const existingVariant = existingVariants.find(
+          (v) => String(v._id) === String(_id),
+        );
+        const mergedAttributes: Record<string, unknown> = {
+          ...(existingVariant?.attributes ?? {}),
+          ...(incomingData.attributes ?? {}),
+        };
+        return { attributes: mergedAttributes };
+      });
+
+      this.skuService.validateVariantAttributes(
+        mergedForValidation,
+        effectiveAllowedAttributes,
+        0,
+        0,
+      );
+    }
+
     if (cleanDto.allowedAttributes) {
       const variantsToValidate =
         (doc.variants as any[])?.filter((v) => {
