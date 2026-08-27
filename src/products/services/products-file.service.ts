@@ -124,18 +124,20 @@ export class ProductFileService {
       images?: MulterFilesType;
     },
     bodyImages?: (FileAsset | string)[] | FileAsset | string,
-  ): Promise<
-    Partial<{
+  ): Promise<{
+    updates: Partial<{
       imageCover: FileAsset;
       infoProductPdf: FileAsset;
       images: (FileAsset | string)[];
-    }>
-  > {
+    }>;
+    filesToDelete: (FileAsset | string)[];
+  }> {
     const result: Partial<{
       imageCover: FileAsset;
       infoProductPdf: FileAsset;
       images: (FileAsset | string)[];
     }> = {};
+    const filesToDelete: (FileAsset | string)[] = [];
 
     try {
       // 1. Handle single files (imageCover + infoProductPdf)
@@ -151,12 +153,12 @@ export class ProductFileService {
             Product.name,
           );
           if (key === 'imageCover' || key === 'infoProductPdf') {
-            const oldAsset = doc[key as 'imageCover' | 'infoProductPdf'];
+            const oldAsset = doc[key];
             if (oldAsset) {
-              await this.fileUploadService.deleteFile(oldAsset);
+              filesToDelete.push(oldAsset);
             }
+            result[key] = newAsset;
           }
-          (result as any)[key] = newAsset;
         }
       }
 
@@ -197,7 +199,7 @@ export class ProductFileService {
           (img) => !remainingUrlSet.has(getNormalizedUrl(img)),
         );
         if (imagesToDelete.length > 0) {
-          await this.fileUploadService.deleteFiles(imagesToDelete);
+          filesToDelete.push(...imagesToDelete);
         }
       }
 
@@ -222,7 +224,7 @@ export class ProductFileService {
       );
     }
 
-    return result;
+    return { updates: result, filesToDelete };
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -243,5 +245,10 @@ export class ProductFileService {
     if (doc.images && Array.isArray(doc.images)) {
       await this.fileUploadService.deleteFiles(doc.images);
     }
+  }
+
+  async deleteFilesList(files: (FileAsset | string)[]): Promise<void> {
+    if (!files || files.length === 0) return;
+    await this.fileUploadService.deleteFiles(files);
   }
 }

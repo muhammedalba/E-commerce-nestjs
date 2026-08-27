@@ -257,6 +257,9 @@ ProductSchema.pre('countDocuments', function () {
   if (!this.getFilter().isDeleted) {
     this.where({ isDeleted: { $ne: true } });
   }
+  if (this.getFilter().isActive === undefined) {
+    this.where({ isActive: { $ne: false } });
+  }
 });
 
 // ─── URL Prefix for Media Fields ─────────────────────────

@@ -36,6 +36,7 @@ import { JwtPayload } from './shared/types/jwt-payload.interface';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
+import { ResetPasswordDto } from './shared/dto/reset-Password';
 
 interface GoogleRequest extends Omit<Request, 'user'> {
   user?: OAuthUser;
@@ -167,8 +168,10 @@ export class AuthController {
   /* ------------ =============================== ---------- */
   @Patch('reset-password')
   @Throttle({ default: { ttl: 60000, limit: 5 } }) // 5 attempts per minute
-  async resetPassword(@Body() LoginUserDto: LoginUserDto): Promise<any> {
-    return this.authService.resetPassword(LoginUserDto);
+  async resetPassword(
+    @Body() ResetPasswordDto: ResetPasswordDto,
+  ): Promise<any> {
+    return this.authService.resetPassword(ResetPasswordDto);
   }
   /* ------------ =============================== ---------- */
   /* ------------ ======  VERIFY PASS RESET CODE  ====== ---------- */

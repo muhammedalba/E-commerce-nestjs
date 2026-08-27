@@ -356,3 +356,299 @@ CQ-COU-03	🟢 Code Quality	P5	فحص مكرر لـ active في validateCoupon
 ⚡ SEC-COU-02 (Double Spend) — ثغرة مالية خطيرة تتطلب حل أتومي عاجل.
 ⚡ SEC-COU-03 + SEC-COU-04 — حقول حساسة مكشوفة عبر API.
 ⚡ ARCH-COU-02 — إزالة التبعيات الزائدة (تكررت في sub-category).
+=======================================================================================================
+# PRODUCTS MODULE AUDIT
+
+This is a comprehensive, read-only audit of the **Products** module (`D:\skyGalaxy_v2\server\src\products`). The goal is to evaluate the security, reliability, data integrity, and performance of the module prior to implementing any refactoring or fixes.
+
+---
+
+## 1. Current Architecture
+
+The Products module follows a **Facade pattern** combined with **separated single-responsibility sub-services** to handle database queries, mutations, file storage, and business logic:
+
+*   **ProductsController**: Exposes public and admin HTTP endpoints. Uses guards for authorization and custom interceptors for JSON body parsing, file validations, caching, and cache invalidation.
+*   **ProductsService**: Serves as a thin facade delegating operations directly to specialized services.
+*   **ProductQueryService**: Handles database reads, filtering, pagination, localization, and variant integration.
+*   **ProductMutationService**: Executes transactions for writing, updating, soft-deleting, and restoring products and their variants.
+*   **ProductFileService**: Deals with disk storage (uploading, replacing, and deleting cover images, variant images, and PDFs).
+*   **ProductSkuService**: Generates deterministic SKUs and validates dynamic attribute constraints.
+*   **InventoryAlertService & InventoryEventListener**: Monitors variant stock levels, checks for low stock, manages Redis cache rate-limits, and schedules notifications/emails to admins via BullMQ.
+*   **AggregationSyncService**: Listens to variant changes asynchronously (`@OnEvent`) to recalculate product price ranges and total stock out-of-band.
+
+---
+
+## 2. File and Dependency Map
+
+```mermaid
+graph TD
+    ProductsController -->|Uses| ProductsService
+    ProductsService -->|Queries| ProductQueryService
+    ProductsService -->|Mutates| ProductMutationService
+    ProductsService -->|Statistics| ProductsStatistics
+    
+    ProductMutationService -->|Transaction Session| ProductModel
+    ProductMutationService -->|Transaction Session| ProductVariantModel
+    ProductMutationService -->|Files I/O| ProductFileService
+    ProductMutationService -->|SKU/Attributes| ProductSkuService
+    ProductMutationService -->|Low-Stock Alert Cache| InventoryAlertService
+    
+    ProductQueryService -->|Aggregation| ProductModel
+    ProductQueryService -->|Find| ProductVariantModel
+    
+    InventoryEventListener -->|BullMQ Queue| mail-queue
+    InventoryEventListener -->|SSE/Mongoose| role.notification
+```
+
+---
+
+## 3. Product Responsibilities
+
+The module actually implements the following responsibilities:
+1.  **Product CRUD**: Create, read, update, soft-delete, restore, and permanent hard-delete.
+2.  **Multilingual Support**: Integrates `CustomI18nService` to localize `title`, `description`, and `uses` in English/Arabic responses.
+3.  **Variant Management**: Integrates dynamic properties (such as color, weight, volume) and multi-component (A+B) products.
+4.  **Automatic SKU Generation**: Generates deterministic human-readable SKUs (`PREFIX-ATTRIBUTES-HASH`) for variants.
+5.  **Media Uploads**: Local file storage for Cover Image, PDF Product info sheet, and variant images.
+6.  **Stock Aggregation**: Computes stock summaries and price ranges (`min` and `max` prices) across variants.
+7.  **Low-Stock Alerts**: Emits events and schedules admin emails when product stock runs low.
+
+---
+
+## 4. Product Business Rules
+
+*   **At Least One Variant**: A product must always have at least one active variant. Deleting all variants is blocked.
+*   **Unique SKUs**: SKUs are uppercase, trimmed, and strictly unique database-wide.
+*   **Single Simple Variant**: A product can have at most one variant with no attributes (Simple Variant).
+*   **Attribute Validation**: Variant attributes must match the product's `allowedAttributes` constraints (types, units, enums).
+*   **Soft Deletion**: Products and variants are soft-deleted via `isDeleted: true`. Hard delete is only permitted on soft-deleted items.
+*   **Aggregated Fields**: Product `priceRange` and `stockSummary` are eventually consistent, recalculated asynchronously via event listeners.
+
+---
+
+## 5. Product Creation Flow
+
+1.  **Request Input**: Accepts `CreateProductDto` (includes `variants` array).
+2.  **Fail-Fast Validation**:
+    *   Validates attributes match the allowed product definitions.
+    *   Generates unique `slug` (throws 409 if title conflicts).
+    *   Pre-validates and generates variant SKUs.
+3.  **File Upload**: Uploads `imageCover`, `images`, and `infoProductPdf` to local disk.
+4.  **DB Transaction**:
+    *   Saves product document.
+    *   Saves variants pointing to the new product.
+    *   Commits transaction.
+5.  **Rollback Clean-up**: If DB insertion fails, transaction rolls back, and newly uploaded files are deleted from disk.
+6.  **Out-of-band Recalculation**: Emits `variant.changed` event to compute prices/stock.
+
+---
+
+## 6. Product Update Flow
+
+1.  **Sanitization**: Removes `undefined` values from `UpdateProductDto`.
+2.  **Current State Fetch**: Retrieves the product and active variants from the DB.
+3.  **Fail-Fast Validation**: Validates updated/created variant attributes and slug conflicts in memory.
+4.  **File Update**: Saves new uploads to disk, and deletes old files that are no longer referenced in `imagesCover`, `infoProductPdf`, or `images` body payload.
+5.  **DB Transaction**:
+    *   Updates base product.
+    *   Creates new variants, updates existing ones (using Mongoose `hydrate` and `validateSync`), and soft-deletes others.
+    *   Ensures at least one variant remains.
+    *   Commits transaction.
+6.  **Post-Commit**: Emits recalculation events.
+
+---
+
+## 7. Product Delete Flow
+
+*   **Soft Delete**:
+    *   Sets `isDeleted: true` and `deletedAt: new Date()` on the product and all its variants inside a transaction.
+    *   Does **not** delete any files from disk.
+*   **Hard Delete (Permanent)**:
+    *   Requires the product to be soft-deleted first.
+    *   Deletes all associated images and PDFs from disk.
+    *   Permanently deletes variants and the product from Mongoose inside a transaction.
+
+---
+
+## 8. Image and File Handling
+
+*   **Validation**: Uses `ParseFileFieldsPipe` to restrict file size to `1MB` and allows `png`, `jpeg`, `webp`, and `pdf` extensions.
+*   **Cover Required**: `imageCover` is mandatory at creation.
+*   **Upload Service**: Delegates to `FileUploadService` which writes files locally.
+*   **Delete Service**: Cleans up files via `FileUploadService.deleteFile` and `deleteFiles`.
+
+---
+
+## 9. Storage Architecture
+
+*   Currently tightly coupled to local filesystem storage via `FileUploadService` using standard relative file paths.
+*   Media URLs are dynamically prefixed with `process.env.BASE_URL` in services/schemas to present absolute links.
+*   Does not support multiple storage providers (e.g., S3/Cloudinary) out-of-the-box.
+
+---
+
+## 10. Database Findings
+
+*   **Query Hooks inconsistency**: `ProductSchema` uses Mongoose pre-query hooks to filter out inactive products:
+    ```typescript
+    ProductSchema.pre('find', function () {
+      if (this.getFilter().isActive === undefined) {
+        this.where({ isActive: { $ne: false } });
+      }
+    });
+    ```
+    However, `ProductSchema.pre('countDocuments')` **does not** filter out inactive products. This creates discrepancies in pagination counters.
+
+---
+
+## 11. Index Findings
+
+*   `ProductSchema` has appropriate indexes for text search, slug, category, brand, and supplier.
+*   `ProductVariantSchema` has indexes for `productId`, `sku`, `barcode`, and color/price sorting.
+*   **Missing indexes**: Weight and volume range query filters are built in `buildVariantFilter` but their schema paths (`attributes.weight.value`, `attributes.volume.value`) are not indexed, causing collection scans.
+
+---
+
+## 12. Search / Filter / Sort Findings
+
+*   Variant filters split comma-separated colors and search using regex (e.g. `{ $regex: new RegExp(params.color, 'i') }`). Regex queries without anchors prevent index usage and increase CPU load.
+*   `skuSearch` also uses a case-insensitive regex query on the unique `sku` field, which bypasses index prefix optimization.
+
+---
+
+## 13. Pagination Findings
+
+*   Uses `ApiFeatures` offset-based pagination (`skip` and `limit`).
+*   Stable sorting is maintained since products are sorted by default or custom fields.
+*   Due to the database pre-hook, query results filter out inactive products by default when isActive is not specified in the filter.
+
+
+---
+
+## 14. Performance Findings
+
+*   **Statistics Aggregation Load**: `ProductsStatistics` executes 6 heavy MongoDB aggregations/lookups concurrently using `Promise.all`. Under high traffic or massive datasets, this can saturate Mongoose connections.
+*   **Missing Filter Indexes**: Weight/volume filters trigger full collection scans.
+
+---
+
+## 15. Security Findings
+
+*   **ReDoS (Regular Expression Denial of Service)**: `buildVariantFilter` executes unsanitized user inputs directly inside `new RegExp(params.color, 'i')` and `skuSearch` regex filters. A malicious user could trigger CPU exhaustion via catastrophic backtracking.
+*   **HTML/XSS Injection**: Product `title` and `description` fields are stored without sanitation. If rendered raw by the frontend, this enables XSS attacks.
+
+---
+
+## 16. Data Integrity Findings
+
+*   **Bypassed Variant Validation on Update**: `ProductMutationService.update` does not validate updated variant attributes (`variants.update`) against the product's `allowedAttributes` schema definition. It only validates Mongoose schema constraints.
+*   **Inconsistent Slug/SKU Collision Handling**: `ProductMutationService.create` overrides MongoDB unique constraint violations (code 11000) with a hardcoded "Name already exists" error, even if the collision was caused by a duplicate variant SKU.
+
+---
+
+## 17. Concurrency / Race Condition Findings
+
+*   **SKU Unique Verification TOCTOU**: `ensureUniqueSku` does an in-memory check (`model.exists`) before returning the SKU. Under concurrent creation requests, this can return the same SKU, relying entirely on the MongoDB unique index constraint to fail the write.
+
+---
+
+## 18. Caching Findings
+
+*   Uses `CustomCacheInterceptor` which segments cache keys by resource, language, and user ID.
+*   `ClearCacheInterceptor` invalidates all keys containing `products:` when a mutation occurs. This correctly invalidates listings, item pages, and statistics.
+
+---
+
+## 19. Code Quality Findings
+
+*   **Misleading Comment**: In `buildVariantFilter`, the sold count range filter has a comment stating `// 4. Price (Numeric Range)`.
+*   **Facade/Sub-service Separation**: Strong separation, but `ProductsService` acts as a pure delegate wrapper without adding value.
+
+---
+
+## 20. Architecture Findings
+
+*   **Duplicate Product Schema Registration**: `SupplierModule` registers `ProductSchema` locally instead of inheriting it from `ProductsModule`.
+*   **File Deletion after DB Commit** ✅ **(RESOLVED — BUG-PROD-02)**: In `ProductMutationService.update`, old images are now collected as a deferred list and deleted from disk *only after* the Mongoose transaction commits successfully. In `hardRemove()`, file deletion was similarly moved to post-commit. No rollback can leave broken file references.
+
+---
+
+## 21. Error Handling Findings
+
+*   Duplicate key errors in `create()` throw a generic "Name is already in use" conflict exception, leaking no DB internals, but failing to specify duplicate SKUs.
+
+---
+
+## 22. API Response Findings
+
+*   Endpoints return populated references and localized fields correctly. No excessive DB internals are exposed.
+
+---
+
+## 23. Testing Gaps
+
+*   No unit tests exist for product creation transactions, variant operations, SKU generation collisions, and rollback handlers.
+
+---
+
+## 24. Documentation Gaps
+
+*   `ProductSkuService` and `AggregationSyncService` lack comprehensive JSDocs explaining the business rules for attributes and async aggregation sync.
+
+---
+
+## 25. Dead Code Candidates
+
+*   None identified. The sub-services are fully wired and utilized by the facade service.
+
+---
+
+## 26. Product Invariants
+
+*   A product must have at least one active variant.
+*   SKUs must remain unique.
+*   Only one simple variant is allowed per product.
+*   Variant attributes must strictly comply with product definitions.
+
+---
+
+## 27. Recommended Refactoring Plan
+
+Here is a list of findings organized by severity:
+
+
+
+
+### 🔴 BIZ-PROD-01 — Severity: P1 | Attribute Validation Bypass during Update
+*   **File:** [`products-mutation.service.ts`](file:///d:/skyGalaxy_v2/server/src/products/services/products-mutation.service.ts)
+*   **Function/Class:** `ProductMutationService.update`
+*   **Problem:** Dynamic attribute validation is skipped for `variants.update` operations.
+*   **Impact:** Clients can update variants to include attributes that do not match the product's `allowedAttributes` definition.
+*   **Solution:** Validate updated variant attributes using `skuService.validateVariantAttributes`.
+*   **Priority:** High
+
+### 🔴 SEC-PROD-01 — Severity: P1 | ReDoS Vulnerability in Query Filters
+*   **File:** [`variant-query-builder.ts`](file:///d:/skyGalaxy_v2/server/src/products/shared/utils/variant-query-builder.ts)
+*   **Function/Class:** `buildVariantFilter`
+*   **Problem:** Uses unsanitized user inputs directly inside regex constructor `new RegExp()`.
+*   **Impact:** Exposes MongoDB to ReDoS attacks (catastrophic backtracking).
+*   **Solution:** Sanitize inputs to escape regex special characters or enforce case-insensitive exact matching.
+*   **Priority:** High
+
+---
+
+## 27. FINAL REFACTORING ROADMAP
+
+### PHASE A — Critical security/data-integrity fixes
+*   **ReDoS Prevention**: Sanitize user inputs in `buildVariantFilter` before constructing RegExp instances.
+*   **Update Validation**: Add validation check for updated variant attributes (`variants.update`) in `ProductMutationService.update`.
+*   **Rollback Integrity** ✅ **(RESOLVED)**: Deferred deletion of overwritten assets in `update()` and `hardRemove()` now happens strictly after database transactions commit.
+
+### PHASE B — Performance improvements
+*   **Query Indexes**: Add compound indexes for `attributes.weight.value` and `attributes.volume.value` to support filter operations.
+*   **Statistics load**: Add limits to brand/category aggregation distribution outputs.
+
+
+
+### PHASE H — Documentation
+*   Add JSDoc documentation to `ProductSkuService` and `AggregationSyncService` clarifying dynamic attribute rules.

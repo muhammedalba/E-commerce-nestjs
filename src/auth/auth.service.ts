@@ -17,6 +17,7 @@ import {
   FacebookOAuthUser,
   OAuthUser,
 } from './shared/types/oauth-user.interface';
+import { ResetPasswordDto } from './shared/dto/reset-Password';
 
 @Injectable()
 export class AuthService {
@@ -115,8 +116,8 @@ export class AuthService {
   /* ------------ =============================== ---------- */
   /* ------------ ======  RESET PASSWORD  ====== ---------- */
   /* ------------ =============================== ---------- */
-  async resetPassword(LoginUserDto: LoginUserDto): Promise<any> {
-    return await this.passwordResetService.resetPassword(LoginUserDto);
+  async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<any> {
+    return await this.passwordResetService.resetPassword(resetPasswordDto);
   }
 
   /* ------------ =============================== ---------- */

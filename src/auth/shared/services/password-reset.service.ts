@@ -11,10 +11,10 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { ResetCodeDto } from '../dto/reset-code.dto';
-import { LoginUserDto } from '../dto/login-user.dto';
 import { TokenService } from 'src/auth/shared/services/token.service';
 import { User } from '../schema/user.schema';
 import { Role } from 'src/roles/shared/schemas/role.schema';
+import { ResetPasswordDto } from '../dto/reset-Password';
 
 /**
  * Coordinates the email-based password reset workflow.
@@ -189,23 +189,32 @@ export class PasswordResetService {
    * @security Do not bypass the schema hook when changing this method; assigning
    * `user.password` followed by `save()` is what guarantees hashing here.
    *
-   * @param LoginUserDto - Validated email and replacement password payload.
+   * @param ResetPasswordDto - Validated email and replacement password and code  payload.
    * @returns A success status, localized message, and access token.
    * @throws {BadRequestException} If the user is missing or reset verification expired.
    * @throws {BadGatewayException} If the success email job cannot be queued.
    */
-  async resetPassword(LoginUserDto: LoginUserDto) {
+  async resetPassword(ResetPasswordDto: ResetPasswordDto) {
     // 1) get user by email
     const user = await this.userModel
-      .findOne({ email: LoginUserDto.email })
-      .select('email avatar role verificationCode passwordResetExpires')
+      .findOne({ email: ResetPasswordDto.email })
+      .select(
+        'email avatar role verificationCode passwordResetExpires passwordResetCode',
+      )
       .populate('role')
       .exec();
+
     if (!user) {
       throw new BadRequestException(
         this.i18n.translate('exception.USER_NOT_FOUND'),
       );
     }
+
+    const hashedResetCode = crypto
+      .createHash('sha256')
+      .update(ResetPasswordDto.passwordResetCode.trim())
+      .digest('hex');
+
     // 2) check if password reset code is valid and not expired
     if (
       !user.verificationCode ||
@@ -215,8 +224,13 @@ export class PasswordResetService {
         this.i18n.translate('exception.CODE_EXPIRED'),
       );
     }
+    if (user.passwordResetCode?.trim() !== hashedResetCode) {
+      throw new BadRequestException(
+        this.i18n.translate('exception.CODE_INCORRECT'),
+      );
+    }
     // 3) save new password and  reset seatings
-    user.password = LoginUserDto.password;
+    user.password = ResetPasswordDto.password;
     user.passwordResetCode = undefined;
     user.passwordResetExpires = undefined;
     user.verificationCode = undefined;

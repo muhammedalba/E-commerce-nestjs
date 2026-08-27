@@ -28,6 +28,7 @@ import { ProductQueryService } from './products-query.service';
 import { generateUniqueSlug } from 'src/shared/utils/slug.util';
 import { sanitizePayload } from 'src/shared/utils/object.utils';
 import { withTransactionRetry } from 'src/shared/utils/database.utils';
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
 import { handleDuplicateKeyError } from '../products-helper/product-error.utils';
 import { InventoryAlertService } from './inventory-alert.service';
 
@@ -303,12 +304,15 @@ export class ProductMutationService {
     // ARCHITECTURAL NOTE: File uploads intentionally occur BEFORE the transaction retry block.
     // File I/O is not idempotent. If placed inside the retry block, transient DB failures
     // would trigger duplicate file uploads.
+    let filesToDelete: (FileAsset | string)[] = [];
     if (files) {
-      uploadedFiles = await this.fileService.handleUpdateFiles(
+      const fileResult = await this.fileService.handleUpdateFiles(
         doc,
         files,
         cleanDto.images,
       );
+      uploadedFiles = fileResult.updates;
+      filesToDelete = fileResult.filesToDelete;
       Object.assign(productData, uploadedFiles);
     }
 
@@ -446,6 +450,16 @@ export class ProductMutationService {
         this.logger,
       );
 
+      // Delete old files that are no longer needed, strictly after the transaction commits successfully.
+      if (filesToDelete.length > 0) {
+        void this.fileService.deleteFilesList(filesToDelete).catch((err) => {
+          this.logger.error(
+            'Failed to clean up old files after transaction commit',
+            err,
+          );
+        });
+      }
+
       // ==========================================
       // PHASE 6: Events & Final Response
       // ==========================================
@@ -580,14 +594,14 @@ export class ProductMutationService {
     session.startTransaction();
 
     try {
-      // Delete associated files
-      await this.fileService.deleteProductFiles(doc);
-
       // Hard delete variants first, then product
       await this.variantModel.deleteMany({ productId: doc._id }, { session });
       await this.productModel.findByIdAndDelete(doc._id, { session });
 
       await session.commitTransaction();
+
+      // Delete associated files only after successful commit
+      await this.fileService.deleteProductFiles(doc);
 
       // Invalidate cache
 

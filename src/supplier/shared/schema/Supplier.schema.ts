@@ -4,10 +4,10 @@ import { FileAsset } from 'src/shared/schema/file-asset.schema';
 
 @Schema({ timestamps: true })
 export class Supplier {
-  @Prop({ required: true, unique: true })
+  @Prop({ required: true })
   declare name: string;
 
-  @Prop({ required: true, unique: true })
+  @Prop({ required: true })
   declare slug: string;
 
   @Prop()
