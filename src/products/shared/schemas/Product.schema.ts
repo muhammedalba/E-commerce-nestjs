@@ -239,7 +239,7 @@ ProductSchema.index(
 
 // ─── Auto-exclude soft-deleted documents ─────────────────
 ProductSchema.pre('find', function () {
-  if (!this.getFilter().isDeleted) {
+  if (this.getFilter().isDeleted === undefined) {
     this.where({ isDeleted: { $ne: true } });
   }
   if (this.getFilter().isActive === undefined) {
@@ -248,39 +248,16 @@ ProductSchema.pre('find', function () {
 });
 
 ProductSchema.pre('findOne', function () {
-  if (!this.getFilter().isDeleted) {
+  if (this.getFilter().isDeleted === undefined) {
     this.where({ isDeleted: { $ne: true } });
   }
 });
 
 ProductSchema.pre('countDocuments', function () {
-  if (!this.getFilter().isDeleted) {
+  if (this.getFilter().isDeleted === undefined) {
     this.where({ isDeleted: { $ne: true } });
   }
   if (this.getFilter().isActive === undefined) {
     this.where({ isActive: { $ne: false } });
   }
 });
-
-// ─── URL Prefix for Media Fields ─────────────────────────
-// ProductSchema.post('init', function (doc: HydratedDocument<Product>) {
-//   const hasTranslatedDescription =
-//     doc?.title &&
-//     typeof doc.title === 'object' &&
-//     Object.values(doc.title).some(
-//       (value) => typeof value === 'string' && value.trim() !== '',
-//     );
-
-//   const baseUrl = process.env.BASE_URL ?? '';
-
-//   if (hasTranslatedDescription) {
-//     ['imageCover', 'infoProductPdf'].forEach((key) => {
-//       const path = doc[key as keyof Product];
-//       if (typeof path === 'string' && !path.startsWith(baseUrl)) {
-//         doc[key] = `${baseUrl}${path}`;
-//       }
-//     });
-//     const paths = doc?.images?.map((key) => `${baseUrl}${key}`);
-//     doc.images = paths;
-//   }
-// });

@@ -14,6 +14,7 @@ import {
   PaymentMethod,
   FeeType,
 } from '../payments/shared/schema/payment-method.schema';
+import { ShippingProfile } from '../products/shared/schemas/shipping-profile.schema';
 
 // ---------------------------------------------------------------------------
 // Input DTO
@@ -37,6 +38,8 @@ export interface CheckoutItem {
   brand?: string;
   /** Category ObjectId as string — snapshotted on the cart item at add-time. */
   category?: string;
+  /** Variant shipping profile containing canonical logistics data. */
+  shippingProfile?: ShippingProfile;
 }
 
 // ---------------------------------------------------------------------------
@@ -123,9 +126,6 @@ export interface CheckoutPreviewResponse {
 // ---------------------------------------------------------------------------
 
 const DEFAULT_CURRENCY = 'SAR';
-
-/** COD payment-method code as stored in the settings gateways map. */
-const COD_METHOD_CODE = 'cod';
 
 // ---------------------------------------------------------------------------
 // Service

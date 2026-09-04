@@ -1,6 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types, Schema as MongooseSchema } from 'mongoose';
 import { MODEL_NAMES } from 'src/shared/constants/models.constants';
+import {
+  ShippingProfile,
+  ShippingProfileSchema,
+} from './shipping-profile.schema';
 
 // ─── Valid Units Enum ────────────────────────────────────
 export enum MeasurementUnit {
@@ -110,12 +114,10 @@ export class ProductVariant {
   })
   declare sold: number;
 
-  // ─── Dynamic Attributes ────────────────────────────────
-  // Fully dynamic object. Examples:
-  //   { color: "red" }
-  //   { weight: { value: 20, unit: "kg" } }
-  //   { volume: { value: 4.8, unit: "ltr" }, color: "white" }
-  //   { length: { value: 100, unit: "cm" }, thickness: { value: 2, unit: "mm" } }
+  // ─── Dynamic Attributes (Customer-Facing Only) ────────
+  // Dynamic customer-facing attributes only. Examples:
+  //   { color: "red", finish: "matte", size: "large" }
+  // Logistics/shipping data must NEVER be stored here.
   @Prop({
     type: Object,
     default: {},
@@ -128,6 +130,13 @@ export class ProductVariant {
     default: [],
   })
   declare components: VariantComponent[];
+
+  // ─── Shipping Profile (Logistics Data) ─────────────────
+  @Prop({
+    type: ShippingProfileSchema,
+    required: false,
+  })
+  declare shippingProfile?: ShippingProfile;
 
   // ─── Variant Label (auto-generated or manual) ──────────
   // e.g. "20 KG + 4.8 LTR (A+B)" or "Red / 500ml"
@@ -193,7 +202,7 @@ ProductVariantSchema.pre('findOne', function () {
 });
 
 ProductVariantSchema.pre('countDocuments', function () {
-  if (!this.getFilter().isDeleted) {
+  if (this.getFilter().isDeleted === undefined) {
     this.where({ isDeleted: { $ne: true } });
   }
 });

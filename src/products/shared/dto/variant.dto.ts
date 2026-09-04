@@ -9,7 +9,6 @@ import {
   ValidateNested,
   IsBoolean,
   IsEnum,
-  ValidateIf,
   ValidatorConstraint,
   ValidatorConstraintInterface,
   ValidationArguments,
@@ -17,6 +16,54 @@ import {
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { MeasurementUnit } from '../schemas/ProductVariant.schema';
+import { PackageType } from '../schemas/shipping-profile.schema';
+
+// ─── Shipping Dimensions DTO ─────────────────────────────
+export class ShippingDimensionsDto {
+  @IsNumber()
+  @IsOptional()
+  @Min(0.1, { message: 'lengthMm must be greater than 0' })
+  @Type(() => Number)
+  lengthMm?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0.1, { message: 'widthMm must be greater than 0' })
+  @Type(() => Number)
+  widthMm?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0.1, { message: 'heightMm must be greater than 0' })
+  @Type(() => Number)
+  heightMm?: number;
+}
+
+// ─── Shipping Profile DTO ────────────────────────────────
+export class ShippingProfileDto {
+  @IsNumber()
+  @IsNotEmpty({
+    message: 'weightGrams is required when shippingProfile is provided',
+  })
+  @Min(0.1, { message: 'weightGrams must be greater than 0' })
+  @Type(() => Number)
+  weightGrams!: number;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ShippingDimensionsDto)
+  dimensions?: ShippingDimensionsDto;
+
+  @IsEnum(PackageType, { message: 'Invalid packageType' })
+  @IsOptional()
+  packageType?: PackageType;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(1, { message: 'quantityPerPackage must be at least 1' })
+  @Type(() => Number)
+  quantityPerPackage?: number;
+}
 
 // ─── Component DTO (for A+B products) ────────────────────
 export class VariantComponentDto {
@@ -50,7 +97,7 @@ export class MeasuredAttributeDto {
 @ValidatorConstraint({ name: 'isLessThanPrice', async: false })
 export class IsLessThanPriceConstraint implements ValidatorConstraintInterface {
   validate(priceAfterDiscount: number, args: ValidationArguments) {
-    const object = args.object as any;
+    const object = args.object as { price?: number };
     if (object.price === undefined || object.price === null) return true; // Ignored if price is not provided
     return (
       typeof priceAfterDiscount === 'number' &&
@@ -60,7 +107,7 @@ export class IsLessThanPriceConstraint implements ValidatorConstraintInterface {
   }
 
   defaultMessage(args: ValidationArguments) {
-    return 'Price after discount must be strictly less than the original price';
+    return `Price after discount must be strictly less than the original price ${args.value}`;
   }
 }
 
@@ -104,6 +151,11 @@ export class CreateVariantDto {
   @ValidateNested({ each: true })
   @Type(() => VariantComponentDto)
   components?: VariantComponentDto[];
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ShippingProfileDto)
+  shippingProfile?: ShippingProfileDto;
 
   @IsString()
   @IsOptional()
@@ -162,6 +214,11 @@ export class UpdateVariantDto {
   @ValidateNested({ each: true })
   @Type(() => VariantComponentDto)
   components?: VariantComponentDto[];
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ShippingProfileDto)
+  shippingProfile?: ShippingProfileDto;
 
   @IsString()
   @IsOptional()

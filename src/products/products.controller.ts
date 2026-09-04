@@ -49,8 +49,8 @@ export class ProductsController {
   @Get('statistics')
   @RequirePermission(Permissions.VIEW_PRODUCTS)
   @UseGuards(AuthGuard, PermissionsGuard)
-  // @UseInterceptors(CustomCacheInterceptor)
-  // @CacheTTL(300_000) // 5 minutes
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(300_000) // 5 minutes
   async Products_statistics(
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
@@ -96,16 +96,8 @@ export class ProductsController {
     if (!files.imageCover) {
       throw new BadRequestException('imageCover is required');
     }
-    return await this.productsService.create(
-      createProductDto,
-      files as {
-        imageCover: MulterFilesType;
-        images?: MulterFilesType;
-        infoProductPdf?: MulterFilesType;
-      },
-    );
+    return await this.productsService.create(createProductDto, files);
   }
-
   // ----------------------------------------------------------------------------------------------------------------------------
   //  GET ALL PRODUCTS (cached 60 seconds)
   // ----------------------------------------------------------------------------------------------------------------------------

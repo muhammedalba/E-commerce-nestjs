@@ -26,6 +26,15 @@ export class SeedController {
     await this.seedService.seedKSA();
     return { message: 'KSA locations seeded successfully' };
   }
+
+  @Get('weber-products')
+  async seedWeberProducts() {
+    const res = await this.seedService.seedWeberProducts();
+    return {
+      message: 'Weber products seeded successfully',
+      data: res,
+    };
+  }
 }
 
 @Module({

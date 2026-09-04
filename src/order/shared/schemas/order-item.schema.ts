@@ -1,6 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Types, Schema as MongooseSchema } from 'mongoose';
 import { MODEL_NAMES } from 'src/shared/constants/models.constants';
+import {
+  ShippingProfile,
+  ShippingProfileSchema,
+} from 'src/products/shared/schemas/shipping-profile.schema';
 
 @Schema({ _id: false }) // nested schema
 export class OrderItem {
@@ -51,6 +55,10 @@ export class OrderItem {
   // Snapshot of variant attributes at order time
   @Prop({ type: Object })
   declare attributes: Record<string, unknown>;
+
+  // Snapshot of variant logistics shipping profile at order time
+  @Prop({ type: ShippingProfileSchema, required: false })
+  declare shippingSnapshot?: ShippingProfile;
 }
 
 export const OrderItemSchema = SchemaFactory.createForClass(OrderItem);

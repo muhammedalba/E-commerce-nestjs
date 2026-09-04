@@ -543,9 +543,16 @@ export class OrderService {
       }
 
       // 1) Create Order Document
+      const mappedOrderItems = Array.isArray(orderPayload.items)
+        ? orderPayload.items.map((item) => ({
+            ...item,
+            shippingSnapshot: item.shippingSnapshot || item.shippingProfile,
+          }))
+        : [];
+
       const newOrder = new this.OrderModel({
         user: orderPayload.user,
-        items: orderPayload.items,
+        items: mappedOrderItems,
         shippingAddress: {
           ...orderPayload.shippingAddress,
           country: new Types.ObjectId(

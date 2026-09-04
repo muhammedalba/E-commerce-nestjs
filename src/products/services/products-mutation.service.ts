@@ -31,6 +31,7 @@ import { withTransactionRetry } from 'src/shared/utils/database.utils';
 import { FileAsset } from 'src/shared/schema/file-asset.schema';
 import { handleDuplicateKeyError } from '../products-helper/product-error.utils';
 import { InventoryAlertService } from './inventory-alert.service';
+import { normalizeVariantData } from '../shared/utils/data-normalizer';
 
 /**
  * Handles all write operations: create, update, delete, restore.
@@ -70,8 +71,9 @@ export class ProductMutationService {
     },
   ) {
     const { variants, ...productData } = createProductDto;
-    let uploadedFiles: any = null; // تعريف المتغير هنا ليسهل الوصول إليه في الـ catch
+    console.log('createProductDto', createProductDto);
 
+    let uploadedFiles: any = null; // تعريف المتغير هنا ليسهل الوصول إليه في الـ catch
     // ==========================================
     // خط الدفاع الأول: العمليات السريعة (Fail-Fast)
     // ==========================================
@@ -118,11 +120,16 @@ export class ProductMutationService {
 
       // 4. تجهيز المتغيرات بالتوازي (لأننا فحصنا الـ SKUs مسبقاً)
       const variantDocs = await Promise.all(
-        variants.map(async (v) => ({
-          ...v,
-          productId: newProduct._id,
-          sku: v.sku ? await this.skuService.ensureUnique(v.sku) : undefined,
-        })),
+        variants.map(async (v) => {
+          const normalized = normalizeVariantData(v);
+          return {
+            ...normalized,
+            productId: newProduct._id,
+            sku: normalized.sku
+              ? await this.skuService.ensureUnique(normalized.sku)
+              : undefined,
+          };
+        }),
       );
 
       const createdVariants = await this.variantModel.insertMany(variantDocs, {
@@ -374,13 +381,16 @@ export class ProductMutationService {
             // A. CREATE Variants
             if (variantOps.create && variantOps.create.length > 0) {
               const newVariantsData = await Promise.all(
-                variantOps.create.map(async (v) => ({
-                  ...v,
-                  productId: productResult._id,
-                  sku: v.sku
-                    ? await this.skuService.ensureUnique(v.sku)
-                    : undefined,
-                })),
+                variantOps.create.map(async (v) => {
+                  const normalized = normalizeVariantData(v);
+                  return {
+                    ...normalized,
+                    productId: productResult._id,
+                    sku: normalized.sku
+                      ? await this.skuService.ensureUnique(normalized.sku)
+                      : undefined,
+                  };
+                }),
               );
 
               // ARCHITECTURAL FIX: Explicitly validate before insertMany to guarantee safety.
@@ -403,18 +413,33 @@ export class ProductMutationService {
               const bulkUpdates: AnyBulkWriteOperation<ProductDocument>[] = [];
 
               for (const variantUpdate of variantOps.update) {
-                const { _id, ...updateData } = variantUpdate;
+                const { _id, ...rawUpdateData } = variantUpdate;
+                const updateData = normalizeVariantData(rawUpdateData);
                 if (updateData.sku)
                   updateData.sku = updateData.sku.toUpperCase();
 
                 // CRITICAL FIX: Document-aware bulk validation
                 // We fetch the original plain object, hydrate it into a Mongoose doc, apply updates,
                 // and validate. This accurately respects required fields, defaults, and cross-field logic.
-                const originalState = (doc.variants as any[]).find(
-                  (v: any) => String(v._id) === String(_id),
-                );
+                const originalState = (
+                  doc.variants as (ProductVariant & { _id: unknown })[]
+                ).find((v) => String(v._id) === String(_id));
                 if (!originalState)
                   throw new NotFoundException(`Variant ${_id} not found.`);
+
+                // Isolated concern: safely merge partial shippingProfile if provided without overwriting attributes or vice-versa
+                if (
+                  updateData.shippingProfile &&
+                  originalState.shippingProfile
+                ) {
+                  updateData.shippingProfile = {
+                    ...originalState.shippingProfile,
+                    ...updateData.shippingProfile,
+                    dimensions:
+                      updateData.shippingProfile.dimensions ??
+                      originalState.shippingProfile.dimensions,
+                  };
+                }
 
                 const validationDoc = this.variantModel.hydrate(originalState);
                 validationDoc.set(updateData);

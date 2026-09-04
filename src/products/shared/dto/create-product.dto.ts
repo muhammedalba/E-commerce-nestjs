@@ -100,13 +100,19 @@ export class CreateProductDto {
   @Exists(MODEL_NAMES.CATEGORY)
   category!: string;
 
-  @Transform(({ value }) => {
-    const rawIds = Array.isArray(value) ? value : value ? [value] : [];
+  @Transform(({ value }: { value: unknown }) => {
+    const rawIds: unknown[] = Array.isArray(value)
+      ? value
+      : value
+        ? [value]
+        : [];
     return [
       ...new Set(
-        rawIds.filter((id) => typeof id === 'string' && id.length > 0),
+        rawIds.filter(
+          (id): id is string => typeof id === 'string' && id.length > 0,
+        ),
       ),
-    ];
+    ] as string[];
   })
   @IsArray()
   @IsMongoId({

@@ -2,6 +2,7 @@ import { FilterQuery } from 'mongoose';
 import { ProductVariantDocument } from '../schemas/ProductVariant.schema';
 import { normalizeUnit } from './data-normalizer';
 import { BadRequestException } from '@nestjs/common';
+import { UnitConverter } from 'src/shared/utils/unit-converter.util';
 
 export interface VariantFilterParams {
   color?: string;
@@ -34,34 +35,44 @@ export function buildVariantFilter(
         : { $regex: new RegExp(params.color, 'i') };
   }
 
-  // 2. Weight (Numeric Range + Unit check)
+  // 2. Weight (Shipping Profile Weight Range in Grams)
   if (params.weightMin !== undefined || params.weightMax !== undefined) {
     const weightQuery: Record<string, any> = {};
+    if (!params.weightUnit) {
+      throw new BadRequestException(
+        'weight_unit is required when querying by weight',
+      );
+    }
+
+    const unit = params.weightUnit.trim().toLowerCase();
+
     if (params.weightMin !== undefined) {
       const min = Number(params.weightMin);
-      if (!isNaN(min) && min >= 0) weightQuery.$gte = min;
+      if (!isNaN(min) && min >= 0) {
+        try {
+          weightQuery.$gte = UnitConverter.toGrams(min, unit);
+        } catch {
+          throw new BadRequestException(
+            `Invalid weight unit: ${params.weightUnit}`,
+          );
+        }
+      }
     }
     if (params.weightMax !== undefined) {
       const max = Number(params.weightMax);
-      if (!isNaN(max) && max >= 0) weightQuery.$lte = max;
+      if (!isNaN(max) && max >= 0) {
+        try {
+          weightQuery.$lte = UnitConverter.toGrams(max, unit);
+        } catch {
+          throw new BadRequestException(
+            `Invalid weight unit: ${params.weightUnit}`,
+          );
+        }
+      }
     }
 
     if (Object.keys(weightQuery).length > 0) {
-      vFilter['attributes.weight.value'] = weightQuery;
-
-      // Must require unit to make range meaningful
-      if (!params.weightUnit) {
-        throw new BadRequestException(
-          'weight_unit is required when querying by weight',
-        );
-      }
-      const unit = normalizeUnit(params.weightUnit);
-      if (!unit) {
-        throw new BadRequestException(
-          `Invalid weight unit: ${params.weightUnit}`,
-        );
-      }
-      vFilter['attributes.weight.unit'] = unit;
+      vFilter['shippingProfile.weightGrams'] = weightQuery;
     }
   }
 

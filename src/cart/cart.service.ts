@@ -52,7 +52,8 @@ export class CartService {
       })
       .populate({
         path: 'items.variant',
-        select: 'sku price priceAfterDiscount stock attributes label',
+        select:
+          'sku price priceAfterDiscount stock attributes label shippingProfile',
       })
       .exec();
 

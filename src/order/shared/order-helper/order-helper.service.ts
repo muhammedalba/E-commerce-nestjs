@@ -9,6 +9,7 @@ import {
   ProductVariantDocument,
 } from 'src/products/shared/schemas/ProductVariant.schema';
 import { FileAsset } from 'src/shared/schema/file-asset.schema';
+import { ShippingProfile } from 'src/products/shared/schemas/shipping-profile.schema';
 
 type ValidatedItem = {
   product: {
@@ -26,6 +27,7 @@ type ValidatedItem = {
     sold: number;
     sku: string;
     attributes: Record<string, unknown>;
+    shippingProfile?: ShippingProfile;
   };
   quantity: number;
   totalPrice?: number;
@@ -157,6 +159,7 @@ export class OrderHelperService {
           sold: variant.sold || 0,
           sku: variant.sku,
           attributes: variant.attributes || {},
+          shippingProfile: variant.shippingProfile,
         },
         quantity: item.quantity,
         totalPrice: itemTotal,
@@ -167,9 +170,6 @@ export class OrderHelperService {
     }
 
     totalPrice = Math.round(totalPrice * 100) / 100;
-    console.log('validatedItems', validatedItems);
-    console.log('updatedProducts', updatedProducts);
-    console.log('unAvailableProducts', unAvailableProducts);
 
     return {
       validatedItems,

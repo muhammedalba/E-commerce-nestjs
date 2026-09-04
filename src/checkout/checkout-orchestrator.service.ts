@@ -6,6 +6,8 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PaymentTransactionService } from '../payments/payment-transaction.service';
 import { PaymentProvider } from '../payments/shared/enums/payment-provider.enum';
 import { FileAsset } from 'src/shared/schema/file-asset.schema';
+import { UnitConverter } from 'src/shared/utils/unit-converter.util';
+import { ShippingProfile } from '../products/shared/schemas/shipping-profile.schema';
 
 interface PaymentStrategy {
   getEventName(): string;
@@ -101,7 +103,7 @@ export class CheckoutOrchestratorService {
         variant?:
           | {
               _id?: { toString(): string };
-              attributes?: { weight?: { value?: number; unit?: string } };
+              shippingProfile?: ShippingProfile;
             }
           | string;
         quantity: number;
@@ -124,7 +126,7 @@ export class CheckoutOrchestratorService {
       const v = item.variant as
         | {
             _id?: { toString(): string };
-            attributes?: { weight?: { value?: number; unit?: string } };
+            shippingProfile?: ShippingProfile;
           }
         | undefined;
 
@@ -140,11 +142,15 @@ export class CheckoutOrchestratorService {
           ? item.variant
           : '';
 
+      const weightGrams = v?.shippingProfile?.weightGrams ?? 0;
+      const weightKg = UnitConverter.gramsToKg(weightGrams);
+
       return {
         productId,
         variantId,
         quantity: item.quantity,
-        weight: v?.attributes?.weight?.value ?? 0,
+        weight: weightKg,
+        shippingProfile: v?.shippingProfile,
         price: item.unitPrice,
         brand:
           typeof item.brand === 'object'
@@ -214,7 +220,7 @@ export class CheckoutOrchestratorService {
         variant?:
           | {
               _id?: { toString(): string };
-              attributes?: { weight?: { value?: number; unit?: string } };
+              shippingProfile?: ShippingProfile;
             }
           | string;
         quantity: number;
@@ -233,7 +239,7 @@ export class CheckoutOrchestratorService {
       const v = item.variant as
         | {
             _id?: { toString(): string };
-            attributes?: { weight?: { value?: number; unit?: string } };
+            shippingProfile?: ShippingProfile;
           }
         | undefined;
       const productId = p?._id
@@ -246,11 +252,16 @@ export class CheckoutOrchestratorService {
         : typeof item.variant === 'string'
           ? item.variant
           : '';
+
+      const weightGrams = v?.shippingProfile?.weightGrams ?? 0;
+      const weightKg = UnitConverter.gramsToKg(weightGrams);
+
       return {
         productId,
         variantId,
         quantity: item.quantity,
-        weight: v?.attributes?.weight?.value ?? 0,
+        weight: weightKg,
+        shippingProfile: v?.shippingProfile,
         price: item.unitPrice,
         brand:
           typeof item.brand === 'object'
