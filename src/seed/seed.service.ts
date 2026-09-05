@@ -12,6 +12,11 @@ import { ShippingRateScope } from '../shipping/shared/schema/shipping-rate.schem
 import { PaymentType } from '../payments/shared/schema/payment-method.schema';
 import { KSA_DATA } from './ksa-data';
 import { WEBER_CATEGORIES, WEBER_PRODUCTS_DATA } from './weber-products-data';
+import {
+  FULL_CATALOG_BRANDS,
+  FULL_CATALOG_CATEGORIES,
+  FULL_CATALOG_PRODUCTS,
+} from './full-catalog-data';
 import { RolesSeederService } from '../roles/services/roles-seeder.service';
 import { UsersService } from 'src/users/users.service';
 
@@ -460,7 +465,9 @@ export class SeedService {
           updatedAt: new Date(),
         });
         category = await Category.findOne({ _id: res.insertedId });
-        console.log(`📁 Created Category: ${catData.name.ar} (${catData.slug})`);
+        console.log(
+          `📁 Created Category: ${catData.name.ar} (${catData.slug})`,
+        );
       }
 
       for (const subCatData of catData.subCategories) {
@@ -474,7 +481,14 @@ export class SeedService {
             updatedAt: new Date(),
           });
           subCategory = await SubCategory.findOne({ _id: res.insertedId });
-          console.log(`  📂 Created SubCategory: ${subCatData.name.ar} (${subCatData.slug})`);
+          console.log(
+            `  📂 Created SubCategory: ${subCatData.name.ar} (${subCatData.slug})`,
+          );
+        } else {
+          await SubCategory.updateOne(
+            { _id: subCategory._id },
+            { $set: { category: category!._id, name: subCatData.name } },
+          );
         }
 
         subCategoryMap.set(subCatData.slug, {
@@ -490,7 +504,9 @@ export class SeedService {
     for (const productFamily of WEBER_PRODUCTS_DATA) {
       const classification = subCategoryMap.get(productFamily.subCategorySlug);
       if (!classification) {
-        console.warn(`⚠️ Warning: Subcategory not found for slug: ${productFamily.subCategorySlug}`);
+        console.warn(
+          `⚠️ Warning: Subcategory not found for slug: ${productFamily.subCategorySlug}`,
+        );
         continue;
       }
 
@@ -499,7 +515,10 @@ export class SeedService {
       const prices = productFamily.variants.map((v) => v.price);
       const minPrice = prices.length ? Math.min(...prices) : 0;
       const maxPrice = prices.length ? Math.max(...prices) : 0;
-      const totalStock = productFamily.variants.reduce((sum, v) => sum + v.stock, 0);
+      const totalStock = productFamily.variants.reduce(
+        (sum, v) => sum + v.stock,
+        0,
+      );
 
       let product = await Product.findOne({ slug: productFamily.slug });
       const productPayload = {
@@ -561,7 +580,7 @@ export class SeedService {
         if (existingVariant) {
           await ProductVariant.updateOne(
             { _id: existingVariant._id },
-            { $set: variantPayload }
+            { $set: variantPayload },
           );
         } else {
           await ProductVariant.insertOne({
@@ -575,9 +594,192 @@ export class SeedService {
       }
     }
 
-    console.log(`✅ Weber Seeding Completed: ${WEBER_PRODUCTS_DATA.length} products, ${totalVariantsSeeded} variants`);
+    console.log(
+      `✅ Weber Seeding Completed: ${WEBER_PRODUCTS_DATA.length} products, ${totalVariantsSeeded} variants`,
+    );
     return {
       productsCount: WEBER_PRODUCTS_DATA.length,
+      variantsCount: totalVariantsSeeded,
+    };
+  }
+
+  async seedFullCatalog() {
+    console.log('🌱 Starting Full Multi-Brand Catalog Seeding...');
+
+    const Brand = this.connection.collection('brands');
+    const Category = this.connection.collection('categories');
+    const SubCategory = this.connection.collection('subcategories');
+    const Product = this.connection.collection('products');
+    const ProductVariant = this.connection.collection('productvariants');
+
+    // 1. Seed Brands
+    const brandMap = new Map<string, Types.ObjectId>();
+    for (const b of FULL_CATALOG_BRANDS) {
+      let brandDoc = await Brand.findOne({ slug: b.slug });
+      if (!brandDoc) {
+        const res = await Brand.insertOne({
+          name: b.name,
+          slug: b.slug,
+          image: {
+            url: '/uploads/Brand/default.png',
+            publicId: '/uploads/Brand/default.png',
+            provider: 'local',
+          },
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+        brandDoc = await Brand.findOne({ _id: res.insertedId });
+      }
+      brandMap.set(b.slug, brandDoc!._id as Types.ObjectId);
+    }
+
+    // 2. Seed Categories & Subcategories
+    const subCategoryMap = new Map<
+      string,
+      { categoryId: Types.ObjectId; subCategoryId: Types.ObjectId }
+    >();
+
+    for (const cat of FULL_CATALOG_CATEGORIES) {
+      let categoryDoc = await Category.findOne({ slug: cat.slug });
+      if (!categoryDoc) {
+        const res = await Category.insertOne({
+          name: cat.name,
+          slug: cat.slug,
+          image: {
+            url: '/uploads/Category/default.png',
+            publicId: '/uploads/Category/default.png',
+            provider: 'local',
+          },
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+        categoryDoc = await Category.findOne({ _id: res.insertedId });
+      }
+
+      for (const sub of cat.subCategories) {
+        let subDoc = await SubCategory.findOne({ slug: sub.slug });
+        if (!subDoc) {
+          const res = await SubCategory.insertOne({
+            name: sub.name,
+            slug: sub.slug,
+            category: categoryDoc!._id,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+          subDoc = await SubCategory.findOne({ _id: res.insertedId });
+        } else {
+          await SubCategory.updateOne(
+            { _id: subDoc._id },
+            { $set: { category: categoryDoc!._id, name: sub.name } },
+          );
+        }
+        subCategoryMap.set(sub.slug, {
+          categoryId: categoryDoc!._id as Types.ObjectId,
+          subCategoryId: subDoc!._id as Types.ObjectId,
+        });
+      }
+    }
+
+    // 3. Seed Products & Variants
+    let totalVariantsSeeded = 0;
+
+    for (const productFamily of FULL_CATALOG_PRODUCTS) {
+      const classification = subCategoryMap.get(productFamily.subCategorySlug);
+      if (!classification) continue;
+
+      const brandId = brandMap.get(productFamily.brandSlug);
+      const { categoryId, subCategoryId } = classification;
+
+      const prices = productFamily.variants.map((v) => v.price);
+      const minPrice = prices.length ? Math.min(...prices) : 0;
+      const maxPrice = prices.length ? Math.max(...prices) : 0;
+      const totalStock = productFamily.variants.reduce(
+        (sum, v) => sum + v.stock,
+        0,
+      );
+
+      let productDoc = await Product.findOne({ slug: productFamily.slug });
+      const productPayload = {
+        title: productFamily.title,
+        slug: productFamily.slug,
+        description: productFamily.description,
+        category: categoryId,
+        SubCategories: [subCategoryId],
+        brand: brandId,
+        allowedAttributes: productFamily.allowedAttributes,
+        allowedAttributesVersion: 1,
+        imageCover: {
+          url: '/uploads/Product/default.png',
+          publicId: '/uploads/Product/default.png',
+          provider: 'local',
+        },
+        images: [],
+        uses: { ar: [], en: [] },
+        isUnlimitedStock: false,
+        isActive: true,
+        priceRange: { min: minPrice, max: maxPrice },
+        stockSummary: totalStock,
+        variantCount: productFamily.variants.length,
+        isDeleted: false,
+        updatedAt: new Date(),
+      };
+
+      if (!productDoc) {
+        const res = await Product.insertOne({
+          ...productPayload,
+          createdAt: new Date(),
+        });
+        productDoc = await Product.findOne({ _id: res.insertedId });
+      } else {
+        await Product.updateOne(
+          { _id: productDoc._id },
+          { $set: productPayload },
+        );
+      }
+
+      for (const variant of productFamily.variants) {
+        const variantPayload = {
+          productId: productDoc!._id,
+          sku: variant.sku.toUpperCase().trim(),
+          label: `${variant.label.ar} (${variant.label.en})`,
+          price: variant.price,
+          stock: variant.stock,
+          attributes: variant.attributes,
+          shippingProfile: variant.shippingProfile,
+          components: variant.components || [],
+          isActive: true,
+          isDeleted: false,
+          updatedAt: new Date(),
+        };
+
+        const existingVariant = await ProductVariant.findOne({
+          sku: variantPayload.sku,
+        });
+
+        if (existingVariant) {
+          await ProductVariant.updateOne(
+            { _id: existingVariant._id },
+            { $set: variantPayload },
+          );
+        } else {
+          await ProductVariant.insertOne({
+            ...variantPayload,
+            reserved: 0,
+            sold: 0,
+            createdAt: new Date(),
+          });
+        }
+        totalVariantsSeeded++;
+      }
+    }
+
+    console.log(
+      `✅ Full Catalog Seeding Completed: ${FULL_CATALOG_PRODUCTS.length} products, ${totalVariantsSeeded} variants`,
+    );
+    return {
+      brandsCount: FULL_CATALOG_BRANDS.length,
+      categoriesCount: FULL_CATALOG_CATEGORIES.length,
+      productsCount: FULL_CATALOG_PRODUCTS.length,
       variantsCount: totalVariantsSeeded,
     };
   }

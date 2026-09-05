@@ -35,6 +35,15 @@ export class SeedController {
       data: res,
     };
   }
+
+  @Get('full-catalog')
+  async seedFullCatalog() {
+    const res = await this.seedService.seedFullCatalog();
+    return {
+      message: 'Full catalog seeded successfully',
+      data: res,
+    };
+  }
 }
 
 @Module({

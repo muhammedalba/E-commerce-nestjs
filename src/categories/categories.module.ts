@@ -20,10 +20,7 @@ import { CategoriesStatisticsService } from './categories-helper/categories-stat
     ]),
   ],
   controllers: [CategoriesController],
-  providers: [
-    CategoriesService,
-    CategoriesStatisticsService,
-  ],
+  providers: [CategoriesService, CategoriesStatisticsService],
   exports: [MongooseModule],
 })
 export class CategoriesModule {}

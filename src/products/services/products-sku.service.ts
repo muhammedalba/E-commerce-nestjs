@@ -27,7 +27,15 @@ export class ProductSkuService {
 
   validateVariantAttributes(
     variants: { attributes?: Record<string, unknown> }[],
-    allowedAttributes: any[],
+    allowedAttributes: Array<{
+      name: string;
+      type: 'string' | 'number';
+      required?: boolean;
+      obsolete?: boolean;
+      migratedTo?: string;
+      allowedUnits?: string[];
+      allowedValues?: string[];
+    }>,
     existing_variant_count: number = 0,
     existing_simple_count: number = 0,
   ): void {
@@ -66,6 +74,7 @@ export class ProductSkuService {
     variants: Array<{
       sku?: string;
       attributes?: Record<string, unknown>;
+      components?: Array<{ name: string; value: number; unit: string }>;
     }>,
     baseSlug: string,
   ): Promise<void> {
@@ -73,7 +82,8 @@ export class ProductSkuService {
 
     for (const v of variants) {
       if (!v.sku) {
-        v.sku = generateSku(baseSlug, v.attributes);
+        v.sku = generateSku(baseSlug, v.attributes, v.components);
+        // check if sku exists in db and if so , generate new sku
         v.sku = await ensureUniqueSku(this.variantModel, v.sku);
       } else {
         v.sku = v.sku.toUpperCase().trim();

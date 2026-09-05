@@ -139,7 +139,7 @@ async function run() {
       allowedAttributes: productFamily.allowedAttributes,
       allowedAttributesVersion: 1,
       imageCover: {
-        url: '/uploads/products/default-weber.png',
+        url: '/uploads/products/default.png',
         publicId: 'default-weber-cover',
         provider: 'local',
       },

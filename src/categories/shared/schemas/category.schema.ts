@@ -38,11 +38,9 @@ export const CategorySchema = SchemaFactory.createForClass(Category);
 // under high concurrency (avoids the TOCTOU gap in manual exists() + create() checks).
 CategorySchema.index({ 'name.en': 1 }, { unique: true, sparse: true });
 CategorySchema.index({ slug: 1 }, { unique: true, sparse: true });
-
+// Virtual populate
 CategorySchema.virtual('SubCategories', {
   ref: MODEL_NAMES.SUB_CATEGORY,
   localField: '_id',
   foreignField: 'category',
 });
-
-// removed hooks since slug logic is moved to service

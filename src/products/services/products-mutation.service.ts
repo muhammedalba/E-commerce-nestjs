@@ -32,6 +32,7 @@ import { FileAsset } from 'src/shared/schema/file-asset.schema';
 import { handleDuplicateKeyError } from '../products-helper/product-error.utils';
 import { InventoryAlertService } from './inventory-alert.service';
 import { normalizeVariantData } from '../shared/utils/data-normalizer';
+import { withBaseUrl } from 'src/shared/utils/with-base-url.util';
 
 /**
  * Handles all write operations: create, update, delete, restore.
@@ -71,111 +72,107 @@ export class ProductMutationService {
     },
   ) {
     const { variants, ...productData } = createProductDto;
-    console.log('createProductDto', createProductDto);
 
-    let uploadedFiles: any = null; // تعريف المتغير هنا ليسهل الوصول إليه في الـ catch
+    let uploadedFiles: {
+      imageCover?: FileAsset | undefined;
+      images?: FileAsset[] | undefined;
+      infoProductPdf?: FileAsset | undefined;
+    } | null = null; // Defining the variable here does not mean accessing it within the `catch` block.
+
     // ==========================================
-    // خط الدفاع الأول: العمليات السريعة (Fail-Fast)
+    // First Line of Defense: Rapid Operations (Fail-Fast)
     // ==========================================
 
-    // 1. التحقق من السمات (Attributes)
+    // 1) It performs checks to prevent the creation of multiple variants without attributes and blocks the creation of more than one alternative for a product that lacks specific characteristics.
+    // Validates multiple variants against the product's allowed attributes definition.
+    // Also normalizes attributes in place before validation, to ensure keys/units map correctly.
     this.skuService.validateVariantAttributes(
       variants,
       createProductDto.allowedAttributes || [],
     );
 
-    // 2. توليد Slug والتحقق من الـ SKUs (عمليات سريعة في قاعدة البيانات)
-    // نقوم بها قبل رفع الملفات، لتوفير الباندويث والمساحة إذا كان هناك خطأ
+    // 2) generate Slug and validate SKUs (rapid database operations)
+    // performed before uploading files to save bandwidth and space if there is an error
     productData.slug = await generateUniqueSlug(
       productData.title?.en,
       this.productModel,
       undefined,
       this.i18n.translate('exception.NAME_EXISTS'),
     );
+    // generate sku for each variant
     await this.skuService.generateAndValidateSkus(variants, productData.slug);
 
     // ==========================================
-    // المرحلة الثانية: العمليات المكلفة (رفع الملفات)
+    // Second Line of Defense: Costly Operations (File Upload)
     // ==========================================
 
-    // 3. الآن فقط نقوم برفع الملفات (لأننا تأكدنا أن البيانات الأساسية سليمة)
+    // 3. Now only upload the files (since we have confirmed that the basic data is correct)
     uploadedFiles = await this.fileService.handleCreateFiles(files);
+    // here i will use Object.assign to assign the uploaded files to the productData
     Object.assign(productData, uploadedFiles);
 
     // ==========================================
-    // المرحلة الثالثة: الحفظ النهائي (Transaction)
+    // Third Line of Defense: Final Save (Transaction)
     // ==========================================
 
     const session = await this.connection.startSession();
     session.startTransaction();
 
     try {
-      const [newProduct] = await this.productModel.create(
-        [productData as any],
-        { session },
-      );
+      const [newProduct] = await this.productModel.create([productData], {
+        session,
+      });
 
       if (!newProduct)
         throw new InternalServerErrorException('Failed to create product');
 
-      // 4. تجهيز المتغيرات بالتوازي (لأننا فحصنا الـ SKUs مسبقاً)
-      const variantDocs = await Promise.all(
-        variants.map(async (v) => {
-          const normalized = normalizeVariantData(v);
-          return {
-            ...normalized,
-            productId: newProduct._id,
-            sku: normalized.sku
-              ? await this.skuService.ensureUnique(normalized.sku)
-              : undefined,
-          };
-        }),
-      );
+      // Prepare variants in parallel (SKUs already generated & validated in generateAndValidateSkus)
+      const variantDocs = variants.map((v) => ({
+        ...normalizeVariantData(v),
+        productId: newProduct._id,
+      }));
 
       const createdVariants = await this.variantModel.insertMany(variantDocs, {
         session,
       });
 
       await session.commitTransaction();
-      // 5. الأحداث وتجهيز الرد
+      // 5. Events and preparing the response
+      // used to recalculate the aggregate statistics stored directly on the product document
       this.eventEmitter.emit(
         'variant.changed',
         new VariantChangedEvent(newProduct._id),
       );
-
-      const baseUrl = process.env.BASE_URL || '';
+      // Convert to a plain JS object to safely mutate properties (like URLs) without affecting the Mongoose Document state
       const productResponse = newProduct.toObject();
-
-      productResponse.imageCover.url = `${baseUrl}${productResponse.imageCover.url}`;
+      // make an absolute url for each file in the product and return the product
+      productResponse.imageCover = withBaseUrl(productResponse.imageCover);
       if (productResponse.images?.length) {
-        productResponse.images = productResponse.images.map((img) => ({
-          ...img,
-          url: `${baseUrl}${img.url}`,
-        }));
+        productResponse.images = withBaseUrl(productResponse.images);
       }
       if (productResponse.infoProductPdf) {
-        productResponse.infoProductPdf.url = `${baseUrl}${productResponse.infoProductPdf.url}`;
+        productResponse.infoProductPdf = withBaseUrl(
+          productResponse.infoProductPdf,
+        );
       }
 
       return {
         product: this.i18n.localize(productResponse),
         variants: createdVariants,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       // تراجع عن عمليات قاعدة البيانات
       await session.abortTransaction();
       this.logger.error(
         'Transaction Error (create product)',
-        error?.stack || error,
+        error instanceof Error ? error.stack : error,
       );
 
       // ==========================================
-      // خط الدفاع الثاني: تنظيف الملفات اليتيمة (Rollback)
+      // Rollback: delete orphaned files
       // ==========================================
-      // إذا تم رفع الملفات لكن حدث خطأ في قاعدة البيانات، نقوم بمسحها
       if (uploadedFiles) {
         try {
-          // تأكد من إضافة دالة مثل deleteFiles في fileService الخاص بك
           await this.fileService.deleteProductFiles(uploadedFiles);
           this.logger.log(
             'Orphaned files deleted successfully due to transaction failure.',
@@ -185,7 +182,11 @@ export class ProductMutationService {
         }
       }
 
-      if (error.code === 11000) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        (error as Record<string, unknown>).code === 11000
+      ) {
         throw new ConflictException(
           this.i18n.translate('exception.NAME_EXISTS'),
         );
@@ -195,7 +196,7 @@ export class ProductMutationService {
         this.i18n.translate('exception.ERROR_SAVE'),
       );
     } finally {
-      session.endSession();
+      await session.endSession();
     }
   }
 
@@ -220,8 +221,13 @@ export class ProductMutationService {
     const cleanDto = sanitizePayload(updateProductDto);
     const { variants: variantOps, ...productData } = cleanDto;
 
+    console.log('variants', variantOps?.create);
     // Transformed file tracking for precise rollback
-    let uploadedFiles: any = null;
+    let uploadedFiles: {
+      imageCover?: FileAsset | undefined;
+      images?: (string | FileAsset)[] | undefined;
+      infoProductPdf?: FileAsset | undefined;
+    } | null = null;
 
     // ==========================================
     // PHASE 1: Fetch Current State
@@ -250,9 +256,12 @@ export class ProductMutationService {
     if (variantOps?.create && variantOps.create.length > 0) {
       const existingSimpleCount =
         doc.variants?.filter(
-          (v: any) => !v.attributes || Object.keys(v.attributes).length === 0,
+          (v: ProductVariant) =>
+            !v.attributes || Object.keys(v.attributes).length === 0,
         ).length || 0;
-
+      //  It performs checks to prevent the creation of multiple variants without attributes and blocks the creation of more than one alternative for a product that lacks specific characteristics.
+      // Validates multiple variants against the product's allowed attributes definition.
+      // Also normalizes attributes in place before validation, to ensure keys/units map correctly.
       this.skuService.validateVariantAttributes(
         variantOps.create,
         effectiveAllowedAttributes,
@@ -292,7 +301,7 @@ export class ProductMutationService {
 
     if (cleanDto.allowedAttributes) {
       const variantsToValidate =
-        (doc.variants as any[])?.filter((v) => {
+        (doc.variants as ProductVariantDocument[])?.filter((v) => {
           const isBeingUpdated = variantOps?.update?.some(
             (u) => String(u._id) === String(v._id),
           );
@@ -349,6 +358,7 @@ export class ProductMutationService {
       );
       uploadedFiles = fileResult.updates;
       filesToDelete = fileResult.filesToDelete;
+      console.log('update product ', uploadedFiles);
       Object.assign(productData, uploadedFiles);
     }
 
@@ -360,7 +370,7 @@ export class ProductMutationService {
         async (session) => {
           // 1. Update Base Product
           const hasProductUpdates = Object.keys(productData).length > 0;
-          let productResult: any = doc;
+          let productResult: ProductDocument | null = null;
 
           if (hasProductUpdates) {
             // CRITICAL FIX: Removed .lean() so Mongoose virtuals, getters, and transforms
@@ -374,6 +384,12 @@ export class ProductMutationService {
             productResult = await this.productModel
               .findById(idParamDto.id)
               .session(session);
+          }
+
+          if (!productResult) {
+            throw new NotFoundException(
+              this.i18n.translate('exception.NOT_FOUND'),
+            );
           }
 
           // 2. Sequential Variant Operations (Prevents MongoDB WriteConflict Error 112)
@@ -517,6 +533,12 @@ export class ProductMutationService {
       // ==========================================
       // PHASE 6: Events & Final Response
       // ==========================================
+      if (!updatedProduct) {
+        throw new InternalServerErrorException(
+          'Transaction failed to return updated product.',
+        );
+      }
+
       // Event emission occurs strictly AFTER transaction commit succeeds
       this.eventEmitter.emit(
         'variant.changed',
@@ -555,7 +577,7 @@ export class ProductMutationService {
 
       this.logger.error(
         'Transaction Error (update product)',
-        error?.stack || error,
+        error instanceof Error ? error.stack : String(error),
       );
 
       if (
@@ -566,7 +588,7 @@ export class ProductMutationService {
         throw error;
       }
 
-      if (error.code === 11000) {
+      if ((error as { code?: number })?.code === 11000) {
         handleDuplicateKeyError(error, this.i18n); // Precise duplicate error translation
       }
 
@@ -618,13 +640,13 @@ export class ProductMutationService {
       await session.abortTransaction();
       this.logger.error(
         'Transaction Error (delete product)',
-        error?.stack || error,
+        error instanceof Error ? error.stack : String(error),
       );
       throw new InternalServerErrorException(
         this.i18n.translate('exception.ERROR_DELETE'),
       );
     } finally {
-      session.endSession();
+      await session.endSession();
     }
   }
   /*
@@ -664,13 +686,13 @@ export class ProductMutationService {
       await session.abortTransaction();
       this.logger.error(
         'Transaction Error (hard delete)',
-        error?.stack || error,
+        error instanceof Error ? error.stack : String(error),
       );
       throw new InternalServerErrorException(
         this.i18n.translate('exception.ERROR_DELETE'),
       );
     } finally {
-      session.endSession();
+      await session.endSession();
     }
   }
 
@@ -718,7 +740,7 @@ export class ProductMutationService {
       if (error instanceof NotFoundException) throw error;
       throw new InternalServerErrorException('Failed to restore product');
     } finally {
-      session.endSession();
+      await session.endSession();
     }
   }
 }

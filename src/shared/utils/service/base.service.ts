@@ -4,10 +4,11 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Model, Types, isValidObjectId } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { CustomI18nService } from '../i18n/custom-i18n.service';
 import { ApiFeatures } from '../ApiFeatures';
 import { QueryString } from '../interfaces/queryInterface';
+import { toObjectId } from '../mongo.util';
 import { FileUploadService } from 'src/file-upload/file-upload.service';
 import { MulterFileType } from '../interfaces/fileInterface';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
@@ -128,17 +129,14 @@ export class BaseService<T> {
   ): Promise<void> {
     const query: Record<string, any> = { [field]: value.trim() };
     if (excludeId) {
-      const idToExclude = isValidObjectId(excludeId)
-        ? new Types.ObjectId(excludeId)
-        : excludeId;
-      query._id = { $ne: idToExclude };
+      query._id = { $ne: toObjectId(excludeId) };
     }
     if (onlyActive) {
       query.isActive = true;
     }
 
-    const count = await this.model.countDocuments(query);
-    if (count > 0) {
+    const exists = await this.model.exists(query);
+    if (exists) {
       const key =
         this.serviceOptions.fieldTakenExceptionKey ?? 'exception.NAME_EXISTS';
       throw new BadRequestException(this.t(key));
