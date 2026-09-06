@@ -18,6 +18,9 @@ import { Transform, Type } from 'class-transformer';
 export class ProductAttributeDefinitionDto {
   @IsString()
   @IsNotEmpty()
+  @Transform(({ value }: { value: string }) =>
+    value?.toString().trim().toLowerCase(),
+  )
   name!: string;
 
   @IsString()

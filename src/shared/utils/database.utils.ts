@@ -1,5 +1,22 @@
 import mongoose from 'mongoose';
-import { InternalServerErrorException } from '@nestjs/common';
+import { InternalServerErrorException, LoggerService } from '@nestjs/common';
+
+export interface RetryLogger {
+  warn: (message: string, ...optionalParams: unknown[]) => void;
+}
+
+function hasMongoErrorLabel(error: unknown, label: string): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'hasErrorLabel' in error &&
+    typeof (error as { hasErrorLabel?: unknown }).hasErrorLabel ===
+      'function' &&
+    (error as { hasErrorLabel: (errorLabel: string) => boolean }).hasErrorLabel(
+      label,
+    )
+  );
+}
 
 /**
  * UTILITY: Resilient Transaction Retry Wrapper
@@ -9,7 +26,7 @@ import { InternalServerErrorException } from '@nestjs/common';
 export async function withTransactionRetry<T>(
   action: (session: mongoose.ClientSession) => Promise<T>,
   connection: mongoose.Connection,
-  logger: any,
+  logger: RetryLogger | LoggerService,
   maxRetries = 3,
 ): Promise<T> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -24,10 +41,9 @@ export async function withTransactionRetry<T>(
         try {
           await session.commitTransaction();
           break; // Commit successful
-        } catch (commitError: any) {
+        } catch (commitError: unknown) {
           if (
-            commitError.hasErrorLabel &&
-            commitError.hasErrorLabel('UnknownTransactionCommitResult')
+            hasMongoErrorLabel(commitError, 'UnknownTransactionCommitResult')
           ) {
             logger.warn(
               'UnknownTransactionCommitResult encountered. Retrying commit...',
@@ -40,13 +56,12 @@ export async function withTransactionRetry<T>(
       }
 
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       await session.abortTransaction();
 
       // Retry the entire transaction on transient failures
       if (
-        error.hasErrorLabel &&
-        error.hasErrorLabel('TransientTransactionError') &&
+        hasMongoErrorLabel(error, 'TransientTransactionError') &&
         attempt < maxRetries
       ) {
         logger.warn(
@@ -57,7 +72,7 @@ export async function withTransactionRetry<T>(
       }
       throw error;
     } finally {
-      session.endSession();
+      await session.endSession();
     }
   }
   throw new InternalServerErrorException(

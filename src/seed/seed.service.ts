@@ -528,10 +528,13 @@ export class SeedService {
         category: categoryId,
         SubCategories: [subCategoryId],
         brand: brand!._id,
-        allowedAttributes: productFamily.allowedAttributes,
+        allowedAttributes: productFamily.allowedAttributes.map((att) => ({
+          ...att,
+          name: att.name.trim().toLowerCase(),
+        })),
         allowedAttributesVersion: 1,
         imageCover: {
-          url: '/uploads/products/default-weber.png',
+          url: '/uploads/Product/default.png',
           publicId: 'default-weber-cover',
           provider: 'local',
         },

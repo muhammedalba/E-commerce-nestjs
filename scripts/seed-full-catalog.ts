@@ -142,7 +142,13 @@ async function run() {
       category: categoryId,
       SubCategories: [subCategoryId],
       brand: brandId,
-      allowedAttributes: productFamily.allowedAttributes,
+      // i need to remove the spaces from the attribute names and convert them to camelcase
+      allowedAttributes: productFamily.allowedAttributes?.map((attr) => {
+        return {
+          ...attr,
+          name: attr.name.trim().toLowerCase(),
+        };
+      }),
       allowedAttributesVersion: 1,
       imageCover: {
         url: `/uploads/Product/default.png`,

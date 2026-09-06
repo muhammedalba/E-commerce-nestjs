@@ -46,7 +46,7 @@ export class UpdateProductDto {
   imageCover?: string;
 
   @IsOptional()
-  @Transform(({ value }) => {
+  @Transform(({ value }: { value: string | string[] }) => {
     if (Array.isArray(value)) return value;
     if (value !== undefined && value !== null && value !== '') return [value];
     return [];
@@ -62,8 +62,9 @@ export class UpdateProductDto {
   @IsOptional()
   @Exists(MODEL_NAMES.CATEGORY)
   category?: string;
+
   @IsOptional()
-  @Transform(({ value }) => {
+  @Transform(({ value }: { value: string | string[] }) => {
     const rawIds = Array.isArray(value) ? value : value ? [value] : [];
     return [
       ...new Set(

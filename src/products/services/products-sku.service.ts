@@ -39,6 +39,7 @@ export class ProductSkuService {
     existing_variant_count: number = 0,
     existing_simple_count: number = 0,
   ): void {
+    // The number of new simple product variants provided by the user is calculated—specifically, those variants that do not have any attributes.
     const newSimpleCount = variants.filter(
       (v) => !v.attributes || Object.keys(v.attributes).length === 0,
     ).length;
@@ -62,7 +63,8 @@ export class ProductSkuService {
         'لا يمكن إنشاء أكثر من متغير واحد لمنتج لا يحتوي على خصائص (Attributes)',
       );
     }
-
+    // Validates multiple variants against the product's allowed attributes definition.
+    // Also normalizes attributes in place before validation, to ensure keys/units map correctly.
     validateAndNormalizeVariantsAttributes(variants, allowedAttributes);
   }
 

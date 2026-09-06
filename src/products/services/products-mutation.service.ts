@@ -217,11 +217,6 @@ export class ProductMutationService {
       images?: MulterFilesType;
     },
   ) {
-    // 1. Sanitize Payload (Remove undefined fields/arrays gracefully)
-    const cleanDto = sanitizePayload(updateProductDto);
-    const { variants: variantOps, ...productData } = cleanDto;
-
-    console.log('variants', variantOps?.create);
     // Transformed file tracking for precise rollback
     let uploadedFiles: {
       imageCover?: FileAsset | undefined;
@@ -229,12 +224,19 @@ export class ProductMutationService {
       infoProductPdf?: FileAsset | undefined;
     } | null = null;
 
+    // 1. Sanitize Payload (Remove undefined fields/arrays gracefully)
+    const cleanDto = sanitizePayload(updateProductDto);
+    const { variants: variantOps, ...productData } = cleanDto;
+
     // ==========================================
     // PHASE 1: Fetch Current State
     // ==========================================
     // ARCHITECTURAL FIX: Removed .select() to ensure the doc is fully loaded.
     // This guarantees accurate hydration later for validation, and prevents data-loss scenarios.
-    // Using .lean() here is safe because this snapshot is purely read-only logic evaluation.
+    // Fetch the product by its ID and populate only active (non-deleted) variants.
+    // - .populate(): Retrieves related ProductVariant documents matching the product.
+    // - match: { isDeleted: { $ne: true } }: Excludes soft-deleted variants to maintain accurate counts and avoid ghost references.
+    // - .lean(): Returns lightweight plain JavaScript objects to boost performance and reduce memory usage during read-only evaluations.
     const doc = await this.productModel
       .findById(idParamDto.id)
       .populate({
@@ -243,6 +245,7 @@ export class ProductMutationService {
       })
       .lean();
 
+    // Guard clause: If the product does not exist, fail immediately with a 404 Not Found exception.
     if (!doc) {
       throw new NotFoundException(this.i18n.translate('exception.NOT_FOUND'));
     }
@@ -254,11 +257,13 @@ export class ProductMutationService {
     // PHASE 2: In-Memory Validation (Fail-Fast)
     // ==========================================
     if (variantOps?.create && variantOps.create.length > 0) {
+      // The number of simple variants for the product in the database is calculated—specifically, those variants that do not have any attributes.
       const existingSimpleCount =
         doc.variants?.filter(
           (v: ProductVariant) =>
             !v.attributes || Object.keys(v.attributes).length === 0,
         ).length || 0;
+
       //  It performs checks to prevent the creation of multiple variants without attributes and blocks the creation of more than one alternative for a product that lacks specific characteristics.
       // Validates multiple variants against the product's allowed attributes definition.
       // Also normalizes attributes in place before validation, to ensure keys/units map correctly.
@@ -274,23 +279,30 @@ export class ProductMutationService {
     // We merge the current DB state of each variant with the incoming update payload to produce
     // the "post-update" picture, then run the same attribute validator used for creation.
     if (variantOps?.update && variantOps.update.length > 0) {
-      const existingVariants = (doc.variants ?? []) as unknown as Array<{
-        _id: unknown;
-        attributes?: Record<string, unknown>;
-      }>;
+      // Summary of Objective and Benefit
+      // Support for Partial Updates: Allowing the modification of a single property without requiring the user to resend all existing properties.
+      // 1. Retrieve the list of current product variants from the database
+      const existingVariants = (doc.variants ?? []) as ProductVariantDocument[];
 
+      // 2. Iterate over each variant to be updated
       const mergedForValidation = variantOps.update.map((incoming) => {
         const { _id, ...incomingData } = incoming;
+
+        // 3. Search for the original variant stored in the database using _id
         const existingVariant = existingVariants.find(
           (v) => String(v._id) === String(_id),
         );
+
+        // 4. Merge old attributes with new attributes (new overrides old)
         const mergedAttributes: Record<string, unknown> = {
-          ...(existingVariant?.attributes ?? {}),
-          ...(incomingData.attributes ?? {}),
+          ...(existingVariant?.attributes ?? {}), // old
+          ...(incomingData.attributes ?? {}), // new
         };
+
+        // 5. Return the final form that the variant will take after being saved
         return { attributes: mergedAttributes };
       });
-
+      // validates the attributes of multiple variants against the allowed attributes of the product. It ensures that all attributes are valid and in the correct format.
       this.skuService.validateVariantAttributes(
         mergedForValidation,
         effectiveAllowedAttributes,
@@ -298,23 +310,31 @@ export class ProductMutationService {
         0,
       );
     }
-
+    // 1. Did the user modify the allowed attribute rules for the product in this request? Check whether these old variables are still compatible with the new rules.
     if (cleanDto.allowedAttributes) {
+      // 2. Filtering the current variables in the database to extract only the "constant variables":
+      // This ensures we only validate the variables that were not explicitly part of an update or delete operation,
+      // preventing conflicts between new rules and pending structural changes.
       const variantsToValidate =
         (doc.variants as ProductVariantDocument[])?.filter((v) => {
+          // Is this variable sent in the edit list?
           const isBeingUpdated = variantOps?.update?.some(
             (u) => String(u._id) === String(v._id),
           );
+          // Is this variable included in the deletion list?
           const isBeingDeleted = variantOps?.delete?.some(
             (d) => String(d) === String(v._id),
           );
+          // Exclude variables that are modified or deleted
           return !isBeingUpdated && !isBeingDeleted;
         }) || [];
 
+      // 3. If there are old variables remaining unchanged:
       if (variantsToValidate.length > 0) {
+        // Check whether these old variables are still compatible with the new rules.
         this.skuService.validateVariantAttributes(
           variantsToValidate,
-          cleanDto.allowedAttributes,
+          cleanDto.allowedAttributes, // New rules to be memorized
           0,
           0,
         );
@@ -325,7 +345,7 @@ export class ProductMutationService {
     // PHASE 3: DB-Light Logic (Slugs & SKUs)
     // ==========================================
     let newBaseSlug = doc.slug;
-
+    // If the user has modified the product title, generate a new unique slug for it.
     if (productData.title) {
       newBaseSlug = await generateUniqueSlug(
         productData.title.en,
@@ -335,8 +355,9 @@ export class ProductMutationService {
       );
       productData.slug = newBaseSlug;
     }
-
+    // 3. If new variants are being added:
     if (variantOps?.create && variantOps.create.length > 0) {
+      // Generate and validate SKUs for the new variants.
       await this.skuService.generateAndValidateSkus(
         variantOps.create,
         newBaseSlug,
@@ -358,7 +379,6 @@ export class ProductMutationService {
       );
       uploadedFiles = fileResult.updates;
       filesToDelete = fileResult.filesToDelete;
-      console.log('update product ', uploadedFiles);
       Object.assign(productData, uploadedFiles);
     }
 
@@ -369,9 +389,13 @@ export class ProductMutationService {
       const updatedProduct = await withTransactionRetry(
         async (session) => {
           // 1. Update Base Product
+          // Check if there are any updates pending for the base product document.
           const hasProductUpdates = Object.keys(productData).length > 0;
+
+          // Initialize productResult to null, which will hold the updated product document.
           let productResult: ProductDocument | null = null;
 
+          // If there are pending updates for the base product
           if (hasProductUpdates) {
             // CRITICAL FIX: Removed .lean() so Mongoose virtuals, getters, and transforms
             // (needed by localization decorators/interceptors) remain intact in the response.
@@ -402,6 +426,12 @@ export class ProductMutationService {
                   return {
                     ...normalized,
                     productId: productResult._id,
+                    // During the seconds it took to upload the images in Stage 4,
+                    // another user (or a concurrent request) might have created
+                    //  a variant with the same SKU and saved it to the database.
+                    // The `ensureUnique` check here acts as a final safeguard—a last-line
+                    // defensive check—immediately before the `insertMany` operation
+                    // to ensure that no collision (Duplicate Key Error) occurs.
                     sku: normalized.sku
                       ? await this.skuService.ensureUnique(normalized.sku)
                       : undefined,
@@ -434,15 +464,18 @@ export class ProductMutationService {
                 if (updateData.sku)
                   updateData.sku = updateData.sku.toUpperCase();
 
+                // Searches for the variant in the pre-loaded data (doc.variants)
                 // CRITICAL FIX: Document-aware bulk validation
                 // We fetch the original plain object, hydrate it into a Mongoose doc, apply updates,
                 // and validate. This accurately respects required fields, defaults, and cross-field logic.
                 const originalState = (
                   doc.variants as (ProductVariant & { _id: unknown })[]
                 ).find((v) => String(v._id) === String(_id));
+
                 if (!originalState)
                   throw new NotFoundException(`Variant ${_id} not found.`);
 
+                //  Safe merging of nested objects
                 // Isolated concern: safely merge partial shippingProfile if provided without overwriting attributes or vice-versa
                 if (
                   updateData.shippingProfile &&
@@ -456,10 +489,15 @@ export class ProductMutationService {
                       originalState.shippingProfile.dimensions,
                   };
                 }
-
+                // It takes a standard JS object and converts it in memory into a genuine Mongoose Document, without performing any database query.
                 const validationDoc = this.variantModel.hydrate(originalState);
+                // Apply updates
                 validationDoc.set(updateData);
 
+                // Validate
+                // It validates the entire object against schema rules—such as whether the price is negative, an enum constraint is violated,
+                // or a mandatory field is missing.
+                // If any error is found, it immediately rejects the operation before interacting with the database.
                 const validationError = validationDoc.validateSync();
                 if (validationError) {
                   throw new BadRequestException(
@@ -520,6 +558,14 @@ export class ProductMutationService {
         this.logger,
       );
 
+      // ==========================================
+      // PHASE 6: Events & Final Response
+      // ==========================================
+      if (!updatedProduct) {
+        throw new InternalServerErrorException(
+          'Transaction failed to return updated product.',
+        );
+      }
       // Delete old files that are no longer needed, strictly after the transaction commits successfully.
       if (filesToDelete.length > 0) {
         void this.fileService.deleteFilesList(filesToDelete).catch((err) => {
@@ -530,26 +576,19 @@ export class ProductMutationService {
         });
       }
 
-      // ==========================================
-      // PHASE 6: Events & Final Response
-      // ==========================================
-      if (!updatedProduct) {
-        throw new InternalServerErrorException(
-          'Transaction failed to return updated product.',
-        );
-      }
-
       // Event emission occurs strictly AFTER transaction commit succeeds
       this.eventEmitter.emit(
         'variant.changed',
         new VariantChangedEvent(updatedProduct._id),
       );
 
-      // Fetch final hydrated variants (without lean) to support response/localization layers
-      const finalVariants = await this.variantModel.find({
-        productId: updatedProduct._id,
-        isDeleted: { $ne: true },
-      });
+      // Fetch final hydrated variants
+      const finalVariants = await this.variantModel
+        .find({
+          productId: updatedProduct._id,
+          isDeleted: { $ne: true },
+        })
+        .lean();
 
       return {
         product: this.i18n.localize(updatedProduct),
@@ -732,7 +771,6 @@ export class ProductMutationService {
 
       return {
         product: this.i18n.localize(product),
-        // product: this.queryService.localize(product),
         variants,
       };
     } catch (error) {

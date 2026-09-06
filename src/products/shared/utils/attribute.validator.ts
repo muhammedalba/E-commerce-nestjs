@@ -46,9 +46,9 @@ export function validateAttributes(
 
   // 1. Check for required attributes
   for (const def of allowedAttributes) {
-    if (def.required && !(def.name.trim() in attrs)) {
+    if (def.required && !(def.name.toLowerCase().trim() in attrs)) {
       throw new BadRequestException(
-        `Missing required attribute: "${def.name}"`,
+        `Missing required attribute: " ${def.name} "`,
       );
     }
   }

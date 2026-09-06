@@ -136,7 +136,12 @@ async function run() {
       category: categoryId,
       SubCategories: [subCategoryId],
       brand: brand!._id,
-      allowedAttributes: productFamily.allowedAttributes,
+      allowedAttributes: productFamily.allowedAttributes?.map((attr) => {
+        return {
+          ...attr,
+          name: attr.name.trim().toLowerCase(),
+        };
+      }),
       allowedAttributesVersion: 1,
       imageCover: {
         url: '/uploads/products/default.png',
