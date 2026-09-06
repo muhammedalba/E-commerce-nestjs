@@ -10,6 +10,8 @@ import { Controller, Get } from '@nestjs/common';
 import { UsersModule } from 'src/users/users.module';
 // http://localhost:4000/api/v1/seed
 // http://localhost:4000/api/v1/seed/ksa
+// http://localhost:4000/api/v1/seed/weber-products
+// http://localhost:4000/api/v1/seed/full-catalog
 
 @Controller('seed')
 export class SeedController {

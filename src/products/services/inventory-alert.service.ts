@@ -61,11 +61,8 @@ export class InventoryAlertService {
     const existingAlert = await this.cacheManager.get(cacheKey);
     if (existingAlert) return;
 
-    // Mark as alerted (Atomic operation if Redis store)
-    await this.cacheManager.set(cacheKey, true, {
-      ttl: 48 * 60 * 60 * 1000,
-      nx: true,
-    } as any);
+    // Mark as alerted (TTL: 48 hours)
+    await this.cacheManager.set(cacheKey, true, 48 * 60 * 60 * 1000);
 
     // 5. Emit the specific inventory alert event
     const payload: InventoryAlertPayload = {

@@ -24,7 +24,6 @@ import { VariantChangedEvent } from '../products-helper/aggregation-sync.service
 
 import { ProductFileService } from './products-file.service';
 import { ProductSkuService } from './products-sku.service';
-import { ProductQueryService } from './products-query.service';
 import { generateUniqueSlug } from 'src/shared/utils/slug.util';
 import { sanitizePayload } from 'src/shared/utils/object.utils';
 import { withTransactionRetry } from 'src/shared/utils/database.utils';
@@ -50,7 +49,6 @@ export class ProductMutationService {
     @InjectConnection() private readonly connection: Connection,
     private readonly fileService: ProductFileService,
     private readonly skuService: ProductSkuService,
-    private readonly queryService: ProductQueryService,
     private readonly i18n: CustomI18nService,
     private readonly eventEmitter: EventEmitter2,
     private readonly inventoryAlertService: InventoryAlertService,
@@ -355,13 +353,115 @@ export class ProductMutationService {
       );
       productData.slug = newBaseSlug;
     }
+
     // 3. If new variants are being added:
+    // Pre-calculate and validate new variants BEFORE opening the transaction to minimize lock time
+    let precomputedNewVariants: Record<string, unknown>[] = [];
     if (variantOps?.create && variantOps.create.length > 0) {
       // Generate and validate SKUs for the new variants.
       await this.skuService.generateAndValidateSkus(
         variantOps.create,
         newBaseSlug,
       );
+
+      // During the seconds it took to upload the images in Stage 4,
+      // another user (or a concurrent request) might have created
+      // a variant with the same SKU and saved it to the database.
+      // The `ensureUnique` check here acts as a final safeguard—a last-line
+      // defensive check—immediately before the `insertMany` operation
+      // to ensure that no collision (Duplicate Key Error) occurs.
+      precomputedNewVariants = await Promise.all(
+        variantOps.create.map(async (v) => {
+          const normalized = normalizeVariantData(v);
+          return {
+            ...normalized,
+            productId: doc._id,
+            sku: normalized.sku
+              ? await this.skuService.ensureUnique(normalized.sku)
+              : undefined,
+          };
+        }),
+      );
+
+      // ARCHITECTURAL FIX: Explicitly validate before insertMany to guarantee safety.
+      // Note: If schema utilizes complex pre('save') hooks, consider mapping into sequential .save() calls instead.
+      const newVariantDocs = precomputedNewVariants.map(
+        (data) => new this.variantModel(data),
+      );
+      for (const newDoc of newVariantDocs) {
+        const valErr = newDoc.validateSync();
+        if (valErr) {
+          throw new BadRequestException(
+            `Variant validation failed: ${valErr.message}`,
+          );
+        }
+      }
+    }
+
+    // Pre-calculate and validate variant updates BEFORE opening the transaction
+    const precomputedBulkUpdates: AnyBulkWriteOperation<ProductDocument>[] = [];
+    const stockAlertVariantIds: string[] = [];
+
+    if (variantOps?.update && variantOps.update.length > 0) {
+      for (const variantUpdate of variantOps.update) {
+        const { _id, ...rawUpdateData } = variantUpdate;
+        const updateData = normalizeVariantData(rawUpdateData);
+        if (updateData.sku) {
+          updateData.sku = updateData.sku.toUpperCase();
+        }
+
+        // Searches for the variant in the pre-loaded data (doc.variants)
+        // CRITICAL FIX: Document-aware bulk validation
+        // We fetch the original plain object, hydrate it into a Mongoose doc, apply updates,
+        // and validate. This accurately respects required fields, defaults, and cross-field logic.
+        const originalState = (
+          doc.variants as (ProductVariant & { _id: unknown })[]
+        ).find((v) => String(v._id) === String(_id));
+
+        if (!originalState) {
+          throw new NotFoundException(`Variant ${_id} not found.`);
+        }
+
+        // Safe merging of nested objects
+        // Isolated concern: safely merge partial shippingProfile if provided without overwriting attributes or vice-versa
+        if (updateData.shippingProfile && originalState.shippingProfile) {
+          updateData.shippingProfile = {
+            ...originalState.shippingProfile,
+            ...updateData.shippingProfile,
+            dimensions:
+              updateData.shippingProfile.dimensions ??
+              originalState.shippingProfile.dimensions,
+          };
+        }
+
+        // It takes a standard JS object and converts it in memory into a genuine Mongoose Document, without performing any database query.
+        const validationDoc = this.variantModel.hydrate(originalState);
+        // Apply updates
+        validationDoc.set(updateData);
+
+        // Validate
+        // It validates the entire object against schema rules—such as whether the price is negative, an enum constraint is violated,
+        // or a mandatory field is missing.
+        // If any error is found, it immediately rejects the operation before interacting with the database.
+        const validationError = validationDoc.validateSync();
+        if (validationError) {
+          throw new BadRequestException(
+            `Validation failed for variant ${_id}: ${validationError.message}`,
+          );
+        }
+
+        // CLEAR STOCK ALERT CACHE IF STOCK IS UPDATED (Queued for execution after commit)
+        if ('stock' in updateData) {
+          stockAlertVariantIds.push(String(_id));
+        }
+
+        precomputedBulkUpdates.push({
+          updateOne: {
+            filter: { _id, productId: doc._id },
+            update: { $set: updateData }, // Optimistic Concurrency Note: If updateData includes __v, Mongoose applies it here.
+          },
+        });
+      }
     }
 
     // ==========================================
@@ -419,110 +519,17 @@ export class ProductMutationService {
           // 2. Sequential Variant Operations (Prevents MongoDB WriteConflict Error 112)
           if (variantOps) {
             // A. CREATE Variants
-            if (variantOps.create && variantOps.create.length > 0) {
-              const newVariantsData = await Promise.all(
-                variantOps.create.map(async (v) => {
-                  const normalized = normalizeVariantData(v);
-                  return {
-                    ...normalized,
-                    productId: productResult._id,
-                    // During the seconds it took to upload the images in Stage 4,
-                    // another user (or a concurrent request) might have created
-                    //  a variant with the same SKU and saved it to the database.
-                    // The `ensureUnique` check here acts as a final safeguard—a last-line
-                    // defensive check—immediately before the `insertMany` operation
-                    // to ensure that no collision (Duplicate Key Error) occurs.
-                    sku: normalized.sku
-                      ? await this.skuService.ensureUnique(normalized.sku)
-                      : undefined,
-                  };
-                }),
-              );
-
-              // ARCHITECTURAL FIX: Explicitly validate before insertMany to guarantee safety.
-              // Note: If schema utilizes complex pre('save') hooks, consider mapping into sequential .save() calls instead.
-              const newVariantDocs = newVariantsData.map(
-                (data) => new this.variantModel(data),
-              );
-              for (const newDoc of newVariantDocs) {
-                const valErr = newDoc.validateSync();
-                if (valErr)
-                  throw new BadRequestException(
-                    `Variant validation failed: ${valErr.message}`,
-                  );
-              }
-              await this.variantModel.insertMany(newVariantsData, { session });
+            if (precomputedNewVariants.length > 0) {
+              await this.variantModel.insertMany(precomputedNewVariants, {
+                session,
+              });
             }
 
             // B. UPDATE Variants (BulkWrite with Context-Aware Validation)
-            if (variantOps.update && variantOps.update.length > 0) {
-              const bulkUpdates: AnyBulkWriteOperation<ProductDocument>[] = [];
-
-              for (const variantUpdate of variantOps.update) {
-                const { _id, ...rawUpdateData } = variantUpdate;
-                const updateData = normalizeVariantData(rawUpdateData);
-                if (updateData.sku)
-                  updateData.sku = updateData.sku.toUpperCase();
-
-                // Searches for the variant in the pre-loaded data (doc.variants)
-                // CRITICAL FIX: Document-aware bulk validation
-                // We fetch the original plain object, hydrate it into a Mongoose doc, apply updates,
-                // and validate. This accurately respects required fields, defaults, and cross-field logic.
-                const originalState = (
-                  doc.variants as (ProductVariant & { _id: unknown })[]
-                ).find((v) => String(v._id) === String(_id));
-
-                if (!originalState)
-                  throw new NotFoundException(`Variant ${_id} not found.`);
-
-                //  Safe merging of nested objects
-                // Isolated concern: safely merge partial shippingProfile if provided without overwriting attributes or vice-versa
-                if (
-                  updateData.shippingProfile &&
-                  originalState.shippingProfile
-                ) {
-                  updateData.shippingProfile = {
-                    ...originalState.shippingProfile,
-                    ...updateData.shippingProfile,
-                    dimensions:
-                      updateData.shippingProfile.dimensions ??
-                      originalState.shippingProfile.dimensions,
-                  };
-                }
-                // It takes a standard JS object and converts it in memory into a genuine Mongoose Document, without performing any database query.
-                const validationDoc = this.variantModel.hydrate(originalState);
-                // Apply updates
-                validationDoc.set(updateData);
-
-                // Validate
-                // It validates the entire object against schema rules—such as whether the price is negative, an enum constraint is violated,
-                // or a mandatory field is missing.
-                // If any error is found, it immediately rejects the operation before interacting with the database.
-                const validationError = validationDoc.validateSync();
-                if (validationError) {
-                  throw new BadRequestException(
-                    `Validation failed for variant ${_id}: ${validationError.message}`,
-                  );
-                }
-
-                // CLEAR STOCK ALERT CACHE IF STOCK IS UPDATED
-                if ('stock' in updateData) {
-                  this.inventoryAlertService
-                    .clearStockAlertCache(String(_id))
-                    .catch((e) =>
-                      this.logger.error('Failed to clear stock alert cache', e),
-                    );
-                }
-
-                bulkUpdates.push({
-                  updateOne: {
-                    filter: { _id, productId: productResult._id },
-                    update: { $set: updateData }, // Optimistic Concurrency Note: If updateData includes __v, Mongoose applies it here.
-                  },
-                });
-              }
-
-              await this.variantModel.bulkWrite(bulkUpdates, { session });
+            if (precomputedBulkUpdates.length > 0) {
+              await this.variantModel.bulkWrite(precomputedBulkUpdates, {
+                session,
+              });
             }
 
             // C. DELETE Variants
@@ -566,6 +573,16 @@ export class ProductMutationService {
           'Transaction failed to return updated product.',
         );
       }
+
+      // CLEAR STOCK ALERT CACHE strictly AFTER commit succeeds
+      for (const variantId of stockAlertVariantIds) {
+        this.inventoryAlertService
+          .clearStockAlertCache(variantId)
+          .catch((e) =>
+            this.logger.error('Failed to clear stock alert cache', e),
+          );
+      }
+
       // Delete old files that are no longer needed, strictly after the transaction commits successfully.
       if (filesToDelete.length > 0) {
         void this.fileService.deleteFilesList(filesToDelete).catch((err) => {
@@ -582,13 +599,22 @@ export class ProductMutationService {
         new VariantChangedEvent(updatedProduct._id),
       );
 
-      // Fetch final hydrated variants
-      const finalVariants = await this.variantModel
-        .find({
-          productId: updatedProduct._id,
-          isDeleted: { $ne: true },
-        })
-        .lean();
+      // Fetch final hydrated variants only if variant changes occurred; otherwise reuse doc.variants
+      const hasVariantChanges = Boolean(
+        variantOps &&
+        ((variantOps.create && variantOps.create.length > 0) ||
+          (variantOps.update && variantOps.update.length > 0) ||
+          (variantOps.delete && variantOps.delete.length > 0)),
+      );
+
+      const finalVariants = hasVariantChanges
+        ? await this.variantModel
+            .find({
+              productId: updatedProduct._id,
+              isDeleted: { $ne: true },
+            })
+            .lean()
+        : ((doc.variants ?? []) as ProductVariant[]);
 
       return {
         product: this.i18n.localize(updatedProduct),
@@ -643,51 +669,50 @@ export class ProductMutationService {
    * @returns @description the removed product
    */
   async remove(idParamDto: IdParamDto) {
-    const doc = await this.productModel
-      .findById(idParamDto.id)
-      .select('_id')
-      .lean();
-
-    if (!doc) {
-      throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
-    }
-
-    const session = await this.connection.startSession();
-    session.startTransaction();
-
     try {
-      const now = new Date();
+      await withTransactionRetry(
+        async (session) => {
+          const now = new Date();
 
-      await this.productModel.findByIdAndUpdate(
-        idParamDto.id,
-        { $set: { isDeleted: true, deletedAt: now } },
-        { session },
+          const product = await this.productModel.findByIdAndUpdate(
+            idParamDto.id,
+            { $set: { isDeleted: true, deletedAt: now } },
+            { new: true, session },
+          );
+
+          if (!product) {
+            throw new BadRequestException(
+              this.i18n.translate('exception.NOT_FOUND'),
+            );
+          }
+
+          await this.variantModel.updateMany(
+            { productId: product._id },
+            { $set: { isDeleted: true, deletedAt: now } },
+            { session },
+          );
+        },
+        this.connection,
+        this.logger,
       );
-
-      await this.variantModel.updateMany(
-        { productId: doc._id },
-        { $set: { isDeleted: true, deletedAt: now } },
-        { session },
-      );
-
-      await session.commitTransaction();
 
       // Invalidate cache
 
       return { message: 'Product and variants soft-deleted successfully' };
-    } catch (error: any) {
-      await session.abortTransaction();
+    } catch (error: unknown) {
       this.logger.error(
         'Transaction Error (delete product)',
         error instanceof Error ? error.stack : String(error),
       );
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       throw new InternalServerErrorException(
         this.i18n.translate('exception.ERROR_DELETE'),
       );
-    } finally {
-      await session.endSession();
     }
   }
+
   /*
    * @description this function will hard remove a product
    * @param idParamDto @description the id of the product to be hard removed
@@ -705,15 +730,19 @@ export class ProductMutationService {
       );
     }
 
-    const session = await this.connection.startSession();
-    session.startTransaction();
-
     try {
-      // Hard delete variants first, then product
-      await this.variantModel.deleteMany({ productId: doc._id }, { session });
-      await this.productModel.findByIdAndDelete(doc._id, { session });
-
-      await session.commitTransaction();
+      await withTransactionRetry(
+        async (session) => {
+          // Hard delete variants first, then product
+          await this.variantModel.deleteMany(
+            { productId: doc._id },
+            { session },
+          );
+          await this.productModel.findByIdAndDelete(doc._id, { session });
+        },
+        this.connection,
+        this.logger,
+      );
 
       // Delete associated files only after successful commit
       await this.fileService.deleteProductFiles(doc);
@@ -721,17 +750,17 @@ export class ProductMutationService {
       // Invalidate cache
 
       return { message: 'Product and variants permanently deleted' };
-    } catch (error: any) {
-      await session.abortTransaction();
+    } catch (error: unknown) {
       this.logger.error(
         'Transaction Error (hard delete)',
         error instanceof Error ? error.stack : String(error),
       );
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       throw new InternalServerErrorException(
         this.i18n.translate('exception.ERROR_DELETE'),
       );
-    } finally {
-      await session.endSession();
     }
   }
 
@@ -741,27 +770,30 @@ export class ProductMutationService {
    * @returns @description the restored product
    */
   async restore(idParamDto: IdParamDto) {
-    const session = await this.connection.startSession();
-    session.startTransaction();
-
     try {
-      const product = await this.productModel.findOneAndUpdate(
-        { _id: idParamDto.id, isDeleted: true },
-        { $set: { isDeleted: false, deletedAt: null } },
-        { new: true, session },
+      const product = await withTransactionRetry(
+        async (session) => {
+          const restoredProduct = await this.productModel.findOneAndUpdate(
+            { _id: idParamDto.id, isDeleted: true },
+            { $set: { isDeleted: false, deletedAt: null } },
+            { new: true, session },
+          );
+
+          if (!restoredProduct) {
+            throw new NotFoundException('Deleted product not found');
+          }
+
+          await this.variantModel.updateMany(
+            { productId: restoredProduct._id, isDeleted: true },
+            { $set: { isDeleted: false, deletedAt: null } },
+            { session },
+          );
+
+          return restoredProduct;
+        },
+        this.connection,
+        this.logger,
       );
-
-      if (!product) {
-        throw new NotFoundException('Deleted product not found');
-      }
-
-      await this.variantModel.updateMany(
-        { productId: product._id, isDeleted: true },
-        { $set: { isDeleted: false, deletedAt: null } },
-        { session },
-      );
-
-      await session.commitTransaction();
 
       // Invalidate cache
 
@@ -773,12 +805,13 @@ export class ProductMutationService {
         product: this.i18n.localize(product),
         variants,
       };
-    } catch (error) {
-      await session.abortTransaction();
+    } catch (error: unknown) {
       if (error instanceof NotFoundException) throw error;
+      this.logger.error(
+        'Transaction Error (restore product)',
+        error instanceof Error ? error.stack : String(error),
+      );
       throw new InternalServerErrorException('Failed to restore product');
-    } finally {
-      await session.endSession();
     }
   }
 }

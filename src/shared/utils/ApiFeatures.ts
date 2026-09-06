@@ -1,11 +1,11 @@
 import { Query, Types } from 'mongoose';
-import { QueryString } from './interfaces/queryInterface';
+import { PaginationResult, QueryString } from './interfaces/queryInterface';
 import { searchStrategies } from './strategies/search.strategy';
 
 export class ApiFeatures<T> {
   private mongooseQuery: Query<T[], T>;
   private queryString: QueryString;
-  private paginationResult: Record<string, any> = {};
+  private paginationResult: PaginationResult = {};
 
   constructor(mongooseQuery: Query<T[], T>, queryString: QueryString) {
     this.mongooseQuery = mongooseQuery;
@@ -214,7 +214,7 @@ export class ApiFeatures<T> {
     const skip = (page - 1) * limit;
     const endIndex = page * limit;
 
-    const pagination: Record<string, any> = {
+    const pagination: PaginationResult = {
       currentPage: page,
       limit,
       numberOfPages: Math.ceil(totalDocuments / limit),
@@ -237,7 +237,7 @@ export class ApiFeatures<T> {
     return this.mongooseQuery;
   }
 
-  getPagination() {
+  getPagination(): PaginationResult {
     return this.paginationResult;
   }
 }
