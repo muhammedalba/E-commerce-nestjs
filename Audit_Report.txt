@@ -617,16 +617,6 @@ The module actually implements the following responsibilities:
 Here is a list of findings organized by severity:
 
 
-
-
-### 🔴 BIZ-PROD-01 — Severity: P1 | Attribute Validation Bypass during Update
-*   **File:** [`products-mutation.service.ts`](file:///d:/skyGalaxy_v2/server/src/products/services/products-mutation.service.ts)
-*   **Function/Class:** `ProductMutationService.update`
-*   **Problem:** Dynamic attribute validation is skipped for `variants.update` operations.
-*   **Impact:** Clients can update variants to include attributes that do not match the product's `allowedAttributes` definition.
-*   **Solution:** Validate updated variant attributes using `skuService.validateVariantAttributes`.
-*   **Priority:** High
-
 ### 🔴 SEC-PROD-01 — Severity: P1 | ReDoS Vulnerability in Query Filters
 *   **File:** [`variant-query-builder.ts`](file:///d:/skyGalaxy_v2/server/src/products/shared/utils/variant-query-builder.ts)
 *   **Function/Class:** `buildVariantFilter`

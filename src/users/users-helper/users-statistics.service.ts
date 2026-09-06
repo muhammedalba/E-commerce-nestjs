@@ -5,6 +5,21 @@ import { InjectModel } from '@nestjs/mongoose';
 import { User } from 'src/auth/shared/schema/user.schema';
 import { Role } from 'src/roles/shared/schemas/role.schema';
 
+interface StatusAggResult {
+  _id: boolean | null;
+  count: number;
+}
+
+interface RoleAggResult {
+  _id: string | null;
+  count: number;
+}
+
+interface DailyAggResult {
+  _id: string;
+  count: number;
+}
+
 @Injectable()
 export class UsersStatistics {
   constructor(
@@ -38,13 +53,13 @@ export class UsersStatistics {
         this.UserModel.countDocuments({ isDeleted: { $ne: true } }),
 
         // توزيع الحالات (نشط / غير نشط)
-        this.UserModel.aggregate([
+        this.UserModel.aggregate<StatusAggResult>([
           { $match: { isDeleted: { $ne: true } } },
           { $group: { _id: '$isActive', count: { $sum: 1 } } },
         ]),
 
         // توزيع الأدوار (Admin, User, Manager...) باستخدام $lookup لجلب اسم الدور
-        this.UserModel.aggregate([
+        this.UserModel.aggregate<RoleAggResult>([
           { $match: { isDeleted: { $ne: true } } },
           {
             $lookup: {
@@ -77,6 +92,12 @@ export class UsersStatistics {
             },
           },
           {
+            $match: {
+              'roleData.level': { $ne: 100 },
+              'roleData.name': { $not: /^superadmin$/i },
+            },
+          },
+          {
             $group: {
               _id: { $ifNull: ['$roleData.name', 'unknown'] },
               count: { $sum: 1 },
@@ -92,7 +113,7 @@ export class UsersStatistics {
         }),
 
         // الخط الزمني للتسجيلات اليومية للعملاء الجدد (لرسم Chart)
-        this.UserModel.aggregate([
+        this.UserModel.aggregate<DailyAggResult>([
           {
             $match: {
               createdAt: { $gte: start, $lte: end },
