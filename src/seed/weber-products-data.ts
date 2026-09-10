@@ -1234,6 +1234,373 @@ export const WEBER_PRODUCTS_DATA: SeedProductFamily[] = [
           { name: 'B', value: 6, unit: 'kg' },
         ],
       },
+      // --- Missing variants added below ---
+      {
+        sku: 'EPO-BAT-1018-14',
+        label: { ar: 'أصفر زنك 1018 - 14 كغ', en: 'Yellow Zinc 1018 - 14 KG' },
+        price: 410,
+        stock: 50,
+        attributes: {
+          color: 'Yellow Zinc 1018',
+          weight: { value: 14, unit: 'kg' },
+        },
+        shippingProfile: {
+          weightGrams: 14000,
+          packageType: PackageType.GALLON,
+        },
+        components: [
+          { name: 'A', value: 10.5, unit: 'kg' },
+          { name: 'B', value: 3.5, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'EPO-BAT-1018-24',
+        label: { ar: 'أصفر زنك 1018 - 24 كغ', en: 'Yellow Zinc 1018 - 24 KG' },
+        price: 650,
+        stock: 50,
+        attributes: {
+          color: 'Yellow Zinc 1018',
+          weight: { value: 24, unit: 'kg' },
+        },
+        shippingProfile: { weightGrams: 24000, packageType: PackageType.DRUM },
+        components: [
+          { name: 'A', value: 18, unit: 'kg' },
+          { name: 'B', value: 6, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'EPO-BAT-1019-14',
+        label: {
+          ar: 'بيج فخاري 1019 - 14 كغ',
+          en: 'Beige Pottery 1019 - 14 KG',
+        },
+        price: 410,
+        stock: 50,
+        attributes: {
+          color: 'Beige Pottery 1019',
+          weight: { value: 14, unit: 'kg' },
+        },
+        shippingProfile: {
+          weightGrams: 14000,
+          packageType: PackageType.GALLON,
+        },
+        components: [
+          { name: 'A', value: 10.5, unit: 'kg' },
+          { name: 'B', value: 3.5, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'EPO-BAT-1019-24',
+        label: {
+          ar: 'بيج فخاري 1019 - 24 كغ',
+          en: 'Beige Pottery 1019 - 24 KG',
+        },
+        price: 650,
+        stock: 50,
+        attributes: {
+          color: 'Beige Pottery 1019',
+          weight: { value: 24, unit: 'kg' },
+        },
+        shippingProfile: { weightGrams: 24000, packageType: PackageType.DRUM },
+        components: [
+          { name: 'A', value: 18, unit: 'kg' },
+          { name: 'B', value: 6, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'EPO-BAT-3007-14',
+        label: {
+          ar: 'طوب عتيق 3007 - 14 كغ',
+          en: 'Antique Brick 3007 - 14 KG',
+        },
+        price: 410,
+        stock: 50,
+        attributes: {
+          color: 'Antique Brick 3007',
+          weight: { value: 14, unit: 'kg' },
+        },
+        shippingProfile: {
+          weightGrams: 14000,
+          packageType: PackageType.GALLON,
+        },
+        components: [
+          { name: 'A', value: 10.5, unit: 'kg' },
+          { name: 'B', value: 3.5, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'EPO-BAT-3007-24',
+        label: {
+          ar: 'طوب عتيق 3007 - 24 كغ',
+          en: 'Antique Brick 3007 - 24 KG',
+        },
+        price: 650,
+        stock: 50,
+        attributes: {
+          color: 'Antique Brick 3007',
+          weight: { value: 24, unit: 'kg' },
+        },
+        shippingProfile: { weightGrams: 24000, packageType: PackageType.DRUM },
+        components: [
+          { name: 'A', value: 18, unit: 'kg' },
+          { name: 'B', value: 6, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'EPO-BAT-6001-14',
+        label: {
+          ar: 'أخضر زمرد 6001 - 14 كغ',
+          en: 'Green Emerald 6001 - 14 KG',
+        },
+        price: 410,
+        stock: 50,
+        attributes: {
+          color: 'Green Emerald 6001',
+          weight: { value: 14, unit: 'kg' },
+        },
+        shippingProfile: {
+          weightGrams: 14000,
+          packageType: PackageType.GALLON,
+        },
+        components: [
+          { name: 'A', value: 10.5, unit: 'kg' },
+          { name: 'B', value: 3.5, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'EPO-BAT-6001-24',
+        label: {
+          ar: 'أخضر زمرد 6001 - 24 كغ',
+          en: 'Green Emerald 6001 - 24 KG',
+        },
+        price: 650,
+        stock: 50,
+        attributes: {
+          color: 'Green Emerald 6001',
+          weight: { value: 24, unit: 'kg' },
+        },
+        shippingProfile: { weightGrams: 24000, packageType: PackageType.DRUM },
+        components: [
+          { name: 'A', value: 18, unit: 'kg' },
+          { name: 'B', value: 6, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'EPO-BAT-6032-14',
+        label: {
+          ar: 'أخضر طبيعي 6032 - 14 كغ',
+          en: 'Green Nature 6032 - 14 KG',
+        },
+        price: 410,
+        stock: 50,
+        attributes: {
+          color: 'Green Nature 6032',
+          weight: { value: 14, unit: 'kg' },
+        },
+        shippingProfile: {
+          weightGrams: 14000,
+          packageType: PackageType.GALLON,
+        },
+        components: [
+          { name: 'A', value: 10.5, unit: 'kg' },
+          { name: 'B', value: 3.5, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'EPO-BAT-6032-24',
+        label: {
+          ar: 'أخضر طبيعي 6032 - 24 كغ',
+          en: 'Green Nature 6032 - 24 KG',
+        },
+        price: 650,
+        stock: 50,
+        attributes: {
+          color: 'Green Nature 6032',
+          weight: { value: 24, unit: 'kg' },
+        },
+        shippingProfile: { weightGrams: 24000, packageType: PackageType.DRUM },
+        components: [
+          { name: 'A', value: 18, unit: 'kg' },
+          { name: 'B', value: 6, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'EPO-BAT-7036-14',
+        label: { ar: 'رمادي حصى 7036 - 14 كغ', en: 'Grey Pebble 7036 - 14 KG' },
+        price: 390,
+        stock: 50,
+        attributes: {
+          color: 'Grey Pebble 7036',
+          weight: { value: 14, unit: 'kg' },
+        },
+        shippingProfile: {
+          weightGrams: 14000,
+          packageType: PackageType.GALLON,
+        },
+        components: [
+          { name: 'A', value: 10.5, unit: 'kg' },
+          { name: 'B', value: 3.5, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'EPO-BAT-7036-24',
+        label: { ar: 'رمادي حصى 7036 - 24 كغ', en: 'Grey Pebble 7036 - 24 KG' },
+        price: 620,
+        stock: 50,
+        attributes: {
+          color: 'Grey Pebble 7036',
+          weight: { value: 24, unit: 'kg' },
+        },
+        shippingProfile: { weightGrams: 24000, packageType: PackageType.DRUM },
+        components: [
+          { name: 'A', value: 18, unit: 'kg' },
+          { name: 'B', value: 6, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'EPO-BAT-7037-14',
+        label: {
+          ar: 'رمادي غباري 7037 - 14 كغ',
+          en: 'Grey Dusty 7037 - 14 KG',
+        },
+        price: 390,
+        stock: 50,
+        attributes: {
+          color: 'Grey Dusty 7037',
+          weight: { value: 14, unit: 'kg' },
+        },
+        shippingProfile: {
+          weightGrams: 14000,
+          packageType: PackageType.GALLON,
+        },
+        components: [
+          { name: 'A', value: 10.5, unit: 'kg' },
+          { name: 'B', value: 3.5, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'EPO-BAT-7037-24',
+        label: {
+          ar: 'رمادي غباري 7037 - 24 كغ',
+          en: 'Grey Dusty 7037 - 24 KG',
+        },
+        price: 620,
+        stock: 50,
+        attributes: {
+          color: 'Grey Dusty 7037',
+          weight: { value: 24, unit: 'kg' },
+        },
+        shippingProfile: { weightGrams: 24000, packageType: PackageType.DRUM },
+        components: [
+          { name: 'A', value: 18, unit: 'kg' },
+          { name: 'B', value: 6, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'EPO-BAT-7045-14',
+        label: {
+          ar: 'رمادي دخاني 7045 - 14 كغ',
+          en: 'Grey Smoke 7045 - 14 KG',
+        },
+        price: 390,
+        stock: 50,
+        attributes: {
+          color: 'Grey Smoke 7045',
+          weight: { value: 14, unit: 'kg' },
+        },
+        shippingProfile: {
+          weightGrams: 14000,
+          packageType: PackageType.GALLON,
+        },
+        components: [
+          { name: 'A', value: 10.5, unit: 'kg' },
+          { name: 'B', value: 3.5, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'EPO-BAT-7045-24',
+        label: {
+          ar: 'رمادي دخاني 7045 - 24 كغ',
+          en: 'Grey Smoke 7045 - 24 KG',
+        },
+        price: 620,
+        stock: 50,
+        attributes: {
+          color: 'Grey Smoke 7045',
+          weight: { value: 24, unit: 'kg' },
+        },
+        shippingProfile: { weightGrams: 24000, packageType: PackageType.DRUM },
+        components: [
+          { name: 'A', value: 18, unit: 'kg' },
+          { name: 'B', value: 6, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'EPO-BAT-7046-14',
+        label: {
+          ar: 'رمادي فيل 7046 - 14 كغ',
+          en: 'Grey Elephant 7046 - 14 KG',
+        },
+        price: 390,
+        stock: 50,
+        attributes: {
+          color: 'Grey Elephant 7046',
+          weight: { value: 14, unit: 'kg' },
+        },
+        shippingProfile: {
+          weightGrams: 14000,
+          packageType: PackageType.GALLON,
+        },
+        components: [
+          { name: 'A', value: 10.5, unit: 'kg' },
+          { name: 'B', value: 3.5, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'EPO-BAT-7046-24',
+        label: {
+          ar: 'رمادي فيل 7046 - 24 كغ',
+          en: 'Grey Elephant 7046 - 24 KG',
+        },
+        price: 620,
+        stock: 50,
+        attributes: {
+          color: 'Grey Elephant 7046',
+          weight: { value: 24, unit: 'kg' },
+        },
+        shippingProfile: { weightGrams: 24000, packageType: PackageType.DRUM },
+        components: [
+          { name: 'A', value: 18, unit: 'kg' },
+          { name: 'B', value: 6, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'EPO-BAT-7047-14',
+        label: { ar: 'رمادي 7047 - 14 كغ', en: 'Grey 7047 - 14 KG' },
+        price: 390,
+        stock: 50,
+        attributes: { color: 'Grey 7047', weight: { value: 14, unit: 'kg' } },
+        shippingProfile: {
+          weightGrams: 14000,
+          packageType: PackageType.GALLON,
+        },
+        components: [
+          { name: 'A', value: 10.5, unit: 'kg' },
+          { name: 'B', value: 3.5, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'EPO-BAT-7047-24',
+        label: { ar: 'رمادي 7047 - 24 كغ', en: 'Grey 7047 - 24 KG' },
+        price: 620,
+        stock: 50,
+        attributes: { color: 'Grey 7047', weight: { value: 24, unit: 'kg' } },
+        shippingProfile: { weightGrams: 24000, packageType: PackageType.DRUM },
+        components: [
+          { name: 'A', value: 18, unit: 'kg' },
+          { name: 'B', value: 6, unit: 'kg' },
+        ],
+      },
     ],
   },
 
@@ -1367,6 +1734,322 @@ export const WEBER_PRODUCTS_DATA: SeedProductFamily[] = [
         },
         shippingProfile: {
           weightGrams: 5500,
+          packageType: PackageType.BAG,
+          quantityPerPackage: 1,
+        },
+      },
+      // --- Missing combinations ---
+      {
+        sku: 'BR-10-100',
+        label: { ar: '10 مم (100 متر)', en: '10 mm (100 m)' },
+        price: 85,
+        stock: 40,
+        attributes: {
+          diameter: { value: 10, unit: 'mm' },
+          length: { value: 100, unit: 'm' },
+        },
+        shippingProfile: {
+          weightGrams: 600,
+          packageType: PackageType.BAG,
+          quantityPerPackage: 1,
+        },
+      },
+      {
+        sku: 'BR-10-200',
+        label: { ar: '10 مم (200 متر)', en: '10 mm (200 m)' },
+        price: 160,
+        stock: 40,
+        attributes: {
+          diameter: { value: 10, unit: 'mm' },
+          length: { value: 200, unit: 'm' },
+        },
+        shippingProfile: {
+          weightGrams: 1200,
+          packageType: PackageType.BAG,
+          quantityPerPackage: 1,
+        },
+      },
+      {
+        sku: 'BR-10-360',
+        label: { ar: '10 مم (360 متر)', en: '10 mm (360 m)' },
+        price: 280,
+        stock: 40,
+        attributes: {
+          diameter: { value: 10, unit: 'mm' },
+          length: { value: 360, unit: 'm' },
+        },
+        shippingProfile: {
+          weightGrams: 2200,
+          packageType: PackageType.BAG,
+          quantityPerPackage: 1,
+        },
+      },
+      {
+        sku: 'BR-15-100',
+        label: { ar: '15 مم (100 متر)', en: '15 mm (100 m)' },
+        price: 100,
+        stock: 40,
+        attributes: {
+          diameter: { value: 15, unit: 'mm' },
+          length: { value: 100, unit: 'm' },
+        },
+        shippingProfile: {
+          weightGrams: 900,
+          packageType: PackageType.BAG,
+          quantityPerPackage: 1,
+        },
+      },
+      {
+        sku: 'BR-15-200',
+        label: { ar: '15 مم (200 متر)', en: '15 mm (200 m)' },
+        price: 195,
+        stock: 40,
+        attributes: {
+          diameter: { value: 15, unit: 'mm' },
+          length: { value: 200, unit: 'm' },
+        },
+        shippingProfile: {
+          weightGrams: 1800,
+          packageType: PackageType.BAG,
+          quantityPerPackage: 1,
+        },
+      },
+      {
+        sku: 'BR-15-800',
+        label: { ar: '15 مم (800 متر)', en: '15 mm (800 m)' },
+        price: 760,
+        stock: 40,
+        attributes: {
+          diameter: { value: 15, unit: 'mm' },
+          length: { value: 800, unit: 'm' },
+        },
+        shippingProfile: {
+          weightGrams: 7200,
+          packageType: PackageType.BAG,
+          quantityPerPackage: 1,
+        },
+      },
+      {
+        sku: 'BR-20-100',
+        label: { ar: '20 مم (100 متر)', en: '20 mm (100 m)' },
+        price: 120,
+        stock: 40,
+        attributes: {
+          diameter: { value: 20, unit: 'mm' },
+          length: { value: 100, unit: 'm' },
+        },
+        shippingProfile: {
+          weightGrams: 1100,
+          packageType: PackageType.BAG,
+          quantityPerPackage: 1,
+        },
+      },
+      {
+        sku: 'BR-20-360',
+        label: { ar: '20 مم (360 متر)', en: '20 mm (360 m)' },
+        price: 420,
+        stock: 40,
+        attributes: {
+          diameter: { value: 20, unit: 'mm' },
+          length: { value: 360, unit: 'm' },
+        },
+        shippingProfile: {
+          weightGrams: 4000,
+          packageType: PackageType.BAG,
+          quantityPerPackage: 1,
+        },
+      },
+      {
+        sku: 'BR-20-800',
+        label: { ar: '20 مم (800 متر)', en: '20 mm (800 m)' },
+        price: 920,
+        stock: 40,
+        attributes: {
+          diameter: { value: 20, unit: 'mm' },
+          length: { value: 800, unit: 'm' },
+        },
+        shippingProfile: {
+          weightGrams: 8800,
+          packageType: PackageType.BAG,
+          quantityPerPackage: 1,
+        },
+      },
+      {
+        sku: 'BR-25-200',
+        label: { ar: '25 مم (200 متر)', en: '25 mm (200 m)' },
+        price: 390,
+        stock: 40,
+        attributes: {
+          diameter: { value: 25, unit: 'mm' },
+          length: { value: 200, unit: 'm' },
+        },
+        shippingProfile: {
+          weightGrams: 3500,
+          packageType: PackageType.BAG,
+          quantityPerPackage: 1,
+        },
+      },
+      {
+        sku: 'BR-25-360',
+        label: { ar: '25 مم (360 متر)', en: '25 mm (360 m)' },
+        price: 700,
+        stock: 40,
+        attributes: {
+          diameter: { value: 25, unit: 'mm' },
+          length: { value: 360, unit: 'm' },
+        },
+        shippingProfile: {
+          weightGrams: 6300,
+          packageType: PackageType.BAG,
+          quantityPerPackage: 1,
+        },
+      },
+      {
+        sku: 'BR-25-800',
+        label: { ar: '25 مم (800 متر)', en: '25 mm (800 m)' },
+        price: 1550,
+        stock: 40,
+        attributes: {
+          diameter: { value: 25, unit: 'mm' },
+          length: { value: 800, unit: 'm' },
+        },
+        shippingProfile: {
+          weightGrams: 14000,
+          packageType: PackageType.BAG,
+          quantityPerPackage: 1,
+        },
+      },
+      {
+        sku: 'BR-30-200',
+        label: { ar: '30 مم (200 متر)', en: '30 mm (200 m)' },
+        price: 450,
+        stock: 40,
+        attributes: {
+          diameter: { value: 30, unit: 'mm' },
+          length: { value: 200, unit: 'm' },
+        },
+        shippingProfile: {
+          weightGrams: 4500,
+          packageType: PackageType.BAG,
+          quantityPerPackage: 1,
+        },
+      },
+      {
+        sku: 'BR-30-360',
+        label: { ar: '30 مم (360 متر)', en: '30 mm (360 m)' },
+        price: 810,
+        stock: 40,
+        attributes: {
+          diameter: { value: 30, unit: 'mm' },
+          length: { value: 360, unit: 'm' },
+        },
+        shippingProfile: {
+          weightGrams: 8100,
+          packageType: PackageType.BAG,
+          quantityPerPackage: 1,
+        },
+      },
+      {
+        sku: 'BR-30-800',
+        label: { ar: '30 مم (800 متر)', en: '30 mm (800 m)' },
+        price: 1800,
+        stock: 40,
+        attributes: {
+          diameter: { value: 30, unit: 'mm' },
+          length: { value: 800, unit: 'm' },
+        },
+        shippingProfile: {
+          weightGrams: 18000,
+          packageType: PackageType.BAG,
+          quantityPerPackage: 1,
+        },
+      },
+      {
+        sku: 'BR-40-200',
+        label: { ar: '40 مم (200 متر)', en: '40 mm (200 m)' },
+        price: 580,
+        stock: 40,
+        attributes: {
+          diameter: { value: 40, unit: 'mm' },
+          length: { value: 200, unit: 'm' },
+        },
+        shippingProfile: {
+          weightGrams: 5800,
+          packageType: PackageType.BAG,
+          quantityPerPackage: 1,
+        },
+      },
+      {
+        sku: 'BR-40-360',
+        label: { ar: '40 مم (360 متر)', en: '40 mm (360 m)' },
+        price: 1040,
+        stock: 40,
+        attributes: {
+          diameter: { value: 40, unit: 'mm' },
+          length: { value: 360, unit: 'm' },
+        },
+        shippingProfile: {
+          weightGrams: 10400,
+          packageType: PackageType.BAG,
+          quantityPerPackage: 1,
+        },
+      },
+      {
+        sku: 'BR-40-800',
+        label: { ar: '40 مم (800 متر)', en: '40 mm (800 m)' },
+        price: 2300,
+        stock: 40,
+        attributes: {
+          diameter: { value: 40, unit: 'mm' },
+          length: { value: 800, unit: 'm' },
+        },
+        shippingProfile: {
+          weightGrams: 23000,
+          packageType: PackageType.BAG,
+          quantityPerPackage: 1,
+        },
+      },
+      {
+        sku: 'BR-50-200',
+        label: { ar: '50 مم (200 متر)', en: '50 mm (200 m)' },
+        price: 720,
+        stock: 40,
+        attributes: {
+          diameter: { value: 50, unit: 'mm' },
+          length: { value: 200, unit: 'm' },
+        },
+        shippingProfile: {
+          weightGrams: 7200,
+          packageType: PackageType.BAG,
+          quantityPerPackage: 1,
+        },
+      },
+      {
+        sku: 'BR-50-360',
+        label: { ar: '50 مم (360 متر)', en: '50 mm (360 m)' },
+        price: 1300,
+        stock: 40,
+        attributes: {
+          diameter: { value: 50, unit: 'mm' },
+          length: { value: 360, unit: 'm' },
+        },
+        shippingProfile: {
+          weightGrams: 13000,
+          packageType: PackageType.BAG,
+          quantityPerPackage: 1,
+        },
+      },
+      {
+        sku: 'BR-50-800',
+        label: { ar: '50 مم (800 متر)', en: '50 mm (800 m)' },
+        price: 2900,
+        stock: 40,
+        attributes: {
+          diameter: { value: 50, unit: 'mm' },
+          length: { value: 800, unit: 'm' },
+        },
+        shippingProfile: {
+          weightGrams: 29000,
           packageType: PackageType.BAG,
           quantityPerPackage: 1,
         },
@@ -1596,6 +2279,103 @@ export const WEBER_PRODUCTS_DATA: SeedProductFamily[] = [
           { name: 'B', value: 7.5, unit: 'kg' },
         ],
       },
+      // --- Missing combinations ---
+      {
+        sku: 'DRY-GRAY-15',
+        label: { ar: 'دراي رمادي 15 كغ', en: 'Dry Grey 15 KG' },
+        price: 90,
+        stock: 80,
+        attributes: { color: 'Gray', weight: { value: 15, unit: 'kg' } },
+        shippingProfile: { weightGrams: 15000, packageType: PackageType.BAG },
+        components: [
+          { name: 'A', value: 11, unit: 'kg' },
+          { name: 'B', value: 4, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'DRY-WHITE-15',
+        label: { ar: 'دراي أبيض 15 كغ', en: 'Dry White 15 KG' },
+        price: 95,
+        stock: 80,
+        attributes: { color: 'White', weight: { value: 15, unit: 'kg' } },
+        shippingProfile: { weightGrams: 15000, packageType: PackageType.BAG },
+        components: [
+          { name: 'A', value: 11, unit: 'kg' },
+          { name: 'B', value: 4, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'DRY-WHITE-195',
+        label: { ar: 'دراي أبيض 19.5 كغ', en: 'Dry White 19.5 KG' },
+        price: 120,
+        stock: 80,
+        attributes: { color: 'White', weight: { value: 19.5, unit: 'kg' } },
+        shippingProfile: { weightGrams: 19500, packageType: PackageType.BAG },
+        components: [
+          { name: 'A', value: 15, unit: 'kg' },
+          { name: 'B', value: 4.5, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'DRY-WHITE-26',
+        label: { ar: 'دراي أبيض 26 كغ', en: 'Dry White 26 KG' },
+        price: 150,
+        stock: 80,
+        attributes: { color: 'White', weight: { value: 26, unit: 'kg' } },
+        shippingProfile: { weightGrams: 26000, packageType: PackageType.BAG },
+        components: [
+          { name: 'A', value: 20, unit: 'kg' },
+          { name: 'B', value: 6, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'DRY-BLUE-15',
+        label: { ar: 'دراي أزرق 15 كغ', en: 'Dry Blue 15 KG' },
+        price: 100,
+        stock: 80,
+        attributes: { color: 'Blue', weight: { value: 15, unit: 'kg' } },
+        shippingProfile: { weightGrams: 15000, packageType: PackageType.BAG },
+        components: [
+          { name: 'A', value: 11, unit: 'kg' },
+          { name: 'B', value: 4, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'DRY-BLUE-195',
+        label: { ar: 'دراي أزرق 19.5 كغ', en: 'Dry Blue 19.5 KG' },
+        price: 125,
+        stock: 80,
+        attributes: { color: 'Blue', weight: { value: 19.5, unit: 'kg' } },
+        shippingProfile: { weightGrams: 19500, packageType: PackageType.BAG },
+        components: [
+          { name: 'A', value: 15, unit: 'kg' },
+          { name: 'B', value: 4.5, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'DRY-BLUE-26',
+        label: { ar: 'دراي أزرق 26 كغ', en: 'Dry Blue 26 KG' },
+        price: 155,
+        stock: 80,
+        attributes: { color: 'Blue', weight: { value: 26, unit: 'kg' } },
+        shippingProfile: { weightGrams: 26000, packageType: PackageType.BAG },
+        components: [
+          { name: 'A', value: 20, unit: 'kg' },
+          { name: 'B', value: 6, unit: 'kg' },
+        ],
+      },
+      {
+        sku: 'DRY-BLUE-325',
+        label: { ar: 'دراي أزرق 32.5 كغ', en: 'Dry Blue 32.5 KG' },
+        price: 210,
+        stock: 80,
+        attributes: { color: 'Blue', weight: { value: 32.5, unit: 'kg' } },
+        shippingProfile: { weightGrams: 32500, packageType: PackageType.BAG },
+        components: [
+          { name: 'A', value: 25, unit: 'kg' },
+          { name: 'B', value: 7.5, unit: 'kg' },
+        ],
+      },
     ],
   },
 
@@ -1721,7 +2501,7 @@ export const WEBER_PRODUCTS_DATA: SeedProductFamily[] = [
       {
         name: 'weight',
         type: 'number',
-        allowedValues: ['20'],
+        allowedValues: ['19.5', '20', '24.8'],
         allowedUnits: ['kg'],
       },
     ],
@@ -1835,6 +2615,21 @@ export const WEBER_PRODUCTS_DATA: SeedProductFamily[] = [
           { name: 'Liquid', value: 4.8, unit: 'ltr' },
         ],
       },
+      {
+        sku: 'COL-FLEX-GREY-195',
+        label: {
+          ar: 'كول فليكس رمادي 19.5 كغ A+B',
+          en: 'Col Flex Grey 19.5 KG A+B',
+        },
+        price: 105,
+        stock: 100,
+        attributes: { color: 'Grey', weight: { value: 19.5, unit: 'kg' } },
+        shippingProfile: { weightGrams: 19500, packageType: PackageType.BAG },
+        components: [
+          { name: 'A (Powder)', value: 15, unit: 'kg' },
+          { name: 'B (Liquid)', value: 4.5, unit: 'kg' },
+        ],
+      },
     ],
   },
 
@@ -1887,6 +2682,20 @@ export const WEBER_PRODUCTS_DATA: SeedProductFamily[] = [
         shippingProfile: { weightGrams: 25000, packageType: PackageType.BAG },
       },
       {
+        sku: '2023009020',
+        label: {
+          ar: 'ريب 331 تي اكس تعشيش خشن 20 كغ',
+          en: 'Rep 331 TX Coarse 20 KG',
+        },
+        price: 55,
+        stock: 120,
+        attributes: {
+          type: 'Coarse 331 TX',
+          weight: { value: 20, unit: 'kg' },
+        },
+        shippingProfile: { weightGrams: 20000, packageType: PackageType.BAG },
+      },
+      {
         sku: '202300952',
         label: {
           ar: 'ريب 332 اف ار تعشيش ناعم 25 كغ',
@@ -1925,14 +2734,41 @@ export const WEBER_PRODUCTS_DATA: SeedProductFamily[] = [
         shippingProfile: { weightGrams: 20000, packageType: PackageType.BAG },
       },
       {
-        sku: '202300949',
+        sku: '202300957',
         label: {
-          ar: 'تيك 301 جراوت غير قابل للانكماش 25 كغ',
-          en: 'Tec 301 Non-Shrink Grout 25 KG',
+          ar: 'ريب 332 اف ار تعشيش ناعم 20 كغ',
+          en: 'Rep 332 FR Fine 20 KG',
         },
-        price: 42,
-        stock: 200,
-        attributes: { weight: { value: 25, unit: 'kg' } },
+        price: 60,
+        stock: 120,
+        attributes: { type: 'Fine 332 FR', weight: { value: 20, unit: 'kg' } },
+        shippingProfile: { weightGrams: 20000, packageType: PackageType.BAG },
+      },
+      {
+        sku: '202300958',
+        label: {
+          ar: 'ريب 360 اف اف ار تعشيش ناعم 25 كغ',
+          en: 'Rep 360 FFR Fine 25 KG',
+        },
+        price: 65,
+        stock: 120,
+        attributes: { type: 'Fine 360 FFR', weight: { value: 25, unit: 'kg' } },
+        shippingProfile: { weightGrams: 25000, packageType: PackageType.BAG },
+      },
+      {
+        sku: '202300959',
+        label: { ar: 'ريب بي سي تعشيش ناعم 25 كغ', en: 'Rep PC Fine 25 KG' },
+        price: 58,
+        stock: 120,
+        attributes: { type: 'Fine PC', weight: { value: 25, unit: 'kg' } },
+        shippingProfile: { weightGrams: 25000, packageType: PackageType.BAG },
+      },
+      {
+        sku: '202300960',
+        label: { ar: 'اس تي سي تعشيش خشن 25 كغ', en: 'ST Coarse 25 KG' },
+        price: 52,
+        stock: 120,
+        attributes: { type: 'Coarse ST', weight: { value: 25, unit: 'kg' } },
         shippingProfile: { weightGrams: 25000, packageType: PackageType.BAG },
       },
     ],

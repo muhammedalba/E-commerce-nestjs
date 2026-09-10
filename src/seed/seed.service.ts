@@ -457,7 +457,7 @@ export class SeedService {
           name: catData.name,
           slug: catData.slug,
           image: {
-            url: '/uploads/categories/default.png',
+            url: '/uploads/Category/default.png',
             publicId: 'default-category',
             provider: 'local',
           },
