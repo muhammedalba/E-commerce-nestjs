@@ -157,6 +157,21 @@ export class ProductsController {
   }
 
   // ----------------------------------------------------------------------------------------------------------------------------
+  //  GET MANY PRODUCTS BY IDS (must stay before ':id' — see route-ordering note above)
+  // ----------------------------------------------------------------------------------------------------------------------------
+
+  @Get('by-ids')
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(60_000) // 60 seconds
+  findManyByIds(
+    @Query('ids') ids: string,
+    @Query('all_langs') allLangs?: string,
+  ) {
+    const returnAllLangs = allLangs === 'true';
+    return this.productsService.findManyByIds(ids, returnAllLangs);
+  }
+
+  // ----------------------------------------------------------------------------------------------------------------------------
   //  GET PRODUCT BY ID (cached 120 seconds)
   // ----------------------------------------------------------------------------------------------------------------------------
 

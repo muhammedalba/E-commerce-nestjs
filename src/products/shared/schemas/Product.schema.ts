@@ -217,6 +217,9 @@ ProductSchema.index({
 ProductSchema.index({ brand: 1 });
 ProductSchema.index({ supplier: 1 });
 ProductSchema.index({ isDeleted: 1, isActive: 1, isFeatured: 1 });
+ProductSchema.index({ isDeleted: 1, isActive: 1, totalSold: -1 });
+ProductSchema.index({ isDeleted: 1, isActive: 1, createdAt: -1 });
+ProductSchema.index({ isDeleted: 1, isActive: 1, ratingsAverage: -1 });
 ProductSchema.index({ 'priceRange.min': 1 });
 // Text index for search functionality (weighted titles higher than descriptions)
 ProductSchema.index(

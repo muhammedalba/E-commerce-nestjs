@@ -54,6 +54,10 @@ export class ProductsService {
     return this.queryService.findOne(idParamDto, allLangs);
   }
 
+  async findManyByIds(ids: string, allLangs: boolean = false) {
+    return this.queryService.findManyByIds(ids, allLangs);
+  }
+
   // =========================================================================================
   //  WRITE OPERATIONS (delegated to MutationService)
   // =========================================================================================

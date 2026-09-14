@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { FilterQuery, Model, Types } from 'mongoose';
 import { Product, ProductDocument } from '../shared/schemas/Product.schema';
@@ -20,6 +20,8 @@ import {
 
 @Injectable()
 export class ProductQueryService {
+  private readonly logger = new Logger(ProductQueryService.name);
+
   constructor(
     @InjectModel(Product.name)
     private readonly productModel: Model<ProductDocument>,
@@ -73,7 +75,6 @@ export class ProductQueryService {
     allLangs: boolean,
   ) {
     if (!products.length) return { results: 0, total: 0, pagination, data: [] };
-    console.log(products);
 
     const productIds = products.map((p) => p._id);
     const variants = await this.variantModel
@@ -171,6 +172,36 @@ export class ProductQueryService {
       features.getPagination(),
       allLangs,
     );
+  }
+
+  async findManyByIds(ids: string, allLangs: boolean = false) {
+    const objectIds = (ids ?? '')
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => /^[0-9a-fA-F]{24}$/.test(id))
+      .map((id) => new Types.ObjectId(id));
+
+    if (objectIds.length === 0) {
+      return { results: 0, total: 0, pagination: {}, data: [] };
+    }
+
+    const products = await this.productModel
+      .find({ _id: { $in: objectIds } })
+      .populate('category brand', 'name')
+      .lean<Array<Product & { _id: Types.ObjectId }>>()
+      .exec();
+
+    if (products.length < objectIds.length) {
+      const foundIds = new Set(products.map((p) => p._id.toString()));
+      const missingIds = objectIds
+        .map((id) => id.toString())
+        .filter((id) => !foundIds.has(id));
+      this.logger.warn(
+        `findManyByIds: ${missingIds.length} of ${objectIds.length} requested IDs were not found: ${missingIds.join(', ')}`,
+      );
+    }
+
+    return this.assembleFinalResponse(products, products.length, {}, allLangs);
   }
 
   async findOne(idParamDto: IdParamDto, allLangs: boolean = false) {
