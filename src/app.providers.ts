@@ -1,7 +1,7 @@
 import { Provider } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { ThrottlerGuard } from '@nestjs/throttler';
 import { MaintenanceGuard } from './shared/guards/maintenance.guard';
+import { CustomThrottlerGuard } from './shared/guards/custom-throttler.guard';
 import { TransformInterceptor } from './shared/interceptors/transform.interceptor';
 import { LoggingInterceptor } from './shared/interceptors/logging.interceptor';
 import { AppService } from './app.service';
@@ -12,7 +12,7 @@ export const appProviders: Provider[] = [
   // Global rate limiter guard
   {
     provide: APP_GUARD,
-    useClass: ThrottlerGuard,
+    useClass: CustomThrottlerGuard,
   },
   // Global maintenance mode guard
   {
