@@ -62,7 +62,9 @@ export class UserProfileService {
     // 1) get user from database
     const user = await this.userModel
       .findById(user_id)
-      .select('isActive name avatar email phone role slug lastLogin')
+      .select(
+        'isActive name avatar email phone role slug lastLogin totalOrder provider',
+      )
       .populate('role')
       .lean()
       .exec();

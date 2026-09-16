@@ -78,7 +78,7 @@ export class ProductsController {
     createProductDto: CreateProductDto,
     @UploadedFiles(
       new ParseFileFieldsPipe(
-        '1MB',
+        '2MB',
         ['png', 'jpeg', 'webp', 'pdf'],
         [
           { name: 'imageCover', required: true },

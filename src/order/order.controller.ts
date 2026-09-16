@@ -129,6 +129,32 @@ export class OrderController {
   }
 
   // ========================================================================================
+  // =========================================  GET MY ORDERS ==============================
+  // ========================================================================================
+  @Get('my-orders')
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(30000) // 30 seconds (orders change frequently)
+  findMyOrders(
+    @Req() req: { user: JwtPayload },
+    @Query() queryString: QueryString,
+  ) {
+    return this.orderService.findMyOrders(req.user.user_id, queryString);
+  }
+
+  // ========================================================================================
+  // =========================================  GET MY ORDER (ONE) ==========================
+  // ========================================================================================
+  @Get('my-orders/:id')
+  @UseInterceptors(CustomCacheInterceptor)
+  @CacheTTL(30000) // 30 seconds
+  findMyOrder(
+    @Req() req: { user: JwtPayload },
+    @Param() idParamDto: IdParamDto,
+  ) {
+    return this.orderService.findMyOrder(req.user.user_id, idParamDto.id);
+  }
+
+  // ========================================================================================
   // =========================================  FIND ONE ORDER ==============================
   // ========================================================================================
   @Get(':id')

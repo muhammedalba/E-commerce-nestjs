@@ -23,6 +23,7 @@ import { Permissions } from 'src/roles/shared/enums/permissions.enum';
 import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 import { withBaseUrl } from 'src/shared/utils/with-base-url.util';
 import { FileAsset } from 'src/shared/schema/file-asset.schema';
+import { OrderStatus } from './shared/enums/order-status.enum';
 // 1. تعريف الأنواع بشكل دقيق وصريح
 interface UserPopulated {
   avatar?: FileAsset;
@@ -229,18 +230,14 @@ export class OrderService {
       if (typedItem.items) {
         typedItem.items.forEach((orderItem) => {
           if (orderItem.productId) {
-            if (
-              orderItem.productId.imageCover?.url &&
-              !orderItem.productId.imageCover?.url.startsWith('http')
-            ) {
-              orderItem.productId.imageCover.url = `${process.env.BASE_URL}${orderItem.productId.imageCover?.url}`;
+            if (orderItem.productId.imageCover?.url) {
+              orderItem.productId.imageCover.url = String(
+                withBaseUrl(orderItem.productId.imageCover.url),
+              );
             }
             if (orderItem.productId.images) {
-              orderItem.productId.images = orderItem.productId.images.map(
-                (img) =>
-                  img && !img.startsWith('http')
-                    ? `${process.env.BASE_URL}${img}`
-                    : img,
+              orderItem.productId.images = withBaseUrl(
+                orderItem.productId.images,
               );
             }
           }
@@ -253,6 +250,186 @@ export class OrderService {
       results: data.length,
       pagination: features.getPagination(),
       data,
+    };
+  }
+  // =============================================================
+  // =============================================================
+  // =============================================================
+
+  /**
+   * يُعيد طلبات المستخدم الحالي فقط، بحقول محدودة (whitelist) مناسبة لواجهة
+   * العميل — على عكس findAll (المخصصة للوحة تحكم الأدمن) لا يتم هنا كشف أي
+   * حقول داخلية/إدارية (مثل notes أو isDeleted)، ولا يُفتح للعميل أي فلتر
+   * عام غير الفرز والترقيم.
+   */
+  async findMyOrders(userId: string, queryString: QueryString) {
+    const filterQuery = { user: new Types.ObjectId(userId) };
+    const activeStatuses = [
+      OrderStatus.PENDING_PAYMENT,
+      OrderStatus.PENDING,
+      OrderStatus.PROCESSING,
+      OrderStatus.SHIPPED,
+    ];
+
+    // Both counts are cheap, index-backed countDocuments queries (no
+    // population, no document fetching) — running them alongside the page
+    // query lets the client show "active orders" without a second request
+    // or scanning order documents on the frontend.
+    const [total, activeCount] = await Promise.all([
+      this.OrderModel.countDocuments(filterQuery),
+      this.OrderModel.countDocuments({
+        ...filterQuery,
+        status: { $in: activeStatuses },
+      }),
+    ]);
+    const features = new ApiFeatures(
+      this.OrderModel.find(filterQuery),
+      queryString,
+    )
+      .sort()
+      .paginate(total);
+
+    const data = await features
+      .getQuery()
+      .select(
+        'items status paymentStatus grandTotal totalPrice totalQuantity currency ' +
+          'discountAmount couponCode ' +
+          'createdAt checkedOutAt processingAt shippedAt deliveredAt paidAt completedAt cancelledAt',
+      )
+      .populate({ path: 'items.productId', select: 'title slug imageCover' })
+      .populate({
+        path: 'items.variantId',
+        select: 'sku price priceAfterDiscount label attributes',
+      })
+      .populate({ path: 'couponId', select: 'name type discount' })
+      .lean()
+      .exec();
+
+    // add absolute url to product cover images (نفس نمط findAll)
+    data.forEach((item) => {
+      const typedItem = item as unknown as {
+        items?: Array<{
+          productId?: { imageCover?: { url: string } };
+        }>;
+      };
+
+      if (typedItem.items) {
+        typedItem.items.forEach((orderItem) => {
+          if (orderItem.productId?.imageCover?.url) {
+            orderItem.productId.imageCover.url = String(
+              withBaseUrl(orderItem.productId.imageCover.url),
+            );
+          }
+        });
+      }
+    });
+
+    return {
+      status: 'success',
+      results: data.length,
+      pagination: { ...features.getPagination(), activeCount },
+      data,
+    };
+  }
+  // =============================================================
+  // =============================================================
+  // =============================================================
+
+  /**
+   * يُعيد تفاصيل طلب واحد للمستخدم الحالي فقط — ملكية الطلب تُفرض داخل
+   * الاستعلام نفسه (`user: userId`) بدلاً من التحقق بعد الجلب، حتى لا
+   * يستطيع أي عميل معرفة وجود طلب لعميل آخر عبر تخمين الـ id (رسالة
+   * NOT_FOUND واحدة سواء كان الطلب غير موجود أو ملكاً لمستخدم آخر).
+   * الحقول المُعادة محدودة (whitelist) ولا تشمل `notes` أو `isDeleted` أو
+   * أي حقل إداري داخلي آخر.
+   */
+  async findMyOrder(userId: string, orderId: string) {
+    if (!Types.ObjectId.isValid(orderId)) {
+      throw new BadRequestException('Invalid order ID');
+    }
+
+    const order = (await this.OrderModel.findOne({
+      _id: orderId,
+      user: new Types.ObjectId(userId),
+    })
+      .select(
+        'items status paymentStatus paymentMethodCode paymentMethod shippingMethod ' +
+          'shippingAddress shippingProviderId shippingRateId shippingAmount taxAmount ' +
+          'paymentFees grandTotal totalPrice totalQuantity discountAmount currency ' +
+          'couponId couponCode transferReceiptImg InvoicePdf DeliveryReceiptImage ' +
+          'deliveryReceiptNumber deliveryDate deliveryName invoiceNumber ' +
+          'customerServiceContact DeliveryVerificationCode ' +
+          'checkedOutAt processingAt shippedAt deliveredAt paidAt completedAt cancelledAt ' +
+          'createdAt updatedAt',
+      )
+      .populate([
+        { path: 'items.productId', select: 'title imageCover slug images' },
+        {
+          path: 'items.variantId',
+          select: 'sku price priceAfterDiscount label attributes',
+        },
+        { path: 'shippingAddress.country', select: 'name' },
+        { path: 'shippingAddress.city', select: 'name' },
+        { path: 'couponId', select: 'name type discount' },
+        { path: 'shippingProviderId', select: 'name code logo trackingUrl' },
+        {
+          path: 'shippingRateId',
+          select: 'estimatedDays basePrice baseWeight additionalKgPrice',
+        },
+      ])
+      .lean()
+      .exec()) as unknown as PopulatedOrderData | null;
+
+    if (!order) {
+      throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
+    }
+
+    if (order.transferReceiptImg?.url) {
+      order.transferReceiptImg.url = String(
+        withBaseUrl(order.transferReceiptImg?.url),
+      );
+    }
+
+    if (order.InvoicePdf?.url) {
+      order.InvoicePdf.url = String(withBaseUrl(order.InvoicePdf.url));
+    }
+
+    if (order.DeliveryReceiptImage?.url) {
+      order.DeliveryReceiptImage.url = String(
+        withBaseUrl(order.DeliveryReceiptImage.url),
+      );
+    }
+
+    if (order.shippingProviderId?.logo?.url) {
+      order.shippingProviderId.logo.url = String(
+        withBaseUrl(order.shippingProviderId.logo.url),
+      );
+    }
+
+    if (Array.isArray(order.items)) {
+      for (const item of order.items) {
+        const product = item.productId;
+        if (!product) continue;
+
+        if (product.imageCover?.url) {
+          product.imageCover.url = String(withBaseUrl(product.imageCover.url));
+        }
+
+        if (Array.isArray(product.images)) {
+          product.images = product.images.filter((img: FileAsset) =>
+            Boolean(img.url),
+          );
+          for (const img of product.images) {
+            img.url = String(withBaseUrl(img.url));
+          }
+        }
+      }
+    }
+
+    return {
+      status: 'success',
+      message: String(this.i18n.translate('success.found_SUCCESS')),
+      data: order,
     };
   }
   // =============================================================
