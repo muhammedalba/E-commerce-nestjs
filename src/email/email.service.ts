@@ -161,4 +161,36 @@ export class EmailService {
       },
     });
   }
+
+  async send_exchange_rate_alert(
+    to: string,
+    adminName: string,
+    currencyCode: string,
+    consecutiveFailures: number,
+    reason: string,
+    subject: string,
+    lang?: string,
+  ): Promise<void> {
+    const resolvedLang =
+      lang ??
+      I18nContext.current()?.lang ??
+      process.env.DEFAULT_LANGUAGE ??
+      'ar';
+    const template = `exchange-rate-alert-${resolvedLang}`;
+
+    await this.mailerService.sendMail({
+      to,
+      subject,
+      template,
+      context: {
+        subject,
+        adminName,
+        currencyCode,
+        consecutiveFailures,
+        reason,
+        year: new Date().getFullYear(),
+        companyName: process.env.APP_NAME,
+      },
+    });
+  }
 }

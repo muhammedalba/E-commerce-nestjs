@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{subject}}</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 20px auto;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .header {
+      background-color: #f0ad4e;
+      color: white;
+      text-align: center;
+      padding: 10px;
+      border-radius: 8px 8px 0 0;
+    }
+    .content {
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .footer {
+      text-align: center;
+      color: #777;
+      font-size: 12px;
+      margin-top: 20px;
+    }
+    .details-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    .details-table th, .details-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    .details-table th {
+      background-color: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>⚠️ Alert: Exchange Rate Sync Failed</h2>
+    </div>
+
+    <div class="content">
+      <p>Hello <strong>{{adminName}}</strong>,</p>
+      <p>The automatic exchange rate sync has failed several times in a row. The rate currently shown to customers may be stale and no longer match the real market rate.</p>
+
+      <table class="details-table">
+        <tr>
+          <th>Store Currency</th>
+          <td>{{currencyCode}}</td>
+        </tr>
+        <tr>
+          <th>Consecutive Failures</th>
+          <td>{{consecutiveFailures}}</td>
+        </tr>
+        <tr>
+          <th>Failure Reason</th>
+          <td>{{reason}}</td>
+        </tr>
+      </table>
+
+      <p>Please check the store settings or update the exchange rate manually if the issue persists.</p>
+    </div>
+
+    <div class="footer">
+      <p>&copy; {{year}} {{companyName}}. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

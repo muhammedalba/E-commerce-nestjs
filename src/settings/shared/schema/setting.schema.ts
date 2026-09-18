@@ -61,6 +61,10 @@ export class Setting {
   @Prop({ type: Number, default: 1, min: 0 })
   declare exchangeRate: number;
 
+  // آخر وقت تمت فيه مزامنة سعر الصرف تلقائيًا من مصدر خارجي
+  @Prop({ type: Date, default: null })
+  declare exchangeRateUpdatedAt: Date | null;
+
   // إعدادات SEO
   @Prop({ type: Object, required: true, default: { ar: '', en: '' } })
   @IsDefined()

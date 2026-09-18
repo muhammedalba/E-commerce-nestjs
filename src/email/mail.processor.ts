@@ -1,10 +1,14 @@
 import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { EmailService } from './email.service';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 @Processor('mail-queue')
 export class MailProcessor extends WorkerHost {
-  constructor(private readonly emailService: EmailService) {
+  constructor(
+    private readonly emailService: EmailService,
+    private readonly notificationsService: NotificationsService,
+  ) {
     super();
   }
 
@@ -89,6 +93,37 @@ export class MailProcessor extends WorkerHost {
           subject,
           lang,
         );
+        return {};
+      }
+      case 'exchange-rate-sync-failed': {
+        const {
+          email,
+          adminName,
+          currencyCode,
+          consecutiveFailures,
+          reason,
+          subject,
+          lang,
+        } = job.data;
+        await this.emailService.send_exchange_rate_alert(
+          email,
+          adminName,
+          currencyCode,
+          consecutiveFailures,
+          reason,
+          subject,
+          lang,
+        );
+        return {};
+      }
+      case 'admin-role-notification': {
+        const { roleId, action, message, payload } = job.data;
+        await this.notificationsService.createRoleNotification({
+          roleId,
+          action,
+          message,
+          payload,
+        });
         return {};
       }
       default:

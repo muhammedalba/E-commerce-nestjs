@@ -36,8 +36,14 @@ export const BullConfig = BullModule.forRootAsync({
       console.error(`[Redis Error] - ${err.message}`);
     });
 
+    // Namespace all queue keys by environment so local dev never races
+    // production for jobs when both share the same Redis instance — each
+    // gets its own isolated set of BullMQ keys/queues under the hood.
+    const nodeEnv = config.get<string>('NODE_ENV') || 'development';
+
     return {
       connection: redisClient,
+      prefix: `bull-${nodeEnv}`,
     };
   },
   inject: [ConfigService],

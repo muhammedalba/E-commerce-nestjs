@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="utf-8">
+  <title>{{subject}}</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      direction: rtl;
+    }
+    .container {
+      max-width: 600px;
+      margin: 20px auto;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .header {
+      background-color: #f0ad4e;
+      color: white;
+      text-align: center;
+      padding: 10px;
+      border-radius: 8px 8px 0 0;
+    }
+    .content {
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .footer {
+      text-align: center;
+      color: #777;
+      font-size: 12px;
+      margin-top: 20px;
+    }
+    .details-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    .details-table th, .details-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: right;
+    }
+    .details-table th {
+      background-color: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>⚠️ تنبيه: فشل مزامنة سعر الصرف</h2>
+    </div>
+
+    <div class="content">
+      <p>مرحباً <strong>{{adminName}}</strong>،</p>
+      <p>فشلت مزامنة سعر الصرف التلقائي عدة مرات متتالية. السعر المعروض للعملاء حاليًا قد يكون قديمًا وغير مطابق للسعر الحقيقي.</p>
+
+      <table class="details-table">
+        <tr>
+          <th>عملة المتجر</th>
+          <td>{{currencyCode}}</td>
+        </tr>
+        <tr>
+          <th>عدد المحاولات الفاشلة المتتالية</th>
+          <td>{{consecutiveFailures}}</td>
+        </tr>
+        <tr>
+          <th>سبب الفشل</th>
+          <td>{{reason}}</td>
+        </tr>
+      </table>
+
+      <p>يرجى مراجعة إعدادات المتجر أو تحديث سعر الصرف يدويًا إذا استمر العطل.</p>
+    </div>
+
+    <div class="footer">
+      <p>&copy; {{year}} {{companyName}}. جميع الحقوق محفوظة.</p>
+    </div>
+  </div>
+</body>
+</html>

@@ -13,6 +13,7 @@ import { ConfigService } from '@nestjs/config';
 import { Setting, SettingDocument } from './shared/schema/setting.schema';
 import { UpdateSettingDto } from './shared/dto/update-setting.dto';
 import { FileUploadService } from 'src/file-upload/file-upload.service';
+import { ExchangeRateSyncService } from './exchange-rate-sync.service';
 import {
   FileAsset,
   StorageProviderType,
@@ -60,6 +61,9 @@ export class SettingsService {
 
     @InjectConnection()
     private readonly connection: Connection,
+
+    @Inject(forwardRef(() => ExchangeRateSyncService))
+    private readonly exchangeRateSyncService: ExchangeRateSyncService,
   ) {}
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -262,6 +266,16 @@ export class SettingsService {
 
     // Notify the frontend to regenerate statically cached pages (ISR)
     await this.triggerRevalidation('settings,public-settings');
+
+    // Re-sync the exchange rate immediately when the store switches currency,
+    // instead of waiting for the next hourly cron run. This is awaited so the
+    // response (and whatever refetches off it) already carries the freshly
+    // synced rate — a fire-and-forget sync here would race the client's
+    // post-save refetch and hand it back the stale rate.
+    if (dto.currencyCode && dto.currencyCode !== currentSettings.currencyCode) {
+      await this.exchangeRateSyncService.syncExchangeRate();
+      return this.getSettings();
+    }
 
     return updatedDoc as Setting;
   }
