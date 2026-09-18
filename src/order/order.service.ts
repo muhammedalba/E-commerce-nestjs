@@ -930,8 +930,6 @@ export class OrderService {
         (order.paymentMethodCode === 'moyasar' ||
           payload.provider === 'moyasar')
       ) {
-        console.log('order items ', order?.items);
-
         const { validatedItems } =
           await this.orderHelperService.validateOrderItems(
             order.items as unknown as {
@@ -940,7 +938,7 @@ export class OrderService {
               quantity: number;
             }[],
           );
-        console.log('validatedItems after orderHelperService ', validatedItems);
+
         await this.productHelperService.confirmReservation(validatedItems);
         const user = await this.UserModel.findById(order.user);
         if (user) {
