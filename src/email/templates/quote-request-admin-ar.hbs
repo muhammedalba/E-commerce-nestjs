@@ -1,0 +1,96 @@
+<html lang='ar' dir='rtl'>
+  <head>
+    <meta charset='UTF-8' />
+    <title>طلب عرض سعر جديد</title>
+    <style>
+      body {
+        background-color: #f4f4f7;
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        padding: 0;
+        margin: 0;
+        direction: rtl;
+      }
+      .container {
+        max-width: 600px;
+        margin: 40px auto;
+        background: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+      .header {
+        background-color: #16a34a;
+        color: #ffffff;
+        text-align: center;
+        padding: 20px 0;
+        font-size: 24px;
+        font-weight: bold;
+      }
+      .content {
+        padding: 30px;
+        text-align: right;
+      }
+      .content h3 {
+        color: #333333;
+        margin: 24px 0 8px;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #16a34a;
+      }
+      .content p {
+        color: #555555;
+        font-size: 15px;
+        margin: 0 0 6px;
+        line-height: 1.7;
+      }
+      .box {
+        background-color: #f9fafb;
+        border: 1px solid #eee;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 8px;
+        white-space: pre-wrap;
+        color: #333333;
+      }
+      .footer {
+        margin-top: 20px;
+        padding: 15px;
+        text-align: center;
+        font-size: 12px;
+        color: #999999;
+      }
+    </style>
+  </head>
+  <body>
+    <div class='container'>
+      <div class='header'>طلب عرض سعر جديد ({{customerTypeLabel}})</div>
+      <div class='content'>
+        <h3>بيانات العميل</h3>
+        <p>الاسم: <strong>{{name}}</strong></p>
+        <p>نوع العميل: <strong>{{customerTypeLabel}}</strong></p>
+        <p>الهاتف: <strong>{{phone}}</strong></p>
+        <p>البريد الإلكتروني: <strong>{{emails}}</strong></p>
+        <p>وسيلة التواصل المفضلة: <strong>{{preferredContactMethodLabel}}</strong></p>
+
+        {{#if commercialRegistrationNumber}}
+        <h3>بيانات الشركة</h3>
+        <p>السجل التجاري: <strong>{{commercialRegistrationNumber}}</strong></p>
+        <p>الرقم الضريبي: <strong>{{taxNumber}}</strong></p>
+        <p>العنوان الوطني: <strong>{{nationalAddress}}</strong></p>
+        {{/if}}
+
+        <h3>تفاصيل الطلب</h3>
+        <div class='box'>{{orderDetails}}</div>
+
+        <h3>عنوان التوصيل</h3>
+        <div class='box'>{{deliveryAddress}}</div>
+      </div>
+      <div class='footer'>
+        &copy;
+        {{year}}
+        {{companyName}}. جميع الحقوق محفوظة.
+      </div>
+    </div>
+  </body>
+</html>

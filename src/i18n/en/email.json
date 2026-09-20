@@ -1,4 +1,16 @@
 {
   "VERIFY_CODE_SUBJECT": " Your email verification code ",
-  "NEW_ORDER_SUBJECT":"NEW ORDER SUBJECT {name}"
+  "NEW_ORDER_SUBJECT":"NEW ORDER SUBJECT {name}",
+  "CONTACT_ADMIN_SUBJECT": "New contact message received",
+  "CONTACT_CONFIRMATION_SUBJECT": "We've received your message",
+  "CONTACT_INQUIRY_GENERAL": "General Inquiry",
+  "CONTACT_INQUIRY_PRODUCT": "Product Inquiry",
+  "CONTACT_INQUIRY_SERVICE_QUOTE": "Service Quote Request",
+  "CONTACT_INQUIRY_COMPLAINT": "Complaint",
+  "QUOTE_ADMIN_SUBJECT": "New quote request received",
+  "QUOTE_CONFIRMATION_SUBJECT": "We've received your quote request",
+  "QUOTE_CUSTOMER_TYPE_INDIVIDUAL": "Individual",
+  "QUOTE_CUSTOMER_TYPE_COMPANY": "Company",
+  "QUOTE_CONTACT_METHOD_PHONE": "Phone",
+  "QUOTE_CONTACT_METHOD_EMAIL": "Email"
 }

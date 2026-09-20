@@ -162,6 +162,146 @@ export class EmailService {
     });
   }
 
+  async send_contact_admin_notification(
+    name: string,
+    email: string,
+    phone: string,
+    inquiryTypeLabel: string,
+    message: string,
+    subject: string,
+    lang?: string,
+  ): Promise<void> {
+    const resolvedLang =
+      lang ??
+      I18nContext.current()?.lang ??
+      process.env.DEFAULT_LANGUAGE ??
+      'ar';
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const template = `contact-admin-${resolvedLang}`;
+    console.log(
+      `📧 Attempting to send [send_contact_admin_notification] to Admin: ${adminEmail} | Lang: ${resolvedLang} | Template: ${template}`,
+    );
+
+    await this.mailerService.sendMail({
+      to: adminEmail,
+      replyTo: email,
+      subject,
+      template,
+      context: {
+        name,
+        email,
+        phone,
+        inquiryTypeLabel,
+        message,
+        year: new Date().getFullYear(),
+        companyName: process.env.APP_NAME,
+      },
+    });
+  }
+
+  async send_contact_confirmation(
+    to: string,
+    name: string,
+    subject: string,
+    lang?: string,
+  ): Promise<void> {
+    const resolvedLang =
+      lang ??
+      I18nContext.current()?.lang ??
+      process.env.DEFAULT_LANGUAGE ??
+      'ar';
+    const template = `contact-confirmation-${resolvedLang}`;
+    console.log(
+      `📧 Attempting to send [send_contact_confirmation] to: ${to} | Lang: ${resolvedLang} | Template: ${template}`,
+    );
+
+    await this.mailerService.sendMail({
+      to,
+      subject,
+      template,
+      context: {
+        name,
+        year: new Date().getFullYear(),
+        companyName: process.env.APP_NAME,
+      },
+    });
+  }
+
+  async send_quote_request_admin_notification(
+    customerTypeLabel: string,
+    name: string,
+    phone: string,
+    emails: string[],
+    preferredContactMethodLabel: string,
+    orderDetails: string,
+    deliveryAddress: string,
+    commercialRegistrationNumber: string | undefined,
+    taxNumber: string | undefined,
+    nationalAddress: string | undefined,
+    subject: string,
+    lang?: string,
+  ): Promise<void> {
+    const resolvedLang =
+      lang ??
+      I18nContext.current()?.lang ??
+      process.env.DEFAULT_LANGUAGE ??
+      'ar';
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const template = `quote-request-admin-${resolvedLang}`;
+    console.log(
+      `📧 Attempting to send [send_quote_request_admin_notification] to Admin: ${adminEmail} | Lang: ${resolvedLang} | Template: ${template}`,
+    );
+
+    await this.mailerService.sendMail({
+      to: adminEmail,
+      replyTo: emails[0],
+      subject,
+      template,
+      context: {
+        customerTypeLabel,
+        name,
+        phone,
+        emails: emails.join(', '),
+        preferredContactMethodLabel,
+        orderDetails,
+        deliveryAddress,
+        commercialRegistrationNumber,
+        taxNumber,
+        nationalAddress,
+        year: new Date().getFullYear(),
+        companyName: process.env.APP_NAME,
+      },
+    });
+  }
+
+  async send_quote_request_confirmation(
+    to: string[],
+    name: string,
+    subject: string,
+    lang?: string,
+  ): Promise<void> {
+    const resolvedLang =
+      lang ??
+      I18nContext.current()?.lang ??
+      process.env.DEFAULT_LANGUAGE ??
+      'ar';
+    const template = `quote-request-confirmation-${resolvedLang}`;
+    console.log(
+      `📧 Attempting to send [send_quote_request_confirmation] to: ${to.join(', ')} | Lang: ${resolvedLang} | Template: ${template}`,
+    );
+
+    await this.mailerService.sendMail({
+      to,
+      subject,
+      template,
+      context: {
+        name,
+        year: new Date().getFullYear(),
+        companyName: process.env.APP_NAME,
+      },
+    });
+  }
+
   async send_exchange_rate_alert(
     to: string,
     adminName: string,

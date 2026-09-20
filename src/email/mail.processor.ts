@@ -95,6 +95,72 @@ export class MailProcessor extends WorkerHost {
         );
         return {};
       }
+      case 'contact-message': {
+        const {
+          name,
+          email,
+          phone,
+          inquiryTypeLabel,
+          message,
+          adminSubject,
+          confirmationSubject,
+          lang,
+        } = job.data;
+        await this.emailService.send_contact_admin_notification(
+          name,
+          email,
+          phone,
+          inquiryTypeLabel,
+          message,
+          adminSubject,
+          lang,
+        );
+        await this.emailService.send_contact_confirmation(
+          email,
+          name,
+          confirmationSubject,
+          lang,
+        );
+        return {};
+      }
+      case 'quote-request': {
+        const {
+          customerTypeLabel,
+          name,
+          phone,
+          emails,
+          preferredContactMethodLabel,
+          orderDetails,
+          deliveryAddress,
+          commercialRegistrationNumber,
+          taxNumber,
+          nationalAddress,
+          adminSubject,
+          confirmationSubject,
+          lang,
+        } = job.data;
+        await this.emailService.send_quote_request_admin_notification(
+          customerTypeLabel,
+          name,
+          phone,
+          emails,
+          preferredContactMethodLabel,
+          orderDetails,
+          deliveryAddress,
+          commercialRegistrationNumber,
+          taxNumber,
+          nationalAddress,
+          adminSubject,
+          lang,
+        );
+        await this.emailService.send_quote_request_confirmation(
+          emails,
+          name,
+          confirmationSubject,
+          lang,
+        );
+        return {};
+      }
       case 'exchange-rate-sync-failed': {
         const {
           email,

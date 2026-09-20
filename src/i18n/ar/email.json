@@ -1,5 +1,17 @@
 {
       "VERIFY_CODE_SUBJECT":"رمز التحقق من بريدك الإلكتروني",
-      "NEW_ORDER_SUBJECT":"طلب جديد من {name}"
+      "NEW_ORDER_SUBJECT":"طلب جديد من {name}",
+      "CONTACT_ADMIN_SUBJECT":"رسالة جديدة من نموذج تواصل معنا",
+      "CONTACT_CONFIRMATION_SUBJECT":"لقد استلمنا رسالتك",
+      "CONTACT_INQUIRY_GENERAL":"استفسار عام",
+      "CONTACT_INQUIRY_PRODUCT":"استفسار عن منتج",
+      "CONTACT_INQUIRY_SERVICE_QUOTE":"طلب عرض سعر لخدمة",
+      "CONTACT_INQUIRY_COMPLAINT":"شكوى",
+      "QUOTE_ADMIN_SUBJECT":"طلب عرض سعر جديد",
+      "QUOTE_CONFIRMATION_SUBJECT":"لقد استلمنا طلب عرض السعر الخاص بك",
+      "QUOTE_CUSTOMER_TYPE_INDIVIDUAL":"فرد",
+      "QUOTE_CUSTOMER_TYPE_COMPANY":"شركة",
+      "QUOTE_CONTACT_METHOD_PHONE":"الهاتف",
+      "QUOTE_CONTACT_METHOD_EMAIL":"البريد الإلكتروني"
     }
     

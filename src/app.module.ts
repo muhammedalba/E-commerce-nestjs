@@ -34,6 +34,8 @@ import { CheckoutModule } from './checkout/checkout.module';
 import { SeedModule } from './seed/seed.module';
 import { RolesModule } from './roles/roles.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { ContactModule } from './contact/contact.module';
+import { QuoteRequestsModule } from './quote-requests/quote-requests.module';
 import { FileUploadDiskStorageModule } from './file-upload/file-upload.module';
 import { SharedModule } from './shared/shared.module';
 import { appProviders } from './app.providers';
@@ -91,6 +93,8 @@ import { appProviders } from './app.providers';
     SeedModule,
     RolesModule,
     NotificationsModule,
+    ContactModule,
+    QuoteRequestsModule,
     FileUploadDiskStorageModule,
     SharedModule,
   ],
