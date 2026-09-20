@@ -27,7 +27,7 @@ import { MailProcessor } from './mail.processor';
           from: config.get<string>('MAIL_FROM_ADDRESS') || 'No Reply',
         },
         template: {
-          dir: path.join(process.cwd(), 'src', 'email', 'templates'),
+          dir: path.join(process.cwd(), 'dist', 'src', 'email', 'templates'),
 
           adapter: new HandlebarsAdapter({
             eq: (a: unknown, b: unknown) => a === b,
