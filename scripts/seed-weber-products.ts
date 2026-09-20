@@ -1,9 +1,7 @@
 import mongoose from 'mongoose';
 import * as dotenv from 'dotenv';
-import {
-  WEBER_CATEGORIES,
-  WEBER_PRODUCTS_DATA,
-} from '../src/seed/weber-products-data';
+import { WEBER_PRODUCTS_DATA } from '../src/seed/weber-products-data';
+import { FULL_CATALOG_CATEGORIES } from '../src/seed/full-catalog-data';
 
 // Run with: npx tsx scripts/seed-weber-products.ts
 
@@ -57,7 +55,7 @@ async function run() {
     }
   >();
 
-  for (const catData of WEBER_CATEGORIES) {
+  for (const catData of FULL_CATALOG_CATEGORIES) {
     let category = await Category.findOne({ slug: catData.slug });
     if (!category) {
       const res = await Category.insertOne({

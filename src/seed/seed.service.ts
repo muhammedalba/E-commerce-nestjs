@@ -11,7 +11,7 @@ import { TaxScope } from '../taxes/shared/schema/tax.schema';
 import { ShippingRateScope } from '../shipping/shared/schema/shipping-rate.schema';
 import { PaymentType } from '../payments/shared/schema/payment-method.schema';
 import { KSA_DATA } from './ksa-data';
-import { WEBER_CATEGORIES, WEBER_PRODUCTS_DATA } from './weber-products-data';
+import { WEBER_PRODUCTS_DATA } from './weber-products-data';
 import {
   FULL_CATALOG_BRANDS,
   FULL_CATALOG_CATEGORIES,
@@ -450,7 +450,9 @@ export class SeedService {
       { categoryId: Types.ObjectId; subCategoryId: Types.ObjectId }
     >();
 
-    for (const catData of WEBER_CATEGORIES) {
+    // Weber shares the single catalogue taxonomy so that running this seeder
+    // before or after seedFullCatalog() yields the same category tree.
+    for (const catData of FULL_CATALOG_CATEGORIES) {
       let category = await Category.findOne({ slug: catData.slug });
       if (!category) {
         const res = await Category.insertOne({
