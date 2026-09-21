@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="utf-8">
+  <title>{{subject}}</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      direction: rtl;
+    }
+    .container {
+      max-width: 600px;
+      margin: 20px auto;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .header {
+      background-color: #d9534f;
+      color: white;
+      text-align: center;
+      padding: 10px;
+      border-radius: 8px 8px 0 0;
+    }
+    .content {
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .footer {
+      text-align: center;
+      color: #777;
+      font-size: 12px;
+      margin-top: 20px;
+    }
+    .details-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    .details-table th, .details-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: right;
+    }
+    .details-table th {
+      background-color: #f9f9f9;
+      white-space: nowrap;
+    }
+    .error-box {
+      background-color: #fdf2f2;
+      border: 1px solid #f5c6cb;
+      color: #842029;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+      font-family: monospace;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>🚨 فشل في تنفيذ مهمة بريد إلكتروني</h2>
+    </div>
+
+    <div class="content">
+      <p>مرحباً <strong>{{adminName}}</strong>،</p>
+      <p>فشلت إحدى مهام إرسال البريد الإلكتروني بعد استنفاد جميع محاولات إعادة التنفيذ. يرجى مراجعة الأمر في أقرب وقت ممكن.</p>
+
+      <table class="details-table">
+        <tr>
+          <th>اسم المهمة</th>
+          <td>{{jobName}}</td>
+        </tr>
+        <tr>
+          <th>معرّف المهمة</th>
+          <td>{{jobId}}</td>
+        </tr>
+        <tr>
+          <th>عدد المحاولات</th>
+          <td>{{attemptsMade}}</td>
+        </tr>
+      </table>
+
+      <p>رسالة الخطأ:</p>
+      <div class="error-box">{{errorMessage}}</div>
+    </div>
+
+    <div class="footer">
+      <p>&copy; {{year}} {{companyName}}. جميع الحقوق محفوظة.</p>
+    </div>
+  </div>
+</body>
+</html>
