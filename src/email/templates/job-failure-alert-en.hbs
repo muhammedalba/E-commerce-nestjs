@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{subject}}</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 20px auto;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .header {
+      background-color: #d9534f;
+      color: white;
+      text-align: center;
+      padding: 10px;
+      border-radius: 8px 8px 0 0;
+    }
+    .content {
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .footer {
+      text-align: center;
+      color: #777;
+      font-size: 12px;
+      margin-top: 20px;
+    }
+    .details-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    .details-table th, .details-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    .details-table th {
+      background-color: #f9f9f9;
+      white-space: nowrap;
+    }
+    .error-box {
+      background-color: #fdf2f2;
+      border: 1px solid #f5c6cb;
+      color: #842029;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+      font-family: monospace;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>🚨 Mail Job Failed</h2>
+    </div>
+
+    <div class="content">
+      <p>Hello <strong>{{adminName}}</strong>,</p>
+      <p>A mail job has failed after exhausting all retry attempts. Please review it as soon as possible.</p>
+
+      <table class="details-table">
+        <tr>
+          <th>Job Name</th>
+          <td>{{jobName}}</td>
+        </tr>
+        <tr>
+          <th>Job ID</th>
+          <td>{{jobId}}</td>
+        </tr>
+        <tr>
+          <th>Attempts Made</th>
+          <td>{{attemptsMade}}</td>
+        </tr>
+      </table>
+
+      <p>Error message:</p>
+      <div class="error-box">{{errorMessage}}</div>
+    </div>
+
+    <div class="footer">
+      <p>&copy; {{year}} {{companyName}}. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

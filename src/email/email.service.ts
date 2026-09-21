@@ -333,4 +333,48 @@ export class EmailService {
       },
     });
   }
+
+  /**
+   * Notifies the admin that a mail job has permanently failed
+   * (i.e. exhausted all of its retry attempts).
+   */
+  async send_job_failure_alert(
+    jobName: string,
+    jobId: string | undefined,
+    errorMessage: string,
+    attemptsMade: number,
+    lang?: string,
+  ): Promise<void> {
+    const resolvedLang =
+      lang ??
+      I18nContext.current()?.lang ??
+      process.env.DEFAULT_LANGUAGE ??
+      'ar';
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminName = process.env.SUPER_ADMIN_NAME || 'Super Admin';
+    const template = `job-failure-alert-${resolvedLang}`;
+    const subject =
+      resolvedLang === 'ar'
+        ? `🚨 فشل تنفيذ مهمة بريد: ${jobName}`
+        : `🚨 Mail job failed: ${jobName}`;
+    console.log(
+      `📧 Attempting to send [send_job_failure_alert] to Admin: ${adminEmail} | Lang: ${resolvedLang} | Template: ${template}`,
+    );
+
+    await this.mailerService.sendMail({
+      to: adminEmail,
+      subject,
+      template,
+      context: {
+        subject,
+        adminName,
+        jobName,
+        jobId: jobId ?? 'N/A',
+        errorMessage,
+        attemptsMade,
+        year: new Date().getFullYear(),
+        companyName: process.env.APP_NAME,
+      },
+    });
+  }
 }
