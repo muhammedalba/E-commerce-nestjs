@@ -207,6 +207,21 @@ export class Setting {
   @Prop({ type: String, default: '' })
   declare googleMapsApiKey: string;
 
+  // إعدادات تقييمات جوجل (Google Places API)
+  @Prop({
+    type: Object,
+    default: { enabled: false, placeId: '', reviewsUrl: '' },
+  })
+  declare googleReviews: {
+    enabled: boolean;
+    placeId: string;
+    reviewsUrl: string;
+  };
+
+  // مفتاح Google Places API - يُحفظ مشفراً ولا يُرسل أبداً في الاستجابة العامة
+  @Prop({ type: String, default: '' })
+  declare googlePlacesApiKey: string;
+
   // حقول متوافقة مع الـ Frontend لمنع أخطاء الـ Validation
   @Prop({ type: Boolean, default: false })
   declare maintenanceMode: boolean;
@@ -227,6 +242,7 @@ export class Setting {
   // الحقول الديناميكية (لا تُحفظ في قاعدة البيانات)
   hasCustomShippingRates?: boolean;
   hasCustomTaxes?: boolean;
+  hasGooglePlacesApiKey?: boolean;
 }
 
 export const SettingSchema = SchemaFactory.createForClass(Setting);

@@ -20,7 +20,9 @@ export default tseslint.config(
       ecmaVersion: 5,
       sourceType: 'module',
       parserOptions: {
-        projectService: true,
+        projectService: {
+          allowDefaultProject: ['scripts/*.mjs'],
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -31,5 +33,10 @@ export default tseslint.config(
       '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/no-unsafe-argument': 'warn'
     },
+  },
+  // Disable type-checked rules for plain JS scripts not in tsconfig
+  {
+    files: ['scripts/**/*.mjs', 'scripts/**/*.js'],
+    ...tseslint.configs.disableTypeChecked,
   },
 );

@@ -3,7 +3,10 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUrl,
+  Matches,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
@@ -132,6 +135,25 @@ class BankTransferDetailsDto {
   iban?: string;
 }
 
+class GoogleReviewsDto {
+  @Type(() => Boolean)
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  @IsOptional()
+  enabled?: boolean;
+
+  // Place IDs are URL-safe tokens; restricting the charset prevents path injection
+  @IsString()
+  @Matches(/^[A-Za-z0-9_-]*$/)
+  @IsOptional()
+  placeId?: string;
+
+  @ValidateIf((_, value) => value !== '')
+  @IsUrl({ require_protocol: true })
+  @IsOptional()
+  reviewsUrl?: string;
+}
+
 export class UpdateSettingDto {
   @ValidateNested()
   @Type(() => FieldLocalizeDto)
@@ -255,6 +277,15 @@ export class UpdateSettingDto {
   @IsString()
   @IsOptional()
   googleMapsApiKey?: string;
+
+  @ValidateNested()
+  @Type(() => GoogleReviewsDto)
+  @IsOptional()
+  googleReviews?: GoogleReviewsDto;
+
+  @IsString()
+  @IsOptional()
+  googlePlacesApiKey?: string;
 
   @Type(() => Boolean)
   @Transform(({ value }) => value === 'true' || value === true)

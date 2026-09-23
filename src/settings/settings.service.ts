@@ -18,9 +18,75 @@ import {
   StorageProviderType,
 } from 'src/shared/schema/file-asset.schema';
 import { RevalidationService } from 'src/shared/services/revalidation.service';
+import { HttpService } from '@nestjs/axios';
+import { lastValueFrom } from 'rxjs';
+import {
+  decryptConfigValues,
+  encryptConfigValues,
+} from 'src/payments/shared/utils/encryption.util';
+import {
+  PLACE_ID_PATTERN,
+  isExpandedGoogleMapsUrl,
+  isGoogleHost,
+  parseGoogleMapsUrl,
+} from './shared/utils/google-maps-url.util';
 
 /** Cache key used to store/retrieve the global settings object. */
 const SETTINGS_CACHE_KEY = 'settings:global';
+
+/** Cache key prefix for Google reviews (one entry per language). */
+const GOOGLE_REVIEWS_CACHE_PREFIX = 'google-reviews:';
+
+/** Supported review languages. */
+const GOOGLE_REVIEWS_LANGS = ['ar', 'en'] as const;
+export type GoogleReviewsLang = (typeof GOOGLE_REVIEWS_LANGS)[number];
+
+/** Successful Google reviews are cached for 24 h to minimise Places API cost. */
+const GOOGLE_REVIEWS_CACHE_TTL = 24 * 60 * 60 * 1000;
+
+/** Failed lookups are cached briefly so a bad key/Place ID doesn't hammer the API. */
+const GOOGLE_REVIEWS_ERROR_TTL = 10 * 60 * 1000;
+
+const GOOGLE_PLACES_TIMEOUT_MS = 5000;
+
+interface GooglePlaceReview {
+  rating?: number;
+  relativePublishTimeDescription?: string;
+  text?: { text?: string };
+  originalText?: { text?: string };
+  authorAttribution?: { displayName?: string; uri?: string; photoUri?: string };
+}
+
+interface GooglePlaceResponse {
+  rating?: number;
+  userRatingCount?: number;
+  googleMapsUri?: string;
+  reviews?: GooglePlaceReview[];
+}
+
+/** Slim, public-safe payload returned by `GET /settings/google-reviews`. */
+export interface GoogleReviewsResult {
+  enabled: boolean;
+  rating: number;
+  total: number;
+  url: string;
+  reviews: {
+    author: string;
+    authorUrl: string;
+    photo: string;
+    rating: number;
+    text: string;
+    time: string;
+  }[];
+}
+
+const EMPTY_GOOGLE_REVIEWS: GoogleReviewsResult = {
+  enabled: false,
+  rating: 0,
+  total: 0,
+  url: '',
+  reviews: [],
+};
 
 /** Mongoose document key that identifies the single global settings document. */
 const SETTINGS_DOC_KEY = 'global';
@@ -64,7 +130,21 @@ export class SettingsService {
 
     @Inject(forwardRef(() => ExchangeRateSyncService))
     private readonly exchangeRateSyncService: ExchangeRateSyncService,
+
+    private readonly httpService: HttpService,
   ) {}
+
+  /**
+   * Strips the encrypted Google Places API key from a settings object and
+   * replaces it with a boolean flag, so the secret never reaches the public
+   * `GET /settings` response or the settings cache.
+   */
+  private toPublicSettings<T extends { googlePlacesApiKey?: string }>(
+    settings: T,
+  ): Omit<T, 'googlePlacesApiKey'> & { hasGooglePlacesApiKey: boolean } {
+    const { googlePlacesApiKey, ...rest } = settings;
+    return { ...rest, hasGooglePlacesApiKey: !!googlePlacesApiKey };
+  }
 
   // ─────────────────────────────────────────────────────────────────────────────
   // READ
@@ -136,7 +216,7 @@ export class SettingsService {
     }
 
     const settingsWithCustoms = {
-      ...settings,
+      ...(settings ? this.toPublicSettings(settings) : {}),
       hasCustomShippingRates,
       hasCustomTaxes,
     } as unknown as Setting;
@@ -214,6 +294,27 @@ export class SettingsService {
     const updateData: Record<string, unknown> = { ...dto };
     const imageFields = ['favicon', 'logo'] as const;
 
+    // Google Places API key: encrypt when a new value is provided (same
+    // AES-256-GCM scheme as payment secrets); otherwise keep the stored key.
+    const newPlacesKey = dto.googlePlacesApiKey?.trim();
+    if (newPlacesKey) {
+      const encrypted = encryptConfigValues({
+        googlePlacesApiKey: newPlacesKey,
+      }) as { googlePlacesApiKey: string };
+      updateData.googlePlacesApiKey = encrypted.googlePlacesApiKey;
+    } else {
+      delete updateData.googlePlacesApiKey;
+    }
+
+    // Auto-detect the Google Place ID from the pasted Google Maps link
+    if (dto.googleReviews) {
+      updateData.googleReviews = await this.resolveGoogleReviewsPlaceId(
+        dto.googleReviews,
+        currentSettings.googleReviews,
+        newPlacesKey,
+      );
+    }
+
     // Process image uploads in parallel for better performance
     await Promise.all(
       imageFields.map(async (key) => {
@@ -261,8 +362,11 @@ export class SettingsService {
       { upsert: true, new: true, lean: true },
     );
 
-    // Invalidate the server-side cache
-    await this.cacheManager.del(SETTINGS_CACHE_KEY);
+    // Invalidate the server-side cache (settings + Google reviews)
+    await Promise.all([
+      this.cacheManager.del(SETTINGS_CACHE_KEY),
+      ...this.googleReviewsCacheKeys().map((key) => this.cacheManager.del(key)),
+    ]);
 
     // Notify the frontend to regenerate statically cached pages (ISR)
     await this.revalidationService.revalidate(['settings', 'public-settings']);
@@ -277,7 +381,253 @@ export class SettingsService {
       return this.getSettings();
     }
 
-    return updatedDoc as Setting;
+    return (updatedDoc
+      ? this.toPublicSettings(updatedDoc)
+      : updatedDoc) as unknown as Setting;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // GOOGLE REVIEWS
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  private googleReviewsCacheKeys(): string[] {
+    return GOOGLE_REVIEWS_LANGS.map(
+      (lang) => `${GOOGLE_REVIEWS_CACHE_PREFIX}${lang}`,
+    );
+  }
+
+  /** Reads and decrypts the stored Google Places API key (server-side only). */
+  private async getStoredPlacesApiKey(): Promise<string> {
+    const keyDoc = await this.settingModel
+      .findOne({ key: SETTINGS_DOC_KEY })
+      .select('googlePlacesApiKey')
+      .lean();
+    const { googlePlacesApiKey } = decryptConfigValues({
+      googlePlacesApiKey: keyDoc?.googlePlacesApiKey ?? '',
+    }) as { googlePlacesApiKey: string };
+    return googlePlacesApiKey;
+  }
+
+  /**
+   * Fills `placeId` from `reviewsUrl` when the admin pasted a Google Maps link
+   * without a Place ID, or changed the link while leaving the old Place ID.
+   *
+   * Resolution order:
+   * 1. The link already contains a Place ID (`placeid=`, `q=place_id:` …).
+   * 2. Otherwise the business name + pin coordinates are read from the link
+   *    and looked up once via Places Text Search (IDs-only field mask).
+   *
+   * Throws a `BadRequestException` only when reviews are enabled, so the admin
+   * knows immediately that the link couldn't be resolved.
+   */
+  private async resolveGoogleReviewsPlaceId(
+    next: NonNullable<UpdateSettingDto['googleReviews']>,
+    current: Setting['googleReviews'] | undefined,
+    newApiKey?: string,
+  ): Promise<NonNullable<UpdateSettingDto['googleReviews']>> {
+    const reviewsUrl = next.reviewsUrl?.trim() ?? '';
+    const placeId = next.placeId?.trim() ?? '';
+    const urlChanged = reviewsUrl !== (current?.reviewsUrl ?? '');
+    const needsResolve =
+      !!reviewsUrl &&
+      (!placeId || (urlChanged && placeId === (current?.placeId ?? '')));
+
+    if (!needsResolve) return { ...next, reviewsUrl, placeId };
+
+    const fail = (reason: string) => {
+      if (next.enabled) {
+        throw new BadRequestException(
+          `Could not detect the Google Place ID from the link (${reason}). Please enter the Place ID manually.`,
+        );
+      }
+      this.logger.warn(`Google Place ID auto-detection skipped: ${reason}`);
+      return { ...next, reviewsUrl, placeId };
+    };
+
+    try {
+      const expandedUrl = await this.expandGoogleMapsUrl(reviewsUrl);
+      const parsed = parseGoogleMapsUrl(expandedUrl);
+      if (parsed.placeId) {
+        return { ...next, reviewsUrl, placeId: parsed.placeId };
+      }
+      if (!parsed.name) return fail('no business name found in the link');
+
+      const apiKey = newApiKey || (await this.getStoredPlacesApiKey());
+      if (!apiKey) return fail('Google Places API key is missing');
+
+      const hasCoords = parsed.lat !== undefined && parsed.lng !== undefined;
+      const { data } = await lastValueFrom(
+        this.httpService.post<{ places?: { id?: string }[] }>(
+          'https://places.googleapis.com/v1/places:searchText',
+          {
+            textQuery: parsed.name,
+            pageSize: 1,
+            ...(hasCoords && {
+              locationBias: {
+                circle: {
+                  center: { latitude: parsed.lat, longitude: parsed.lng },
+                  radius: 500,
+                },
+              },
+            }),
+          },
+          {
+            headers: {
+              'X-Goog-Api-Key': apiKey,
+              'X-Goog-FieldMask': 'places.id',
+            },
+            timeout: GOOGLE_PLACES_TIMEOUT_MS,
+          },
+        ),
+      );
+
+      const resolvedId = data.places?.[0]?.id;
+      if (!resolvedId || !PLACE_ID_PATTERN.test(resolvedId)) {
+        return fail('no matching place found on Google');
+      }
+
+      this.logger.log(`Google Place ID auto-detected: ${resolvedId}`);
+      return { ...next, reviewsUrl, placeId: resolvedId };
+    } catch (err: unknown) {
+      if (err instanceof BadRequestException) throw err;
+      const error = err as Error & {
+        response?: { data?: { error?: { message?: string } } };
+      };
+      return fail(error.response?.data?.error?.message || error.message);
+    }
+  }
+
+  /**
+   * Follows short links (`maps.app.goo.gl`, `g.page`, …) until a full Google
+   * Maps URL is reached. Every hop is validated against {@link isGoogleHost}
+   * *before* it is requested, so only Google hosts are ever contacted.
+   */
+  private async expandGoogleMapsUrl(raw: string): Promise<string> {
+    let current = raw;
+
+    for (let hop = 0; hop < 5; hop++) {
+      const url = new URL(current);
+      if (
+        !['http:', 'https:'].includes(url.protocol) ||
+        !isGoogleHost(url.hostname)
+      ) {
+        throw new BadRequestException('Only Google Maps links are supported');
+      }
+
+      // EU cookie-consent interstitial: the real target is in `continue`
+      const consentTarget =
+        url.hostname.startsWith('consent.') && url.searchParams.get('continue');
+      if (consentTarget) {
+        current = consentTarget;
+        continue;
+      }
+
+      if (isExpandedGoogleMapsUrl(current)) return current;
+
+      const response = await fetch(current, {
+        redirect: 'manual',
+        signal: AbortSignal.timeout(GOOGLE_PLACES_TIMEOUT_MS),
+      });
+      await response.body?.cancel().catch(() => undefined);
+
+      const location = response.headers.get('location');
+      if (response.status < 300 || response.status >= 400 || !location) {
+        return current;
+      }
+      current = new URL(location, current).toString();
+    }
+
+    return current;
+  }
+
+  /**
+   * Returns the store's Google reviews using the Google Places API (New).
+   *
+   * - Returns `{ enabled: false }` when the admin disabled the feature or the
+   *   Place ID / API key are missing.
+   * - The API key is stored encrypted and only decrypted here, server-side.
+   * - Results are cached per language for {@link GOOGLE_REVIEWS_CACHE_TTL};
+   *   failures are cached for {@link GOOGLE_REVIEWS_ERROR_TTL}.
+   *
+   * @param lang - Review language (`ar` | `en`).
+   */
+  async getGoogleReviews(
+    lang: GoogleReviewsLang,
+  ): Promise<GoogleReviewsResult> {
+    const cacheKey = `${GOOGLE_REVIEWS_CACHE_PREFIX}${lang}`;
+    const cached = await this.cacheManager.get<GoogleReviewsResult>(cacheKey);
+    if (cached) return cached;
+
+    const settings = await this.getSettings();
+    const config = settings.googleReviews;
+    if (
+      !config?.enabled ||
+      !config.placeId ||
+      !settings.hasGooglePlacesApiKey
+    ) {
+      this.logger.debug(
+        `Google reviews skipped: enabled=${!!config?.enabled}, placeId=${!!config?.placeId}, apiKey=${!!settings.hasGooglePlacesApiKey}`,
+      );
+      return EMPTY_GOOGLE_REVIEWS;
+    }
+
+    const apiKey = await this.getStoredPlacesApiKey();
+    if (!apiKey) return EMPTY_GOOGLE_REVIEWS;
+
+    try {
+      const { data } = await lastValueFrom(
+        this.httpService.get<GooglePlaceResponse>(
+          `https://places.googleapis.com/v1/places/${encodeURIComponent(config.placeId)}`,
+          {
+            params: { languageCode: lang },
+            headers: {
+              'X-Goog-Api-Key': apiKey,
+              'X-Goog-FieldMask':
+                'rating,userRatingCount,googleMapsUri,reviews',
+            },
+            timeout: GOOGLE_PLACES_TIMEOUT_MS,
+          },
+        ),
+      );
+
+      const result: GoogleReviewsResult = {
+        enabled: true,
+        rating: data.rating ?? 0,
+        total: data.userRatingCount ?? 0,
+        url: config.reviewsUrl || data.googleMapsUri || '',
+        reviews: (data.reviews ?? [])
+          .map((review) => ({
+            author: review.authorAttribution?.displayName ?? '',
+            authorUrl: review.authorAttribution?.uri ?? '',
+            photo: review.authorAttribution?.photoUri ?? '',
+            rating: review.rating ?? 5,
+            text: review.text?.text || review.originalText?.text || '',
+            time: review.relativePublishTimeDescription ?? '',
+          }))
+          .filter((review) => review.text.trim() !== ''),
+      };
+
+      await this.cacheManager.set(cacheKey, result, GOOGLE_REVIEWS_CACHE_TTL);
+      return result;
+    } catch (err: unknown) {
+      // Surface Google's own error (e.g. API not enabled, key restricted)
+      const error = err as Error & {
+        response?: { data?: { error?: { status?: string; message?: string } } };
+      };
+      const googleError = error.response?.data?.error;
+      this.logger.warn(
+        `Failed to fetch Google reviews: ${error.message}` +
+          (googleError
+            ? ` — ${googleError.status}: ${googleError.message}`
+            : ''),
+      );
+      await this.cacheManager.set(
+        cacheKey,
+        EMPTY_GOOGLE_REVIEWS,
+        GOOGLE_REVIEWS_ERROR_TTL,
+      );
+      return EMPTY_GOOGLE_REVIEWS;
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -367,7 +717,10 @@ export class SettingsService {
    * ```
    */
   async clearCache(): Promise<{ success: boolean }> {
-    await this.cacheManager.del(SETTINGS_CACHE_KEY);
+    await Promise.all([
+      this.cacheManager.del(SETTINGS_CACHE_KEY),
+      ...this.googleReviewsCacheKeys().map((key) => this.cacheManager.del(key)),
+    ]);
     await this.revalidationService.revalidate(['settings', 'public-settings']);
     return { success: true };
   }

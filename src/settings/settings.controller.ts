@@ -3,6 +3,7 @@ import {
   Get,
   Patch,
   Body,
+  Query,
   UseGuards,
   UseInterceptors,
   UploadedFiles,
@@ -79,6 +80,33 @@ export class SettingsController {
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
+  // GET /settings/google-reviews
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Returns the store's Google reviews (via Google Places API) when the admin
+   * has enabled them in settings.
+   *
+   * **Access:** Public – no authentication required.
+   *
+   * **Caching:** Handled inside {@link SettingsService.getGoogleReviews}
+   * (24 h per language) and invalidated whenever settings are updated.
+   *
+   * @param lang - Review language (`ar` | `en`). Defaults to `ar`.
+   *
+   * @example
+   * ```http
+   * GET /settings/google-reviews?lang=en
+   * ```
+   */
+  @Get('google-reviews')
+  async getGoogleReviews(@Query('lang') lang?: string) {
+    return await this.settingsService.getGoogleReviews(
+      lang === 'en' ? 'en' : 'ar',
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
   // PATCH /settings
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -133,6 +161,7 @@ export class SettingsController {
       'footerText',
       'maintenanceMessage',
       'googleAnalyticsId',
+      'googleReviews',
       'maintenanceMode',
       'socialLinks',
       'contactInfo',
