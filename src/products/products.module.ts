@@ -10,7 +10,7 @@ import {
 } from './shared/schemas/ProductVariant.schema';
 
 import { ProductsStatistics } from './products-helper/products-statistics.service';
-import { AggregationSyncService } from './products-helper/aggregation-sync.service';
+import { ProductSyncModule } from './products-helper/product-sync.module';
 
 import {
   Supplier,
@@ -51,6 +51,7 @@ import { InventoryEventListener } from './services/inventory-event.listener';
     ]),
     AuthModule,
     OrderModule,
+    ProductSyncModule,
   ],
   controllers: [ProductsController],
   providers: [
@@ -65,7 +66,6 @@ import { InventoryEventListener } from './services/inventory-event.listener';
     InventoryEventListener,
     // Helpers
     ProductsStatistics,
-    AggregationSyncService,
   ],
   exports: [MongooseModule, InventoryAlertService],
 })

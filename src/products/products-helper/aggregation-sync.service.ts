@@ -7,6 +7,8 @@ import {
   ProductVariantDocument,
 } from '../shared/schemas/ProductVariant.schema';
 import { OnEvent } from '@nestjs/event-emitter';
+import { CacheInvalidationService } from 'src/shared/services/cache-invalidation.service';
+import { RevalidationService } from 'src/shared/services/revalidation.service';
 
 /**
  * An event triggered when variants for a specific product are created, updated, or deleted.
@@ -38,6 +40,8 @@ export class AggregationSyncService {
     private readonly productModel: Model<ProductDocument>,
     @InjectModel(ProductVariant.name)
     private readonly variantModel: Model<ProductVariantDocument>,
+    private readonly cacheInvalidation: CacheInvalidationService,
+    private readonly revalidationService: RevalidationService,
   ) {}
 
   /**
@@ -76,6 +80,22 @@ export class AggregationSyncService {
    */
   @OnEvent('variant.changed', { async: true })
   async handleVariantChanged(event: VariantChangedEvent) {
+    await this.syncProduct(event.productId);
+  }
+
+  /**
+   * Recomputes the aggregates, then — only once they are final — clears the
+   * backend response cache and expires the storefront ISR cache.
+   *
+   * Invalidating *after* the recompute matters: any read that raced in before
+   * it (e.g. the dashboard refetching right after a save) may have cached the
+   * pre-aggregation values (old stock/price) under its language key.
+   *
+   * Can be awaited directly (product create/update) or run via the event.
+   * Never throws.
+   */
+  async syncProduct(productId: Types.ObjectId) {
+    const event = { productId };
     try {
       const stats = await this.variantModel.aggregate<VariantStatsResult>([
         {
@@ -104,7 +124,7 @@ export class AggregationSyncService {
         count: 0,
       };
 
-      await this.productModel.updateOne(
+      const product = await this.productModel.findOneAndUpdate(
         { _id: event.productId },
         {
           $set: {
@@ -114,7 +134,14 @@ export class AggregationSyncService {
             variantCount: result.count,
           },
         },
+        { projection: { slug: 1 } },
       );
+
+      await this.cacheInvalidation.clearResources(['products']);
+      await this.revalidationService.revalidate([
+        'products',
+        ...(product?.slug ? [`product-${product.slug}`] : []),
+      ]);
     } catch (error) {
       this.logger.error(
         `Failed to sync aggregates for product ${event.productId.toString()}`,

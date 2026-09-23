@@ -9,7 +9,6 @@ import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Model, Connection } from 'mongoose';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
-import { ConfigService } from '@nestjs/config';
 import { Setting, SettingDocument } from './shared/schema/setting.schema';
 import { UpdateSettingDto } from './shared/dto/update-setting.dto';
 import { FileUploadService } from 'src/file-upload/file-upload.service';
@@ -18,6 +17,7 @@ import {
   FileAsset,
   StorageProviderType,
 } from 'src/shared/schema/file-asset.schema';
+import { RevalidationService } from 'src/shared/services/revalidation.service';
 
 /** Cache key used to store/retrieve the global settings object. */
 const SETTINGS_CACHE_KEY = 'settings:global';
@@ -55,7 +55,7 @@ export class SettingsService {
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
 
-    private readonly configService: ConfigService,
+    private readonly revalidationService: RevalidationService,
     @Inject(forwardRef(() => FileUploadService))
     private readonly fileUploadService: FileUploadService,
 
@@ -265,7 +265,7 @@ export class SettingsService {
     await this.cacheManager.del(SETTINGS_CACHE_KEY);
 
     // Notify the frontend to regenerate statically cached pages (ISR)
-    await this.triggerRevalidation('settings,public-settings');
+    await this.revalidationService.revalidate(['settings', 'public-settings']);
 
     // Re-sync the exchange rate immediately when the store switches currency,
     // instead of waiting for the next hourly cron run. This is awaited so the
@@ -368,67 +368,7 @@ export class SettingsService {
    */
   async clearCache(): Promise<{ success: boolean }> {
     await this.cacheManager.del(SETTINGS_CACHE_KEY);
-    await this.triggerRevalidation('settings,public-settings');
+    await this.revalidationService.revalidate(['settings', 'public-settings']);
     return { success: true };
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // PRIVATE HELPERS
-  // ─────────────────────────────────────────────────────────────────────────────
-
-  /**
-   * Sends an HTTP POST request to the Next.js ISR revalidation endpoint.
-   *
-   * This allows the frontend to immediately regenerate any statically cached
-   * pages that depend on the provided cache `tag` without waiting for the
-   * next scheduled revalidation cycle.
-   *
-   * The method is a **best-effort** operation: if the frontend URL or the
-   * shared secret are not configured, revalidation is silently skipped.
-   * Network errors are caught and logged without propagating to the caller.
-   *
-   * @param tag - Comma-separated Next.js cache tags to revalidate
-   *              (e.g. `"settings,public-settings"`).
-   * @returns `void` – callers should not depend on the outcome.
-   *
-   * @internal
-   */
-  private async triggerRevalidation(tag: string): Promise<void> {
-    const frontendUrl = this.configService.get<string>('FRONTEND_ORIGIN');
-    const secret = this.configService.get<string>('REVALIDATE_SECRET');
-
-    if (!frontendUrl || !secret) {
-      this.logger.warn(
-        'Frontend URL or Revalidate Secret missing in config. Skipping revalidation.',
-      );
-      return;
-    }
-
-    try {
-      const response = await fetch(`${frontendUrl}/api/revalidate?tag=${tag}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${secret}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        this.logger.log(
-          `[ISR] Successfully triggered revalidation for tag: ${tag}`,
-        );
-      } else {
-        const error = await response.text();
-        this.logger.error(
-          `[ISR] Failed to trigger revalidation for tag: ${tag}. Status: ${response.status} - ${error}`,
-        );
-      }
-    } catch (err: unknown) {
-      const stack = err instanceof Error ? err.stack : undefined;
-      this.logger.error(
-        `[ISR] Network error while triggering revalidation for tag: ${tag}`,
-        stack,
-      );
-    }
   }
 }

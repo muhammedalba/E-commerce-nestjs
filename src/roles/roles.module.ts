@@ -1,6 +1,5 @@
 import { Global, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { CacheModule } from '@nestjs/cache-manager';
 import { RolesController } from './roles.controller';
 import { RolesService } from './services/roles.service';
 import { RolesSeederService } from './services/roles-seeder.service';
@@ -14,12 +13,12 @@ import { User, UserSchema } from '../auth/shared/schema/user.schema';
       { name: Role.name, schema: RoleSchema },
       { name: User.name, schema: UserSchema },
     ]),
-    CacheModule.register({
-      ttl: 1000 * 60 * 60 * 12, // Default TTL 12 hours
-    }),
+    // No own CacheModule: this module is @Global, so exporting one created a
+    // second global CACHE_MANAGER and cache clears could hit the wrong instance.
+    // Uses the app-wide cache (AppModule); every set() passes an explicit TTL.
   ],
   controllers: [RolesController],
   providers: [RolesService, RolesSeederService],
-  exports: [RolesService, RolesSeederService, MongooseModule, CacheModule],
+  exports: [RolesService, RolesSeederService, MongooseModule],
 })
 export class RolesModule {}

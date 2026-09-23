@@ -20,7 +20,7 @@ import { CreateProductDto } from '../shared/dto/create-product.dto';
 import { UpdateProductDto } from '../shared/dto/update-product.dto';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { MulterFilesType } from 'src/shared/utils/interfaces/fileInterface';
-import { VariantChangedEvent } from '../products-helper/aggregation-sync.service';
+import { AggregationSyncService } from '../products-helper/aggregation-sync.service';
 
 import { ProductFileService } from './products-file.service';
 import { ProductSkuService } from './products-sku.service';
@@ -32,6 +32,8 @@ import { handleDuplicateKeyError } from '../products-helper/product-error.utils'
 import { InventoryAlertService } from './inventory-alert.service';
 import { normalizeVariantData } from '../shared/utils/data-normalizer';
 import { withBaseUrl } from 'src/shared/utils/with-base-url.util';
+import { RevalidationService } from 'src/shared/services/revalidation.service';
+import { CacheInvalidationService } from 'src/shared/services/cache-invalidation.service';
 
 /**
  * Handles all write operations: create, update, delete, restore.
@@ -52,7 +54,31 @@ export class ProductMutationService {
     private readonly i18n: CustomI18nService,
     private readonly eventEmitter: EventEmitter2,
     private readonly inventoryAlertService: InventoryAlertService,
+    private readonly revalidationService: RevalidationService,
+    private readonly cacheInvalidation: CacheInvalidationService,
+    private readonly aggregationSync: AggregationSyncService,
   ) {}
+
+  /**
+   * Expires the storefront's ISR cache for the product list and the given
+   * product pages. Pass both old and new slugs when a slug changes.
+   * Must only be called after the DB transaction has committed.
+   */
+  private async revalidateProducts(...slugs: (string | undefined)[]) {
+    // Clear the backend response cache first: @ClearCache('products') on the
+    // controller only runs after this method returns, and Next must not
+    // revalidate against the stale cached response.
+    // Best-effort: the DB write already committed, never fail the request here.
+    await this.cacheInvalidation
+      .clearResources(['products'])
+      .catch((err: unknown) =>
+        this.logger.error('Failed to clear products response cache', err),
+      );
+    return this.revalidationService.revalidate([
+      'products',
+      ...slugs.filter(Boolean).map((slug) => `product-${slug}`),
+    ]);
+  }
 
   /**
    *
@@ -137,10 +163,10 @@ export class ProductMutationService {
       await session.commitTransaction();
       // 5. Events and preparing the response
       // used to recalculate the aggregate statistics stored directly on the product document
-      this.eventEmitter.emit(
-        'variant.changed',
-        new VariantChangedEvent(newProduct._id),
-      );
+      // Awaited (not the async event): the response — and the dashboard's
+      // immediate refetch — must see the final stockSummary / priceRange.
+      await this.aggregationSync.syncProduct(newProduct._id);
+      await this.revalidateProducts(newProduct.slug);
       // Convert to a plain JS object to safely mutate properties (like URLs) without affecting the Mongoose Document state
       const productResponse = newProduct.toObject();
       // make an absolute url for each file in the product and return the product
@@ -594,10 +620,10 @@ export class ProductMutationService {
       }
 
       // Event emission occurs strictly AFTER transaction commit succeeds
-      this.eventEmitter.emit(
-        'variant.changed',
-        new VariantChangedEvent(updatedProduct._id),
-      );
+      await this.aggregationSync.syncProduct(updatedProduct._id);
+
+      // Old slug too: a title change moves the product to a new URL
+      await this.revalidateProducts(doc.slug, updatedProduct.slug);
 
       // Fetch final hydrated variants only if variant changes occurred; otherwise reuse doc.variants
       const hasVariantChanges = Boolean(
@@ -670,7 +696,7 @@ export class ProductMutationService {
    */
   async remove(idParamDto: IdParamDto) {
     try {
-      await withTransactionRetry(
+      const deletedSlug = await withTransactionRetry(
         async (session) => {
           const now = new Date();
 
@@ -691,12 +717,14 @@ export class ProductMutationService {
             { $set: { isDeleted: true, deletedAt: now } },
             { session },
           );
+
+          return product.slug;
         },
         this.connection,
         this.logger,
       );
 
-      // Invalidate cache
+      await this.revalidateProducts(deletedSlug);
 
       return { message: 'Product and variants soft-deleted successfully' };
     } catch (error: unknown) {
@@ -721,7 +749,7 @@ export class ProductMutationService {
   async hardRemove(idParamDto: IdParamDto) {
     const doc = await this.productModel
       .findOne({ _id: idParamDto.id, isDeleted: true })
-      .select('imageCover infoProductPdf images')
+      .select('slug imageCover infoProductPdf images')
       .lean();
 
     if (!doc) {
@@ -747,7 +775,7 @@ export class ProductMutationService {
       // Delete associated files only after successful commit
       await this.fileService.deleteProductFiles(doc);
 
-      // Invalidate cache
+      await this.revalidateProducts(doc.slug);
 
       return { message: 'Product and variants permanently deleted' };
     } catch (error: unknown) {
@@ -795,7 +823,7 @@ export class ProductMutationService {
         this.logger,
       );
 
-      // Invalidate cache
+      await this.revalidateProducts(product.slug);
 
       const variants = await this.variantModel
         .find({ productId: product._id })
