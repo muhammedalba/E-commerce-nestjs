@@ -9,7 +9,11 @@ import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { OrderHelperService } from './shared/order-helper/order-helper.service';
 import { OrderEmailService } from './shared/order-helper/order-email.service';
 import { CouponHelperService } from '../coupons/shared/coupon.helper';
-import { ProductHelperService } from './shared/order-helper/product.helper';
+import {
+  ProductHelperService,
+  StockShortageError,
+} from './shared/order-helper/product.helper';
+import { withTransactionRetry } from 'src/shared/utils/database.utils';
 import { ApiFeatures } from 'src/shared/utils/ApiFeatures';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
@@ -24,6 +28,13 @@ import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 import { withBaseUrl } from 'src/shared/utils/with-base-url.util';
 import { FileAsset } from 'src/shared/schema/file-asset.schema';
 import { OrderStatus } from './shared/enums/order-status.enum';
+import { PaymentStatus } from 'src/payments/shared/enums/payment-status.enum';
+
+/** Final statuses whose stock has been given back to inventory. */
+const CLOSED_ORDER_STATUSES: string[] = [
+  OrderStatus.CANCELLED,
+  OrderStatus.EXPIRED,
+];
 // 1. تعريف الأنواع بشكل دقيق وصريح
 interface UserPopulated {
   avatar?: FileAsset;
@@ -553,6 +564,13 @@ export class OrderService {
     if (!order) {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }
+
+    // إعادة تفعيل طلب ملغي/منتهي: إنقاص المخزون من جديد (قبل رفع الملفات حتى لا تبقى ملفات يتيمة عند الرفض)
+    const newStatus = updateOrderDto.status as string | undefined;
+    if (newStatus && !CLOSED_ORDER_STATUSES.includes(newStatus)) {
+      await this.deductReactivatedOrder(idParamDto.id, newStatus);
+    }
+
     // 2) if file is exits (This feature has not been implemented yet; the invoice cannot be downloaded. )
     if (files.InvoicePdf) {
       const newPdfPath = await this.fileUploadService.updateFile(
@@ -602,6 +620,11 @@ export class OrderService {
       }
     }
 
+    // إرجاع المخزون عند الإلغاء
+    if ((updateOrderDto.status as string) === 'cancelled') {
+      await this.restockCancelledOrder(idParamDto.id);
+    }
+
     // حساب timestamps المناسبة بناءً على الحالة الجديدة
     const statusTimestamps = this.buildStatusTimestamps(
       updateOrderDto.status as string | undefined,
@@ -639,6 +662,101 @@ export class OrderService {
       data: updatedData,
     };
   }
+  /**
+   * Returns an order's stock when it is cancelled.
+   *
+   * The status flip is an atomic conditional update (only from a non-final
+   * status), so double clicks / concurrent requests restock exactly once, and
+   * already cancelled/expired orders (whose stock was already released) are skipped.
+   */
+  private async restockCancelledOrder(orderId: string) {
+    const previous = await this.OrderModel.findOneAndUpdate(
+      {
+        _id: orderId,
+        status: { $nin: [OrderStatus.CANCELLED, OrderStatus.EXPIRED] },
+      },
+      { $set: { status: OrderStatus.CANCELLED } },
+      { new: false },
+    )
+      .select('items paymentMethodCode paymentStatus')
+      .lean();
+
+    if (!previous) return;
+
+    // Unpaid Moyasar orders only reserved stock; every other order deducted it
+    // (order.created, or confirmReservation once the Moyasar payment succeeded).
+    const mode =
+      previous.paymentMethodCode === 'moyasar' &&
+      previous.paymentStatus !== PaymentStatus.PAID
+        ? 'reserved'
+        : 'deducted';
+
+    await this.productHelperService.restockOrderItems(previous.items, mode);
+  }
+
+  /**
+   * Takes stock again when a cancelled/expired order is moved back to an
+   * active status (inverse of {@link restockCancelledOrder}).
+   *
+   * The status flip is an atomic conditional update (only from a closed status),
+   * so stock is taken exactly once. If stock is insufficient, the status is
+   * rolled back and the request is rejected — nothing stays deducted.
+   */
+  private async deductReactivatedOrder(orderId: string, newStatus: string) {
+    let reactivated: {
+      items: Order['items'];
+      mode: 'deducted' | 'reserved';
+    } | null;
+    try {
+      // Status flip + stock deduction commit together, or not at all
+      reactivated = await withTransactionRetry(
+        async (session) => {
+          const previous = await this.OrderModel.findOneAndUpdate(
+            { _id: orderId, status: { $in: CLOSED_ORDER_STATUSES } },
+            { $set: { status: newStatus } },
+            { new: false, session },
+          )
+            .select('items paymentMethodCode paymentStatus')
+            .lean();
+
+          if (!previous) return null; // Not a reactivation (order wasn't closed)
+
+          // Mirror of restockCancelledOrder: unpaid Moyasar orders only hold a reservation
+          const mode =
+            previous.paymentMethodCode === 'moyasar' &&
+            previous.paymentStatus !== PaymentStatus.PAID
+              ? 'reserved'
+              : 'deducted';
+
+          // Throws StockShortageError → transaction aborts, status stays closed
+          await this.productHelperService.deductOrderItems(
+            previous.items,
+            mode,
+            session,
+          );
+          return { items: previous.items, mode };
+        },
+        this.connection,
+        this.logger,
+      );
+    } catch (error: unknown) {
+      if (error instanceof StockShortageError) {
+        const s = error.shortage;
+        throw new BadRequestException(
+          `${this.i18n.translate('exception.INSUFFICIENT_STOCK')} (SKU: ${s.sku ?? s.variantId}, ${s.requested} > ${s.available})`,
+        );
+      }
+      throw error;
+    }
+
+    // Post-commit side effects only
+    if (reactivated?.mode === 'deducted') {
+      await this.productHelperService.afterStockChange(
+        reactivated.items.map((i) => i.productId),
+      );
+    }
+  }
+
   // =============================================================
   // =============================================================
   // =============================================================

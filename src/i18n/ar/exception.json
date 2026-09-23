@@ -30,6 +30,7 @@
   "NOT_AUTHORIZED": "ليس لديك الإذن للوصول",
   "INVALID_CURRENT_PASSWORD": "كلمة المرور الحالية غير صحيحة",
   "NOT_FOUND": "لم يتم العثور عليه",
+  "INSUFFICIENT_STOCK": "المخزون غير كافٍ للمنتج المطلوب",
   "UNAUTHORIZED": "غير مصرح",
   "ERROR_LOGOUT": "حدث خطأ أثناء تسجيل الخروج",
   "LOGIN_AGAIN": "الرجاء تسجيل الدخول مرة أخرى",

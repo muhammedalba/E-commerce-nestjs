@@ -64,6 +64,7 @@ async function bootstrap() {
     origin: allowedOrigins,
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'x-lang'],
+    maxAge: 86400, // cache preflight responses to avoid an OPTIONS per request
   });
 
   // await app.listen(process.env.PORT || 3000, '0.0.0.0');

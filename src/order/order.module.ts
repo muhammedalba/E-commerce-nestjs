@@ -24,6 +24,7 @@ import { ProductHelperService } from './shared/order-helper/product.helper';
 import { OrdersStatisticsService } from './shared/order-helper/order-statistics.service';
 import { MarketingStatisticsService } from './shared/order-helper/marketing-statistics.service';
 import { AuditModule } from '../audit/audit.module';
+import { ProductSyncModule } from 'src/products/products-helper/product-sync.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { AuditModule } from '../audit/audit.module';
     EmailModule,
     AuditModule,
     CouponsModule,
+    ProductSyncModule,
   ],
   controllers: [OrderController],
   providers: [

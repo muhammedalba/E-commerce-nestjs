@@ -34,7 +34,10 @@ class EnvironmentVariables {
   CLIENT_URL!: string;
 
   @IsString()
-  JWT_SECRET_KEY!: string;
+  JWT_PRIVATE_KEY!: string;
+
+  @IsString()
+  JWT_PUBLIC_KEY!: string;
 
   @IsString()
   @IsOptional()
