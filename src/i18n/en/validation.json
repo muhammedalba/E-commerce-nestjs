@@ -8,5 +8,7 @@
   "MATCH_PASSWORD": "Password confirmation does not match",
   "IS_MONGO_ID": "{property} is not a valid ID",
   "MIN_LENGTH": "{property} must be at least {constraints.0} characters (received \"{value}\")",
-  "MAX_LENGTH": "{property} must be at most {constraints.0} characters (received \"{value}\")"
+  "MAX_LENGTH": "{property} must be at most {constraints.0} characters (received \"{value}\")",
+  "IS_INT": "{property} must be an integer",
+  "RATING_RANGE": "{property} must be between 1 and 5"
 }

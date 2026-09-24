@@ -133,6 +133,7 @@ export class SeedService {
       // Store features
       features: {
         reviews: true,
+        reviewsVerifiedOnly: false,
         coupons: true,
         guestCheckout: true,
         wishlist: true,

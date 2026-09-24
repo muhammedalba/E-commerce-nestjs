@@ -17,4 +17,5 @@ export const MODEL_NAMES = {
   PAYMENT_TRANSACTION: 'PaymentTransaction',
   ROLE: 'Role',
   ORDER: 'Order',
+  REVIEW: 'Review',
 } as const;

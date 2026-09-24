@@ -111,6 +111,11 @@ export enum Permissions {
   VIEW_NOTIFICATIONS = 'view_notifications',
   SEND_NOTIFICATION = 'send_notification',
   DELETE_NOTIFICATION = 'delete_notification',
+
+  // ---- Reviews ----
+  VIEW_REVIEWS = 'view_reviews',
+  MANAGE_REVIEWS = 'manage_reviews',
+  DELETE_REVIEW = 'delete_review',
 }
 
 export const PERMISSIONS_METADATA: PermissionMetadata[] = [
@@ -499,5 +504,22 @@ export const PERMISSIONS_METADATA: PermissionMetadata[] = [
     key: Permissions.DELETE_PAYMENT_METHOD,
     groupKey: 'permissions.groups.payment_methods',
     labelKey: 'permissions.labels.delete_payment_method',
+  },
+
+  // ── Reviews ───────────────────────────────────────────────────────────────
+  {
+    key: Permissions.VIEW_REVIEWS,
+    groupKey: 'permissions.groups.reviews',
+    labelKey: 'permissions.labels.view_reviews',
+  },
+  {
+    key: Permissions.MANAGE_REVIEWS,
+    groupKey: 'permissions.groups.reviews',
+    labelKey: 'permissions.labels.manage_reviews',
+  },
+  {
+    key: Permissions.DELETE_REVIEW,
+    groupKey: 'permissions.groups.reviews',
+    labelKey: 'permissions.labels.delete_review',
   },
 ];

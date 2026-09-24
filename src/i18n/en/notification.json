@@ -5,5 +5,8 @@
   "ORDER_CANCELED": "Your order has been cancelled.",
   "DIRECT_SEND_SUCCESS": "Notification sent to the target user successfully",
   "BROADCAST_SEND_SUCCESS": "Notification sent to all users successfully",
-  "ROLE_SEND_SUCCESS": "Notification sent to all users of the selected role successfully"
+  "ROLE_SEND_SUCCESS": "Notification sent to all users of the selected role successfully",
+  "NEW_REVIEW_PENDING": "A new review on \"{product}\" is awaiting approval",
+  "REVIEW_APPROVED": "Your review on \"{product}\" has been approved and is now published",
+  "REVIEW_REPLIED": "The store replied to your review on \"{product}\""
 }

@@ -180,6 +180,10 @@ export class Order extends Document {
 
 export const OrderSchema = SchemaFactory.createForClass(Order);
 
+// Purchase verification for reviews ("has this user a delivered order with
+// this product?") — also serves any query filtering by `user` (e.g. my-orders).
+OrderSchema.index({ user: 1, 'items.productId': 1, status: 1 });
+
 // الزيادة التلقائية لرقم الفاتورة بشكل حتمي وآمن للطلبات المتزامنة تلقائياً
 OrderSchema.pre('save', async function (next) {
   if (this.isNew && !this.invoiceNumber) {

@@ -52,6 +52,8 @@ export class ApiFeatures<T> {
       'paymentStatus',
       'paymentMethod',
       'paymentMethodCode',
+      'product',
+      'isVerifiedPurchase',
     ];
 
     const mongoQuery: Record<string, any> = {};

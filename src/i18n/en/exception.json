@@ -107,5 +107,13 @@
   "notification": {
     "USER_ID_REQUIRED_FOR_DIRECT_NOTIFICATION": "User ID is required when sending a direct notification to a specific user",
     "ROLE_ID_REQUIRED_FOR_ROLE_NOTIFICATION": "Role ID is required when sending a notification to a specific user role group"
+  },
+  "review": {
+    "NOT_FOUND": "Review not found",
+    "PRODUCT_NOT_FOUND": "Product not found or unavailable",
+    "ALREADY_REVIEWED": "You have already reviewed this product. You can edit your existing review instead.",
+    "REVIEWS_DISABLED": "Reviews are currently disabled",
+    "PURCHASE_REQUIRED": "Only customers who purchased this product can review it",
+    "REPLY_ALREADY_EXISTS": "This review already has a reply"
   }
 }
