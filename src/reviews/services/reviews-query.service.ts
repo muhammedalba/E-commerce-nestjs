@@ -104,6 +104,31 @@ export class ReviewsQueryService {
   }
 
   // ------------ =============================== ---------- //
+  // ------------ ====  my reviews on many products  ==== ---------- //
+  // ------------ =============================== ---------- //
+  /**
+   * The current user's reviews (any status) on several products in ONE query
+   * — lets the order details page render every item's review state without
+   * an N+1 of `/product/:id/me` calls.
+   *
+   * No eligibility check: this is only a read; creating/editing still goes
+   * through the regular endpoints (and their purchase / settings checks).
+   */
+  async findMineByProducts(userId: string, productIds: string[]) {
+    // 1) One indexed query: {user, product} is covered by the unique index
+    const reviews = await this.reviewModel
+      .find({
+        user: new Types.ObjectId(userId),
+        product: { $in: productIds.map((id) => new Types.ObjectId(id)) },
+      })
+      .select('-__v')
+      .lean();
+
+    // 2) Same localization as the other read endpoints (ids → strings)
+    return this.i18n.localize(reviews);
+  }
+
+  // ------------ =============================== ---------- //
   // ------------ ======  admin list  ====== ---------- //
   // ------------ =============================== ---------- //
   async findAllForAdmin(queryString: QueryString) {
