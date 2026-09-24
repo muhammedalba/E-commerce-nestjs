@@ -32,6 +32,10 @@ export class ReviewsService {
     return this.queryService.findMine(userId, productId);
   }
 
+  async findMineByProducts(userId: string, productIds: string[]) {
+    return this.queryService.findMineByProducts(userId, productIds);
+  }
+
   async findAllForAdmin(queryString: QueryString) {
     return this.queryService.findAllForAdmin(queryString);
   }

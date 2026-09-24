@@ -22,6 +22,7 @@ import {
   ProductIdParamDto,
   ReviewIdParamDto,
 } from './shared/dto/review-params.dto';
+import { MyReviewsQueryDto } from './shared/dto/my-reviews-query.dto';
 import { ReviewsEnabledGuard } from './shared/guards/reviews-enabled.guard';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
@@ -64,6 +65,20 @@ export class ReviewsController {
     @Req() req: { user: JwtPayload },
   ) {
     return await this.reviewsService.findMine(req.user.user_id, productId);
+  }
+
+  // ------------ ======  my reviews on several products (order page)  ====== ---------- //
+  // GET /reviews/me?productIds=a,b,c — no cache: per-user and changes on every edit
+  @Get('me')
+  @UseGuards(AuthGuard)
+  async findMineByProducts(
+    @Query() { productIds }: MyReviewsQueryDto,
+    @Req() req: { user: JwtPayload },
+  ) {
+    return await this.reviewsService.findMineByProducts(
+      req.user.user_id,
+      productIds,
+    );
   }
 
   // ------------ ======  create review  ====== ---------- //
