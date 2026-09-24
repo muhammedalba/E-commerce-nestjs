@@ -106,6 +106,10 @@ class StoreFeaturesDto {
 
   @IsBoolean()
   @IsOptional()
+  reviewsVerifiedOnly?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
   coupons?: boolean;
 
   @IsBoolean()

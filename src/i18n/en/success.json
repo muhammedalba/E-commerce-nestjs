@@ -9,7 +9,9 @@
   "RESET_CODE_SENDED": "Reset code has been sent to your email",
   "RESET_CODE_VALID": "Code verified successfully",
   "SUCCESS_RESET_PASSWORD": "Password reset successfully",
-  "APPLY_COUPON_SUCCESS":"apply coupon successfully",
+  "APPLY_COUPON_SUCCESS": "apply coupon successfully",
   "CONTACT_MESSAGE_SENT": "Your message has been sent successfully. We'll get back to you shortly.",
-  "QUOTE_REQUEST_SENT": "Your quote request has been sent successfully. Our team will contact you shortly."
+  "QUOTE_REQUEST_SENT": "Your quote request has been sent successfully. Our team will contact you shortly.",
+  "REVIEW_SUBMITTED": "Your review has been submitted and will be published after approval",
+  "REVIEW_UPDATED": "Your review has been updated and will be published after approval"
 }

@@ -3,9 +3,6 @@ import {
   IsOptional,
   IsMongoId,
   IsArray,
-  Min,
-  Max,
-  IsNumber,
   ValidateNested,
   IsBoolean,
 } from 'class-validator';
@@ -101,25 +98,6 @@ export class UpdateProductDto {
   @Transform(({ value }) => value === 'true' || value === true)
   @IsOptional()
   isActive?: boolean;
-
-  // ─── Ratings ───────────────────────────────────────────
-  @IsNumber()
-  @Min(1)
-  @Max(5)
-  @IsOptional()
-  rating?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Type(() => Number)
-  ratingsQuantity?: number;
-
-  @IsNumber()
-  @Min(0)
-  @Max(5)
-  @IsOptional()
-  @Type(() => Number)
-  ratingsAverage?: number;
 
   // ─── Variant Operations ────────────────────────────────
   @IsOptional()

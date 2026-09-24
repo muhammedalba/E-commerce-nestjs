@@ -75,6 +75,9 @@ export const searchStrategies: Record<string, (keyword: string) => object> = {
       { code: { $regex: keyword, $options: 'i' } },
     ],
   }),
+  Review: (keyword: string) => ({
+    $or: [{ comment: { $regex: keyword, $options: 'i' } }],
+  }),
   default: (keyword: string) => ({
     $or: [
       { 'name.en': { $regex: keyword, $options: 'i' } },

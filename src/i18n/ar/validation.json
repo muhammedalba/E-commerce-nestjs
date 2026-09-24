@@ -8,5 +8,7 @@
   "MATCH_PASSWORD": "تأكيد كلمة المرور غير مطابق",
   "IS_MONGO_ID": "معرّف {property} غير صالح",
   "MIN_LENGTH": "{property} يجب أن يكون على الأقل {constraints.0} أحرف (القيمة المُدخلة: \"{value}\")",
-  "MAX_LENGTH": "{property} يجب أن يكون على الأكثر {constraints.0} حرفًا (القيمة المُدخلة: \"{value}\")"
+  "MAX_LENGTH": "{property} يجب أن يكون على الأكثر {constraints.0} حرفًا (القيمة المُدخلة: \"{value}\")",
+  "IS_INT": "{property} يجب أن يكون رقماً صحيحاً",
+  "RATING_RANGE": "{property} يجب أن يكون بين 1 و 5"
 }

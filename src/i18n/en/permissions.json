@@ -13,7 +13,8 @@
     "coupons_offers": "Coupons & Offers",
     "shipping_taxes": "Shipping & Taxes",
     "payment_methods": "Payment Methods",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "reviews": "Reviews"
   },
   "labels": {
     "access_dashboard": "Access Dashboard",
@@ -87,6 +88,9 @@
     "view_payment_methods": "View Payment Methods",
     "create_payment_method": "Create Payment Method",
     "update_payment_method": "Update Payment Method",
-    "delete_payment_method": "Delete Payment Method"
+    "delete_payment_method": "Delete Payment Method",
+    "view_reviews": "View Reviews",
+    "manage_reviews": "Manage Reviews (approve, reject, reply)",
+    "delete_review": "Delete Review"
   }
 }

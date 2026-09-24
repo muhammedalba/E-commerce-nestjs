@@ -102,5 +102,13 @@
   "notification": {
     "USER_ID_REQUIRED_FOR_DIRECT_NOTIFICATION": "معرف المستخدم مطلوب عند إرسال إشعار مباشر لمستخدم محدد",
     "ROLE_ID_REQUIRED_FOR_ROLE_NOTIFICATION": "معرف الدور مطلوب عند إرسال إشعار لمجموعة أدوار محددة"
+  },
+  "review": {
+    "NOT_FOUND": "التقييم غير موجود",
+    "PRODUCT_NOT_FOUND": "المنتج غير موجود أو غير متاح",
+    "ALREADY_REVIEWED": "لقد قمت بتقييم هذا المنتج مسبقاً، يمكنك تعديل تقييمك الحالي بدلاً من إنشاء تقييم جديد",
+    "REVIEWS_DISABLED": "التقييمات متوقفة حالياً",
+    "PURCHASE_REQUIRED": "التقييم متاح فقط للعملاء الذين اشتروا هذا المنتج",
+    "REPLY_ALREADY_EXISTS": "تم الرد على هذا التقييم مسبقاً"
   }
 }

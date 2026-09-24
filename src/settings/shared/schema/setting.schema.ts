@@ -10,7 +10,7 @@ export type SettingDocument = HydratedDocument<Setting>;
 
 @Schema({ timestamps: true })
 export class Setting {
-  // مفتاح الـ Singleton - دائماً 'global'
+  // The Singleton key – always 'global'
   @Prop({ type: String, unique: true, default: 'global' })
   declare key: string;
 
@@ -51,7 +51,7 @@ export class Setting {
   })
   declare storageProvider: 'local' | 'cloudinary';
 
-  // إعدادات العملة
+  // Currency settings
   @Prop({ type: String, default: 'SAR' })
   declare currencyCode: string;
 
@@ -61,11 +61,11 @@ export class Setting {
   @Prop({ type: Number, default: 1, min: 0 })
   declare exchangeRate: number;
 
-  // آخر وقت تمت فيه مزامنة سعر الصرف تلقائيًا من مصدر خارجي
+  // Date of the last automatic exchange rate sync from an external source
   @Prop({ type: Date, default: null })
   declare exchangeRateUpdatedAt: Date | null;
 
-  // إعدادات SEO
+  // SEO settings
   @Prop({ type: Object, required: true, default: { ar: '', en: '' } })
   @IsDefined()
   @ValidateNested()
@@ -81,7 +81,7 @@ export class Setting {
   @Prop({ type: String, default: '' })
   declare googleAnalyticsId: string;
 
-  // وسائل التواصل الاجتماعي
+  // Social links
   @Prop({
     type: Object,
     default: {
@@ -104,7 +104,7 @@ export class Setting {
     whatsapp: string;
   };
 
-  // معلومات التواصل
+  // Contact information
   @Prop({
     type: Object,
     default: {
@@ -145,11 +145,12 @@ export class Setting {
     crNo: string;
   };
 
-  // ميزات المتجر
+  // Store features
   @Prop({
     type: Object,
     default: {
       reviews: true,
+      reviewsVerifiedOnly: false,
       coupons: true,
       guestCheckout: true,
       wishlist: true,
@@ -157,14 +158,16 @@ export class Setting {
   })
   declare features: {
     reviews: boolean;
+    // Enforce review submission only for customers who have purchased the product (delivered orders)
+    reviewsVerifiedOnly?: boolean;
     coupons: boolean;
     guestCheckout: boolean;
     wishlist: boolean;
   };
-  // إعدادات الشحن المجاني
+  // Free shipping settings
   @Prop({ type: Number, default: 0 })
   declare freeShippingThreshold: number;
-  // إعدادات الضرائب
+  //Tax Settings
   @Prop({ type: Number, default: 0 })
   declare vatRate: number;
 
@@ -177,7 +180,7 @@ export class Setting {
   @Prop({ type: Boolean, default: true })
   declare paymentsEnabled: boolean;
 
-  // تفاصيل الحساب للتحويل البنكي
+  // Bank Transfer Details
   @Prop({
     type: Object,
     default: {
@@ -194,10 +197,10 @@ export class Setting {
     iban: string;
   };
 
-  // إعدادات النظام المتقدمة
+  // Advanced system settings
   @Prop({ type: Boolean, default: false })
   declare enablePerformance: boolean;
-  // المفقودة المضافة حديثاً
+  // Added recently
   @Prop({ type: Boolean, default: true })
   declare allowRegistration: boolean;
 
@@ -207,7 +210,7 @@ export class Setting {
   @Prop({ type: String, default: '' })
   declare googleMapsApiKey: string;
 
-  // إعدادات تقييمات جوجل (Google Places API)
+  // Google Reviews settings (Google Places API)
   @Prop({
     type: Object,
     default: { enabled: false, placeId: '', reviewsUrl: '' },
@@ -218,11 +221,11 @@ export class Setting {
     reviewsUrl: string;
   };
 
-  // مفتاح Google Places API - يُحفظ مشفراً ولا يُرسل أبداً في الاستجابة العامة
+  // Google Places API key – stored encrypted and never sent in the public response
   @Prop({ type: String, default: '' })
   declare googlePlacesApiKey: string;
 
-  // حقول متوافقة مع الـ Frontend لمنع أخطاء الـ Validation
+  // Fields compatible with the Frontend to prevent Validation errors
   @Prop({ type: Boolean, default: false })
   declare maintenanceMode: boolean;
 
@@ -235,11 +238,11 @@ export class Setting {
   @Type(() => FieldLocalizeDto)
   declare maintenanceMessage: FieldLocalizeDto;
 
-  // إعدادات تنبيهات المخزون
+  // Inventory alert settings
   @Prop({ type: Boolean, default: true })
   declare inventoryAlertsEnabled: boolean;
 
-  // الحقول الديناميكية (لا تُحفظ في قاعدة البيانات)
+  // Dynamic fields (not saved in the database)
   hasCustomShippingRates?: boolean;
   hasCustomTaxes?: boolean;
   hasGooglePlacesApiKey?: boolean;

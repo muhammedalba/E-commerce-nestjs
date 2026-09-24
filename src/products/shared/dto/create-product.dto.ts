@@ -4,8 +4,6 @@ import {
   IsOptional,
   IsMongoId,
   IsArray,
-  Min,
-  Max,
   IsNumber,
   IsDefined,
   ValidateNested,
@@ -151,26 +149,6 @@ export class CreateProductDto {
   @Transform(({ value }) => value === 'true' || value === true)
   @IsOptional()
   isActive?: boolean;
-
-  // ─── Ratings (aggregated) ──────────────────────────────  @ApiPropertyOptional({
-
-  @IsNumber()
-  @Min(1)
-  @Max(5)
-  @IsOptional()
-  rating?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Type(() => Number)
-  ratingsQuantity?: number;
-
-  @IsNumber()
-  @Min(0)
-  @Max(5)
-  @IsOptional()
-  @Type(() => Number)
-  ratingsAverage?: number;
 
   // ─── Variants (required at creation) ───────────────────
 

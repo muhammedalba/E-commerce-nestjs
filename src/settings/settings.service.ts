@@ -697,6 +697,24 @@ export class SettingsService {
     return settings.inventoryAlertsEnabled ?? true;
   }
 
+  /**
+   * Checks whether customers are allowed to write product reviews.
+   * Defaults to `true` when the flag has not been explicitly configured.
+   */
+  async isReviewsEnabled(): Promise<boolean> {
+    const settings = await this.getSettings();
+    return settings.features?.reviews ?? true;
+  }
+
+  /**
+   * Checks whether reviews are restricted to customers who purchased the
+   * product (delivered/completed order). Defaults to `false`.
+   */
+  async isReviewsVerifiedOnly(): Promise<boolean> {
+    const settings = await this.getSettings();
+    return Boolean(settings.features?.reviewsVerifiedOnly);
+  }
+
   // ─────────────────────────────────────────────────────────────────────────────
   // CACHE MANAGEMENT
   // ─────────────────────────────────────────────────────────────────────────────

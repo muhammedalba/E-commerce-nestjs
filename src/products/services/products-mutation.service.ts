@@ -34,6 +34,10 @@ import { normalizeVariantData } from '../shared/utils/data-normalizer';
 import { withBaseUrl } from 'src/shared/utils/with-base-url.util';
 import { RevalidationService } from 'src/shared/services/revalidation.service';
 import { CacheInvalidationService } from 'src/shared/services/cache-invalidation.service';
+import {
+  PRODUCT_EVENTS,
+  ProductDeletedEvent,
+} from '../shared/events/product.events';
 
 /**
  * Handles all write operations: create, update, delete, restore.
@@ -770,6 +774,12 @@ export class ProductMutationService {
         },
         this.connection,
         this.logger,
+      );
+
+      // Committed — let dependent modules (e.g. reviews) remove their data
+      this.eventEmitter.emit(
+        PRODUCT_EVENTS.DELETED,
+        new ProductDeletedEvent(doc._id.toString()),
       );
 
       // Delete associated files only after successful commit

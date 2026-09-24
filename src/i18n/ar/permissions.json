@@ -13,7 +13,8 @@
     "coupons_offers": "الكوبونات والعروض",
     "shipping_taxes": "الشحن والضرائب",
     "payment_methods": "طرق الدفع",
-    "notifications": "الإشعارات"
+    "notifications": "الإشعارات",
+    "reviews": "التقييمات"
   },
   "labels": {
     "access_dashboard": "دخول لوحة التحكم",
@@ -87,6 +88,9 @@
     "view_payment_methods": "عرض طرق الدفع",
     "create_payment_method": "إضافة طريقة دفع",
     "update_payment_method": "تعديل طريقة دفع",
-    "delete_payment_method": "حذف طريقة دفع"
+    "delete_payment_method": "حذف طريقة دفع",
+    "view_reviews": "عرض التقييمات",
+    "manage_reviews": "إدارة التقييمات (قبول، رفض، رد)",
+    "delete_review": "حذف التقييم"
   }
 }

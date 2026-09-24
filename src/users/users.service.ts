@@ -21,6 +21,7 @@ import { User, UserDocument } from 'src/auth/shared/schema/user.schema';
 import { UsersStatistics } from './users-helper/users-statistics.service';
 import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
 import { Role } from 'src/roles/shared/schemas/role.schema';
+import { USER_EVENTS, UserDeletedEvent } from './shared/events/user.events';
 
 type PopulatedUser = Omit<UserDocument, 'role'> & {
   role?:
@@ -280,6 +281,12 @@ export class UsersService extends BaseService<UserDocument> {
     );
 
     const deleteResult = await this.deleteOneDoc(idParamDto, 'avatar');
+
+    // Let dependent modules (e.g. reviews) remove data owned by this user
+    this.eventEmitter.emit(
+      USER_EVENTS.DELETED,
+      new UserDeletedEvent(idParamDto.id),
+    );
 
     return deleteResult;
   }
