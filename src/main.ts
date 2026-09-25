@@ -7,6 +7,7 @@ import { I18nValidationPipe } from 'nestjs-i18n';
 import { AllExceptionsFilter } from './shared/filters/all-exceptions.filter';
 import { I18nService } from 'nestjs-i18n';
 import { Request, Response, NextFunction } from 'express';
+import { timingSafeEqual } from 'crypto';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -40,6 +41,38 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
   // cookie parser
   app.use(cookieParser());
+  // TEMPORARY diagnostic (remove after configuring `trust proxy`): shows what
+  // the API sees as the client IP, to find how many proxies sit in front of it.
+  // Requires the x-internal-key header; answers 404 to everyone else.
+  app.use(
+    '/api/v1/debug/request-ip',
+    (req: Request, res: Response, next: NextFunction) => {
+      const key = process.env.INTERNAL_API_KEY;
+      const provided = req.headers['x-internal-key'];
+      const ok =
+        !!key &&
+        typeof provided === 'string' &&
+        provided.length === key.length &&
+        timingSafeEqual(Buffer.from(provided), Buffer.from(key));
+      if (!ok) return next();
+
+      res.json({
+        ip: req.ip,
+        ips: req.ips,
+        socketRemoteAddress: req.socket.remoteAddress,
+        trustProxy: req.app.get('trust proxy') as unknown,
+        headers: {
+          'x-forwarded-for': req.headers['x-forwarded-for'] ?? null,
+          'x-real-ip': req.headers['x-real-ip'] ?? null,
+          'cf-connecting-ip': req.headers['cf-connecting-ip'] ?? null,
+          'x-forwarded-proto': req.headers['x-forwarded-proto'] ?? null,
+          'x-forwarded-host': req.headers['x-forwarded-host'] ?? null,
+          via: req.headers['via'] ?? null,
+        },
+      });
+    },
+  );
+
   // redirect to api/v1
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (req.path === '/') {

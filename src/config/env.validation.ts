@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsString,
   IsUrl,
+  MinLength,
   validateSync,
 } from 'class-validator';
 
@@ -38,6 +39,14 @@ class EnvironmentVariables {
 
   @IsString()
   JWT_PUBLIC_KEY!: string;
+
+  // Shared secret the Next.js server sends as `x-internal-key` so its
+  // server-side fetches (build, ISR, SSR) skip rate limiting. Optional:
+  // when unset, no request can bypass the throttler.
+  @IsString()
+  @IsOptional()
+  @MinLength(32)
+  INTERNAL_API_KEY?: string;
 
   @IsString()
   @IsOptional()
