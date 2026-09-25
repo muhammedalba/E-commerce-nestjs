@@ -1,6 +1,7 @@
 import { useContainer } from 'class-validator';
 import * as cookieParser from 'cookie-parser';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { I18nValidationPipe } from 'nestjs-i18n';
@@ -10,7 +11,12 @@ import { Request, Response, NextFunction } from 'express';
 import { timingSafeEqual } from 'crypto';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // The API runs behind a reverse proxy on the same host (requests arrive
+  // from 127.0.0.1 with the client in X-Forwarded-For). Trust only that
+  // loopback hop so req.ip is the real client — per-client rate limiting —
+  // while a client-supplied X-Forwarded-For value can't spoof it.
+  app.set('trust proxy', process.env.TRUST_PROXY || 'loopback');
   // allowed origins
   const allowedOrigins = [
     'http://localhost:3000',
@@ -94,7 +100,7 @@ async function bootstrap() {
 
   // enable cors
   app.enableCors({
-    origin: allowedOrigins,
+    origin: allowedOrigins.filter((o): o is string => !!o),
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'x-lang'],
     maxAge: 86400, // cache preflight responses to avoid an OPTIONS per request
