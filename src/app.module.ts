@@ -18,6 +18,7 @@ import { CarouselModule } from './carousel/carousel.module';
 import { CouponsModule } from './coupons/coupons.module';
 import { ProductsModule } from './products/products.module';
 import { CartModule } from './cart/cart.module';
+import { WishlistModule } from './wishlist/wishlist.module';
 import { OrderModule } from './order/order.module';
 import { PromoBannerModule } from './promo-banner/promo-banner.module';
 import { SubCategoryModule } from './sub-category/sub-category.module';
@@ -78,6 +79,7 @@ import { appProviders } from './app.providers';
     CouponsModule,
     ProductsModule,
     CartModule,
+    WishlistModule,
     OrderModule,
     PromoBannerModule,
     SubCategoryModule,

@@ -707,6 +707,15 @@ export class SettingsService {
   }
 
   /**
+   * Checks whether the customer wishlist is enabled.
+   * Defaults to `true` when the flag has not been explicitly configured.
+   */
+  async isWishlistEnabled(): Promise<boolean> {
+    const settings = await this.getSettings();
+    return settings.features?.wishlist ?? true;
+  }
+
+  /**
    * Checks whether reviews are restricted to customers who purchased the
    * product (delivered/completed order). Defaults to `false`.
    */

@@ -18,4 +18,5 @@ export const MODEL_NAMES = {
   ROLE: 'Role',
   ORDER: 'Order',
   REVIEW: 'Review',
+  WISHLIST: 'Wishlist',
 } as const;

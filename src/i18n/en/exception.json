@@ -115,5 +115,10 @@
     "REVIEWS_DISABLED": "Reviews are currently disabled",
     "PURCHASE_REQUIRED": "Only customers who purchased this product can review it",
     "REPLY_ALREADY_EXISTS": "This review already has a reply"
+  },
+  "wishlist": {
+    "LIMIT_REACHED": "You have reached the maximum number of items in your wishlist",
+    "PRODUCT_NOT_AVAILABLE": "Product not found or unavailable",
+    "WISHLIST_DISABLED": "Wishlist is currently disabled"
   }
 }

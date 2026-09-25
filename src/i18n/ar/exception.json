@@ -110,5 +110,10 @@
     "REVIEWS_DISABLED": "التقييمات متوقفة حالياً",
     "PURCHASE_REQUIRED": "التقييم متاح فقط للعملاء الذين اشتروا هذا المنتج",
     "REPLY_ALREADY_EXISTS": "تم الرد على هذا التقييم مسبقاً"
+  },
+  "wishlist": {
+    "LIMIT_REACHED": "لقد وصلت إلى الحد الأقصى لعدد المنتجات في المفضلة",
+    "PRODUCT_NOT_AVAILABLE": "المنتج غير موجود أو غير متاح",
+    "WISHLIST_DISABLED": "المفضلة معطلة حالياً"
   }
 }

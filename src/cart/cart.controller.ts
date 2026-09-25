@@ -15,6 +15,7 @@ import { CartService } from './cart.service';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
 import { CreateCartDto } from './shared/dto/create-cart.dto';
+import { SyncCartDto } from './shared/dto/sync-cart.dto';
 import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
@@ -82,10 +83,9 @@ export class CartController {
   @ClearCache('cart')
   async syncCart(
     @Req() req: { user: JwtPayload },
-    @Body('items') items: CreateCartDto[],
+    @Body() syncCartDto: SyncCartDto,
   ) {
-    console.log(items, 'items');
-    return await this.cartService.syncCart(req.user.user_id, items);
+    return await this.cartService.syncCart(req.user.user_id, syncCartDto.items);
   }
 
   // ------------ =============================== ---------- //

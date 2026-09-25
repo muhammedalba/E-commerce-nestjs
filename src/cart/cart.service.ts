@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Cart } from './shared/schemas/cart.schema';
 import { CreateCartDto } from './shared/dto/create-cart.dto';
+import { SyncCartItemDto } from './shared/dto/sync-cart.dto';
 import { Product } from 'src/products/shared/schemas/Product.schema';
 import {
   ProductVariant,
@@ -141,7 +142,10 @@ export class CartService {
   // ------------ =============================== ---------- //
   // ------------ ======  ADD ITEM  ====== ---------- //
   // ------------ =============================== ---------- //
-  async addItem(userId: string, createCartDto: CreateCartDto) {
+  async addItem(
+    userId: string,
+    createCartDto: Pick<CreateCartDto, 'productId' | 'variantId' | 'quantity'>,
+  ) {
     const { productId, variantId, quantity } = createCartDto;
 
     // 1.check product is exist and active
@@ -452,10 +456,12 @@ export class CartService {
   // ------------ =============================== ---------- //
   // ------------ ======  SYNC CART  ====== ---------- //
   // ------------ =============================== ---------- //
-  async syncCart(userId: string, items: CreateCartDto[]) {
+  async syncCart(userId: string, items: SyncCartItemDto[]) {
     if (!items || items.length === 0) return this.getCart(userId);
 
     for (const item of items) {
+      // Skip stale guest lines (e.g. empty variantId) without failing the whole sync
+      if (!Types.ObjectId.isValid(item.variantId)) continue;
       try {
         await this.addItem(userId, item);
       } catch (error) {
