@@ -48,6 +48,18 @@ class EnvironmentVariables {
   @MinLength(32)
   INTERNAL_API_KEY?: string;
 
+  // Trusted proxies/CDNs in front of the API: comma-separated presets
+  // (private, cloudflare), IPs or CIDR ranges. Loopback is always trusted.
+  @IsString()
+  @IsOptional()
+  TRUSTED_PROXIES?: string;
+
+  // Optional: header a CDN uses for the client IP (e.g. true-client-ip),
+  // for CDNs that don't append it to X-Forwarded-For.
+  @IsString()
+  @IsOptional()
+  CLIENT_IP_HEADER?: string;
+
   @IsString()
   @IsOptional()
   JWT_EXPIRE_TIME: string = '1d';

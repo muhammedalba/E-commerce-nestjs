@@ -10,6 +10,10 @@ import {
 import { timingSafeEqual } from 'crypto';
 import { isIP } from 'net';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
+import {
+  getTrustedProxies,
+  normalizeIp,
+} from 'src/shared/utils/trusted-proxies';
 
 const INTERNAL_KEY_HEADER = 'x-internal-key';
 const CLIENT_IP_HEADER = 'x-client-ip';
@@ -54,14 +58,30 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
   }
 
   protected async getTracker(req: Record<string, any>): Promise<string> {
-    const clientIp = (req as HeaderBag).headers[CLIENT_IP_HEADER];
+    const { headers } = req as HeaderBag;
+
+    // Browser request relayed by the Next.js server
+    const relayedIp = headers[CLIENT_IP_HEADER];
     if (
-      typeof clientIp === 'string' &&
-      isIP(clientIp) &&
+      typeof relayedIp === 'string' &&
+      isIP(relayedIp) &&
       this.hasValidInternalKey(req as HeaderBag)
     ) {
-      return clientIp;
+      return relayedIp;
     }
+
+    // CDNs that pass the client only in a dedicated header (CLIENT_IP_HEADER,
+    // e.g. true-client-ip). Honored only when every hop was a trusted proxy,
+    // i.e. req.ip itself is one — otherwise the header could be client-sent.
+    const cdnHeader = process.env.CLIENT_IP_HEADER?.trim().toLowerCase();
+    const ip = (req as { ip?: string }).ip;
+    if (cdnHeader && ip && getTrustedProxies().isTrusted(ip)) {
+      const cdnIp = headers[cdnHeader];
+      if (typeof cdnIp === 'string' && isIP(normalizeIp(cdnIp))) {
+        return normalizeIp(cdnIp);
+      }
+    }
+
     return super.getTracker(req);
   }
 

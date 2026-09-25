@@ -6,16 +6,20 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { I18nValidationPipe } from 'nestjs-i18n';
 import { AllExceptionsFilter } from './shared/filters/all-exceptions.filter';
+import { getTrustedProxies } from './shared/utils/trusted-proxies';
 import { I18nService } from 'nestjs-i18n';
 import { Request, Response, NextFunction } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  // The API runs behind a reverse proxy on the same host (requests arrive
-  // from 127.0.0.1 with the client in X-Forwarded-For). Trust only that
-  // loopback hop so req.ip is the real client — per-client rate limiting —
-  // while a client-supplied X-Forwarded-For value can't spoof it.
-  app.set('trust proxy', process.env.TRUST_PROXY || 'loopback');
+  // Requests reach the API through trusted proxies (the local reverse proxy,
+  // plus any CDN listed in TRUSTED_PROXIES). Express walks X-Forwarded-For
+  // from the right, skipping trusted hops, so req.ip is the real client —
+  // per-client rate limiting — and client-supplied values can't spoof it.
+  const trustedProxies = getTrustedProxies();
+  app.set('trust proxy', (address: string) =>
+    trustedProxies.isTrusted(address),
+  );
   // allowed origins
   const allowedOrigins = [
     'http://localhost:3000',
