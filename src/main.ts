@@ -70,6 +70,7 @@ async function bootstrap() {
         headers: {
           'x-forwarded-for': req.headers['x-forwarded-for'] ?? null,
           'x-real-ip': req.headers['x-real-ip'] ?? null,
+          'x-client-ip': req.headers['x-client-ip'] ?? null,
           'cf-connecting-ip': req.headers['cf-connecting-ip'] ?? null,
           'x-forwarded-proto': req.headers['x-forwarded-proto'] ?? null,
           'x-forwarded-host': req.headers['x-forwarded-host'] ?? null,
