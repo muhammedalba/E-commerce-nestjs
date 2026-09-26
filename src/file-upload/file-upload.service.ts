@@ -16,17 +16,17 @@ import { SettingsService } from 'src/settings/settings.service';
 // type filesType = Request['files'];
 
 const IMAGE_DIMENSIONS: Record<string, { width: number; height: number }> = {
-  image: { width: 600, height: 600 },
-  imageCover: { width: 600, height: 600 },
-  images: { width: 600, height: 600 },
-  avatar: { width: 200, height: 200 },
-  carouselSm: { width: 480, height: 240 },
-  carouselMd: { width: 800, height: 400 },
-  carouselLg: { width: 1200, height: 600 },
-  transferReceiptImg: { width: 1200, height: 1024 },
-  DeliveryReceiptImage: { width: 1200, height: 1024 },
-  logo: { width: 500, height: 300 },
-  favicon: { width: 64, height: 64 },
+  image: { width: 800, height: 800 },
+  imageCover: { width: 1200, height: 1200 },
+  images: { width: 1200, height: 1200 },
+  avatar: { width: 300, height: 300 },
+  carouselSm: { width: 1080, height: 810 },
+  carouselMd: { width: 1600, height: 700 },
+  carouselLg: { width: 2100, height: 900 },
+  transferReceiptImg: { width: 1920, height: 1920 },
+  DeliveryReceiptImage: { width: 1920, height: 1920 },
+  logo: { width: 600, height: 300 },
+  favicon: { width: 192, height: 192 },
 };
 
 /**

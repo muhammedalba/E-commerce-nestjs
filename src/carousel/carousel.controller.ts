@@ -51,7 +51,7 @@ export class CarouselController {
     createCarouselDto: CreateCarouselDto,
     @UploadedFiles(
       new ParseFileFieldsPipe(
-        '1MB',
+        '2MB',
         ['png', 'jpeg', 'webp'],
         [
           { name: 'carouselLg', required: true },
@@ -109,7 +109,7 @@ export class CarouselController {
   async update(
     @UploadedFiles(
       new ParseFileFieldsPipe(
-        '1MB',
+        '2MB',
         ['png', 'jpeg', 'webp'],
         [
           { name: 'carouselLg', required: false },
