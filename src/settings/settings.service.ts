@@ -47,7 +47,6 @@ const ALL_STOREFRONT_TAGS = [
   'public-settings',
   'products',
   'categories',
-  'homepage',
   'brands',
   'carousel',
   'promo-banner',
