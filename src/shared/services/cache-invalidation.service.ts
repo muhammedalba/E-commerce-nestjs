@@ -3,8 +3,37 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 
 /**
+ * Resources whose cached responses embed data of another resource.
+ * Product responses populate category / sub-category / brand / supplier names,
+ * so changing any of those must also drop cached product responses.
+ */
+const DEPENDENT_RESOURCES: Record<string, string[]> = {
+  categories: ['products'],
+  'sub-category': ['products'],
+  brands: ['products'],
+  supplier: ['products'],
+};
+
+type KeyvLike = Record<string, unknown> & {
+  namespace?: string;
+  iterator?: () => AsyncIterable<[string, unknown]>;
+};
+
+type RedisLike = {
+  scan: (
+    cursor: string,
+    ...args: (string | number)[]
+  ) => Promise<[string, string[]]>;
+  del: (...keys: string[]) => Promise<number>;
+};
+
+/**
  * Clears the backend response cache (CustomCacheInterceptor entries, keyed
- * `<resource>:...`) for whole resources — every language, user and query.
+ * `<resource>:...`) for whole resources — every language, user and query —
+ * plus the resources that embed their data (see DEPENDENT_RESOURCES).
+ *
+ * Keys are matched by prefix (`products:`), so `category` never matches
+ * `sub-category:` and unrelated entries (role permissions, settings) are kept.
  *
  * Used by ClearCacheInterceptor (@ClearCache) and by services that change a
  * resource outside its own controller (e.g. order stock changes → 'products').
@@ -15,105 +44,117 @@ export class CacheInvalidationService {
 
   constructor(@Inject(CACHE_MANAGER) private readonly cacheManager: Cache) {}
 
+  /** The given resources plus every resource that depends on them. */
+  static expand(resources: string[]): string[] {
+    return [
+      ...new Set(
+        resources.flatMap((r) => [r, ...(DEPENDENT_RESOURCES[r] ?? [])]),
+      ),
+    ];
+  }
+
   async clearResources(resources: string[]): Promise<void> {
+    const expanded = CacheInvalidationService.expand(resources);
+    const prefixes = expanded.map((r) => `${r}:`);
+    const matches = (key: string) => prefixes.some((p) => key.startsWith(p));
+
     const cm = this.cacheManager as unknown as Record<string, unknown>;
-    let clearedAny = false;
+    const stores = Array.isArray(cm.stores) ? (cm.stores as KeyvLike[]) : [];
+
+    let cleared = 0;
     // Whether at least one strategy could list keys. If it could and nothing
-    // matched, there is simply nothing to clear — never wipe the whole cache
-    // (it also holds role permissions etc.).
+    // matched, there is simply nothing to clear — never wipe the whole cache.
     let canEnumerate = false;
 
-    // Strategy 1: Iterate cache-manager v6 Keyv stores (Memory or Redis)
-    const rawStores = cm.stores || (cm.store ? [cm.store] : []);
-    const stores = Array.isArray(rawStores)
-      ? (rawStores as Record<string, unknown>[])
-      : [];
-
-    for (const s of stores) {
-      // 1a) Try Keyv async iterator (standard for cache-manager v6)
-
-      if (typeof s.iterator === 'function') {
-        canEnumerate = true;
-        try {
-          const iteratorFn = s.iterator as () => AsyncIterable<
-            [string, unknown]
-          >;
-          for await (const [key] of iteratorFn.call(s)) {
-            if (
-              typeof key === 'string' &&
-              resources.some((r) => key.includes(`${r}:`))
-            ) {
-              await this.cacheManager.del(key);
-              clearedAny = true;
-            }
-          }
-        } catch (e) {
-          this.logger.error('Error iterating cache keys:', e);
+    for (const store of stores) {
+      const keys = await this.listKeys(store);
+      if (keys === null) {
+        // Redis: delete server-side by pattern (SCAN, never the blocking KEYS)
+        const redisCleared = await this.clearRedis(store, expanded);
+        if (redisCleared !== null) {
+          canEnumerate = true;
+          cleared += redisCleared;
         }
+        continue;
       }
-
-      // 1b) Try internal Map store (_store or opts.store)
-      const opts = s.opts as Record<string, unknown> | undefined;
-      const map = (opts?.store || s._store) as Map<string, unknown> | undefined;
-      if (map instanceof Map) {
-        canEnumerate = true;
-        for (const key of Array.from(map.keys())) {
-          if (
-            typeof key === 'string' &&
-            resources.some((r) => key.includes(`${r}:`))
-          ) {
-            map.delete(key);
-            clearedAny = true;
-          }
-        }
-      }
-
-      // 1c) Try Redis client if attached to store
-      const optsStore = opts?.store as Record<string, unknown> | undefined;
-      const client = (s.client ||
-        s._client ||
-        optsStore?.client ||
-        optsStore?._client) as
-        | {
-            keys?: (p: string) => Promise<string[]>;
-            del?: (...k: string[]) => Promise<number>;
-          }
-        | undefined;
-      if (
-        client &&
-        typeof client.keys === 'function' &&
-        typeof client.del === 'function'
-      ) {
-        canEnumerate = true;
-        for (const resource of resources) {
-          const keys = await client.keys(`*${resource}:*`);
-          if (keys && keys.length > 0) {
-            await client.del(...keys);
-            clearedAny = true;
-          }
-        }
+      canEnumerate = true;
+      for (const key of keys.filter(matches)) {
+        await this.cacheManager.del(key);
+        cleared++;
       }
     }
 
-    if (clearedAny) {
-      this.logger.log(`🧹 Cache cleared for: ${resources.join(', ')}`);
+    if (cleared > 0) {
+      this.logger.log(
+        `🧹 Cache cleared for: ${expanded.join(', ')} (${cleared} entries)`,
+      );
       return;
     }
     if (canEnumerate) return; // nothing cached for these resources
 
-    // Strategy 2: Fallback to clear() or reset() if targeted key clearing didn't find matching keys
+    // Unknown store that can't be enumerated: correctness over hit rate
     if (typeof cm.clear === 'function') {
       await (cm.clear as () => Promise<void>)();
-      this.logger.log(`🧹 Full cache cleared for: ${resources.join(', ')}`);
+      this.logger.warn(
+        `🧹 Full cache cleared (store not enumerable) for: ${expanded.join(', ')}`,
+      );
       return;
     }
+    this.logger.warn(`⚠️ Could not clear cache for: ${expanded.join(', ')}`);
+  }
 
-    if (typeof cm.reset === 'function') {
-      await (cm.reset as () => Promise<void>)();
-      this.logger.log(`🧹 Full cache reset for: ${resources.join(', ')}`);
-      return;
+  /**
+   * Keys of an in-process store, without the Keyv namespace prefix
+   * (the form cacheManager.del expects). `null` when not enumerable here.
+   */
+  private async listKeys(store: KeyvLike): Promise<string[] | null> {
+    const adapter = store.store as Record<string, unknown> | undefined;
+
+    // CacheableMemory (bounded LRU store used by the app)
+    if (adapter && typeof adapter.getStore === 'function') {
+      const mem = (
+        adapter.getStore as (ns?: string) => { keys: Iterable<string> }
+      )(store.namespace);
+      return [...mem.keys];
     }
 
-    this.logger.warn(`⚠️ Could not clear cache for: ${resources.join(', ')}`);
+    // Keyv async iterator (plain Map store, default cache-manager setup)
+    if (typeof store.iterator === 'function') {
+      const keys: string[] = [];
+      for await (const [key] of store.iterator.call(store)) {
+        if (typeof key === 'string') keys.push(key);
+      }
+      return keys;
+    }
+
+    return null;
+  }
+
+  /** Deleted count, or `null` if the store has no Redis client. */
+  private async clearRedis(
+    store: KeyvLike,
+    resources: string[],
+  ): Promise<number | null> {
+    const adapter = store.store as Record<string, unknown> | undefined;
+    const client = (adapter?.client ?? store.client) as RedisLike | undefined;
+    if (!client || typeof client.scan !== 'function') return null;
+
+    const ns = store.namespace ? `${store.namespace}:` : '';
+    let deleted = 0;
+    for (const resource of resources) {
+      let cursor = '0';
+      do {
+        const [next, keys] = await client.scan(
+          cursor,
+          'MATCH',
+          `${ns}${resource}:*`,
+          'COUNT',
+          500,
+        );
+        cursor = next;
+        if (keys.length > 0) deleted += await client.del(...keys);
+      } while (cursor !== '0');
+    }
+    return deleted;
   }
 }

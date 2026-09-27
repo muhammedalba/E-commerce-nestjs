@@ -8,33 +8,27 @@ import {
   Param,
   Req,
   UseGuards,
-  UseInterceptors,
 } from '@nestjs/common';
-import { CacheTTL } from '@nestjs/cache-manager';
 import { CartService } from './cart.service';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
 import { CreateCartDto } from './shared/dto/create-cart.dto';
 import { SyncCartDto } from './shared/dto/sync-cart.dto';
-import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.interceptor';
-import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
-import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 
 @Controller('cart')
 @UseGuards(AuthGuard)
-@UseInterceptors(ClearCacheInterceptor)
+// No response cache: per-user, write-heavy data (a 10s cache gave ~no hits,
+// every write wiped all users' entries, and CartService.clearCart after an
+// order bypassed @ClearCache — so a stale cart was served after checkout).
 export class CartController {
   constructor(private readonly cartService: CartService) {}
 
   @Get()
-  @UseInterceptors(CustomCacheInterceptor)
-  @CacheTTL(10000) // 10 seconds
   async getCart(@Req() req: { user: JwtPayload }) {
     return await this.cartService.getCart(req.user.user_id);
   }
 
   @Post('add')
-  @ClearCache('cart')
   async addItem(
     @Req() req: { user: JwtPayload },
     @Body() createCartDto: CreateCartDto,
@@ -43,7 +37,6 @@ export class CartController {
   }
 
   @Patch('update-quantity')
-  @ClearCache('cart')
   async updateQuantity(
     @Req() req: { user: JwtPayload },
     @Body() updateCartDto: CreateCartDto,
@@ -55,7 +48,6 @@ export class CartController {
   }
 
   @Delete('remove/:productId/:variantId')
-  @ClearCache('cart')
   removeItemVariant(
     @Req() req: { user: JwtPayload },
     @Param('productId') productId: string,
@@ -65,7 +57,6 @@ export class CartController {
   }
 
   @Delete('remove/:productId')
-  @ClearCache('cart')
   removeItem(
     @Req() req: { user: JwtPayload },
     @Param('productId') productId: string,
@@ -74,13 +65,11 @@ export class CartController {
   }
 
   @Delete('clear')
-  @ClearCache('cart')
   clearCart(@Req() req: { user: JwtPayload }) {
     return this.cartService.clearCart(req.user.user_id);
   }
 
   @Post('sync')
-  @ClearCache('cart')
   async syncCart(
     @Req() req: { user: JwtPayload },
     @Body() syncCartDto: SyncCartDto,

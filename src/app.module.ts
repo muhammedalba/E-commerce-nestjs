@@ -5,7 +5,7 @@ import { BullConfig } from './config/bull.config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { UsersModule } from './users/users.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { validateEnv } from './config/env.validation';
 import { AuthModule } from './auth/auth.module';
 import { BrandsModule } from './brands/brands.module';
@@ -41,6 +41,7 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { FileUploadDiskStorageModule } from './file-upload/file-upload.module';
 import { SharedModule } from './shared/shared.module';
 import { appProviders } from './app.providers';
+import { createKeyv } from 'cacheable';
 
 @Module({
   imports: [
@@ -56,8 +57,23 @@ import { appProviders } from './app.providers';
         limit: 100,
       },
     ]),
-    CacheModule.register({
+    // Bounded in-process cache: LRU-capped and swept for expired entries.
+    // (The default Map store has no size limit and only drops expired entries
+    // when they are read again — unbounded growth with user-controlled keys.)
+    CacheModule.registerAsync({
       isGlobal: true,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        stores: [
+          createKeyv({
+            lruSize: config.get<number>('CACHE_MAX_ITEMS', 1000),
+            checkInterval: config.get<number>(
+              'CACHE_CHECK_INTERVAL_MS',
+              60_000,
+            ),
+          }),
+        ],
+      }),
     }),
     BullConfig,
     EventEmitterModule.forRoot({

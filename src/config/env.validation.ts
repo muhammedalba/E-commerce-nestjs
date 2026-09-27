@@ -96,6 +96,16 @@ class EnvironmentVariables {
   @IsString()
   REDIS_URL!: string;
 
+  /** Max entries in the in-process response cache (LRU eviction beyond it). */
+  @IsNumber()
+  @IsOptional()
+  CACHE_MAX_ITEMS: number = 1000;
+
+  /** How often expired cache entries are swept from memory (ms, 0 = never). */
+  @IsNumber()
+  @IsOptional()
+  CACHE_CHECK_INTERVAL_MS: number = 60_000;
+
   @IsNumber()
   MAIL_RETRY_ATTEMPTS!: number;
 
