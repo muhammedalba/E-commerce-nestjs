@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { CacheModule } from '@nestjs/cache-manager';
 
 import { LocationsModule } from '../locations/locations.module';
 import { ShippingModule } from '../shipping/shipping.module';
@@ -26,7 +25,7 @@ import { CheckoutOrchestratorService } from './checkout-orchestrator.service';
     CouponsModule,
     AuthModule,
     CartModule,
-    CacheModule.register(),
+    // Checkout sessions live in Redis (RedisModule, global); no local cache.
     // سنحتاج لاحقاً لربطه بـ OrdersModule و ProductsModule
   ],
   controllers: [CheckoutController],

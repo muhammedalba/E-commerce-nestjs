@@ -1,48 +1,69 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+  Optional,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { randomUUID } from 'crypto';
+import { Redis } from 'ioredis';
+import {
+  REDIS_CLIENT,
+  REDIS_SUBSCRIBER,
+  redisNamespace,
+} from '../redis/redis.module';
+import { CacheMetricsService } from './cache-metrics.service';
 
 /**
  * Resources whose cached responses embed data of another resource.
- * Product responses populate category / sub-category / brand / supplier names,
- * so changing any of those must also drop cached product responses.
+ * - Product responses populate category / sub-category / brand / supplier names.
+ * - The profile (auth:me-profile) reflects user data admins can change.
  */
 const DEPENDENT_RESOURCES: Record<string, string[]> = {
   categories: ['products'],
   'sub-category': ['products'],
   brands: ['products'],
   supplier: ['products'],
+  users: ['auth'],
 };
 
-type KeyvLike = Record<string, unknown> & {
-  namespace?: string;
-  iterator?: () => AsyncIterable<[string, unknown]>;
-};
-
-type RedisLike = {
-  scan: (
-    cursor: string,
-    ...args: (string | number)[]
-  ) => Promise<[string, string[]]>;
-  del: (...keys: string[]) => Promise<number>;
-};
+interface InvalidationMessage {
+  origin: string;
+  resources: string[];
+  /** Invalidate every resource (admin "clear cache"). */
+  all?: boolean;
+}
 
 /**
- * Clears the backend response cache (CustomCacheInterceptor entries, keyed
- * `<resource>:...`) for whole resources — every language, user and query —
- * plus the resources that embed their data (see DEPENDENT_RESOURCES).
+ * Invalidates the response cache (CustomCacheInterceptor) by **version**:
+ * every resource has a version number that is part of its cache keys
+ * (`products:v3:...`). Invalidating = bumping the version — O(1), no key
+ * scan. Old entries become unreachable and are reclaimed by LRU / TTL / the
+ * expiry sweep. Unrelated entries (role permissions, settings) are untouched.
  *
- * Keys are matched by prefix (`products:`), so `category` never matches
- * `sub-category:` and unrelated entries (role permissions, settings) are kept.
- *
- * Used by ClearCacheInterceptor (@ClearCache) and by services that change a
- * resource outside its own controller (e.g. order stock changes → 'products').
+ * Multi-instance: each instance has its own in-memory cache, so bumps are
+ * broadcast over Redis pub/sub and applied by every other instance. Without
+ * Redis it degrades to local-only invalidation (correct for one instance).
  */
 @Injectable()
-export class CacheInvalidationService {
+export class CacheInvalidationService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(CacheInvalidationService.name);
+  private readonly versions = new Map<string, number>();
+  /** Bumped by invalidateAll(): part of every key, so all entries go at once. */
+  private generation = 0;
+  private readonly instanceId = randomUUID();
+  private readonly channel: string;
 
-  constructor(@Inject(CACHE_MANAGER) private readonly cacheManager: Cache) {}
+  constructor(
+    private readonly metrics: CacheMetricsService,
+    config: ConfigService,
+    @Optional() @Inject(REDIS_CLIENT) private readonly redis?: Redis,
+    @Optional() @Inject(REDIS_SUBSCRIBER) private readonly subscriber?: Redis,
+  ) {
+    this.channel = `${redisNamespace(config)}:cache-invalidate`;
+  }
 
   /** The given resources plus every resource that depends on them. */
   static expand(resources: string[]): string[] {
@@ -53,108 +74,85 @@ export class CacheInvalidationService {
     ];
   }
 
-  async clearResources(resources: string[]): Promise<void> {
-    const expanded = CacheInvalidationService.expand(resources);
-    const prefixes = expanded.map((r) => `${r}:`);
-    const matches = (key: string) => prefixes.some((p) => key.startsWith(p));
+  /** Current version token of a resource (part of its cache keys). */
+  versionOf(resource: string): string {
+    return `${this.generation}.${this.versions.get(resource) ?? 0}`;
+  }
 
-    const cm = this.cacheManager as unknown as Record<string, unknown>;
-    const stores = Array.isArray(cm.stores) ? (cm.stores as KeyvLike[]) : [];
-
-    let cleared = 0;
-    // Whether at least one strategy could list keys. If it could and nothing
-    // matched, there is simply nothing to clear — never wipe the whole cache.
-    let canEnumerate = false;
-
-    for (const store of stores) {
-      const keys = await this.listKeys(store);
-      if (keys === null) {
-        // Redis: delete server-side by pattern (SCAN, never the blocking KEYS)
-        const redisCleared = await this.clearRedis(store, expanded);
-        if (redisCleared !== null) {
-          canEnumerate = true;
-          cleared += redisCleared;
-        }
-        continue;
-      }
-      canEnumerate = true;
-      for (const key of keys.filter(matches)) {
-        await this.cacheManager.del(key);
-        cleared++;
-      }
-    }
-
-    if (cleared > 0) {
-      this.logger.log(
-        `🧹 Cache cleared for: ${expanded.join(', ')} (${cleared} entries)`,
-      );
-      return;
-    }
-    if (canEnumerate) return; // nothing cached for these resources
-
-    // Unknown store that can't be enumerated: correctness over hit rate
-    if (typeof cm.clear === 'function') {
-      await (cm.clear as () => Promise<void>)();
-      this.logger.warn(
-        `🧹 Full cache cleared (store not enumerable) for: ${expanded.join(', ')}`,
-      );
-      return;
-    }
-    this.logger.warn(`⚠️ Could not clear cache for: ${expanded.join(', ')}`);
+  private bumpOne(resource: string) {
+    this.versions.set(resource, (this.versions.get(resource) ?? 0) + 1);
   }
 
   /**
-   * Keys of an in-process store, without the Keyv namespace prefix
-   * (the form cacheManager.del expects). `null` when not enumerable here.
+   * Invalidates every cached response of the resources (all languages,
+   * users and queries) and of their dependents, on every instance.
    */
-  private async listKeys(store: KeyvLike): Promise<string[] | null> {
-    const adapter = store.store as Record<string, unknown> | undefined;
-
-    // CacheableMemory (bounded LRU store used by the app)
-    if (adapter && typeof adapter.getStore === 'function') {
-      const mem = (
-        adapter.getStore as (ns?: string) => { keys: Iterable<string> }
-      )(store.namespace);
-      return [...mem.keys];
-    }
-
-    // Keyv async iterator (plain Map store, default cache-manager setup)
-    if (typeof store.iterator === 'function') {
-      const keys: string[] = [];
-      for await (const [key] of store.iterator.call(store)) {
-        if (typeof key === 'string') keys.push(key);
-      }
-      return keys;
-    }
-
-    return null;
+  async clearResources(resources: string[]): Promise<void> {
+    const expanded = this.bump(resources);
+    await this.broadcast({ origin: this.instanceId, resources: expanded });
   }
 
-  /** Deleted count, or `null` if the store has no Redis client. */
-  private async clearRedis(
-    store: KeyvLike,
-    resources: string[],
-  ): Promise<number | null> {
-    const adapter = store.store as Record<string, unknown> | undefined;
-    const client = (adapter?.client ?? store.client) as RedisLike | undefined;
-    if (!client || typeof client.scan !== 'function') return null;
+  /**
+   * Invalidates the whole response cache (every resource, language, user and
+   * query) on every instance — O(1). Unrelated cache entries (role
+   * permissions, settings document, fallback checkout sessions) are kept.
+   */
+  async invalidateAll(): Promise<void> {
+    this.generation++;
+    this.metrics.invalidated();
+    this.logger.log('🧹 Entire response cache invalidated');
+    await this.broadcast({ origin: this.instanceId, resources: [], all: true });
+  }
 
-    const ns = store.namespace ? `${store.namespace}:` : '';
-    let deleted = 0;
-    for (const resource of resources) {
-      let cursor = '0';
-      do {
-        const [next, keys] = await client.scan(
-          cursor,
-          'MATCH',
-          `${ns}${resource}:*`,
-          'COUNT',
-          500,
-        );
-        cursor = next;
-        if (keys.length > 0) deleted += await client.del(...keys);
-      } while (cursor !== '0');
+  private async broadcast(message: InvalidationMessage): Promise<void> {
+    if (!this.redis) return;
+    try {
+      await this.redis.publish(this.channel, JSON.stringify(message));
+    } catch (err) {
+      // Local invalidation already happened; other instances (if any) catch
+      // up when their entries expire.
+      this.logger.warn(
+        `Invalidation broadcast failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
-    return deleted;
+  }
+
+  private bump(resources: string[]): string[] {
+    const expanded = CacheInvalidationService.expand(resources);
+    for (const r of expanded) this.bumpOne(r);
+    this.metrics.invalidated(expanded.length);
+    this.logger.log(`🧹 Cache invalidated for: ${expanded.join(', ')}`);
+    return expanded;
+  }
+
+  onModuleInit() {
+    const sub = this.subscriber;
+    if (!sub) return;
+    sub.on('message', (channel: string, raw: string) => {
+      if (channel !== this.channel) return;
+      try {
+        const msg = JSON.parse(raw) as InvalidationMessage;
+        // Already applied locally (and dependents already expanded)
+        if (msg.origin === this.instanceId) return;
+        if (msg.all) this.generation++;
+        for (const r of msg.resources) this.bumpOne(r);
+      } catch {
+        this.logger.warn('Ignoring malformed cache invalidation message');
+      }
+    });
+    // enableOfflineQueue is off: subscribe once connected (ioredis
+    // re-subscribes automatically after reconnects).
+    const subscribe = () =>
+      sub
+        .subscribe(this.channel)
+        .catch((err: Error) =>
+          this.logger.warn(`Subscribe failed: ${err.message}`),
+        );
+    if (sub.status === 'ready') void subscribe();
+    else sub.once('ready', () => void subscribe());
+  }
+
+  onModuleDestroy() {
+    this.subscriber?.removeAllListeners('message');
   }
 }

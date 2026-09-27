@@ -1,70 +1,51 @@
-import { createCache } from 'cache-manager';
-import { createKeyv } from 'cacheable';
+import { ConfigService } from '@nestjs/config';
+import { EventEmitter } from 'events';
 import { CacheInvalidationService } from './cache-invalidation.service';
+import { CacheMetricsService } from './cache-metrics.service';
 
-const key = (resource: string, path: string, lang = 'ar') =>
-  `${resource}:${path}:lang=${lang}:user=guest`;
+const config = {
+  get: (k: string) => (k === 'NODE_ENV' ? 'test' : undefined),
+} as unknown as ConfigService;
+const metrics = () => new CacheMetricsService({} as never);
 
-// Same store the app registers (expiry sweep disabled so Jest can exit)
-const appCache = () =>
-  createCache({ stores: [createKeyv({ lruSize: 100, checkInterval: 0 })] });
+/** Fake Redis pub/sub: publish() delivers to every subscriber on the bus. */
+class FakeBus {
+  subscribers: FakeRedis[] = [];
+}
+class FakeRedis extends EventEmitter {
+  status = 'ready';
+  channels = new Set<string>();
+  constructor(private readonly bus: FakeBus) {
+    super();
+    bus.subscribers.push(this);
+  }
+  subscribe(channel: string) {
+    this.channels.add(channel);
+    return Promise.resolve(1);
+  }
+  publish(channel: string, message: string) {
+    for (const s of this.bus.subscribers) {
+      if (s.channels.has(channel)) s.emit('message', channel, message);
+    }
+    return Promise.resolve(1);
+  }
+}
 
-describe('CacheInvalidationService (bounded CacheableMemory store)', () => {
-  it('clears every language/query entry of a resource, keeps others', async () => {
-    const cache = appCache();
-    const service = new CacheInvalidationService(cache as never);
-    const productKeys = [
-      key('products', '/api/v1/products/drill?all_langs=true', 'ar'),
-      key('products', '/api/v1/products/drill?all_langs=true', 'en'),
-      key('products', '/api/v1/products?limit=10'),
-    ];
-    for (const k of productKeys) await cache.set(k, 1, 60_000);
-    await cache.set('role_permissions:42', ['a'], 60_000);
-    await cache.set(key('order', '/api/v1/order'), 1, 60_000);
-
-    await service.clearResources(['products']);
-
-    for (const k of productKeys) expect(await cache.get(k)).toBeUndefined();
-    expect(await cache.get('role_permissions:42')).toEqual(['a']);
-    expect(await cache.get(key('order', '/api/v1/order'))).toBe(1);
-  });
-
-  it('matches by prefix: clearing categories keeps sub-category entries', async () => {
-    const cache = appCache();
-    const service = new CacheInvalidationService(cache as never);
-    await cache.set(key('sub-category', '/api/v1/sub-category'), 1, 60_000);
-    await cache.set(key('categories', '/api/v1/categories'), 1, 60_000);
-
-    await service.clearResources(['categories']);
-
-    expect(
-      await cache.get(key('categories', '/api/v1/categories')),
-    ).toBeUndefined();
-    expect(await cache.get(key('sub-category', '/api/v1/sub-category'))).toBe(
-      1,
-    );
-  });
-
-  it('also clears resources that embed the changed data (brand → products)', async () => {
-    const cache = appCache();
-    const service = new CacheInvalidationService(cache as never);
-    await cache.set(key('products', '/api/v1/products'), 1, 60_000);
-    await cache.set(key('brands', '/api/v1/brands'), 1, 60_000);
-
+describe('CacheInvalidationService (versioned)', () => {
+  it('bumps the version of the resource and its dependents only', async () => {
+    const service = new CacheInvalidationService(metrics(), config);
     await service.clearResources(['brands']);
 
-    expect(await cache.get(key('brands', '/api/v1/brands'))).toBeUndefined();
-    expect(
-      await cache.get(key('products', '/api/v1/products')),
-    ).toBeUndefined();
+    expect(service.versionOf('brands')).toBe('0.1');
+    expect(service.versionOf('products')).toBe('0.1'); // embeds brand names
+    expect(service.versionOf('categories')).toBe('0.0');
+    expect(service.versionOf('sub-category')).toBe('0.0');
   });
 
-  it('never wipes unrelated entries when nothing matches', async () => {
-    const cache = appCache();
-    const service = new CacheInvalidationService(cache as never);
-    await cache.set('role_permissions:42', ['a'], 60_000);
-    await service.clearResources(['products']);
-    expect(await cache.get('role_permissions:42')).toEqual(['a']);
+  it('users changes also invalidate the cached profile (auth)', async () => {
+    const service = new CacheInvalidationService(metrics(), config);
+    await service.clearResources(['users']);
+    expect(service.versionOf('auth')).toBe('0.1');
   });
 
   it('expand() lists dependents once', () => {
@@ -74,55 +55,81 @@ describe('CacheInvalidationService (bounded CacheableMemory store)', () => {
       'categories',
     ]);
   });
-});
 
-describe('CacheInvalidationService (default Map store, compatibility)', () => {
-  it('still clears via the Keyv iterator', async () => {
-    const cache = createCache({});
-    const service = new CacheInvalidationService(cache as never);
-    await cache.set(key('products', '/api/v1/products'), 1, 60_000);
-    await cache.set('role_permissions:1', 1, 60_000);
+  it('broadcasts to other instances, which apply it exactly once', async () => {
+    const bus = new FakeBus();
+    const a = new CacheInvalidationService(
+      metrics(),
+      config,
+      new FakeRedis(bus) as never,
+      new FakeRedis(bus) as never,
+    );
+    const b = new CacheInvalidationService(
+      metrics(),
+      config,
+      new FakeRedis(bus) as never,
+      new FakeRedis(bus) as never,
+    );
+    a.onModuleInit();
+    b.onModuleInit();
+    await new Promise((r) => setImmediate(r)); // let subscribe() settle
 
-    await service.clearResources(['products']);
+    await a.clearResources(['categories']);
 
-    expect(
-      await cache.get(key('products', '/api/v1/products')),
-    ).toBeUndefined();
-    expect(await cache.get('role_permissions:1')).toBe(1);
+    // a applied locally and ignored its own echo; b applied the broadcast
+    expect(a.versionOf('categories')).toBe('0.1');
+    expect(b.versionOf('categories')).toBe('0.1');
+    expect(b.versionOf('products')).toBe('0.1'); // dependents travel expanded
   });
-});
 
-describe('CacheInvalidationService (Redis store)', () => {
-  it('uses SCAN with a prefix pattern, never KEYS', async () => {
-    const scan = jest
-      .fn()
-      .mockResolvedValueOnce(['7', ['app:products:a']])
-      .mockResolvedValueOnce(['0', ['app:products:b']]);
-    const del = jest.fn().mockResolvedValue(1);
-    const keys = jest.fn();
-    const service = new CacheInvalidationService({
-      stores: [{ namespace: 'app', store: { client: { scan, del, keys } } }],
-    } as never);
-
-    await service.clearResources(['products']);
-
-    expect(scan).toHaveBeenNthCalledWith(
-      1,
-      '0',
-      'MATCH',
-      'app:products:*',
-      'COUNT',
-      500,
+  it('still invalidates locally when the broadcast fails', async () => {
+    const redis = {
+      publish: jest.fn().mockRejectedValue(new Error('down')),
+    };
+    const service = new CacheInvalidationService(
+      metrics(),
+      config,
+      redis as never,
     );
-    expect(scan).toHaveBeenNthCalledWith(
-      2,
-      '7',
-      'MATCH',
-      'app:products:*',
-      'COUNT',
-      500,
+    await expect(service.clearResources(['carousel'])).resolves.toBeUndefined();
+    expect(service.versionOf('carousel')).toBe('0.1');
+  });
+
+  it('publishes on an environment-namespaced channel', async () => {
+    const redis = { publish: jest.fn().mockResolvedValue(1) };
+    const service = new CacheInvalidationService(
+      metrics(),
+      config,
+      redis as never,
     );
-    expect(del).toHaveBeenCalledTimes(2);
-    expect(keys).not.toHaveBeenCalled();
+    await service.clearResources(['brands']);
+    expect(redis.publish).toHaveBeenCalledWith(
+      'app-test:cache-invalidate',
+      expect.stringContaining('"resources":["brands","products"]'),
+    );
+  });
+
+  it('invalidateAll() changes every version token and reaches other instances', async () => {
+    const bus = new FakeBus();
+    const mk = () =>
+      new CacheInvalidationService(
+        metrics(),
+        config,
+        new FakeRedis(bus) as never,
+        new FakeRedis(bus) as never,
+      );
+    const a = mk();
+    const b = mk();
+    a.onModuleInit();
+    b.onModuleInit();
+    await new Promise((r) => setImmediate(r));
+    await a.clearResources(['brands']); // brands 0.1 everywhere
+
+    await a.invalidateAll();
+
+    for (const s of [a, b]) {
+      expect(s.versionOf('brands')).toBe('1.1');
+      expect(s.versionOf('never-touched')).toBe('1.0');
+    }
   });
 });

@@ -21,6 +21,7 @@ import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ParseBodyJsonInterceptor } from 'src/shared/interceptors/parse-body-json.interceptor';
 import { ParseFileFieldsPipe } from 'src/shared/files/ParseFileFieldsPipe';
+import { CacheMetricsService } from 'src/shared/services/cache-metrics.service';
 
 /**
  * Controller that exposes the application-wide settings API.
@@ -41,7 +42,10 @@ import { ParseFileFieldsPipe } from 'src/shared/files/ParseFileFieldsPipe';
 @Controller('settings')
 @UseInterceptors(ClearCacheInterceptor)
 export class SettingsController {
-  constructor(private readonly settingsService: SettingsService) {}
+  constructor(
+    private readonly settingsService: SettingsService,
+    private readonly cacheMetrics: CacheMetricsService,
+  ) {}
 
   /**
    * Accepted file upload fields for image assets.
@@ -228,5 +232,24 @@ export class SettingsController {
   @UseGuards(AuthGuard, PermissionsGuard)
   async clearCache() {
     return await this.settingsService.clearCache();
+  }
+
+  /**
+   * Response-cache statistics for this server instance (since its start):
+   * hits, misses, hitRate, coalesced misses, invalidations, in-memory entries.
+   *
+   * @example
+   * ```http
+   * GET /settings/cache-stats
+   * Authorization: Bearer <admin-token>
+   * ```
+   */
+  @Get('cache-stats')
+  @RequirePermission(Permissions.VIEW_SETTINGS)
+  @UseGuards(AuthGuard, PermissionsGuard)
+  getCacheStats() {
+    return this.cacheMetrics.snapshot({
+      maxEntries: Number(process.env.CACHE_MAX_ITEMS ?? 1000),
+    });
   }
 }

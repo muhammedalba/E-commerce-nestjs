@@ -18,6 +18,7 @@ import {
   StorageProviderType,
 } from 'src/shared/schema/file-asset.schema';
 import { RevalidationService } from 'src/shared/services/revalidation.service';
+import { CacheInvalidationService } from 'src/shared/services/cache-invalidation.service';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
 import {
@@ -36,6 +37,21 @@ const SETTINGS_CACHE_KEY = 'settings:global';
 
 /** Cache key prefix for Google reviews (one entry per language). */
 const GOOGLE_REVIEWS_CACHE_PREFIX = 'google-reviews:';
+
+/**
+ * Every static tag the storefront's /api/revalidate accepts (per-product
+ * `product-<slug>` pages also carry 'products', so they are covered).
+ */
+const ALL_STOREFRONT_TAGS = [
+  'settings',
+  'public-settings',
+  'products',
+  'categories',
+  'homepage',
+  'brands',
+  'carousel',
+  'promo-banner',
+];
 
 /** Supported review languages. */
 const GOOGLE_REVIEWS_LANGS = ['ar', 'en'] as const;
@@ -122,6 +138,7 @@ export class SettingsService {
     private readonly cacheManager: Cache,
 
     private readonly revalidationService: RevalidationService,
+    private readonly cacheInvalidation: CacheInvalidationService,
     @Inject(forwardRef(() => FileUploadService))
     private readonly fileUploadService: FileUploadService,
 
@@ -173,7 +190,9 @@ export class SettingsService {
    */
   async getSettings(): Promise<Setting> {
     // 1. Cache hit – fast path
-    const cached = await this.cacheManager.get<Setting>(SETTINGS_CACHE_KEY);
+    const cached = await this.cacheManager.get<Setting>(
+      this.settingsCacheKey(),
+    );
     if (cached) return cached;
 
     // 2. Upsert the single global document (creates defaults on first run)
@@ -223,7 +242,7 @@ export class SettingsService {
 
     // 4. Populate cache for subsequent reads
     await this.cacheManager.set(
-      SETTINGS_CACHE_KEY,
+      this.settingsCacheKey(),
       settingsWithCustoms,
       SETTINGS_CACHE_TTL,
     );
@@ -362,11 +381,13 @@ export class SettingsService {
       { upsert: true, new: true, lean: true },
     );
 
-    // Invalidate the server-side cache (settings + Google reviews)
+    // Invalidate the server-side cache (settings + Google reviews) here, and
+    // on every other instance via the version bump.
     await Promise.all([
-      this.cacheManager.del(SETTINGS_CACHE_KEY),
+      this.cacheManager.del(this.settingsCacheKey()),
       ...this.googleReviewsCacheKeys().map((key) => this.cacheManager.del(key)),
     ]);
+    await this.cacheInvalidation.clearResources(['settings']);
 
     // Notify the frontend to regenerate statically cached pages (ISR)
     await this.revalidationService.revalidate(['settings', 'public-settings']);
@@ -391,9 +412,22 @@ export class SettingsService {
   // ─────────────────────────────────────────────────────────────────────────────
 
   private googleReviewsCacheKeys(): string[] {
-    return GOOGLE_REVIEWS_LANGS.map(
-      (lang) => `${GOOGLE_REVIEWS_CACHE_PREFIX}${lang}`,
-    );
+    return GOOGLE_REVIEWS_LANGS.map((lang) => this.googleReviewsCacheKey(lang));
+  }
+
+  /**
+   * Cache keys carry the 'settings' version: bumping it (clearResources /
+   * invalidateAll, broadcast over Redis) drops these entries on every server
+   * instance — a plain del() only reaches the instance that ran it.
+   * ('settings' is also bumped by shipping/taxes changes, which feed the
+   * computed hasCustomShippingRates / hasCustomTaxes flags.)
+   */
+  private settingsCacheKey(): string {
+    return `${SETTINGS_CACHE_KEY}:${this.cacheInvalidation.versionOf('settings')}`;
+  }
+
+  private googleReviewsCacheKey(lang: string): string {
+    return `${GOOGLE_REVIEWS_CACHE_PREFIX}${lang}:${this.cacheInvalidation.versionOf('settings')}`;
   }
 
   /** Reads and decrypts the stored Google Places API key (server-side only). */
@@ -554,7 +588,7 @@ export class SettingsService {
   async getGoogleReviews(
     lang: GoogleReviewsLang,
   ): Promise<GoogleReviewsResult> {
-    const cacheKey = `${GOOGLE_REVIEWS_CACHE_PREFIX}${lang}`;
+    const cacheKey = this.googleReviewsCacheKey(lang);
     const cached = await this.cacheManager.get<GoogleReviewsResult>(cacheKey);
     if (cached) return cached;
 
@@ -729,11 +763,13 @@ export class SettingsService {
   // ─────────────────────────────────────────────────────────────────────────────
 
   /**
-   * Manually flushes the settings cache and triggers ISR revalidation.
+   * Admin "Clear system cache": invalidates the **entire** response cache
+   * (products, categories, brands, settings, … — every language/user/query)
+   * on every server instance, and expires every storefront ISR tag.
    *
-   * Useful when an external process modifies the underlying settings document
-   * directly (e.g. a database migration or seed script) and the cache needs to
-   * be invalidated without going through {@link updateSettings}.
+   * Useful after direct database changes (migration, seed script, manual
+   * edit) or as an emergency fix if stale data ever shows up.
+   * Role permissions are kept (they are invalidated on role changes).
    *
    * @returns An object `{ success: true }` upon successful cache invalidation.
    *
@@ -744,11 +780,9 @@ export class SettingsService {
    * ```
    */
   async clearCache(): Promise<{ success: boolean }> {
-    await Promise.all([
-      this.cacheManager.del(SETTINGS_CACHE_KEY),
-      ...this.googleReviewsCacheKeys().map((key) => this.cacheManager.del(key)),
-    ]);
-    await this.revalidationService.revalidate(['settings', 'public-settings']);
+    // Settings / Google-reviews keys carry the version token → covered too
+    await this.cacheInvalidation.invalidateAll();
+    await this.revalidationService.revalidate(ALL_STOREFRONT_TAGS);
     return { success: true };
   }
 }

@@ -2,6 +2,7 @@ import { Global, Module } from '@nestjs/common';
 import { CustomI18nService } from './utils/i18n/custom-i18n.service';
 import { RevalidationService } from './services/revalidation.service';
 import { CacheInvalidationService } from './services/cache-invalidation.service';
+import { CacheMetricsService } from './services/cache-metrics.service';
 
 /**
  * Global shared module that provides cross-cutting utilities
@@ -10,11 +11,22 @@ import { CacheInvalidationService } from './services/cache-invalidation.service'
  * Currently exports:
  * - CustomI18nService: i18n translation and response localization utility
  * - RevalidationService: Next.js ISR cache-tag revalidation
- * - CacheInvalidationService: backend response-cache clearing per resource
+ * - CacheInvalidationService: versioned response-cache invalidation (+ pub/sub)
+ * - CacheMetricsService: response-cache hit/miss counters
  */
 @Global()
 @Module({
-  providers: [CustomI18nService, RevalidationService, CacheInvalidationService],
-  exports: [CustomI18nService, RevalidationService, CacheInvalidationService],
+  providers: [
+    CustomI18nService,
+    RevalidationService,
+    CacheInvalidationService,
+    CacheMetricsService,
+  ],
+  exports: [
+    CustomI18nService,
+    RevalidationService,
+    CacheInvalidationService,
+    CacheMetricsService,
+  ],
 })
 export class SharedModule {}

@@ -40,6 +40,7 @@ import { QuoteRequestsModule } from './quote-requests/quote-requests.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { FileUploadDiskStorageModule } from './file-upload/file-upload.module';
 import { SharedModule } from './shared/shared.module';
+import { RedisModule } from './shared/redis/redis.module';
 import { appProviders } from './app.providers';
 import { createKeyv } from 'cacheable';
 
@@ -117,6 +118,7 @@ import { createKeyv } from 'cacheable';
     ReviewsModule,
     FileUploadDiskStorageModule,
     SharedModule,
+    RedisModule,
   ],
   controllers: [AppController],
   providers: [...appProviders],

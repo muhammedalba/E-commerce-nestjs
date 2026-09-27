@@ -188,7 +188,9 @@ export class AuthController {
   @SkipThrottle()
   @UseInterceptors(FileInterceptor('avatar'))
   @UseGuards(AuthGuard)
-  @ClearCache('me-profile')
+  // The profile route is cached under the 'auth' resource
+  // (/api/v1/auth/me-profile); 'me-profile' never matched any key.
+  @ClearCache('auth')
   async updateMe(
     @Req() request: { user: JwtPayload },
     @Body() UpdateUserDto: UpdateUserDto,
