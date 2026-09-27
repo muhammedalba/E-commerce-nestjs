@@ -209,7 +209,10 @@ export class UpdateSettingDto {
 
   @IsString()
   @IsOptional()
-  googleAnalyticsId?: string;
+  @Matches(/^(GTM-[A-Z0-9]+)?$/i, {
+    message: 'googleTagManagerId must be in the format GTM-XXXXXXX',
+  })
+  googleTagManagerId?: string;
 
   @IsString()
   @IsOptional()

@@ -72,7 +72,7 @@ export class SeedService {
         en: 'Shop online and discover our products and services.',
       },
 
-      googleAnalyticsId: '',
+      googleTagManagerId: '',
       tawkId: '',
 
       // Social Media

@@ -164,7 +164,7 @@ export class SettingsController {
       'siteDescription',
       'footerText',
       'maintenanceMessage',
-      'googleAnalyticsId',
+      'googleTagManagerId',
       'tawkId',
       'googleReviews',
       'maintenanceMode',

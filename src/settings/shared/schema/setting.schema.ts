@@ -79,7 +79,7 @@ export class Setting {
   declare metaDescription: FieldLocalizeDto;
 
   @Prop({ type: String, default: '' })
-  declare googleAnalyticsId: string;
+  declare googleTagManagerId: string;
 
   // Tawk.to live chat: "<propertyId>/<widgetId>"
   @Prop({ type: String, default: '' })
