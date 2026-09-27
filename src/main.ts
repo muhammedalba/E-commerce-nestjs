@@ -87,7 +87,12 @@ async function bootstrap() {
   app.enableCors({
     origin: allowedOrigins.filter((o): o is string => !!o),
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-lang', 'x-recaptcha-token'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'x-lang',
+      'x-recaptcha-token',
+    ],
     maxAge: 86400, // cache preflight responses to avoid an OPTIONS per request
   });
 
@@ -98,4 +103,7 @@ async function bootstrap() {
 }
 bootstrap().catch((err) => {
   console.error('Error during application bootstrap:', err);
+  // Exit so the host restarts the app instead of leaving a process that
+  // never listens.
+  process.exit(1);
 });

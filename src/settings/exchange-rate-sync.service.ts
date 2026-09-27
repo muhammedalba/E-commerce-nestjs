@@ -90,8 +90,17 @@ export class ExchangeRateSyncService implements OnModuleInit {
     this.leaseKey = `${redisNamespace(config)}:lease:exchange-rate-sync`;
   }
 
-  async onModuleInit(): Promise<void> {
-    await this.runScheduledSync();
+  /**
+   * Not awaited: Nest calls listen() only after every onModuleInit resolves,
+   * and waiting here for Redis (up to 5s) plus the rate API delays the port
+   * past the host's startup deadline. The sync runs in the background instead.
+   */
+  onModuleInit(): void {
+    void this.runScheduledSync().catch((err: unknown) =>
+      this.logger.warn(
+        `Startup exchange rate sync failed: ${(err as Error).message}`,
+      ),
+    );
   }
 
   /** Startup + hourly sync, run by one instance of the cluster only. */
