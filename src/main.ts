@@ -12,6 +12,20 @@ import { Request, Response, NextFunction } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // Graceful shutdown. The host stops the process with a signal (SIGTERM /
+  // SIGINT) on every deploy, restart or scale-down. Without this, Nest
+  // ignores the signal and the process is killed mid-flight: no module
+  // cleanup runs. With it, Nest first stops accepting new connections and
+  // runs every lifecycle hook (onModuleDestroy / onApplicationShutdown):
+  // - RedisModule quits its client and subscriber connections, so the
+  //   server doesn't keep dead connections open until they time out.
+  //   That matters on providers with a connection cap.
+  // - BullMQ workers close, so a mail job in progress is released instead
+  //   of being left stalled until the lock expires.
+  // - Scheduled (@Cron) jobs stop and the MongoDB connection closes cleanly.
+  // Required for zero-downtime restarts (e.g. `pm2 reload`) when running
+  // more than one instance.
+  app.enableShutdownHooks();
   // Requests reach the API through trusted proxies (the local reverse proxy,
   // plus any CDN listed in TRUSTED_PROXIES). Express walks X-Forwarded-For
   // from the right, skipping trusted hops, so req.ip is the real client —
