@@ -50,14 +50,16 @@ export class PaymentSchedulerService {
         );
         if (!transaction) continue;
 
-        this.logger.log(`Marking transaction ${transaction._id} as EXPIRED`);
+        const transactionId = transaction._id.toString();
+        this.logger.log(`Marking transaction ${transactionId} as EXPIRED`);
 
         this.eventEmitter.emit('payment.expired', {
-          orderId: transaction.orderId,
-          transactionId: transaction.id,
+          orderId: transaction.orderId.toString(),
+          transactionId,
         });
       }
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const error = err as Error;
       this.logger.error(
         `Error in checkExpiredPayments: ${error.message}`,
         error.stack,
