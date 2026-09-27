@@ -56,3 +56,56 @@ describe('PaymentReviewListener', () => {
     ).resolves.toBeUndefined();
   });
 });
+
+describe('PaymentReviewListener payment.refunded', () => {
+  const setup = () => {
+    const find = jest.fn(() => ({
+      select: () => ({ lean: () => Promise.resolve([{ _id: 'r1' }]) }),
+    }));
+    const emit = jest.fn();
+    const listener = new PaymentReviewListener(
+      { find } as never,
+      { emit } as never,
+    );
+    return { listener, emit };
+  };
+  const refund = (isFull: boolean, refundedAmount: number) => ({
+    orderId: 'o1',
+    transactionId: 't1',
+    refundedAmount,
+    currency: 'SAR',
+    isFull,
+  });
+
+  it('tells order managers about a full refund', async () => {
+    const { listener, emit } = setup();
+
+    await listener.handlePaymentRefunded(refund(true, 100));
+
+    expect(emit).toHaveBeenCalledWith(
+      'role.notification.r1',
+      expect.objectContaining({
+        action: 'PAYMENT_REFUNDED',
+        message: {
+          ar: 'تم استرداد مبلغ الطلب o1 بالكامل (100 SAR).',
+          en: 'Order o1 was fully refunded (100 SAR).',
+        },
+      }),
+    );
+  });
+
+  it('gives the cumulative total for a partial refund', async () => {
+    const { listener, emit } = setup();
+
+    await listener.handlePaymentRefunded(refund(false, 60));
+
+    expect(emit).toHaveBeenCalledWith(
+      'role.notification.r1',
+      expect.objectContaining({
+        message: expect.objectContaining({
+          en: 'Part of order o1 was refunded. Total refunded so far: 60 SAR.',
+        }) as unknown,
+      }),
+    );
+  });
+});
