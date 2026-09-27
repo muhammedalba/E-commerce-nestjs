@@ -4,7 +4,9 @@ import {
   Injectable,
   Logger,
   OnModuleInit,
+  Optional,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -12,6 +14,9 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { lastValueFrom } from 'rxjs';
+import { randomUUID } from 'crypto';
+import { Redis } from 'ioredis';
+import { REDIS_CLIENT, redisNamespace } from 'src/shared/redis/redis.module';
 import { Setting, SettingDocument } from './shared/schema/setting.schema';
 import { SettingsService } from './settings.service';
 import { Role, RoleDocument } from 'src/roles/shared/schemas/role.schema';
@@ -52,6 +57,12 @@ interface OpenErApiResponse {
  * `SettingsService.updateSettings`) can all trigger this close together; an
  * in-flight guard prevents overlapping calls, and a short cooldown skips
  * re-fetching the same currency's rate too soon.
+ *
+ * Multi-instance: the startup and hourly runs fire on every app instance, so
+ * they first claim a short cluster-wide lease in Redis and only the winner
+ * syncs (one API call, one cache flush). A currency change calls
+ * `syncExchangeRate()` directly and is never skipped. Without Redis every
+ * instance syncs, which is redundant but harmless.
  */
 @Injectable()
 export class ExchangeRateSyncService implements OnModuleInit {
@@ -60,6 +71,8 @@ export class ExchangeRateSyncService implements OnModuleInit {
   private lastSync: { currencyCode: string; at: number } | null = null;
   private consecutiveFailures = 0;
   private hasNotifiedForCurrentIncident = false;
+  private readonly instanceId = randomUUID();
+  private readonly leaseKey: string;
 
   constructor(
     private readonly httpService: HttpService,
@@ -71,13 +84,70 @@ export class ExchangeRateSyncService implements OnModuleInit {
     private readonly roleModel: Model<RoleDocument>,
     @InjectQueue('mail-queue')
     private readonly mailQueue: Queue,
-  ) {}
+    config: ConfigService,
+    @Optional() @Inject(REDIS_CLIENT) private readonly redis?: Redis,
+  ) {
+    this.leaseKey = `${redisNamespace(config)}:lease:exchange-rate-sync`;
+  }
 
   async onModuleInit(): Promise<void> {
+    await this.runScheduledSync();
+  }
+
+  /** Startup + hourly sync, run by one instance of the cluster only. */
+  @Cron(CronExpression.EVERY_HOUR)
+  async runScheduledSync(): Promise<void> {
+    if (!(await this.claimScheduledRun())) {
+      this.logger.debug(
+        'Exchange rate sync skipped: another instance is handling this run.',
+      );
+      return;
+    }
     await this.syncExchangeRate();
   }
 
-  @Cron(CronExpression.EVERY_HOUR)
+  /**
+   * SET NX with an expiry: the first instance to ask gets the lease, the rest
+   * skip until it expires. It outlives the moment every instance's cron fires
+   * together and a rolling restart, and is never released early so the
+   * losers can't slip in right after the winner finishes. Fails open when
+   * Redis is unreachable.
+   */
+  private async claimScheduledRun(): Promise<boolean> {
+    if (!this.redis || !(await this.redisReady(this.redis))) return true;
+    try {
+      const res = await this.redis.set(
+        this.leaseKey,
+        this.instanceId,
+        'PX',
+        MIN_SYNC_INTERVAL_MS,
+        'NX',
+      );
+      return res === 'OK';
+    } catch (err: unknown) {
+      this.logger.warn(
+        `Exchange rate lease unavailable, syncing locally: ${(err as Error).message}`,
+      );
+      return true;
+    }
+  }
+
+  /** At startup the connection may still be opening (no offline queue). */
+  private redisReady(redis: Redis, timeoutMs = 5000): Promise<boolean> {
+    if (redis.status === 'ready') return Promise.resolve(true);
+    return new Promise((resolve) => {
+      const onReady = () => {
+        clearTimeout(timer);
+        resolve(true);
+      };
+      const timer = setTimeout(() => {
+        redis.off('ready', onReady);
+        resolve(false);
+      }, timeoutMs);
+      redis.once('ready', onReady);
+    });
+  }
+
   async syncExchangeRate(): Promise<void> {
     // Serialize calls: startup, the hourly cron and a currency-change event
     // can all land close together, and this stops them overlapping.

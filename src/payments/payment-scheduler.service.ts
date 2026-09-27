@@ -9,6 +9,8 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PaymentStatus } from './shared/enums/payment-status.enum';
 
+const PENDING_STATUSES = [PaymentStatus.INITIATED, PaymentStatus.PENDING];
+
 @Injectable()
 export class PaymentSchedulerService {
   private readonly logger = new Logger(PaymentSchedulerService.name);
@@ -28,16 +30,27 @@ export class PaymentSchedulerService {
     expirationThreshold.setMinutes(expirationThreshold.getMinutes() - 15);
 
     try {
-      const expiredTransactions = await this.paymentTransactionModel.find({
-        status: { $in: [PaymentStatus.INITIATED, PaymentStatus.PENDING] },
-        createdAt: { $lt: expirationThreshold },
-      });
+      const candidates = await this.paymentTransactionModel
+        .find({
+          status: { $in: PENDING_STATUSES },
+          createdAt: { $lt: expirationThreshold },
+        })
+        .select('_id')
+        .lean();
 
-      for (const transaction of expiredTransactions) {
+      for (const { _id } of candidates) {
+        // Conditional flip: exactly one caller wins per transaction. Another
+        // app instance running this same cron, or a webhook that just marked
+        // it PAID, makes the update match nothing, so payment.expired (which
+        // releases reserved stock) is emitted at most once.
+        const transaction = await this.paymentTransactionModel.findOneAndUpdate(
+          { _id, status: { $in: PENDING_STATUSES } },
+          { $set: { status: PaymentStatus.EXPIRED } },
+          { new: true },
+        );
+        if (!transaction) continue;
+
         this.logger.log(`Marking transaction ${transaction._id} as EXPIRED`);
-
-        transaction.status = PaymentStatus.EXPIRED;
-        await transaction.save();
 
         this.eventEmitter.emit('payment.expired', {
           orderId: transaction.orderId,

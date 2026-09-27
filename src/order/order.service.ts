@@ -1117,12 +1117,25 @@ export class OrderService {
     this.logger.log(`Handling payment.expired for order ${payload.orderId}`);
     try {
       const timestamps = this.buildStatusTimestamps('expired', 'FAILED');
-      const order = await this.OrderModel.findByIdAndUpdate(
-        payload.orderId,
+      // Only an order still awaiting payment expires: if it was paid,
+      // cancelled or already expired, its reservation was settled elsewhere
+      // and releasing it again would free stock held by other orders.
+      const order = await this.OrderModel.findOneAndUpdate(
+        {
+          _id: payload.orderId,
+          status: { $in: [OrderStatus.PENDING, OrderStatus.PENDING_PAYMENT] },
+          paymentStatus: { $ne: PaymentStatus.PAID },
+        },
         { status: 'expired', paymentStatus: 'FAILED', ...timestamps },
         { new: true },
       );
-      if (order && order.paymentMethodCode === 'moyasar') {
+      if (!order) {
+        this.logger.log(
+          `payment.expired ignored: order ${payload.orderId} is no longer awaiting payment`,
+        );
+        return;
+      }
+      if (order.paymentMethodCode === 'moyasar') {
         const { validatedItems } =
           await this.orderHelperService.validateOrderItems(
             order.items as unknown as {
