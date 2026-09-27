@@ -12,6 +12,7 @@ import {
 import { PaymentTransactionService } from './payment-transaction.service';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { WebhookMoyasarDto } from './shared/dto/webhook-moyasar.dto';
+import { LinkMoyasarPaymentDto } from './shared/dto/link-moyasar-payment.dto';
 import { PaymentProviderFactory } from './providers/payment-provider.factory';
 
 @Controller('payments')
@@ -62,6 +63,21 @@ export class PaymentTransactionsController {
   @Get('verify/:invoiceId')
   verifyPaymentStatus(@Param('invoiceId') invoiceId: string) {
     return this.paymentTransactionService.verifyPaymentStatus(invoiceId);
+  }
+
+  /* ================================================ */
+  /*  LINK MOYASAR PAYMENT (checkout page, pre-3DS)    */
+  /* ================================================ */
+  @Post('moyasar/link')
+  @UseGuards(AuthGuard)
+  linkMoyasarPayment(
+    @Body() { paymentId }: LinkMoyasarPaymentDto,
+    @Request() req: { user: { _id: string } },
+  ) {
+    return this.paymentTransactionService.linkMoyasarPayment(
+      paymentId,
+      String(req.user._id),
+    );
   }
 
   /* ================================================ */

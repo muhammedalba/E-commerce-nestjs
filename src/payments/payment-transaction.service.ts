@@ -304,18 +304,7 @@ export class PaymentTransactionService {
       throw new NotFoundException('Payment not found on Moyasar');
     }
 
-    const metadata = payment.metadata as Record<string, unknown> | undefined;
-    const orderId = metadata?.orderId as string | undefined;
-    if (!orderId) {
-      throw new BadRequestException(
-        'Payment does not contain orderId metadata',
-      );
-    }
-    // Metadata is set by the browser: reject junk as a permanent 4xx instead of
-    // letting the ObjectId cast throw a 500 that Moyasar would keep retrying.
-    if (!Types.ObjectId.isValid(orderId)) {
-      throw new BadRequestException('Payment orderId metadata is invalid');
-    }
+    const orderId = this.getOrderIdFromPayment(payment);
 
     // 2. Find internal transaction
     let transaction = await this.transactionModel
@@ -368,6 +357,77 @@ export class PaymentTransactionService {
       amount: transaction.amount,
       currency: transaction.currency,
     };
+  }
+
+  /**
+   * Links a Moyasar payment to its order's open transaction as soon as the
+   * checkout page creates it (before 3DS), so the expiry cron can ask Moyasar
+   * about it instead of expiring a payment whose webhook and callback were lost.
+   *
+   * Nothing from the browser is trusted: the order comes from the payment as
+   * Moyasar reports it, and must belong to the caller.
+   *
+   * @returns `linked: false` when the order has no open transaction.
+   * @throws {NotFoundException} If Moyasar has no such payment, or the order is not the caller's.
+   * @throws {BadRequestException} If the payment's orderId metadata is missing or invalid.
+   */
+  async linkMoyasarPayment(
+    providerPaymentId: string,
+    userId: string,
+  ): Promise<{ linked: boolean }> {
+    const payment = await this.providerFactory
+      .getMoyasarProvider()
+      .fetchPayment(providerPaymentId);
+    if (!payment) {
+      throw new NotFoundException('Payment not found on Moyasar');
+    }
+    const orderId = this.getOrderIdFromPayment(payment);
+    const ownsOrder = await this.orderModel.exists({
+      _id: orderId,
+      user: userId,
+    });
+    if (!ownsOrder) {
+      throw new NotFoundException('Order not found');
+    }
+
+    try {
+      // The latest attempt wins: a customer who re-submits the form gets a new
+      // payment id. processMoyasarWebhook relinks by order if an earlier one pays.
+      const linked = await this.transactionModel.findOneAndUpdate(
+        {
+          orderId: new Types.ObjectId(orderId),
+          status: { $in: [PaymentStatus.INITIATED, PaymentStatus.PENDING] },
+        },
+        { $set: { providerPaymentId } },
+        { sort: { createdAt: -1 }, new: true },
+      );
+      return { linked: !!linked };
+    } catch (err: unknown) {
+      // Unique index: this payment is already tracked by a transaction.
+      if ((err as { code?: number }).code === 11000) return { linked: true };
+      throw err;
+    }
+  }
+
+  /**
+   * Reads the order id Moyasar stores in the payment metadata. The checkout
+   * page sets it, so it is validated here: junk becomes a permanent 4xx rather
+   * than an ObjectId cast error (a 500 that Moyasar would keep retrying).
+   *
+   * @throws {BadRequestException} If the orderId metadata is missing or not an ObjectId.
+   */
+  private getOrderIdFromPayment(payment: Record<string, unknown>): string {
+    const metadata = payment.metadata as Record<string, unknown> | undefined;
+    const orderId = metadata?.orderId as string | undefined;
+    if (!orderId) {
+      throw new BadRequestException(
+        'Payment does not contain orderId metadata',
+      );
+    }
+    if (!Types.ObjectId.isValid(orderId)) {
+      throw new BadRequestException('Payment orderId metadata is invalid');
+    }
+    return orderId;
   }
 
   /**

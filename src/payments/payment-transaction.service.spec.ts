@@ -75,10 +75,14 @@ const fakeTransactionModel = (initial: Partial<TxState> = {}) => {
     findById: jest.fn(() => Promise.resolve(snapshot())),
     findOneAndUpdate: jest.fn(
       (
-        filter: { status: { $nin: PaymentStatus[] } },
+        filter: { status: { $nin?: PaymentStatus[]; $in?: PaymentStatus[] } },
         update: { $set: Record<string, unknown> },
       ) => {
-        if (filter.status.$nin.includes(state.status)) {
+        const { $nin, $in } = filter.status;
+        if (
+          $nin?.includes(state.status) ||
+          ($in && !$in.includes(state.status))
+        ) {
           return Promise.resolve(null);
         }
         for (const [key, value] of Object.entries(update.$set)) {
@@ -345,5 +349,68 @@ describe('PaymentTransactionService late payments', () => {
     expect(model.state.status).toBe(PaymentStatus.EXPIRED);
     expect(model.state.providerPaymentId).toBe('pay_other');
     expect(eventEmitter.emit).not.toHaveBeenCalled();
+  });
+});
+
+describe('PaymentTransactionService.linkMoyasarPayment', () => {
+  const linkSetup = (
+    opts: { status?: PaymentStatus; ownsOrder?: boolean } = {},
+  ) => {
+    const model = fakeTransactionModel({
+      status: opts.status ?? PaymentStatus.PENDING,
+      providerPaymentId: undefined,
+    });
+    const exists = jest.fn(() =>
+      Promise.resolve(opts.ownsOrder === false ? null : { _id: 'o' }),
+    );
+    const payment = paidPayment({
+      id: 'pay_new',
+      status: 'initiated',
+      metadata: { orderId: model.state.orderId.toString() },
+    });
+    const service = new PaymentTransactionService(
+      model as never,
+      { exists } as never,
+      {
+        getMoyasarProvider: () => ({
+          fetchPayment: () => Promise.resolve(payment),
+        }),
+      } as never,
+      { emit: jest.fn() } as never,
+    );
+    return { model, exists, service };
+  };
+
+  it("links the payment to the caller's open transaction, using the order Moyasar reports", async () => {
+    const { model, exists, service } = linkSetup();
+
+    await expect(
+      service.linkMoyasarPayment('pay_new', 'user1'),
+    ).resolves.toEqual({ linked: true });
+
+    expect(exists).toHaveBeenCalledWith({
+      _id: model.state.orderId.toString(),
+      user: 'user1',
+    });
+    expect(model.state.providerPaymentId).toBe('pay_new');
+    expect(model.state.status).toBe(PaymentStatus.PENDING);
+  });
+
+  it("refuses to link a payment for someone else's order", async () => {
+    const { model, service } = linkSetup({ ownsOrder: false });
+
+    await expect(
+      service.linkMoyasarPayment('pay_new', 'attacker'),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(model.state.providerPaymentId).toBeUndefined();
+  });
+
+  it('does not link a transaction that is no longer open', async () => {
+    const { model, service } = linkSetup({ status: PaymentStatus.EXPIRED });
+
+    await expect(
+      service.linkMoyasarPayment('pay_new', 'user1'),
+    ).resolves.toEqual({ linked: false });
+    expect(model.state.providerPaymentId).toBeUndefined();
   });
 });
