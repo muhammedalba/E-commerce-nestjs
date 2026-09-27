@@ -214,15 +214,21 @@ describe('PaymentTransactionService.processMoyasarWebhook', () => {
     );
   });
 
-  it('marks a pending transaction FAILED on amount mismatch without emitting', async () => {
+  it('fails the transaction on amount mismatch and emits payment.failed once, so the order is cancelled', async () => {
     const model = fakeTransactionModel();
     const { service, eventEmitter } = createService(model);
 
     await service.processMoyasarWebhook(paidPayment({ amount: 1 }));
+    await service.processMoyasarWebhook(paidPayment({ amount: 1 }));
 
     expect(model.state.status).toBe(PaymentStatus.FAILED);
     expect(model.state.metadata.failureReason).toBe('Amount mismatch detected');
-    expect(eventEmitter.emit).not.toHaveBeenCalled();
+    expect(eventEmitter.emit).toHaveBeenCalledTimes(1);
+    expect(eventEmitter.emit).toHaveBeenCalledWith('payment.failed', {
+      orderId: model.state.orderId.toString(),
+      userId: model.state.userId.toString(),
+      reason: 'Amount mismatch detected',
+    });
   });
 
   it('never overwrites a PAID transaction', async () => {
@@ -238,7 +244,7 @@ describe('PaymentTransactionService.processMoyasarWebhook', () => {
 });
 
 describe('PaymentTransactionService currency check', () => {
-  it('fails a payment made in another currency without emitting', async () => {
+  it('fails a payment made in another currency and emits payment.failed', async () => {
     const model = fakeTransactionModel();
     const { service, eventEmitter } = createService(model);
 
@@ -248,7 +254,11 @@ describe('PaymentTransactionService currency check', () => {
     expect(model.state.metadata.failureReason).toBe(
       'Currency mismatch detected',
     );
-    expect(eventEmitter.emit).not.toHaveBeenCalled();
+    expect(eventEmitter.emit).toHaveBeenCalledTimes(1);
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      'payment.failed',
+      expect.objectContaining({ reason: 'Currency mismatch detected' }),
+    );
   });
 
   it('matches a store currency stored as the Arabic symbol, like the checkout page', async () => {

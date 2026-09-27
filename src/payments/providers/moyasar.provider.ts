@@ -10,6 +10,7 @@ import {
   PaymentSessionResult,
 } from './payment-provider.interface';
 import { lastValueFrom } from 'rxjs';
+import { createHash, timingSafeEqual } from 'crypto';
 import { PaymentsService } from '../payments.service';
 import { decryptConfigValues } from '../shared/utils/encryption.util';
 import { PaymentStatus } from '../shared/enums/payment-status.enum';
@@ -29,6 +30,23 @@ export class MoyasarProvider implements IPaymentProvider {
   ) {}
 
   /**
+   * Loads the decrypted Moyasar `secretConfig` from the database, even while
+   * payments or the method are disabled (in-flight payments must still verify).
+   *
+   * @returns The decrypted config, or an empty object when none is stored.
+   */
+  private async getSecretConfig(): Promise<Record<string, string>> {
+    const moyasarMethod =
+      await this.paymentsService.findCredentialsByCode('moyasar');
+    return moyasarMethod?.secretConfig
+      ? (decryptConfigValues(moyasarMethod.secretConfig) as Record<
+          string,
+          string
+        >)
+      : {};
+  }
+
+  /**
    * Retrieves the Moyasar secret key securely from the database configuration.
    * If the configuration is not found in the database, it falls back to the environment variable.
    *
@@ -36,13 +54,7 @@ export class MoyasarProvider implements IPaymentProvider {
    * @private
    */
   private async getSecretKey(): Promise<string> {
-    const moyasarMethod = await this.paymentsService.findByCode('moyasar');
-    const decryptedConfig = moyasarMethod?.secretConfig
-      ? (decryptConfigValues(moyasarMethod.secretConfig) as Record<
-          string,
-          string
-        >)
-      : {};
+    const decryptedConfig = await this.getSecretConfig();
     return (
       decryptedConfig.MOYASAR_SECRET_KEY || process.env.MOYASAR_SECRET_KEY || ''
     );
@@ -109,7 +121,8 @@ export class MoyasarProvider implements IPaymentProvider {
     try {
       const response = await lastValueFrom(
         this.httpService.get(
-          `https://api.moyasar.com/v1/payments/${paymentId}`,
+          // Encoded so an id can never change the API path (e.g. '../invoices/x').
+          `https://api.moyasar.com/v1/payments/${encodeURIComponent(paymentId)}`,
           {
             headers: {
               Authorization: authHeader,
@@ -167,27 +180,40 @@ export class MoyasarProvider implements IPaymentProvider {
    * Verifies the authenticity of a Moyasar webhook payload using the secret token.
    * Returns the payment ID from the payload if valid.
    *
+   * The secret is mandatory: without one every webhook is rejected rather than
+   * accepted unauthenticated. Compared in constant time.
+   *
    * @param payload - The webhook payload received from Moyasar.
    * @returns The extracted payment ID, or undefined if not present.
-   * @throws {UnauthorizedException} If the secret token does not match.
+   * @throws {UnauthorizedException} If no secret is configured or the token does not match.
    */
   async verifyWebhook(payload: WebhookMoyasarDto): Promise<string | undefined> {
-    const moyasarMethod = await this.paymentsService.findByCode('moyasar');
-    const decryptedConfig = moyasarMethod?.secretConfig
-      ? (decryptConfigValues(moyasarMethod.secretConfig) as Record<
-          string,
-          string
-        >)
-      : {};
+    const decryptedConfig = await this.getSecretConfig();
     const secret =
       decryptedConfig.MOYASAR_WEBHOOK_SECRET ||
       process.env.MOYASAR_WEBHOOK_SECRET;
 
-    if (secret && payload.secret_token !== secret) {
+    if (!secret) {
+      this.logger.error(
+        'MOYASAR_WEBHOOK_SECRET is not configured (payment method secretConfig or env): rejecting webhook',
+      );
+      throw new UnauthorizedException('Invalid Webhook Secret Token');
+    }
+
+    if (!secretsMatch(payload.secret_token ?? '', secret)) {
       this.logger.error('Invalid Webhook Secret Token received');
       throw new UnauthorizedException('Invalid Webhook Secret Token');
     }
 
     return payload?.data?.id as string | undefined;
   }
+}
+
+/**
+ * Constant-time comparison. Both sides are hashed first so their lengths are
+ * equal (timingSafeEqual requires it) and the secret's length does not leak.
+ */
+function secretsMatch(received: string, expected: string): boolean {
+  const digest = (value: string) => createHash('sha256').update(value).digest();
+  return timingSafeEqual(digest(received), digest(expected));
 }

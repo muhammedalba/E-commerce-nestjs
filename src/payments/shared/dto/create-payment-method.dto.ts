@@ -7,6 +7,8 @@ import {
   IsObject,
   IsArray,
   ValidateNested,
+  Min,
+  Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PaymentType, FeeType } from '../schema/payment-method.schema';
@@ -30,11 +32,16 @@ export class CreatePaymentMethodDto {
   @IsOptional()
   isActive?: boolean;
 
+  /** Added to the order total: a negative value would act as a discount. */
   @IsNumber()
+  @Min(0)
   @IsOptional()
   fixedFee?: number;
 
+  /** Percent of the subtotal (checkout divides by 100). */
   @IsNumber()
+  @Min(0)
+  @Max(100)
   @IsOptional()
   percentageFee?: number;
 

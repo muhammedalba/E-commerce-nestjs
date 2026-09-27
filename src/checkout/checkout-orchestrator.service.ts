@@ -49,29 +49,11 @@ class MoyasarStrategy implements PaymentStrategy {
   }
 }
 
-class StripeStrategy implements PaymentStrategy {
-  getEventName() {
-    return 'order.created';
-  }
-  processPayment(orderResponse: { orderId?: string }) {
-    return Promise.resolve({
-      client_secret: `pi_mock_${orderResponse.orderId}_secret_test`,
-      approvalUrl: `/checkout/payment?orderId=${orderResponse.orderId}`,
-    });
-  }
-}
-
-class PaypalStrategy implements PaymentStrategy {
-  getEventName() {
-    return 'order.created';
-  }
-  processPayment(orderResponse: { orderId?: string }) {
-    return Promise.resolve({
-      approvalUrl: `https://www.sandbox.paypal.com/checkoutnow?token=mock_token_${orderResponse.orderId}`,
-    });
-  }
-}
-
+/**
+ * Offline methods (cash on delivery, bank transfer). Online methods without
+ * an integration never get here: PaymentsService.validatePaymentMethod
+ * rejects them (see SUPPORTED_ONLINE_PAYMENT_CODES).
+ */
 class DefaultStrategy implements PaymentStrategy {
   getEventName() {
     return 'order.created';
@@ -460,8 +442,6 @@ export class CheckoutOrchestratorService {
     // 5 & 6. Execute Payment Strategy
     const strategies: Record<string, PaymentStrategy> = {
       moyasar: new MoyasarStrategy(),
-      stripe: new StripeStrategy(),
-      paypal: new PaypalStrategy(),
     };
 
     const strategy =

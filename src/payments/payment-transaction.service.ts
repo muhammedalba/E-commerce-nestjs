@@ -185,11 +185,10 @@ export class PaymentTransactionService {
         `Amount mismatch for order ${orderId}! Expected ${expectedAmountHalalas}, got ${payload.amount}`,
       );
       // Mark as failed due to tampered amount
-      await this.transitionIfNotFinal(transaction._id, {
-        status: PaymentStatus.FAILED,
-        failedAt: new Date(),
-        'metadata.failureReason': 'Amount mismatch detected',
-      });
+      await this.failMismatchedPayment(
+        transaction._id,
+        'Amount mismatch detected',
+      );
       return;
     }
 
@@ -200,11 +199,10 @@ export class PaymentTransactionService {
       this.logger.error(
         `Currency mismatch for order ${orderId}! Expected ${expectedCurrency}, got ${paidCurrency}`,
       );
-      await this.transitionIfNotFinal(transaction._id, {
-        status: PaymentStatus.FAILED,
-        failedAt: new Date(),
-        'metadata.failureReason': 'Currency mismatch detected',
-      });
+      await this.failMismatchedPayment(
+        transaction._id,
+        'Currency mismatch detected',
+      );
       return;
     }
 
@@ -246,6 +244,31 @@ export class PaymentTransactionService {
         reason: failureReason || 'Payment failed',
       });
     }
+  }
+
+  /**
+   * Fails a transaction whose payment does not match it (amount or currency)
+   * and emits payment.failed, so the order is cancelled and its reserved stock
+   * released instead of staying pending until the customer checks out again.
+   * Business decision: this also applies when someone else pays an order with
+   * a wrong amount (it requires knowing the order id).
+   */
+  private async failMismatchedPayment(
+    transactionId: Types.ObjectId,
+    reason: string,
+  ): Promise<void> {
+    const updated = await this.transitionIfNotFinal(transactionId, {
+      status: PaymentStatus.FAILED,
+      failedAt: new Date(),
+      'metadata.failureReason': reason,
+    });
+    if (!updated) return;
+
+    this.eventEmitter.emit('payment.failed', {
+      orderId: updated.orderId.toString(),
+      userId: updated.userId?.toString(),
+      reason,
+    });
   }
 
   /**

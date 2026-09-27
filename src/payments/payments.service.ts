@@ -13,6 +13,15 @@ import { UpdatePaymentMethodDto } from './shared/dto/update-payment-method.dto';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { ApiFeatures } from 'src/shared/utils/ApiFeatures';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
+import {
+  ONLINE_PAYMENT_TYPES,
+  SUPPORTED_ONLINE_PAYMENT_CODES,
+} from './shared/constants/payment-methods.constants';
+import { decryptConfigValues } from './shared/utils/encryption.util';
+import {
+  maskSecretConfig,
+  mergeSecretConfig,
+} from './shared/utils/secret-config.util';
 
 // Removed buildPublicConfig function as we now use native publicConfig field.
 
@@ -25,11 +34,29 @@ export class PaymentsService {
     private readonly i18n: CustomI18nService,
   ) {}
 
-  async create(data: CreatePaymentMethodDto): Promise<PaymentMethodDocument> {
+  async create(data: CreatePaymentMethodDto): Promise<PaymentMethod> {
     if (data.isDefault) {
       await this.paymentMethodModel.updateMany({}, { isDefault: false });
     }
-    return this.paymentMethodModel.create(data);
+    const created = await this.paymentMethodModel.create(
+      data.secretConfig
+        ? { ...data, secretConfig: mergeSecretConfig({}, data.secretConfig) }
+        : data,
+    );
+    return this.toAdminView(created.toObject());
+  }
+
+  /**
+   * What the admin API returns for a method: `secretConfig` masked, never the
+   * real secrets (anyone with view permission would otherwise read live keys).
+   * Accepts encrypted or already-decrypted values.
+   */
+  private toAdminView<T extends { secretConfig?: unknown }>(method: T): T {
+    if (method.secretConfig === undefined) return method;
+    return {
+      ...method,
+      secretConfig: maskSecretConfig(decryptConfigValues(method.secretConfig)),
+    };
   }
 
   /**
@@ -50,7 +77,15 @@ export class PaymentsService {
       isActive: true,
     };
 
-    const andConditions: any[] = [];
+    const andConditions: any[] = [
+      // Online methods without an integration would never charge the customer.
+      {
+        $or: [
+          { type: { $nin: ONLINE_PAYMENT_TYPES } },
+          { code: { $in: SUPPORTED_ONLINE_PAYMENT_CODES } },
+        ],
+      },
+    ];
 
     if (query?.currency) {
       andConditions.push({
@@ -108,7 +143,11 @@ export class PaymentsService {
     return {
       results: data.length,
       pagination: features.getPagination(),
-      data: this.i18n.localize(data) as Record<string, unknown>[],
+      data: this.i18n.localize(
+        data.map((method) =>
+          this.toAdminView(method as { secretConfig?: unknown }),
+        ),
+      ) as Record<string, unknown>[],
     };
   }
   // find payment method by code
@@ -121,28 +160,58 @@ export class PaymentsService {
 
     return this.paymentMethodModel.findOne({ code, isActive: true }).lean();
   }
+
+  /**
+   * Loads a method's stored credentials for server-side provider calls.
+   * Unlike findByCode it ignores `paymentsEnabled` and `isActive`: payments
+   * already in flight must still be verified after an admin disables payments
+   * or the method, instead of silently falling back to environment keys.
+   */
+  async findCredentialsByCode(code: string): Promise<PaymentMethod | null> {
+    return this.paymentMethodModel.findOne({ code }).lean();
+  }
   // find payment method by id
-  async findById(id: string): Promise<PaymentMethodDocument> {
-    const method = await this.paymentMethodModel.findById(id);
+  async findById(id: string): Promise<PaymentMethod> {
+    const method = await this.paymentMethodModel.findById(id).lean();
     if (!method) throw new NotFoundException('Payment method not found');
-    return method;
+    return this.toAdminView(method);
   }
   // update payment method
   async update(
     id: string,
     data: UpdatePaymentMethodDto,
-  ): Promise<PaymentMethodDocument> {
+  ): Promise<PaymentMethod> {
+    let update = data;
+    if (data.secretConfig) {
+      // Merge per key (see mergeSecretConfig): the admin form sends back the
+      // masked values it received, and a partial update must not wipe keys.
+      const current = await this.paymentMethodModel
+        .findById(id)
+        .select('secretConfig')
+        .lean();
+      if (!current) throw new NotFoundException('Payment method not found');
+      update = {
+        ...data,
+        secretConfig: mergeSecretConfig(
+          decryptConfigValues(current.secretConfig ?? {}) as Record<
+            string,
+            unknown
+          >,
+          data.secretConfig,
+        ),
+      };
+    }
     if (data.isDefault) {
       await this.paymentMethodModel.updateMany(
         { _id: { $ne: id } },
         { isDefault: false },
       );
     }
-    const updated = await this.paymentMethodModel.findByIdAndUpdate(id, data, {
-      new: true,
-    });
+    const updated = await this.paymentMethodModel
+      .findByIdAndUpdate(id, update, { new: true })
+      .lean();
     if (!updated) throw new NotFoundException('Payment method not found');
-    return updated;
+    return this.toAdminView(updated);
   }
   // delete payment method
   async remove(id: string): Promise<void> {
@@ -156,7 +225,11 @@ export class PaymentsService {
   ): Promise<PaymentMethod> {
     const method = await this.findByCode(code);
 
-    if (!method) {
+    if (
+      !method ||
+      (ONLINE_PAYMENT_TYPES.includes(method.type) &&
+        !SUPPORTED_ONLINE_PAYMENT_CODES.includes(method.code))
+    ) {
       throw new NotFoundException(`Payment method "${code}" is not available`);
     }
 

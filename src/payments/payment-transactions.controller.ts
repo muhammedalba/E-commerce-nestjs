@@ -12,7 +12,11 @@ import {
 import { PaymentTransactionService } from './payment-transaction.service';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { WebhookMoyasarDto } from './shared/dto/webhook-moyasar.dto';
-import { LinkMoyasarPaymentDto } from './shared/dto/link-moyasar-payment.dto';
+import {
+  LinkMoyasarPaymentDto,
+  VerifyPaymentParamDto,
+} from './shared/dto/link-moyasar-payment.dto';
+import { Throttle } from '@nestjs/throttler';
 import { PaymentProviderFactory } from './providers/payment-provider.factory';
 
 @Controller('payments')
@@ -61,8 +65,11 @@ export class PaymentTransactionsController {
   /*  VERIFY PAYMENT STATUS (Frontend Polling)         */
   /* ================================================ */
   @Get('verify/:invoiceId')
-  verifyPaymentStatus(@Param('invoiceId') invoiceId: string) {
-    return this.paymentTransactionService.verifyPaymentStatus(invoiceId);
+  // Public and each call hits the Moyasar API: bounded per client. The
+  // callback page polls every 3s (20/min), so 30 leaves room for retries.
+  @Throttle({ default: { ttl: 60000, limit: 30 } })
+  verifyPaymentStatus(@Param() params: VerifyPaymentParamDto) {
+    return this.paymentTransactionService.verifyPaymentStatus(params.invoiceId);
   }
 
   /* ================================================ */
