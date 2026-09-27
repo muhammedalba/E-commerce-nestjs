@@ -1,4 +1,9 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import {
   IPaymentProvider,
@@ -91,7 +96,9 @@ export class MoyasarProvider implements IPaymentProvider {
    * or upon receiving a webhook, ensuring the system cannot be spoofed.
    *
    * @param {string} paymentId - The unique payment identifier provided by Moyasar.
-   * @returns {Promise<Record<string, unknown> | null>} A promise that resolves to the payment details object, or null if the request fails.
+   * @returns {Promise<Record<string, unknown> | null>} The payment details, or null when Moyasar has no such payment (404).
+   * @throws {ServiceUnavailableException} On any other failure (network, timeout, 5xx, rejected credentials),
+   * so the webhook answers 5xx and Moyasar redelivers instead of the event being lost.
    */
   async fetchPayment(
     paymentId: string,
@@ -112,11 +119,14 @@ export class MoyasarProvider implements IPaymentProvider {
       );
       return response.data as Record<string, unknown>;
     } catch (err: unknown) {
-      const error = err as Error;
+      const error = err as Error & { response?: { status?: number } };
       this.logger.error(
         `Failed to fetch Moyasar payment ${paymentId}: ${error.message}`,
       );
-      return null;
+      if (error.response?.status === 404) return null;
+      throw new ServiceUnavailableException(
+        'Payment provider is temporarily unavailable',
+      );
     }
   }
 

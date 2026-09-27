@@ -54,6 +54,7 @@ export class MaintenanceGuard implements CanActivate {
 
     // 2. Allow essential authentication routes to enable administrative login
     if (this.isAuthRoute(request.url)) return true;
+    if (this.isPaymentCallbackRoute(request.url)) return true;
 
     // 3. Extract access token and verify user authorization
     const token = this.extractTokenFromHeader(request);
@@ -79,6 +80,23 @@ export class MaintenanceGuard implements CanActivate {
       url.includes('/auth/verify-Pass-Reset-Code') ||
       url.includes('/settings/clear-cache') ||
       url.includes('/settings')
+    );
+  }
+
+  /**
+   * Payment settlement routes stay reachable during maintenance: Moyasar keeps
+   * delivering webhooks and customers keep returning from 3DS, while the
+   * expiry cron keeps running. Blocking them would expire orders that were paid.
+   * Matched on the path only, so a query string cannot opt other routes in.
+   *
+   * @param url - The target request URL.
+   * @returns True for the Moyasar webhook and the payment verify route.
+   */
+  private isPaymentCallbackRoute(url: string): boolean {
+    const path = url.split('?')[0];
+    return (
+      path.endsWith('/payments/webhooks/moyasar') ||
+      /\/payments\/verify\/[^/]+$/.test(path)
     );
   }
 

@@ -13,11 +13,27 @@ import {
 } from './shared/schemas/payment-transaction.schema';
 import { CreatePaymentDto } from './shared/dto/create-payment.dto';
 import { PaymentStatus } from './shared/enums/payment-status.enum';
+import {
+  classifyPaymentFailure,
+  PaymentFailureCategory,
+} from './shared/utils/payment-failure.util';
 import { PaymentProvider } from './shared/enums/payment-provider.enum';
 import { PaymentProviderFactory } from './providers/payment-provider.factory';
 import { Order } from 'src/order/shared/schemas/Order.schema';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrderStatus } from 'src/order/shared/enums/order-status.enum';
+
+/**
+ * Normalizes a currency code exactly like the checkout page does before it
+ * calls Moyasar.init, so a store currency set as 'ر.س' or 'sar' still matches
+ * the 'SAR' Moyasar reports.
+ */
+function normalizeCurrency(currency: unknown): string {
+  const code = (typeof currency === 'string' ? currency : '')
+    .toUpperCase()
+    .trim();
+  return code === 'ر.س' || code === 'ر.س.' ? 'SAR' : code;
+}
 
 /**
  * Service responsible for managing the lifecycle of payment transactions.
@@ -156,6 +172,21 @@ export class PaymentTransactionService {
       return;
     }
 
+    // Security Check: Validate Currency (set by the browser, like the amount)
+    const expectedCurrency = normalizeCurrency(transaction.currency || 'SAR');
+    const paidCurrency = normalizeCurrency(payload.currency);
+    if (paidCurrency !== expectedCurrency) {
+      this.logger.error(
+        `Currency mismatch for order ${orderId}! Expected ${expectedCurrency}, got ${paidCurrency}`,
+      );
+      await this.transitionIfNotFinal(transaction._id, {
+        status: PaymentStatus.FAILED,
+        failedAt: new Date(),
+        'metadata.failureReason': 'Currency mismatch detected',
+      });
+      return;
+    }
+
     if (paymentStatus === 'paid') {
       const updated = await this.transitionIfNotFinal(transaction._id, {
         status: PaymentStatus.PAID,
@@ -165,21 +196,33 @@ export class PaymentTransactionService {
       // Emit event for Order Service to handle stock and status updates
       this.eventEmitter.emit('payment.succeeded', {
         orderId: updated.orderId.toString(),
+        userId: updated.userId?.toString(),
         transactionId: updated._id.toString(),
         provider: updated.provider,
         amount: updated.amount,
       });
     } else if (paymentStatus === 'failed') {
+      // Moyasar puts the issuer / 3DS outcome on the payment source.
+      const source = payload.source as
+        | { message?: unknown; response_code?: unknown }
+        | undefined;
+      const failureReason =
+        (typeof source?.message === 'string' && source.message) ||
+        (typeof payload.message === 'string' && payload.message) ||
+        undefined;
       const updated = await this.transitionIfNotFinal(transaction._id, {
         status: PaymentStatus.FAILED,
         failedAt: new Date(),
-        'metadata.failureReason': payload.message,
+        'metadata.failureReason': failureReason,
+        'metadata.failureCode': source?.response_code,
+        'metadata.failureCategory': classifyPaymentFailure(source),
       });
       if (!updated) return;
 
       this.eventEmitter.emit('payment.failed', {
         orderId: updated.orderId.toString(),
-        reason: payload.message || 'Payment failed',
+        userId: updated.userId?.toString(),
+        reason: failureReason || 'Payment failed',
       });
     }
   }
@@ -228,6 +271,7 @@ export class PaymentTransactionService {
     orderId: string;
     orderStatus?: string;
     paymentStatus: string;
+    failureCategory?: PaymentFailureCategory;
     amount: number;
     currency: string;
   }> {
@@ -245,6 +289,11 @@ export class PaymentTransactionService {
       throw new BadRequestException(
         'Payment does not contain orderId metadata',
       );
+    }
+    // Metadata is set by the browser: reject junk as a permanent 4xx instead of
+    // letting the ObjectId cast throw a 500 that Moyasar would keep retrying.
+    if (!Types.ObjectId.isValid(orderId)) {
+      throw new BadRequestException('Payment orderId metadata is invalid');
     }
 
     // 2. Find internal transaction
@@ -282,6 +331,13 @@ export class PaymentTransactionService {
       orderId: transaction.orderId.toString(),
       orderStatus: order?.status,
       paymentStatus: transaction.status, // INITIATED, PENDING, PAID, FAILED
+      // Category only: the raw issuer message (e.g. "stolen card") stays server-side.
+      failureCategory:
+        transaction.status === PaymentStatus.FAILED
+          ? (transaction.metadata?.failureCategory as
+              | PaymentFailureCategory
+              | undefined)
+          : undefined,
       amount: transaction.amount,
       currency: transaction.currency,
     };

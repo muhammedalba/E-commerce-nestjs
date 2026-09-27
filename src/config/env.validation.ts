@@ -114,6 +114,10 @@ class EnvironmentVariables {
 
   @IsString()
   MOYASAR_SECRET_KEY!: string;
+
+  /** Key for payment-method secrets stored in the DB; changing it makes them unreadable. */
+  @IsString()
+  PAYMENT_CONFIG_SECRET!: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

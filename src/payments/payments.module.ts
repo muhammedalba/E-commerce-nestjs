@@ -29,7 +29,8 @@ import { Order, OrderSchema } from '../order/shared/schemas/Order.schema';
     ]),
     AuthModule,
     SettingsModule,
-    HttpModule,
+    // Bounded so a hanging Moyasar call cannot hold webhook/verify requests open.
+    HttpModule.register({ timeout: 10_000 }),
   ],
   controllers: [PaymentsController, PaymentTransactionsController],
   providers: [

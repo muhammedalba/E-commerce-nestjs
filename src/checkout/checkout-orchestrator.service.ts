@@ -2,7 +2,7 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { CheckoutSessionService } from './checkout-session.service';
 import { CheckoutService, CheckoutPreviewResponse } from './checkout.service';
 import { CartService } from '../cart/cart.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { PaymentTransactionService } from '../payments/payment-transaction.service';
 import { PaymentProvider } from '../payments/shared/enums/payment-provider.enum';
 import { FileAsset } from 'src/shared/schema/file-asset.schema';
@@ -399,6 +399,13 @@ export class CheckoutOrchestratorService {
     // Since we need to return the OrderID to the frontend immediately to proceed to payment,
     // we should wait for the order creation.
 
+    // Cancel this user's earlier unpaid Moyasar orders (abandoned or failed
+    // attempts) first: their reservations count against stock in
+    // validateOrderItems and would otherwise block this retry.
+    await this.eventEmitter.emitAsync('checkout.supersedeUnpaidOrders', {
+      userId,
+    });
+
     let orderResponse:
       | { orderId?: string; success?: boolean; error?: string }
       | undefined;
@@ -441,11 +448,14 @@ export class CheckoutOrchestratorService {
       );
     }
 
-    // 4. Clear the cart and session
-    await this.cartService.clearCart(userId);
-    await this.sessionService.clearSession(userId);
-
     const methodCode = summary.payment?.methodCode || '';
+
+    // 4. Clear the cart and session. Card payments keep them until the payment
+    // succeeds (see handlePaymentSucceeded) so a failed payment can be retried.
+    if (methodCode.toLowerCase().trim() !== 'moyasar') {
+      await this.cartService.clearCart(userId);
+      await this.sessionService.clearSession(userId);
+    }
 
     // 5 & 6. Execute Payment Strategy
     const strategies: Record<string, PaymentStrategy> = {
@@ -479,5 +489,22 @@ export class CheckoutOrchestratorService {
       message: 'Order created successfully. Pending payment.',
       ...paymentData,
     };
+  }
+
+  // Card payments: the cart and session survive order creation and are only
+  // cleared once the payment is confirmed.
+  @OnEvent('payment.succeeded', { async: true })
+  async handlePaymentSucceeded(payload: { orderId: string; userId?: string }) {
+    if (!payload.userId) return;
+    try {
+      await this.cartService.clearCart(payload.userId);
+      await this.sessionService.clearSession(payload.userId);
+    } catch (err: unknown) {
+      const error = err as Error;
+      this.logger.error(
+        `Clearing cart after payment of order ${payload.orderId} failed: ${error.message}`,
+        error.stack,
+      );
+    }
   }
 }

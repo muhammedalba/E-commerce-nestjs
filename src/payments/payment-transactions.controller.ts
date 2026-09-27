@@ -6,6 +6,8 @@ import {
   Param,
   UseGuards,
   Request,
+  HttpException,
+  Logger,
 } from '@nestjs/common';
 import { PaymentTransactionService } from './payment-transaction.service';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
@@ -14,6 +16,8 @@ import { PaymentProviderFactory } from './providers/payment-provider.factory';
 
 @Controller('payments')
 export class PaymentTransactionsController {
+  private readonly logger = new Logger(PaymentTransactionsController.name);
+
   constructor(
     private readonly paymentTransactionService: PaymentTransactionService,
     private readonly providerFactory: PaymentProviderFactory,
@@ -33,8 +37,20 @@ export class PaymentTransactionsController {
       try {
         await this.paymentTransactionService.verifyPaymentStatus(paymentId);
       } catch (error) {
-        // Log but don't fail, we return 200 OK to Moyasar
-        console.error('Webhook verification failed:', error);
+        // 4xx is permanent (unknown payment, payout event, bad metadata):
+        // acknowledge so Moyasar stops retrying.
+        if (error instanceof HttpException && error.getStatus() < 500) {
+          this.logger.warn(
+            `Webhook for payment ${paymentId} not processed: ${error.message}`,
+          );
+        } else {
+          // Transient (provider or DB unavailable): fail so Moyasar redelivers.
+          // Safe to repeat: status transitions are atomic and emit at most once.
+          this.logger.error(
+            `Webhook for payment ${paymentId} failed, Moyasar will retry: ${(error as Error).message}`,
+          );
+          throw error;
+        }
       }
     }
     return { received: true };

@@ -994,20 +994,12 @@ export class OrderService {
     couponDetails?: { couponId?: string; [key: string]: unknown };
   }) {
     try {
+      // Only reserve stock here. The coupon and the user's order count are
+      // applied in handlePaymentSucceeded, so a failed payment can be retried
+      // with the same coupon.
       const { validatedItems } =
         await this.orderHelperService.validateOrderItems(payload.items);
       await this.productHelperService.reserveStock(validatedItems);
-
-      if (payload.couponDetails && payload.couponDetails.couponId) {
-        await this.couponHelperService.markCouponAsUsed(
-          new Types.ObjectId(payload.couponDetails.couponId),
-          payload.userId,
-        );
-      }
-
-      await this.UserModel.findByIdAndUpdate(payload.userId, {
-        $inc: { totalOrder: 1 },
-      });
     } catch (err: any) {
       const error = err as Error;
       this.logger.error(
@@ -1034,8 +1026,14 @@ export class OrderService {
     this.logger.log(`Handling payment.succeeded for order ${payload.orderId}`);
     try {
       const timestamps = this.buildStatusTimestamps('processing', 'PAID');
-      const order = await this.OrderModel.findByIdAndUpdate(
-        payload.orderId,
+      // Only an order still awaiting payment moves forward. A cancelled one
+      // (payment failed, superseded, or cancelled by an admin) already released
+      // its reservation, so confirming it would take stock twice.
+      const order = await this.OrderModel.findOneAndUpdate(
+        {
+          _id: payload.orderId,
+          status: { $in: [OrderStatus.PENDING, OrderStatus.PENDING_PAYMENT] },
+        },
         {
           status: 'processing',
           paymentStatus: 'PAID',
@@ -1043,11 +1041,37 @@ export class OrderService {
         },
         { new: true },
       );
+      if (!order) {
+        await this.OrderModel.findByIdAndUpdate(payload.orderId, {
+          paymentStatus: 'PAID',
+          ...this.buildStatusTimestamps(undefined, 'PAID'),
+        });
+        this.logger.error(
+          `CRITICAL: payment ${payload.transactionId} captured for order ${payload.orderId} which is no longer awaiting payment — needs manual refund/review`,
+        );
+        return;
+      }
       if (
-        order &&
-        (order.paymentMethodCode === 'moyasar' ||
-          payload.provider === 'moyasar')
+        order.paymentMethodCode === 'moyasar' ||
+        payload.provider === 'moyasar'
       ) {
+        if (order.couponId) {
+          try {
+            await this.couponHelperService.markCouponAsUsed(
+              new Types.ObjectId(String(order.couponId)),
+              String(order.user),
+            );
+          } catch (couponErr: unknown) {
+            // The customer has paid: never undo the order over a coupon race.
+            this.logger.warn(
+              `Coupon ${String(order.couponId)} could not be marked as used for paid order ${payload.orderId}: ${(couponErr as Error).message}`,
+            );
+          }
+        }
+        await this.UserModel.findByIdAndUpdate(order.user, {
+          $inc: { totalOrder: 1 },
+        });
+
         const { validatedItems } =
           await this.orderHelperService.validateOrderItems(
             order.items as unknown as {
@@ -1083,10 +1107,21 @@ export class OrderService {
   async handlePaymentFailed(payload: { orderId: string; reason: string }) {
     this.logger.log(`Handling payment.failed for order ${payload.orderId}`);
     try {
-      const timestamps = this.buildStatusTimestamps(undefined, 'FAILED');
-      const order = await this.OrderModel.findByIdAndUpdate(
-        payload.orderId,
-        { paymentStatus: 'FAILED', ...timestamps },
+      // A failed payment closes the order: the cart is still intact, so the
+      // customer retries with a fresh checkout. The status condition makes the
+      // reservation release happen at most once.
+      const timestamps = this.buildStatusTimestamps('cancelled', 'FAILED');
+      const order = await this.OrderModel.findOneAndUpdate(
+        {
+          _id: payload.orderId,
+          status: { $in: [OrderStatus.PENDING, OrderStatus.PENDING_PAYMENT] },
+          paymentStatus: { $ne: PaymentStatus.PAID },
+        },
+        {
+          status: OrderStatus.CANCELLED,
+          paymentStatus: 'FAILED',
+          ...timestamps,
+        },
         { new: true },
       );
       if (order && order.paymentMethodCode === 'moyasar') {
@@ -1104,6 +1139,66 @@ export class OrderService {
       const error = err as Error;
       this.logger.error(
         `payment.failed handler failed: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
+  /* ================================================ */
+  /*  SUPERSEDE UNPAID MOYASAR ORDERS                 */
+  /* ================================================ */
+  /**
+   * Cancels a user's Moyasar orders that are still awaiting payment, before
+   * they start a new checkout. Their cart was kept, so the new order replaces
+   * them; releasing their reservations first keeps them from counting against
+   * stock in the new order's validation. Bank transfer / COD orders are never
+   * touched.
+   */
+  @OnEvent('checkout.supersedeUnpaidOrders')
+  async handleSupersedeUnpaidOrders(payload: { userId: string }) {
+    try {
+      const openOrders = await this.OrderModel.find({
+        user: new Types.ObjectId(payload.userId),
+        paymentMethodCode: 'moyasar',
+        status: { $in: [OrderStatus.PENDING, OrderStatus.PENDING_PAYMENT] },
+        paymentStatus: { $ne: PaymentStatus.PAID },
+      })
+        .select('_id')
+        .lean();
+
+      for (const { _id } of openOrders) {
+        // Same atomic flip as restockCancelledOrder: a webhook that marks the
+        // order paid at this moment makes the update match nothing.
+        const previous = await this.OrderModel.findOneAndUpdate(
+          {
+            _id,
+            status: { $in: [OrderStatus.PENDING, OrderStatus.PENDING_PAYMENT] },
+            paymentStatus: { $ne: PaymentStatus.PAID },
+          },
+          {
+            $set: {
+              status: OrderStatus.CANCELLED,
+              ...this.buildStatusTimestamps('cancelled'),
+            },
+          },
+          { new: false },
+        )
+          .select('items')
+          .lean();
+        if (!previous) continue;
+
+        await this.productHelperService.restockOrderItems(
+          previous.items,
+          'reserved',
+        );
+        this.logger.log(
+          `Order ${String(_id)} superseded by a new checkout of user ${payload.userId}`,
+        );
+      }
+    } catch (err: unknown) {
+      const error = err as Error;
+      this.logger.error(
+        `Superseding unpaid orders of user ${payload.userId} failed: ${error.message}`,
         error.stack,
       );
     }

@@ -17,8 +17,10 @@ const PIPE_OPTIONS = { whitelist: true, forbidNonWhitelisted: true };
 type TxState = {
   _id: Types.ObjectId;
   orderId: Types.ObjectId;
+  userId: Types.ObjectId;
   provider: string;
   amount: number;
+  currency: string;
   status: PaymentStatus;
   providerPaymentId?: string;
   metadata: Record<string, unknown>;
@@ -33,8 +35,10 @@ const fakeTransactionModel = (initial: Partial<TxState> = {}) => {
   const state: TxState = {
     _id: new Types.ObjectId(),
     orderId: new Types.ObjectId(),
+    userId: new Types.ObjectId(),
     provider: 'MOYASAR',
     amount: 100,
+    currency: 'SAR',
     status: PaymentStatus.PENDING,
     providerPaymentId: 'pay_1',
     metadata: {},
@@ -82,6 +86,7 @@ const paidPayment = (overrides: Record<string, unknown> = {}) => ({
   id: 'pay_1',
   status: 'paid',
   amount: 10000,
+  currency: 'SAR',
   metadata: { orderId: new Types.ObjectId().toString() },
   ...overrides,
 });
@@ -130,6 +135,7 @@ describe('PaymentTransactionService.processMoyasarWebhook', () => {
       'payment.succeeded',
       expect.objectContaining({
         orderId: model.state.orderId.toString(),
+        userId: model.state.userId.toString(),
         transactionId: model.state._id.toString(),
         amount: 100,
       }),
@@ -149,8 +155,35 @@ describe('PaymentTransactionService.processMoyasarWebhook', () => {
     expect(eventEmitter.emit).toHaveBeenCalledTimes(1);
     expect(eventEmitter.emit).toHaveBeenCalledWith('payment.failed', {
       orderId: model.state.orderId.toString(),
+      userId: model.state.userId.toString(),
       reason: 'Declined',
     });
+  });
+
+  it('records the issuer message, code and category from the payment source', async () => {
+    const model = fakeTransactionModel();
+    const { service, eventEmitter } = createService(model);
+
+    await service.processMoyasarWebhook(
+      paidPayment({
+        status: 'failed',
+        source: {
+          type: 'creditcard',
+          message: 'INSUFFICIENT FUNDS',
+          response_code: '51',
+        },
+      }),
+    );
+
+    expect(model.state.metadata).toMatchObject({
+      failureReason: 'INSUFFICIENT FUNDS',
+      failureCode: '51',
+      failureCategory: 'insufficient_funds',
+    });
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      'payment.failed',
+      expect.objectContaining({ reason: 'INSUFFICIENT FUNDS' }),
+    );
   });
 
   it('marks a pending transaction FAILED on amount mismatch without emitting', async () => {
@@ -173,5 +206,49 @@ describe('PaymentTransactionService.processMoyasarWebhook', () => {
 
     expect(model.state.status).toBe(PaymentStatus.PAID);
     expect(eventEmitter.emit).not.toHaveBeenCalled();
+  });
+});
+
+describe('PaymentTransactionService currency check', () => {
+  it('fails a payment made in another currency without emitting', async () => {
+    const model = fakeTransactionModel();
+    const { service, eventEmitter } = createService(model);
+
+    await service.processMoyasarWebhook(paidPayment({ currency: 'USD' }));
+
+    expect(model.state.status).toBe(PaymentStatus.FAILED);
+    expect(model.state.metadata.failureReason).toBe(
+      'Currency mismatch detected',
+    );
+    expect(eventEmitter.emit).not.toHaveBeenCalled();
+  });
+
+  it('matches a store currency stored as the Arabic symbol, like the checkout page', async () => {
+    const model = fakeTransactionModel({ currency: 'ر.س' });
+    const { service, eventEmitter } = createService(model);
+
+    await service.processMoyasarWebhook(paidPayment({ currency: 'SAR' }));
+
+    expect(model.state.status).toBe(PaymentStatus.PAID);
+    expect(eventEmitter.emit).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('PaymentTransactionService.verifyPaymentStatus', () => {
+  it('rejects invalid orderId metadata with a 400 instead of a cast error', async () => {
+    const fetchPayment = jest.fn(() =>
+      Promise.resolve(paidPayment({ metadata: { orderId: 'not-an-id' } })),
+    );
+    const service = new PaymentTransactionService(
+      fakeTransactionModel() as never,
+      {} as never,
+      { getMoyasarProvider: () => ({ fetchPayment }) } as never,
+      { emit: jest.fn() } as never,
+    );
+
+    await expect(service.verifyPaymentStatus('pay_1')).rejects.toMatchObject({
+      status: 400,
+      message: 'Payment orderId metadata is invalid',
+    });
   });
 });
