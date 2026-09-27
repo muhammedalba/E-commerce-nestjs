@@ -61,3 +61,31 @@ export function mergeSecretConfig(existing: Config, incoming: Config): Config {
   }
   return merged;
 }
+
+const SECRET_KEY_NAME = /secret|private|password/i;
+/** Moyasar (and Stripe-style) secret API keys. */
+const SECRET_KEY_VALUE = /^sk_(live|test)_/;
+
+/**
+ * Paths in a `publicConfig` that look like secrets, e.g. `MOYASAR_SECRET_KEY`
+ * or any `sk_live_…` value. publicConfig is served to every visitor, so such
+ * values belong in secretConfig.
+ */
+export function findSecretLikePaths(config: unknown, path = ''): string[] {
+  if (Array.isArray(config)) {
+    return config.flatMap((item, i) =>
+      findSecretLikePaths(item, `${path}[${i}]`),
+    );
+  }
+  if (isPlainObject(config)) {
+    return Object.entries(config).flatMap(([key, value]) => {
+      const keyPath = path ? `${path}.${key}` : key;
+      return SECRET_KEY_NAME.test(key)
+        ? [keyPath]
+        : findSecretLikePaths(value, keyPath);
+    });
+  }
+  return typeof config === 'string' && SECRET_KEY_VALUE.test(config.trim())
+    ? [path]
+    : [];
+}

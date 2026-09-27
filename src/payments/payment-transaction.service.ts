@@ -18,22 +18,11 @@ import {
   PaymentFailureCategory,
 } from './shared/utils/payment-failure.util';
 import { PaymentProvider } from './shared/enums/payment-provider.enum';
+import { normalizeCurrency, toMinorUnits } from './shared/utils/currency.util';
 import { PaymentProviderFactory } from './providers/payment-provider.factory';
 import { Order } from 'src/order/shared/schemas/Order.schema';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrderStatus } from 'src/order/shared/enums/order-status.enum';
-
-/**
- * Normalizes a currency code exactly like the checkout page does before it
- * calls Moyasar.init, so a store currency set as 'ر.س' or 'sar' still matches
- * the 'SAR' Moyasar reports.
- */
-function normalizeCurrency(currency: unknown): string {
-  const code = (typeof currency === 'string' ? currency : '')
-    .toUpperCase()
-    .trim();
-  return code === 'ر.س' || code === 'ر.س.' ? 'SAR' : code;
-}
 
 /**
  * Service responsible for managing the lifecycle of payment transactions.
@@ -69,9 +58,7 @@ export class PaymentTransactionService {
     // 1. Create Transaction as INITIATED
     const transaction = new this.transactionModel({
       orderId: new Types.ObjectId(createDto.orderId),
-      // userId is not in createDto currently? Wait, we need it.
-      // Let's pass userId in createDto or separately. I will assume it's passed.
-      userId: new Types.ObjectId((createDto as any).userId), // we will fix DTO later if needed
+      userId: new Types.ObjectId(createDto.userId),
       provider: createDto.provider,
       amount: createDto.amount,
       currency: createDto.currency,
@@ -178,11 +165,15 @@ export class PaymentTransactionService {
     }
 
     // Security Check: Validate Amount
-    // Moyasar payload.amount is in halalas (e.g. 10000 for 100 SAR)
-    const expectedAmountHalalas = Math.round(transaction.amount * 100);
-    if (payload.amount !== expectedAmountHalalas) {
+    // Moyasar payload.amount is in minor units (10000 halalas for 100 SAR,
+    // 100000 fils for 100 KWD)
+    const expectedMinorUnits = toMinorUnits(
+      transaction.amount,
+      transaction.currency || 'SAR',
+    );
+    if (payload.amount !== expectedMinorUnits) {
       this.logger.error(
-        `Amount mismatch for order ${orderId}! Expected ${expectedAmountHalalas}, got ${payload.amount}`,
+        `Amount mismatch for order ${orderId}! Expected ${expectedMinorUnits}, got ${payload.amount}`,
       );
       // Mark as failed due to tampered amount
       await this.failMismatchedPayment(
@@ -484,16 +475,7 @@ export class PaymentTransactionService {
       throw new BadRequestException('Order is already paid');
     }
 
-    // 2. Cancel old transactions
-    await this.transactionModel.updateMany(
-      {
-        orderId,
-        status: { $in: [PaymentStatus.INITIATED, PaymentStatus.PENDING] },
-      },
-      { $set: { status: PaymentStatus.CANCELLED } },
-    );
-
-    // 3. Issue new payment
+    // 2. Issue new payment
     const createDto: CreatePaymentDto = {
       orderId,
       userId,
@@ -505,6 +487,26 @@ export class PaymentTransactionService {
     };
 
     const result = await this.initiatePayment(createDto, userEmail);
+
+    // 3. Cancel every other open transaction, keeping only the newest. Done
+    // after creating the new one so two concurrent retries agree on the same
+    // survivor: a second open transaction would later expire and take the
+    // order (and its reserved stock) down with it.
+    const openStatuses = [PaymentStatus.INITIATED, PaymentStatus.PENDING];
+    const newest = await this.transactionModel
+      .findOne({ orderId, status: { $in: openStatuses } })
+      .sort({ createdAt: -1, _id: -1 })
+      .select('_id')
+      .lean();
+    await this.transactionModel.updateMany(
+      {
+        orderId,
+        status: { $in: openStatuses },
+        ...(newest ? { _id: { $ne: newest._id } } : {}),
+      },
+      { $set: { status: PaymentStatus.CANCELLED } },
+    );
+
     if (!result.paymentUrl) {
       throw new BadRequestException('Failed to generate new payment URL');
     }

@@ -31,11 +31,11 @@ export class PaymentTransaction {
   })
   declare provider: PaymentProvider;
 
+  // unique already creates the index; a separate `index: true` was redundant.
   @Prop({
     type: String,
     unique: true,
     sparse: true,
-    index: true,
   })
   declare providerPaymentId: string | undefined;
 
@@ -81,3 +81,8 @@ export class PaymentTransaction {
 
 export const PaymentTransactionSchema =
   SchemaFactory.createForClass(PaymentTransaction);
+
+// Expiry cron, every minute: open transactions older than the threshold.
+PaymentTransactionSchema.index({ status: 1, createdAt: 1 });
+// verify / link / webhook fallback: an order's latest transaction.
+PaymentTransactionSchema.index({ orderId: 1, createdAt: -1 });

@@ -248,3 +248,44 @@ describe('PaymentsService admin views never expose secrets', () => {
     expect(leaksSecret(created)).toBe(false);
   });
 });
+
+describe('PaymentsService publicConfig', () => {
+  it.each([
+    [
+      'create',
+      (s: PaymentsService) =>
+        s.create({
+          name: { ar: 'بطاقة بنكية', en: 'Bank card' },
+          code: 'moyasar',
+          type: PaymentType.CARD,
+          feeType: 'fixed' as never,
+          provider: 'MOYASAR',
+          publicConfig: { publishableKey: 'pk_x', secretKey: 'sk_live_1' },
+        }),
+    ],
+    [
+      'update',
+      (s: PaymentsService) =>
+        s.update('m1', { publicConfig: { key: 'sk_live_1' } }),
+    ],
+  ])(
+    'rejects secrets in publicConfig on %s, before writing',
+    async (_, call) => {
+      const model = {
+        create: jest.fn(),
+        findByIdAndUpdate: jest.fn(),
+        updateMany: jest.fn(),
+        findById: jest.fn(),
+      };
+      const service = new PaymentsService(
+        model as never,
+        {} as never,
+        { localize: (v: unknown) => v } as never,
+      );
+
+      await expect(call(service)).rejects.toMatchObject({ status: 400 });
+      expect(model.create).not.toHaveBeenCalled();
+      expect(model.findByIdAndUpdate).not.toHaveBeenCalled();
+    },
+  );
+});

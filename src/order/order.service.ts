@@ -1049,11 +1049,18 @@ export class OrderService {
         this.logger.error(
           `CRITICAL: payment ${payload.transactionId} captured for order ${payload.orderId} which is no longer awaiting payment — needs manual refund/review`,
         );
+        // Alerts the admins who can act on it (PaymentReviewListener).
+        this.eventEmitter.emit('payment.needs_review', {
+          orderId: payload.orderId,
+          transactionId: payload.transactionId,
+          amount: payload.amount,
+        });
         return;
       }
       if (
         order.paymentMethodCode === 'moyasar' ||
-        payload.provider === 'moyasar'
+        // Transactions store the provider enum ('MOYASAR').
+        payload.provider?.toLowerCase() === 'moyasar'
       ) {
         if (order.couponId) {
           try {

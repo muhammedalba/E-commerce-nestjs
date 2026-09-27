@@ -44,3 +44,27 @@ describe('MaintenanceGuard payment routes', () => {
     await expect(createGuard().canActivate(contextFor(url))).rejects.toThrow();
   });
 });
+
+describe('MaintenanceGuard auth routes', () => {
+  it.each([
+    '/api/v1/auth/login',
+    '/api/v1/auth/login/',
+    '/api/v1/auth/verify-Pass-Reset-Code',
+    '/api/v1/settings',
+    '/api/v1/settings?lang=ar',
+    '/api/v1/settings/clear-cache',
+  ])('lets %s through during maintenance', async (url) => {
+    await expect(createGuard().canActivate(contextFor(url))).resolves.toBe(
+      true,
+    );
+  });
+
+  it.each([
+    '/api/v1/orders?x=/settings',
+    '/api/v1/products?next=/auth/login',
+    '/api/v1/users/settings-export',
+    '/api/v1/auth/register',
+  ])('keeps %s blocked (a query string cannot opt a route in)', async (url) => {
+    await expect(createGuard().canActivate(contextFor(url))).rejects.toThrow();
+  });
+});

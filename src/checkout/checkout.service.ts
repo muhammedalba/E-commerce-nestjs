@@ -583,7 +583,9 @@ export class CheckoutService {
       payment: {
         methodId: dto.paymentMethodId ?? '',
         methodName: dto.paymentMethodId ?? '',
-        methodCode: dto.paymentMethodId ?? '',
+        // The stored (lowercased) code, not the client's spelling: order
+        // handlers compare it exactly (e.g. === 'moyasar').
+        methodCode: chosenPaymentMethod?.code ?? dto.paymentMethodId ?? '',
         fees: paymentFees,
       },
       couponDetails: couponResult.couponDetails,

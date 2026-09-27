@@ -19,6 +19,8 @@ import { MoyasarProvider } from './providers/moyasar.provider';
 import { PaymentProviderFactory } from './providers/payment-provider.factory';
 import { HttpModule } from '@nestjs/axios';
 import { Order, OrderSchema } from '../order/shared/schemas/Order.schema';
+import { Role, RoleSchema } from '../roles/shared/schemas/role.schema';
+import { PaymentReviewListener } from './payment-review.listener';
 
 @Module({
   imports: [
@@ -26,6 +28,7 @@ import { Order, OrderSchema } from '../order/shared/schemas/Order.schema';
       { name: PaymentMethod.name, schema: PaymentMethodSchema },
       { name: PaymentTransaction.name, schema: PaymentTransactionSchema },
       { name: Order.name, schema: OrderSchema },
+      { name: Role.name, schema: RoleSchema },
     ]),
     AuthModule,
     SettingsModule,
@@ -39,6 +42,7 @@ import { Order, OrderSchema } from '../order/shared/schemas/Order.schema';
     PaymentSchedulerService,
     MoyasarProvider,
     PaymentProviderFactory,
+    PaymentReviewListener,
   ],
   exports: [PaymentsService, PaymentTransactionService],
 })

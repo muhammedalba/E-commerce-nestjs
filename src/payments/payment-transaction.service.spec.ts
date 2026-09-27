@@ -424,3 +424,70 @@ describe('PaymentTransactionService.linkMoyasarPayment', () => {
     expect(model.state.providerPaymentId).toBeUndefined();
   });
 });
+
+describe('PaymentTransactionService minor units', () => {
+  it('accepts a 3-decimal currency paid in fils (×1000, not ×100)', async () => {
+    const model = fakeTransactionModel({ amount: 12.345, currency: 'KWD' });
+    const { service } = createService(model);
+
+    await service.processMoyasarWebhook(
+      paidPayment({ amount: 12345, currency: 'KWD' }),
+    );
+
+    expect(model.state.status).toBe(PaymentStatus.PAID);
+  });
+});
+
+describe('PaymentTransactionService.retryPayment', () => {
+  it('cancels the other open transactions only after creating the new one, keeping the newest', async () => {
+    const calls: string[] = [];
+    const newestQuery = {
+      sort: () => newestQuery,
+      select: () => newestQuery,
+      lean: () => Promise.resolve({ _id: 'tx_new' }),
+    };
+    const updateMany = jest.fn(() => {
+      calls.push('cancel');
+      return Promise.resolve();
+    });
+    const service = new PaymentTransactionService(
+      { findOne: jest.fn(() => newestQuery), updateMany } as never,
+      {
+        findOne: () =>
+          Promise.resolve({
+            status: 'pending_payment',
+            paymentStatus: 'PENDING',
+            paymentMethodCode: 'moyasar',
+            grandTotal: 100,
+            currency: 'SAR',
+          }),
+      } as never,
+      {} as never,
+      { emit: jest.fn() } as never,
+    );
+    jest.spyOn(service, 'initiatePayment').mockImplementation(() => {
+      calls.push('create');
+      return Promise.resolve({
+        paymentUrl: 'https://pay',
+        transactionId: 'tx_new',
+      });
+    });
+    const orderId = new Types.ObjectId().toString();
+
+    await expect(service.retryPayment(orderId, 'u1', 'a@b.c')).resolves.toEqual(
+      {
+        paymentUrl: 'https://pay',
+      },
+    );
+
+    expect(calls).toEqual(['create', 'cancel']);
+    expect(updateMany).toHaveBeenCalledWith(
+      {
+        orderId,
+        status: { $in: [PaymentStatus.INITIATED, PaymentStatus.PENDING] },
+        _id: { $ne: 'tx_new' },
+      },
+      { $set: { status: PaymentStatus.CANCELLED } },
+    );
+  });
+});

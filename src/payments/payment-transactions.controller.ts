@@ -14,6 +14,7 @@ import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { WebhookMoyasarDto } from './shared/dto/webhook-moyasar.dto';
 import {
   LinkMoyasarPaymentDto,
+  RetryPaymentParamDto,
   VerifyPaymentParamDto,
 } from './shared/dto/link-moyasar-payment.dto';
 import { Throttle } from '@nestjs/throttler';
@@ -93,7 +94,7 @@ export class PaymentTransactionsController {
   @Post('retry/:orderId')
   @UseGuards(AuthGuard)
   retryPayment(
-    @Param('orderId') orderId: string,
+    @Param() { orderId }: RetryPaymentParamDto,
     @Request() req: { user: { _id: string; email: string } },
   ) {
     const userId = String(req.user._id);

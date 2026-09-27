@@ -1,4 +1,4 @@
-import { IsString, Matches, MaxLength } from 'class-validator';
+import { IsMongoId, IsString, Matches, MaxLength } from 'class-validator';
 
 /** Moyasar ids are interpolated into the Moyasar API path, so no '/' or '.'. */
 export const MOYASAR_PAYMENT_ID_PATTERN = /^[\w-]+$/;
@@ -16,4 +16,9 @@ export class VerifyPaymentParamDto {
   @MaxLength(64)
   @Matches(MOYASAR_PAYMENT_ID_PATTERN)
   invoiceId!: string;
+}
+
+export class RetryPaymentParamDto {
+  @IsMongoId()
+  orderId!: string;
 }

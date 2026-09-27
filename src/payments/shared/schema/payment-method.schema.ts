@@ -88,6 +88,17 @@ PaymentMethodSchema.index({ provider: 1 });
 PaymentMethodSchema.index({ type: 1 });
 PaymentMethodSchema.index({ isDefault: 1 });
 
+/*
+ * secretConfig encryption (see encryption.util):
+ * - Encrypted on write: save, findOneAndUpdate, updateOne, updateMany.
+ * - Decrypted on read: find and findOne, including .lean() and findById.
+ *   NOT decrypted: the documents returned by findOneAndUpdate / create, so
+ *   callers that return them must decrypt themselves.
+ * - Never sent to clients in clear: PaymentsService masks it for the admin
+ *   API and merges updates per key (secret-config.util). Provider code reads
+ *   it through PaymentsService.findCredentialsByCode.
+ */
+
 // Hooks for document creation/saving
 PaymentMethodSchema.pre('save', function (next) {
   if (this.isModified('secretConfig') && this.secretConfig) {

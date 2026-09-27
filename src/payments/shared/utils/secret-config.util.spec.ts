@@ -1,4 +1,8 @@
-import { maskSecretConfig, mergeSecretConfig } from './secret-config.util';
+import {
+  findSecretLikePaths,
+  maskSecretConfig,
+  mergeSecretConfig,
+} from './secret-config.util';
 
 describe('maskSecretConfig', () => {
   it('masks every string, keeping the last 4 characters of long values', () => {
@@ -64,5 +68,33 @@ describe('mergeSecretConfig', () => {
         { nested: { b: 'new', a: '••••••••' } },
       ),
     ).toEqual({ nested: { a: 'keep', b: 'new' } });
+  });
+});
+
+describe('findSecretLikePaths', () => {
+  it('flags secret-looking key names and sk_ values, however nested', () => {
+    expect(
+      findSecretLikePaths({
+        publishableKey: 'pk_live_abc',
+        MOYASAR_SECRET_KEY: 'x',
+        nested: { apiKey: 'sk_live_123', privateToken: 'y' },
+        list: ['sk_test_9'],
+      }),
+    ).toEqual([
+      'MOYASAR_SECRET_KEY',
+      'nested.apiKey',
+      'nested.privateToken',
+      'list[0]',
+    ]);
+  });
+
+  it('allows what the storefront uses (publishable keys, bank details)', () => {
+    expect(
+      findSecretLikePaths({
+        publishableKey: 'pk_test_abc',
+        iban: 'SA0380000000608010167519',
+        bankName: 'Al Rajhi',
+      }),
+    ).toEqual([]);
   });
 });

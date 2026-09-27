@@ -75,11 +75,18 @@ export class MaintenanceGuard implements CanActivate {
    * @returns True if the route is an authentication endpoint.
    */
   private isAuthRoute(url: string): boolean {
+    // Matched on the path after the API prefix: a substring match on the whole
+    // URL let any route through with e.g. `?x=/settings` in its query string.
+    const route =
+      url
+        .split('?')[0]
+        .replace(/^\/api\/v1/, '')
+        .replace(/\/+$/, '') || '/';
     return (
-      url.includes('/auth/login') ||
-      url.includes('/auth/verify-Pass-Reset-Code') ||
-      url.includes('/settings/clear-cache') ||
-      url.includes('/settings')
+      route === '/auth/login' ||
+      route === '/auth/verify-Pass-Reset-Code' ||
+      route === '/settings' ||
+      route.startsWith('/settings/')
     );
   }
 

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import {
@@ -19,6 +23,7 @@ import {
 } from './shared/constants/payment-methods.constants';
 import { decryptConfigValues } from './shared/utils/encryption.util';
 import {
+  findSecretLikePaths,
   maskSecretConfig,
   mergeSecretConfig,
 } from './shared/utils/secret-config.util';
@@ -35,6 +40,7 @@ export class PaymentsService {
   ) {}
 
   async create(data: CreatePaymentMethodDto): Promise<PaymentMethod> {
+    this.assertNoSecretsInPublicConfig(data.publicConfig);
     if (data.isDefault) {
       await this.paymentMethodModel.updateMany({}, { isDefault: false });
     }
@@ -44,6 +50,23 @@ export class PaymentsService {
         : data,
     );
     return this.toAdminView(created.toObject());
+  }
+
+  /**
+   * publicConfig is returned to every visitor by GET /payments (and cached),
+   * so a secret saved there by mistake would be public.
+   *
+   * @throws {BadRequestException} Naming the secret-looking paths.
+   */
+  private assertNoSecretsInPublicConfig(
+    publicConfig?: Record<string, unknown>,
+  ) {
+    const paths = findSecretLikePaths(publicConfig ?? {});
+    if (paths.length > 0) {
+      throw new BadRequestException(
+        `publicConfig is visible to every customer; move ${paths.join(', ')} to secretConfig`,
+      );
+    }
   }
 
   /**
@@ -116,7 +139,7 @@ export class PaymentsService {
       .find(filterQuery)
       .sort({ displayOrder: 1 })
       .select(
-        'publicConfig code name provider description type feeType fixedFee percentageFee passFeesToCustomer passFeesToCustomer requiresOnlineConfirmation requiresAdditionalInfo icon displayOrder',
+        'publicConfig code name provider description type feeType fixedFee percentageFee passFeesToCustomer requiresOnlineConfirmation requiresAdditionalInfo icon displayOrder',
       )
       .lean();
 
@@ -181,6 +204,7 @@ export class PaymentsService {
     id: string,
     data: UpdatePaymentMethodDto,
   ): Promise<PaymentMethod> {
+    this.assertNoSecretsInPublicConfig(data.publicConfig);
     let update = data;
     if (data.secretConfig) {
       // Merge per key (see mergeSecretConfig): the admin form sends back the
