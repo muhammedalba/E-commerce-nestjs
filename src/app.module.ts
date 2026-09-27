@@ -64,17 +64,18 @@ import { createKeyv } from 'cacheable';
     CacheModule.registerAsync({
       isGlobal: true,
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        stores: [
-          createKeyv({
-            lruSize: config.get<number>('CACHE_MAX_ITEMS', 1000),
-            checkInterval: config.get<number>(
-              'CACHE_CHECK_INTERVAL_MS',
-              60_000,
-            ),
-          }),
-        ],
-      }),
+      useFactory: (config: ConfigService) => {
+        const store = createKeyv({
+          lruSize: config.get<number>('CACHE_MAX_ITEMS', 1000),
+          checkInterval: config.get<number>('CACHE_CHECK_INTERVAL_MS', 60_000),
+        });
+        // createKeyv disables serialization, so values are stored via
+        // structuredClone, which turns ObjectIds into `{ buffer: {...} }`.
+        // Store JSON instead — the same shape the client receives uncached.
+        store.serialize = JSON.stringify;
+        store.deserialize = JSON.parse;
+        return { stores: [store] };
+      },
     }),
     BullConfig,
     EventEmitterModule.forRoot({
