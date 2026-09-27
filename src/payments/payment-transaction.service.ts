@@ -148,52 +148,70 @@ export class PaymentTransactionService {
         `Amount mismatch for order ${orderId}! Expected ${expectedAmountHalalas}, got ${payload.amount}`,
       );
       // Mark as failed due to tampered amount
-      transaction.status = PaymentStatus.FAILED;
-      transaction.failedAt = new Date();
-      transaction.metadata = {
-        ...transaction.metadata,
-        failureReason: 'Amount mismatch detected',
-      };
-      await transaction.save();
-      return;
-    }
-
-    // Idempotency check
-    if (
-      transaction.status === PaymentStatus.PAID ||
-      transaction.status === PaymentStatus.FAILED
-    ) {
-      this.logger.log(
-        `Webhook ignored: Transaction ${transaction._id} is already ${transaction.status}`,
-      );
+      await this.transitionIfNotFinal(transaction._id, {
+        status: PaymentStatus.FAILED,
+        failedAt: new Date(),
+        'metadata.failureReason': 'Amount mismatch detected',
+      });
       return;
     }
 
     if (paymentStatus === 'paid') {
-      transaction.status = PaymentStatus.PAID;
-      transaction.paidAt = new Date();
-      await transaction.save();
+      const updated = await this.transitionIfNotFinal(transaction._id, {
+        status: PaymentStatus.PAID,
+        paidAt: new Date(),
+      });
+      if (!updated) return;
       // Emit event for Order Service to handle stock and status updates
       this.eventEmitter.emit('payment.succeeded', {
-        orderId: transaction.orderId.toString(),
-        transactionId: transaction._id.toString(),
-        provider: transaction.provider,
-        amount: transaction.amount,
+        orderId: updated.orderId.toString(),
+        transactionId: updated._id.toString(),
+        provider: updated.provider,
+        amount: updated.amount,
       });
     } else if (paymentStatus === 'failed') {
-      transaction.status = PaymentStatus.FAILED;
-      transaction.failedAt = new Date();
-      transaction.metadata = {
-        ...transaction.metadata,
-        failureReason: payload.message,
-      };
-      await transaction.save();
+      const updated = await this.transitionIfNotFinal(transaction._id, {
+        status: PaymentStatus.FAILED,
+        failedAt: new Date(),
+        'metadata.failureReason': payload.message,
+      });
+      if (!updated) return;
 
       this.eventEmitter.emit('payment.failed', {
-        orderId: transaction.orderId.toString(),
+        orderId: updated.orderId.toString(),
         reason: payload.message || 'Payment failed',
       });
     }
+  }
+
+  /**
+   * Atomically applies `set` unless the transaction is already PAID or FAILED.
+   *
+   * The Moyasar webhook and the callback page's verify call both process every
+   * payment, often at the same moment. The status condition in the filter makes
+   * exactly one of them win, so payment.succeeded / payment.failed (which confirm
+   * or release reserved stock) are emitted at most once per transaction.
+   *
+   * @returns The updated transaction, or null when it was already final.
+   */
+  private async transitionIfNotFinal(
+    transactionId: Types.ObjectId,
+    set: Record<string, unknown>,
+  ): Promise<PaymentTransactionDocument | null> {
+    const updated = await this.transactionModel.findOneAndUpdate(
+      {
+        _id: transactionId,
+        status: { $nin: [PaymentStatus.PAID, PaymentStatus.FAILED] },
+      },
+      { $set: set },
+      { new: true },
+    );
+    if (!updated) {
+      this.logger.log(
+        `Webhook ignored: Transaction ${transactionId.toString()} is already final`,
+      );
+    }
+    return updated;
   }
 
   /**
