@@ -21,7 +21,10 @@ export class ContactService {
     private readonly i18n: I18nService,
   ) {}
 
-  async submitMessage(createContactDto: CreateContactDto) {
+  async submitMessage(
+    createContactDto: CreateContactDto,
+    recaptchaUnverified = false,
+  ) {
     const lang =
       I18nContext.current()?.lang || process.env.DEFAULT_LANGUAGE || 'ar';
 
@@ -35,9 +38,11 @@ export class ContactService {
           INQUIRY_TYPE_LABEL_KEYS[createContactDto.inquiryType],
           { lang },
         ),
-        adminSubject: this.i18n.translate('email.CONTACT_ADMIN_SUBJECT', {
+        adminSubject: this.adminSubject(
+          'email.CONTACT_ADMIN_SUBJECT',
           lang,
-        }),
+          recaptchaUnverified,
+        ),
         confirmationSubject: this.i18n.translate(
           'email.CONTACT_CONFIRMATION_SUBJECT',
           { lang },
@@ -55,5 +60,16 @@ export class ContactService {
       status: 'success',
       message: this.i18n.translate('success.CONTACT_MESSAGE_SENT'),
     };
+  }
+  /** Admin email subject, prefixed when reCAPTCHA could not be verified (Google unreachable). */
+  private adminSubject(
+    key: string,
+    lang: string,
+    recaptchaUnverified: boolean,
+  ) {
+    const subject = this.i18n.translate(key, { lang });
+    return recaptchaUnverified
+      ? `${String(this.i18n.translate('email.RECAPTCHA_UNVERIFIED_PREFIX', { lang }))} ${String(subject)}`
+      : subject;
   }
 }

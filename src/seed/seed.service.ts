@@ -73,6 +73,7 @@ export class SeedService {
       },
 
       googleAnalyticsId: '',
+      tawkId: '',
 
       // Social Media
       socialLinks: {

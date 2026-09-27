@@ -81,6 +81,10 @@ export class Setting {
   @Prop({ type: String, default: '' })
   declare googleAnalyticsId: string;
 
+  // Tawk.to live chat: "<propertyId>/<widgetId>"
+  @Prop({ type: String, default: '' })
+  declare tawkId: string;
+
   // Social links
   @Prop({
     type: Object,

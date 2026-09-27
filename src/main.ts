@@ -87,7 +87,7 @@ async function bootstrap() {
   app.enableCors({
     origin: allowedOrigins.filter((o): o is string => !!o),
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-lang'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-lang', 'x-recaptcha-token'],
     maxAge: 86400, // cache preflight responses to avoid an OPTIONS per request
   });
 

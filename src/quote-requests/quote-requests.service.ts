@@ -25,7 +25,7 @@ export class QuoteRequestsService {
     private readonly i18n: I18nService,
   ) {}
 
-  async submitRequest(dto: CreateQuoteRequestDto) {
+  async submitRequest(dto: CreateQuoteRequestDto, recaptchaUnverified = false) {
     const lang =
       I18nContext.current()?.lang || process.env.DEFAULT_LANGUAGE || 'ar';
 
@@ -48,9 +48,11 @@ export class QuoteRequestsService {
         commercialRegistrationNumber: dto.commercialRegistrationNumber,
         taxNumber: dto.taxNumber,
         nationalAddress: dto.nationalAddress,
-        adminSubject: this.i18n.translate('email.QUOTE_ADMIN_SUBJECT', {
+        adminSubject: this.adminSubject(
+          'email.QUOTE_ADMIN_SUBJECT',
           lang,
-        }),
+          recaptchaUnverified,
+        ),
         confirmationSubject: this.i18n.translate(
           'email.QUOTE_CONFIRMATION_SUBJECT',
           { lang },
@@ -68,5 +70,16 @@ export class QuoteRequestsService {
       status: 'success',
       message: this.i18n.translate('success.QUOTE_REQUEST_SENT'),
     };
+  }
+  /** Admin email subject, prefixed when reCAPTCHA could not be verified (Google unreachable). */
+  private adminSubject(
+    key: string,
+    lang: string,
+    recaptchaUnverified: boolean,
+  ) {
+    const subject = this.i18n.translate(key, { lang });
+    return recaptchaUnverified
+      ? `${String(this.i18n.translate('email.RECAPTCHA_UNVERIFIED_PREFIX', { lang }))} ${String(subject)}`
+      : subject;
   }
 }

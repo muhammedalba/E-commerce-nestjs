@@ -211,6 +211,13 @@ export class UpdateSettingDto {
   @IsOptional()
   googleAnalyticsId?: string;
 
+  @IsString()
+  @IsOptional()
+  @Matches(/^([a-f0-9]{24}\/[a-z0-9]+)?$/i, {
+    message: 'tawkId must be in the format <propertyId>/<widgetId>',
+  })
+  tawkId?: string;
+
   @ValidateNested()
   @Type(() => SocialLinksDto)
   @IsOptional()

@@ -1,5 +1,9 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import {
+  RecaptchaGuard,
+  RecaptchaUnverified,
+} from 'src/shared/guards/recaptcha.guard';
 import { QuoteRequestsService } from './quote-requests.service';
 import { CreateQuoteRequestDto } from './shared/dto/create-quote-request.dto';
 
@@ -11,8 +15,15 @@ export class QuoteRequestsController {
   // ------------ ======  SUBMIT QUOTE REQUEST   ====== ---------- //
   // ------------ =============================== ---------- //
   @Post()
+  @UseGuards(new RecaptchaGuard('quote_request'))
   @Throttle({ default: { ttl: 60000, limit: 3 } }) // 3 requests per minute (anti-spam)
-  async create(@Body() dto: CreateQuoteRequestDto): Promise<any> {
-    return await this.quoteRequestsService.submitRequest(dto);
+  async create(
+    @Body() dto: CreateQuoteRequestDto,
+    @RecaptchaUnverified() recaptchaUnverified: boolean,
+  ): Promise<any> {
+    return await this.quoteRequestsService.submitRequest(
+      dto,
+      recaptchaUnverified,
+    );
   }
 }

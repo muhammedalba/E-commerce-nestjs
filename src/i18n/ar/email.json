@@ -14,5 +14,6 @@
   "QUOTE_CONTACT_METHOD_PHONE": "الهاتف",
   "QUOTE_CONTACT_METHOD_EMAIL": "البريد الإلكتروني",
   "ORDER_REFUNDED_SUBJECT": "تم استرداد مبلغ طلبك",
-  "ORDER_PARTIALLY_REFUNDED_SUBJECT": "تم استرداد جزء من مبلغ طلبك"
+  "ORDER_PARTIALLY_REFUNDED_SUBJECT": "تم استرداد جزء من مبلغ طلبك",
+  "RECAPTCHA_UNVERIFIED_PREFIX": "[⚠️ غير متحقق — reCAPTCHA]"
 }

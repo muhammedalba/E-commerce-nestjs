@@ -14,5 +14,6 @@
   "QUOTE_CONTACT_METHOD_PHONE": "Phone",
   "QUOTE_CONTACT_METHOD_EMAIL": "Email",
   "ORDER_REFUNDED_SUBJECT": "Your order was refunded",
-  "ORDER_PARTIALLY_REFUNDED_SUBJECT": "Part of your order was refunded"
+  "ORDER_PARTIALLY_REFUNDED_SUBJECT": "Part of your order was refunded",
+  "RECAPTCHA_UNVERIFIED_PREFIX": "[⚠️ Unverified — reCAPTCHA]"
 }
