@@ -149,6 +149,27 @@ export class PaymentTransactionService {
       }
     }
 
+    // Paid after its transaction expired (15-min cron) or was cancelled by a
+    // retry, and never linked: record the capture instead of dropping it as
+    // unknown. payment.succeeded then flags the order for manual refund/review,
+    // since its reservation was already released.
+    if (!transaction && orderId && paymentStatus === 'paid') {
+      transaction = await this.transactionModel
+        .findOne({
+          orderId: new Types.ObjectId(orderId),
+          status: { $in: [PaymentStatus.EXPIRED, PaymentStatus.CANCELLED] },
+          providerPaymentId: null,
+        })
+        .sort({ createdAt: -1 });
+      if (transaction) {
+        this.logger.warn(
+          `Late payment ${providerPaymentId} for ${transaction.status} transaction ${transaction._id} (order ${orderId})`,
+        );
+        transaction.providerPaymentId = providerPaymentId;
+        await transaction.save();
+      }
+    }
+
     if (!transaction) {
       this.logger.warn(
         `Webhook received for unknown Moyasar payment: ${providerPaymentId} (orderId: ${orderId})`,
@@ -306,22 +327,28 @@ export class PaymentTransactionService {
     }
 
     // Actively process it if status is not final
-    if (
+    const isOpen =
       transaction.status === PaymentStatus.PENDING ||
-      transaction.status === PaymentStatus.INITIATED
+      transaction.status === PaymentStatus.INITIATED;
+    // A capture that arrived after expiry/cancellation must still be recorded
+    // (see processMoyasarWebhook); the webhook reaches it through here too.
+    const isLatePaid =
+      payment.status === 'paid' &&
+      (transaction.status === PaymentStatus.EXPIRED ||
+        transaction.status === PaymentStatus.CANCELLED);
+    if (
+      (isOpen &&
+        (payment.status === 'paid' ||
+          payment.status === 'failed' ||
+          payment.status === 'expired')) ||
+      isLatePaid
     ) {
-      if (
-        payment.status === 'paid' ||
-        payment.status === 'failed' ||
-        payment.status === 'expired'
-      ) {
-        // Reuse webhook logic safely
-        await this.processMoyasarWebhook(payment);
-        // Refresh transaction from DB
-        const updated = await this.transactionModel.findById(transaction._id);
-        if (updated) {
-          transaction = updated;
-        }
+      // Reuse webhook logic safely
+      await this.processMoyasarWebhook(payment);
+      // Refresh transaction from DB
+      const updated = await this.transactionModel.findById(transaction._id);
+      if (updated) {
+        transaction = updated;
       }
     }
 

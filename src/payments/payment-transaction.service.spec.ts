@@ -44,11 +44,35 @@ const fakeTransactionModel = (initial: Partial<TxState> = {}) => {
     metadata: {},
     ...initial,
   };
+  /** Snapshot whose save() persists the only field the service links: providerPaymentId. */
+  const snapshot = () => {
+    const doc = {
+      ...state,
+      save: jest.fn(() => {
+        state.providerPaymentId = doc.providerPaymentId;
+        return Promise.resolve();
+      }),
+    };
+    return doc;
+  };
+  const matches = (filter: {
+    providerPaymentId?: string | null;
+    status?: { $in: PaymentStatus[] };
+  }) =>
+    (!('providerPaymentId' in filter) ||
+      (state.providerPaymentId ?? null) === filter.providerPaymentId) &&
+    (!filter.status || filter.status.$in.includes(state.status));
+  /** Chainable like a Mongoose query: awaitable, with .sort(). */
+  const query = <T>(value: T) =>
+    Object.assign(Promise.resolve(value), {
+      sort: () => Promise.resolve(value),
+    });
   const model = {
     state,
-    findOne: jest.fn(() =>
-      Promise.resolve({ ...state, save: jest.fn(() => Promise.resolve()) }),
+    findOne: jest.fn((filter: Parameters<typeof matches>[0]) =>
+      query(matches(filter) ? snapshot() : null),
     ),
+    findById: jest.fn(() => Promise.resolve(snapshot())),
     findOneAndUpdate: jest.fn(
       (
         filter: { status: { $nin: PaymentStatus[] } },
@@ -250,5 +274,76 @@ describe('PaymentTransactionService.verifyPaymentStatus', () => {
       status: 400,
       message: 'Payment orderId metadata is invalid',
     });
+  });
+});
+
+describe('PaymentTransactionService late payments', () => {
+  const lateSetup = (status: PaymentStatus) => {
+    const model = fakeTransactionModel({
+      status,
+      providerPaymentId: undefined,
+    });
+    const eventEmitter = { emit: jest.fn() };
+    const payment = paidPayment({
+      metadata: { orderId: model.state.orderId.toString() },
+    });
+    const service = new PaymentTransactionService(
+      model as never,
+      { findById: () => Promise.resolve({ status: 'expired' }) } as never,
+      {
+        getMoyasarProvider: () => ({
+          fetchPayment: () => Promise.resolve(payment),
+        }),
+      } as never,
+      eventEmitter as never,
+    );
+    return { model, eventEmitter, service, payment };
+  };
+
+  it.each([PaymentStatus.EXPIRED, PaymentStatus.CANCELLED])(
+    'records a capture that arrives after the transaction was %s',
+    async (status) => {
+      const { model, eventEmitter, service } = lateSetup(status);
+
+      const result = await service.verifyPaymentStatus('pay_1');
+
+      expect(model.state.status).toBe(PaymentStatus.PAID);
+      expect(model.state.providerPaymentId).toBe('pay_1');
+      expect(result.paymentStatus).toBe(PaymentStatus.PAID);
+      // The order handler flags the order for manual refund/review.
+      expect(eventEmitter.emit).toHaveBeenCalledTimes(1);
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'payment.succeeded',
+        expect.objectContaining({ orderId: model.state.orderId.toString() }),
+      );
+    },
+  );
+
+  it('does not touch an expired transaction for a failed payment', async () => {
+    const { model, eventEmitter, service, payment } = lateSetup(
+      PaymentStatus.EXPIRED,
+    );
+    payment.status = 'failed';
+
+    await service.verifyPaymentStatus('pay_1');
+
+    expect(model.state.status).toBe(PaymentStatus.EXPIRED);
+    expect(eventEmitter.emit).not.toHaveBeenCalled();
+  });
+
+  it('does not relink an expired transaction already tied to another payment', async () => {
+    const model = fakeTransactionModel({
+      status: PaymentStatus.EXPIRED,
+      providerPaymentId: 'pay_other',
+    });
+    const { service, eventEmitter } = createService(model);
+
+    await service.processMoyasarWebhook(
+      paidPayment({ metadata: { orderId: model.state.orderId.toString() } }),
+    );
+
+    expect(model.state.status).toBe(PaymentStatus.EXPIRED);
+    expect(model.state.providerPaymentId).toBe('pay_other');
+    expect(eventEmitter.emit).not.toHaveBeenCalled();
   });
 });
