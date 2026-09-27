@@ -43,13 +43,21 @@ export function normalizeCurrency(currency: unknown): string {
   return code === 'ر.س' || code === 'ر.س.' ? 'SAR' : code;
 }
 
-/** Converts a major-unit amount (e.g. 100.5 SAR) to Moyasar's integer minor units. */
-export function toMinorUnits(amount: number, currency: string): number {
+function minorUnitFactor(currency: string): number {
   const code = normalizeCurrency(currency);
-  const factor = THREE_DECIMAL_CURRENCIES.has(code)
+  return THREE_DECIMAL_CURRENCIES.has(code)
     ? 1000
     : ZERO_DECIMAL_CURRENCIES.has(code)
       ? 1
       : 100;
-  return Math.round(amount * factor);
+}
+
+/** Converts a major-unit amount (e.g. 100.5 SAR) to Moyasar's integer minor units. */
+export function toMinorUnits(amount: number, currency: string): number {
+  return Math.round(amount * minorUnitFactor(currency));
+}
+
+/** Converts Moyasar's integer minor units back to a major-unit amount. */
+export function fromMinorUnits(minorUnits: number, currency: string): number {
+  return minorUnits / minorUnitFactor(currency);
 }

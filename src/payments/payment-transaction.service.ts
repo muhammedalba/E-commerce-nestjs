@@ -18,7 +18,12 @@ import {
   PaymentFailureCategory,
 } from './shared/utils/payment-failure.util';
 import { PaymentProvider } from './shared/enums/payment-provider.enum';
-import { normalizeCurrency, toMinorUnits } from './shared/utils/currency.util';
+import {
+  fromMinorUnits,
+  normalizeCurrency,
+  toMinorUnits,
+} from './shared/utils/currency.util';
+import { PaymentRefundedEvent } from './shared/types/payment-events';
 import { PaymentProviderFactory } from './providers/payment-provider.factory';
 import { Order } from 'src/order/shared/schemas/Order.schema';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -238,6 +243,75 @@ export class PaymentTransactionService {
   }
 
   /**
+   * Records a refund (or void) made in the Moyasar dashboard on the paid
+   * transaction and emits payment.refunded once per new refunded total.
+   *
+   * Moyasar reports status `refunded` for both full and partial refunds, with
+   * the cumulative amount in `refunded` (minor units); a void is always full.
+   * The update only matches while the stored total is lower, so the webhook,
+   * verify polling and redeliveries record each refund exactly once, and a
+   * second partial refund raises the total.
+   */
+  async processMoyasarRefund(payment: Record<string, unknown>): Promise<void> {
+    const providerPaymentId = payment.id as string;
+    const transaction = await this.transactionModel.findOne({
+      providerPaymentId,
+    });
+    if (!transaction) {
+      this.logger.warn(
+        `Refund received for unknown Moyasar payment ${providerPaymentId}`,
+      );
+      return;
+    }
+
+    const paidMinorUnits = Number(payment.amount);
+    const refundedMinorUnits =
+      payment.status === 'voided'
+        ? paidMinorUnits
+        : Number(payment.refunded ?? paidMinorUnits);
+    if (!(refundedMinorUnits > 0)) return;
+
+    const isFull = refundedMinorUnits >= paidMinorUnits;
+    const currency = transaction.currency || 'SAR';
+    const refundedAmount = fromMinorUnits(refundedMinorUnits, currency);
+
+    const updated = await this.transactionModel.findOneAndUpdate(
+      {
+        _id: transaction._id,
+        status: {
+          $in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
+        },
+        $or: [
+          { refundedAmount: { $exists: false } },
+          { refundedAmount: null },
+          { refundedAmount: { $lt: refundedAmount } },
+        ],
+      },
+      {
+        $set: {
+          status: isFull
+            ? PaymentStatus.REFUNDED
+            : PaymentStatus.PARTIALLY_REFUNDED,
+          refundedAmount,
+          refundedAt: new Date(),
+        },
+      },
+      { new: true },
+    );
+    if (!updated) return; // already recorded, or the transaction was never paid
+
+    const event: PaymentRefundedEvent = {
+      orderId: updated.orderId.toString(),
+      userId: updated.userId?.toString(),
+      transactionId: updated._id.toString(),
+      refundedAmount,
+      currency,
+      isFull,
+    };
+    this.eventEmitter.emit('payment.refunded', event);
+  }
+
+  /**
    * Fails a transaction whose payment does not match it (amount or currency)
    * and emits payment.failed, so the order is cancelled and its reserved stock
    * released instead of staying pending until the customer checks out again.
@@ -327,6 +401,14 @@ export class PaymentTransactionService {
 
     if (!transaction) {
       throw new NotFoundException('Payment transaction not found in database');
+    }
+
+    // Refunds and voids are made in the Moyasar dashboard; sync them here
+    // (the payment_refunded / payment_voided webhooks come through here too).
+    if (payment.status === 'refunded' || payment.status === 'voided') {
+      await this.processMoyasarRefund(payment);
+      transaction =
+        (await this.transactionModel.findById(transaction._id)) ?? transaction;
     }
 
     // Actively process it if status is not final

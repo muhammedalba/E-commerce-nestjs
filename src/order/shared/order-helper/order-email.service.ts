@@ -81,4 +81,38 @@ export class OrderEmailService {
       );
     }
   }
+
+  /**
+   * Tells the customer about a refund made in the Moyasar dashboard. Queued;
+   * a failure is logged, not thrown: the refund is already recorded.
+   */
+  async sendRefundEmail(refund: {
+    email: string;
+    orderId: string;
+    refundedAmount: number;
+    currency: string;
+    isFull: boolean;
+    cancelled: boolean;
+  }) {
+    const lang = process.env.DEFAULT_LANGUAGE || 'ar';
+    try {
+      await this.mailQueue.add('order-refunded', {
+        ...refund,
+        refundedAmount: refund.refundedAmount.toString(),
+        orderUrl: `${process.env.CLIENT_URL}/${lang}/account/orders/${refund.orderId}`,
+        subject: this.i18n.translate(
+          refund.isFull
+            ? 'email.ORDER_REFUNDED_SUBJECT'
+            : 'email.ORDER_PARTIALLY_REFUNDED_SUBJECT',
+          { lang },
+        ),
+        lang,
+      });
+    } catch (err) {
+      this.logger.error(
+        `Failed to queue refund email for order ${refund.orderId}`,
+        err,
+      );
+    }
+  }
 }

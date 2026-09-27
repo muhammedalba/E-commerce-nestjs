@@ -125,6 +125,13 @@ export class Order extends Document {
   @Prop({ type: String, default: undefined })
   declare paymentStatus: PaymentStatus;
 
+  /** Total refunded through the payment provider, in major units. */
+  @Prop({ type: Number, default: undefined })
+  declare refundedAmount: number;
+
+  @Prop({ type: Date, default: undefined })
+  declare refundedAt: Date;
+
   @Prop({ type: Date, default: undefined })
   declare completedAt: Date;
 

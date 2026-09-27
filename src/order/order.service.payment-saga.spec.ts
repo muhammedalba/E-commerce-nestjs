@@ -219,3 +219,137 @@ describe('OrderService Moyasar payment saga', () => {
     );
   });
 });
+
+describe('OrderService payment.refunded (Moyasar dashboard refunds)', () => {
+  const setup = (previousOrder: Record<string, unknown> | null) => {
+    const ctx = createService();
+    const OrderModel = ctx.OrderModel as Record<string, jest.Mock>;
+    OrderModel.findOneAndUpdate = jest.fn(() => query(previousOrder));
+    OrderModel.updateOne = jest.fn(() => Promise.resolve());
+    OrderModel.findById = jest.fn(() => query({ user: 'u1' }));
+    (ctx.UserModel as Record<string, jest.Mock>).findById = jest.fn(() =>
+      query({ email: 'a@b.c' }),
+    );
+    const releaseCouponUsage = jest.fn(() => Promise.resolve(true));
+    (ctx.couponHelperService as Record<string, jest.Mock>).releaseCouponUsage =
+      releaseCouponUsage;
+    const sendRefundEmail = jest.fn(() => Promise.resolve());
+    const orderEmailService = (
+      ctx.service as unknown as { orderEmailService: Record<string, jest.Mock> }
+    ).orderEmailService;
+    orderEmailService.sendRefundEmail = sendRefundEmail;
+    return { ...ctx, OrderModel, releaseCouponUsage, sendRefundEmail };
+  };
+  const event = (isFull: boolean, refundedAmount = 100) => ({
+    orderId: new Types.ObjectId().toString(),
+    transactionId: 't1',
+    refundedAmount,
+    currency: 'SAR',
+    isFull,
+  });
+
+  it('full refund before shipping: cancels, restocks the deducted stock, releases the coupon, emails', async () => {
+    const couponId = new Types.ObjectId();
+    const {
+      service,
+      OrderModel,
+      productHelperService,
+      releaseCouponUsage,
+      sendRefundEmail,
+    } = setup({
+      items,
+      user: 'u1',
+      couponId,
+      paymentMethodCode: 'moyasar',
+      paymentStatus: 'PAID',
+    });
+    const payload = event(true);
+
+    await service.handlePaymentRefunded(payload);
+
+    expect(OrderModel.findOneAndUpdate).toHaveBeenCalledWith(
+      {
+        _id: payload.orderId,
+        status: {
+          $in: [
+            OrderStatus.PENDING_PAYMENT,
+            OrderStatus.PENDING,
+            OrderStatus.PROCESSING,
+          ],
+        },
+      },
+      {
+        $set: expect.objectContaining({
+          status: OrderStatus.CANCELLED,
+          paymentStatus: 'REFUNDED',
+          refundedAmount: 100,
+        }) as unknown,
+      },
+      { new: false },
+    );
+    expect(productHelperService.restockOrderItems).toHaveBeenCalledWith(
+      items,
+      'deducted',
+    );
+    expect(releaseCouponUsage).toHaveBeenCalledWith(couponId, 'u1');
+    expect(OrderModel.updateOne).not.toHaveBeenCalled();
+    expect(sendRefundEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'a@b.c',
+        isFull: true,
+        cancelled: true,
+      }),
+    );
+  });
+
+  it('full refund after shipping: records REFUNDED only, no restock or coupon', async () => {
+    const {
+      service,
+      OrderModel,
+      productHelperService,
+      releaseCouponUsage,
+      sendRefundEmail,
+    } = setup(null); // conditional cancel matched nothing: shipped/delivered/closed
+    const payload = event(true);
+
+    await service.handlePaymentRefunded(payload);
+
+    expect(OrderModel.updateOne).toHaveBeenCalledWith(
+      { _id: payload.orderId },
+      {
+        $set: expect.objectContaining({
+          paymentStatus: 'REFUNDED',
+          refundedAmount: 100,
+        }) as unknown,
+      },
+    );
+    expect(productHelperService.restockOrderItems).not.toHaveBeenCalled();
+    expect(releaseCouponUsage).not.toHaveBeenCalled();
+    expect(sendRefundEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ isFull: true, cancelled: false }),
+    );
+  });
+
+  it('partial refund: records PARTIALLY_REFUNDED and the total, the order goes on', async () => {
+    const { service, OrderModel, productHelperService, sendRefundEmail } =
+      setup(null);
+    const payload = event(false, 25);
+
+    await service.handlePaymentRefunded(payload);
+
+    expect(OrderModel.findOneAndUpdate).not.toHaveBeenCalled();
+    expect(OrderModel.updateOne).toHaveBeenCalledWith(
+      { _id: payload.orderId },
+      {
+        $set: expect.objectContaining({
+          paymentStatus: 'PARTIALLY_REFUNDED',
+          refundedAmount: 25,
+        }) as unknown,
+      },
+    );
+    expect(productHelperService.restockOrderItems).not.toHaveBeenCalled();
+    expect(sendRefundEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ isFull: false, cancelled: false }),
+    );
+  });
+});

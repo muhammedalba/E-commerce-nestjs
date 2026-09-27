@@ -10,6 +10,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PaymentTransactionService } from './payment-transaction.service';
+import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { WebhookMoyasarDto } from './shared/dto/webhook-moyasar.dto';
 import {
@@ -80,11 +81,11 @@ export class PaymentTransactionsController {
   @UseGuards(AuthGuard)
   linkMoyasarPayment(
     @Body() { paymentId }: LinkMoyasarPaymentDto,
-    @Request() req: { user: { _id: string } },
+    @Request() req: { user: JwtPayload },
   ) {
     return this.paymentTransactionService.linkMoyasarPayment(
       paymentId,
-      String(req.user._id),
+      req.user.user_id,
     );
   }
 
@@ -95,10 +96,10 @@ export class PaymentTransactionsController {
   @UseGuards(AuthGuard)
   retryPayment(
     @Param() { orderId }: RetryPaymentParamDto,
-    @Request() req: { user: { _id: string; email: string } },
+    @Request() req: { user: JwtPayload },
   ) {
-    const userId = String(req.user._id);
-    const userEmail = String(req.user.email);
+    const userId = req.user.user_id;
+    const userEmail = req.user.email;
     return this.paymentTransactionService.retryPayment(
       orderId,
       userId,

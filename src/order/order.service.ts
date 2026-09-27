@@ -29,6 +29,7 @@ import { withBaseUrl } from 'src/shared/utils/with-base-url.util';
 import { FileAsset } from 'src/shared/schema/file-asset.schema';
 import { OrderStatus } from './shared/enums/order-status.enum';
 import { PaymentStatus } from 'src/payments/shared/enums/payment-status.enum';
+import { PaymentRefundedEvent } from 'src/payments/shared/types/payment-events';
 
 /** Final statuses whose stock has been given back to inventory. */
 const CLOSED_ORDER_STATUSES: string[] = [
@@ -367,6 +368,7 @@ export class OrderService {
         'items status paymentStatus paymentMethodCode paymentMethod shippingMethod ' +
           'shippingAddress shippingProviderId shippingRateId shippingAmount taxAmount ' +
           'paymentFees grandTotal totalPrice totalQuantity discountAmount currency ' +
+          'refundedAmount refundedAt ' +
           'couponId couponCode transferReceiptImg InvoicePdf DeliveryReceiptImage ' +
           'deliveryReceiptNumber deliveryDate deliveryName invoiceNumber ' +
           'customerServiceContact DeliveryVerificationCode ' +
@@ -1102,6 +1104,117 @@ export class OrderService {
       const error = err as Error;
       this.logger.error(
         `payment.succeeded failed for order ${payload.orderId}: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
+  /* ================================================ */
+  /*  SAGA: PAYMENT REFUNDED (Moyasar dashboard)      */
+  /* ================================================ */
+  /**
+   * Applies a refund made in the Moyasar dashboard to the order:
+   * - partial: recorded only (PARTIALLY_REFUNDED + amount), the order goes on;
+   * - full, not shipped yet: the order is cancelled, its stock returned and
+   *   its coupon released for the customer;
+   * - full, already shipped/delivered (or closed): recorded only (REFUNDED);
+   *   goods coming back are restocked by hand when received.
+   * The customer is emailed in every case. The cancel is a conditional flip,
+   * so stock and coupon are returned at most once.
+   */
+  @OnEvent('payment.refunded', { async: true })
+  async handlePaymentRefunded(payload: PaymentRefundedEvent) {
+    this.logger.log(`Handling payment.refunded for order ${payload.orderId}`);
+    try {
+      const refund = {
+        refundedAmount: payload.refundedAmount,
+        refundedAt: new Date(),
+      };
+      let cancelled = false;
+
+      if (payload.isFull) {
+        const previous = await this.OrderModel.findOneAndUpdate(
+          {
+            _id: payload.orderId,
+            status: {
+              $in: [
+                OrderStatus.PENDING_PAYMENT,
+                OrderStatus.PENDING,
+                OrderStatus.PROCESSING,
+              ],
+            },
+          },
+          {
+            $set: {
+              status: OrderStatus.CANCELLED,
+              paymentStatus: PaymentStatus.REFUNDED,
+              ...refund,
+              ...this.buildStatusTimestamps('cancelled'),
+            },
+          },
+          { new: false },
+        )
+          .select('items user couponId paymentMethodCode paymentStatus')
+          .lean();
+
+        if (previous) {
+          cancelled = true;
+          // Same rule as restockCancelledOrder: a paid Moyasar order deducted
+          // its stock (confirmReservation); an unpaid one only reserved it.
+          const mode =
+            previous.paymentMethodCode === 'moyasar' &&
+            previous.paymentStatus !== PaymentStatus.PAID &&
+            previous.paymentStatus !== PaymentStatus.PARTIALLY_REFUNDED
+              ? 'reserved'
+              : 'deducted';
+          await this.productHelperService.restockOrderItems(
+            previous.items,
+            mode,
+          );
+          if (previous.couponId) {
+            await this.couponHelperService.releaseCouponUsage(
+              new Types.ObjectId(String(previous.couponId)),
+              String(previous.user),
+            );
+          }
+        } else {
+          await this.OrderModel.updateOne(
+            { _id: payload.orderId },
+            { $set: { paymentStatus: PaymentStatus.REFUNDED, ...refund } },
+          );
+        }
+      } else {
+        await this.OrderModel.updateOne(
+          { _id: payload.orderId },
+          {
+            $set: {
+              paymentStatus: PaymentStatus.PARTIALLY_REFUNDED,
+              ...refund,
+            },
+          },
+        );
+      }
+
+      const order = await this.OrderModel.findById(payload.orderId)
+        .select('user')
+        .lean();
+      const user = order
+        ? await this.UserModel.findById(order.user).select('email').lean()
+        : null;
+      if (user?.email) {
+        await this.orderEmailService.sendRefundEmail({
+          email: user.email,
+          orderId: payload.orderId,
+          refundedAmount: payload.refundedAmount,
+          currency: payload.currency,
+          isFull: payload.isFull,
+          cancelled,
+        });
+      }
+    } catch (err: unknown) {
+      const error = err as Error;
+      this.logger.error(
+        `payment.refunded failed for order ${payload.orderId}: ${error.message}`,
         error.stack,
       );
     }

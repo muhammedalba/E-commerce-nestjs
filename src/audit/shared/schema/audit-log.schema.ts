@@ -12,6 +12,7 @@ export enum AuditAction {
   LOGOUT = 'LOGOUT',
   ORDER_PLACED = 'ORDER_PLACED',
   PAYMENT_RECEIVED = 'PAYMENT_RECEIVED',
+  PAYMENT_REFUNDED = 'PAYMENT_REFUNDED',
 }
 
 @Schema({ timestamps: true })

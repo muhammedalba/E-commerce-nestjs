@@ -93,6 +93,19 @@ interface ExchangeRateSyncFailedJobData {
   lang?: string;
 }
 
+interface OrderRefundedJobData {
+  email: string;
+  orderId: string;
+  refundedAmount: string;
+  currency: string;
+  isFull: boolean;
+  /** The refund cancelled the order (full refund before shipping). */
+  cancelled: boolean;
+  orderUrl: string;
+  subject: string;
+  lang?: string;
+}
+
 interface AdminRoleNotificationJobData {
   roleId: string;
   action: string;
@@ -112,6 +125,7 @@ type MailJob =
       MailJobResult,
       'exchange-rate-sync-failed'
     >
+  | Job<OrderRefundedJobData, MailJobResult, 'order-refunded'>
   | Job<AdminRoleNotificationJobData, MailJobResult, 'admin-role-notification'>;
 
 type MailJobResult = Record<string, never>;
@@ -316,6 +330,10 @@ export class MailProcessor extends WorkerHost {
           subject,
           lang,
         );
+        return {};
+      }
+      case 'order-refunded': {
+        await this.emailService.send_order_refunded(job.data);
         return {};
       }
       case 'admin-role-notification': {

@@ -491,3 +491,165 @@ describe('PaymentTransactionService.retryPayment', () => {
     );
   });
 });
+
+describe('PaymentTransactionService.processMoyasarRefund', () => {
+  /** Paid transaction; the conditional update mimics the status + "higher total" filter. */
+  const refundModel = (initial: Record<string, unknown> = {}) => {
+    const state: Record<string, unknown> = {
+      _id: new Types.ObjectId(),
+      orderId: new Types.ObjectId(),
+      userId: new Types.ObjectId(),
+      currency: 'SAR',
+      status: PaymentStatus.PAID,
+      providerPaymentId: 'pay_1',
+      refundedAmount: undefined,
+      ...initial,
+    };
+    return {
+      state,
+      findOne: jest.fn((filter: { providerPaymentId: string }) =>
+        Promise.resolve(
+          filter.providerPaymentId === state.providerPaymentId
+            ? { ...state }
+            : null,
+        ),
+      ),
+      findOneAndUpdate: jest.fn(
+        (
+          filter: { status: { $in: PaymentStatus[] } },
+          update: { $set: { refundedAmount: number } },
+        ) => {
+          const current = state.refundedAmount as number | undefined;
+          if (
+            !filter.status.$in.includes(state.status as PaymentStatus) ||
+            (current != null && current >= update.$set.refundedAmount)
+          ) {
+            return Promise.resolve(null);
+          }
+          Object.assign(state, update.$set);
+          return Promise.resolve({ ...state });
+        },
+      ),
+    };
+  };
+  const setup = (initial?: Record<string, unknown>) => {
+    const model = refundModel(initial);
+    const eventEmitter = { emit: jest.fn() };
+    const service = new PaymentTransactionService(
+      model as never,
+      {} as never,
+      {} as never,
+      eventEmitter as never,
+    );
+    return { model, eventEmitter, service };
+  };
+  const refunded = (refundedMinor: number, status = 'refunded') => ({
+    id: 'pay_1',
+    status,
+    amount: 10000,
+    refunded: refundedMinor,
+  });
+
+  it('records a full refund once, even when webhook and polling race', async () => {
+    const { model, eventEmitter, service } = setup();
+
+    await Promise.all([
+      service.processMoyasarRefund(refunded(10000)),
+      service.processMoyasarRefund(refunded(10000)),
+    ]);
+
+    expect(model.state.status).toBe(PaymentStatus.REFUNDED);
+    expect(model.state.refundedAmount).toBe(100);
+    expect(eventEmitter.emit).toHaveBeenCalledTimes(1);
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      'payment.refunded',
+      expect.objectContaining({
+        refundedAmount: 100,
+        currency: 'SAR',
+        isFull: true,
+      }),
+    );
+  });
+
+  it('records partial refunds as the cumulative total rises, ignoring redeliveries', async () => {
+    const { model, eventEmitter, service } = setup();
+
+    await service.processMoyasarRefund(refunded(2500));
+    await service.processMoyasarRefund(refunded(2500)); // redelivery
+    await service.processMoyasarRefund(refunded(6000)); // second refund, total 60
+
+    expect(model.state.status).toBe(PaymentStatus.PARTIALLY_REFUNDED);
+    expect(model.state.refundedAmount).toBe(60);
+    expect(
+      eventEmitter.emit.mock.calls.map(
+        ([, p]) => p as { refundedAmount: number; isFull: boolean },
+      ),
+    ).toEqual([
+      expect.objectContaining({ refundedAmount: 25, isFull: false }),
+      expect.objectContaining({ refundedAmount: 60, isFull: false }),
+    ]);
+  });
+
+  it('treats a void as a full refund', async () => {
+    const { model, eventEmitter, service } = setup();
+
+    await service.processMoyasarRefund(refunded(0, 'voided'));
+
+    expect(model.state.status).toBe(PaymentStatus.REFUNDED);
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      'payment.refunded',
+      expect.objectContaining({ refundedAmount: 100, isFull: true }),
+    );
+  });
+
+  it('ignores a refund for a transaction that was never paid', async () => {
+    const { model, eventEmitter, service } = setup({
+      status: PaymentStatus.PENDING,
+    });
+
+    await service.processMoyasarRefund(refunded(10000));
+
+    expect(model.state.status).toBe(PaymentStatus.PENDING);
+    expect(eventEmitter.emit).not.toHaveBeenCalled();
+  });
+
+  it('is reached from verifyPaymentStatus, which the refund webhooks go through', async () => {
+    const orderId = new Types.ObjectId();
+    const txQuery = {
+      sort: () =>
+        Promise.resolve({ _id: 't1', orderId, status: PaymentStatus.PAID }),
+    };
+    const service = new PaymentTransactionService(
+      {
+        findOne: () => txQuery,
+        findById: () =>
+          Promise.resolve({
+            _id: 't1',
+            orderId,
+            status: PaymentStatus.REFUNDED,
+            amount: 100,
+            currency: 'SAR',
+          }),
+      } as never,
+      { findById: () => Promise.resolve({ status: 'cancelled' }) } as never,
+      {
+        getMoyasarProvider: () => ({
+          fetchPayment: () =>
+            Promise.resolve({
+              ...refunded(10000),
+              metadata: { orderId: orderId.toString() },
+            }),
+        }),
+      } as never,
+      { emit: jest.fn() } as never,
+    );
+    const processRefund = jest
+      .spyOn(service, 'processMoyasarRefund')
+      .mockResolvedValue();
+
+    const result = await service.verifyPaymentStatus('pay_1');
+
+    expect(processRefund).toHaveBeenCalledTimes(1);
+    expect(result.paymentStatus).toBe(PaymentStatus.REFUNDED);
+  });
+});

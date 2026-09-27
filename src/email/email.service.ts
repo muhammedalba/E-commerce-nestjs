@@ -1,10 +1,30 @@
 import { Injectable } from '@nestjs/common';
-import { MailerService } from '@nestjs-modules/mailer';
+import { ISendMailOptions, MailerService } from '@nestjs-modules/mailer';
+import { existsSync } from 'fs';
+import * as path from 'path';
 import { I18nContext } from 'nestjs-i18n';
 
 @Injectable()
 export class EmailService {
   constructor(private readonly mailerService: MailerService) {}
+
+  /**
+   * Sends through the mailer after checking the template file exists. The
+   * handlebars adapter reads it synchronously inside a nodemailer callback, so
+   * a missing file (new template not copied to dist, unexpected lang) was an
+   * uncaught exception that killed the whole server. Now it is a normal error:
+   * the mail job fails, is retried and reported like any other failure.
+   */
+  private async sendMail(options: ISendMailOptions): Promise<void> {
+    if (options.template) {
+      // Same directory as the MailerModule template.dir (email.module.ts).
+      const file = path.join(__dirname, 'templates', `${options.template}.hbs`);
+      if (!existsSync(file)) {
+        throw new Error(`Email template not found: ${options.template}.hbs`);
+      }
+    }
+    await this.mailerService.sendMail(options);
+  }
   /**
    * Sends a verification code to the user's email address.
    * @param to - The recipient's email address.
@@ -29,7 +49,7 @@ export class EmailService {
       `📧 Attempting to send [sendRandomCode] to: ${to} | Lang: ${resolvedLang} | Template: ${template}`,
     );
 
-    await this.mailerService.sendMail({
+    await this.sendMail({
       to,
       template,
       subject,
@@ -58,7 +78,7 @@ export class EmailService {
       `📧 Attempting to send [send_reset_password_success] to: ${to} | Lang: ${resolvedLang} | Template: ${template}`,
     );
 
-    await this.mailerService.sendMail({
+    await this.sendMail({
       to,
       subject,
       template,
@@ -104,7 +124,7 @@ export class EmailService {
       `📧 Attempting to send [new_admin_order] to Admin: ${adminEmail} | Lang: ${resolvedLang} | Template: ${template}`,
     );
 
-    await this.mailerService.sendMail({
+    await this.sendMail({
       to: adminEmail,
       subject,
       template,
@@ -144,7 +164,7 @@ export class EmailService {
       `📧 Attempting to send [send_inventory_alert] to: ${to} | Lang: ${resolvedLang} | Template: ${template}`,
     );
 
-    await this.mailerService.sendMail({
+    await this.sendMail({
       to,
       subject,
       template,
@@ -182,7 +202,7 @@ export class EmailService {
       `📧 Attempting to send [send_contact_admin_notification] to Admin: ${adminEmail} | Lang: ${resolvedLang} | Template: ${template}`,
     );
 
-    await this.mailerService.sendMail({
+    await this.sendMail({
       to: adminEmail,
       replyTo: email,
       subject,
@@ -215,7 +235,7 @@ export class EmailService {
       `📧 Attempting to send [send_contact_confirmation] to: ${to} | Lang: ${resolvedLang} | Template: ${template}`,
     );
 
-    await this.mailerService.sendMail({
+    await this.sendMail({
       to,
       subject,
       template,
@@ -252,7 +272,7 @@ export class EmailService {
       `📧 Attempting to send [send_quote_request_admin_notification] to Admin: ${adminEmail} | Lang: ${resolvedLang} | Template: ${template}`,
     );
 
-    await this.mailerService.sendMail({
+    await this.sendMail({
       to: adminEmail,
       replyTo: emails[0],
       subject,
@@ -290,7 +310,7 @@ export class EmailService {
       `📧 Attempting to send [send_quote_request_confirmation] to: ${to.join(', ')} | Lang: ${resolvedLang} | Template: ${template}`,
     );
 
-    await this.mailerService.sendMail({
+    await this.sendMail({
       to,
       subject,
       template,
@@ -318,7 +338,7 @@ export class EmailService {
       'ar';
     const template = `exchange-rate-alert-${resolvedLang}`;
 
-    await this.mailerService.sendMail({
+    await this.sendMail({
       to,
       subject,
       template,
@@ -328,6 +348,41 @@ export class EmailService {
         currencyCode,
         consecutiveFailures,
         reason,
+        year: new Date().getFullYear(),
+        companyName: process.env.APP_NAME,
+      },
+    });
+  }
+
+  /**
+   * Tells the customer about a refund made in the Moyasar dashboard (full or
+   * partial, and whether it cancelled the order).
+   */
+  async send_order_refunded(refund: {
+    email: string;
+    orderId: string;
+    refundedAmount: string;
+    currency: string;
+    isFull: boolean;
+    cancelled: boolean;
+    orderUrl: string;
+    subject: string;
+    lang?: string;
+  }): Promise<void> {
+    const resolvedLang = refund.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
+
+    await this.sendMail({
+      to: refund.email,
+      subject: refund.subject,
+      template: `order-refunded-${resolvedLang}`,
+      context: {
+        subject: refund.subject,
+        orderId: refund.orderId,
+        refundedAmount: refund.refundedAmount,
+        currency: refund.currency,
+        isFull: refund.isFull,
+        cancelled: refund.cancelled,
+        orderUrl: refund.orderUrl,
         year: new Date().getFullYear(),
         companyName: process.env.APP_NAME,
       },
@@ -361,7 +416,7 @@ export class EmailService {
       `📧 Attempting to send [send_job_failure_alert] to Admin: ${adminEmail} | Lang: ${resolvedLang} | Template: ${template}`,
     );
 
-    await this.mailerService.sendMail({
+    await this.sendMail({
       to: adminEmail,
       subject,
       template,

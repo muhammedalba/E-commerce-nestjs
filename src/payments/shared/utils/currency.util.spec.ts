@@ -1,4 +1,8 @@
-import { normalizeCurrency, toMinorUnits } from './currency.util';
+import {
+  fromMinorUnits,
+  normalizeCurrency,
+  toMinorUnits,
+} from './currency.util';
 
 describe('currency.util', () => {
   it.each([
@@ -21,5 +25,16 @@ describe('currency.util', () => {
     expect(normalizeCurrency(' sar ')).toBe('SAR');
     expect(normalizeCurrency('ر.س.')).toBe('SAR');
     expect(normalizeCurrency(undefined)).toBe('');
+  });
+});
+
+describe('fromMinorUnits', () => {
+  it.each([
+    [10000, 'SAR', 100],
+    [2550, 'SAR', 25.5],
+    [12345, 'KWD', 12.345],
+    [1500, 'JPY', 1500],
+  ])('%d %s → %d', (minor, currency, expected) => {
+    expect(fromMinorUnits(minor, currency)).toBe(expected);
   });
 });

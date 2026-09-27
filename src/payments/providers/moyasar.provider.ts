@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   Logger,
   ServiceUnavailableException,
@@ -137,6 +138,55 @@ export class MoyasarProvider implements IPaymentProvider {
         `Failed to fetch Moyasar payment ${paymentId}: ${error.message}`,
       );
       if (error.response?.status === 404) return null;
+      throw new ServiceUnavailableException(
+        'Payment provider is temporarily unavailable',
+      );
+    }
+  }
+
+  /**
+   * Refunds a paid payment through the Moyasar API (all of it, or part of it;
+   * several partial refunds are allowed up to the paid amount).
+   *
+   * @param paymentId - The Moyasar payment id.
+   * @param amountMinorUnits - Amount to refund in minor units (e.g. halalas).
+   * @returns The updated payment object (status `refunded`, cumulative `refunded`).
+   * @throws {BadRequestException} When Moyasar rejects the refund (4xx), with its message.
+   * @throws {ServiceUnavailableException} On network errors, timeouts or Moyasar 5xx.
+   */
+  async refundPayment(
+    paymentId: string,
+    amountMinorUnits: number,
+  ): Promise<Record<string, unknown>> {
+    const MOYASAR_SECRET_KEY = await this.getSecretKey();
+    const authHeader = `Basic ${Buffer.from(`${MOYASAR_SECRET_KEY}:`).toString('base64')}`;
+
+    try {
+      const response = await lastValueFrom(
+        this.httpService.post(
+          `https://api.moyasar.com/v1/payments/${encodeURIComponent(paymentId)}/refund`,
+          { amount: amountMinorUnits },
+          { headers: { Authorization: authHeader } },
+        ),
+      );
+      return response.data as Record<string, unknown>;
+    } catch (err: unknown) {
+      const error = err as Error & {
+        response?: { status?: number; data?: { message?: unknown } };
+      };
+      const status = error.response?.status;
+      const providerMessage =
+        typeof error.response?.data?.message === 'string'
+          ? error.response.data.message
+          : undefined;
+      this.logger.error(
+        `Moyasar refund failed for payment ${paymentId} (${status ?? 'no response'}): ${providerMessage ?? error.message}`,
+      );
+      if (status && status >= 400 && status < 500) {
+        throw new BadRequestException(
+          `Moyasar rejected the refund${providerMessage ? `: ${providerMessage}` : ''}`,
+        );
+      }
       throw new ServiceUnavailableException(
         'Payment provider is temporarily unavailable',
       );

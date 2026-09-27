@@ -65,3 +65,32 @@ describe('PaymentTransactionsController.handleMoyasarWebhook', () => {
     await expect(controller.handleMoyasarWebhook(payload)).rejects.toBe(error);
   });
 });
+
+describe('PaymentTransactionsController reads the caller from the JWT payload', () => {
+  // AuthGuard sets request.user to the JwtPayload: the id is `user_id`, not `_id`.
+  const req = { user: { user_id: 'u1', email: 'a@b.c' } } as never;
+
+  it('links the payment for req.user.user_id', async () => {
+    const linkMoyasarPayment = jest.fn(() => Promise.resolve({ linked: true }));
+    const controller = new PaymentTransactionsController(
+      { linkMoyasarPayment } as never,
+      {} as never,
+    );
+
+    await controller.linkMoyasarPayment({ paymentId: 'pay_1' }, req);
+
+    expect(linkMoyasarPayment).toHaveBeenCalledWith('pay_1', 'u1');
+  });
+
+  it('retries for req.user.user_id and email', async () => {
+    const retryPayment = jest.fn(() => Promise.resolve({ paymentUrl: 'u' }));
+    const controller = new PaymentTransactionsController(
+      { retryPayment } as never,
+      {} as never,
+    );
+
+    await controller.retryPayment({ orderId: 'o1' }, req);
+
+    expect(retryPayment).toHaveBeenCalledWith('o1', 'u1', 'a@b.c');
+  });
+});

@@ -189,4 +189,22 @@ export class CouponHelperService {
       );
     }
   }
+
+  /**
+   * Undoes markCouponAsUsed for an order that was fully refunded before
+   * shipping, so the customer can use the coupon again. Conditional on the
+   * user still being recorded, so repeating it never lowers the count twice.
+   *
+   * @returns Whether a usage was released.
+   */
+  async releaseCouponUsage(
+    couponId: Types.ObjectId,
+    userId: string,
+  ): Promise<boolean> {
+    const coupon = await this.couponModel.findOneAndUpdate(
+      { _id: couponId, usedByUsers: userId, usageCount: { $gt: 0 } },
+      { $pull: { usedByUsers: userId }, $inc: { usageCount: -1 } },
+    );
+    return !!coupon;
+  }
 }

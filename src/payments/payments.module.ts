@@ -21,6 +21,9 @@ import { HttpModule } from '@nestjs/axios';
 import { Order, OrderSchema } from '../order/shared/schemas/Order.schema';
 import { Role, RoleSchema } from '../roles/shared/schemas/role.schema';
 import { PaymentReviewListener } from './payment-review.listener';
+import { PaymentRefundService } from './payment-refund.service';
+import { PaymentRefundsController } from './payment-refunds.controller';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [
@@ -32,10 +35,15 @@ import { PaymentReviewListener } from './payment-review.listener';
     ]),
     AuthModule,
     SettingsModule,
+    AuditModule,
     // Bounded so a hanging Moyasar call cannot hold webhook/verify requests open.
     HttpModule.register({ timeout: 10_000 }),
   ],
-  controllers: [PaymentsController, PaymentTransactionsController],
+  controllers: [
+    PaymentsController,
+    PaymentTransactionsController,
+    PaymentRefundsController,
+  ],
   providers: [
     PaymentsService,
     PaymentTransactionService,
@@ -43,6 +51,7 @@ import { PaymentReviewListener } from './payment-review.listener';
     MoyasarProvider,
     PaymentProviderFactory,
     PaymentReviewListener,
+    PaymentRefundService,
   ],
   exports: [PaymentsService, PaymentTransactionService],
 })

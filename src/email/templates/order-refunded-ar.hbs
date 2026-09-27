@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="utf-8">
+  <title>{{subject}}</title>
+    <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      direction: rtl;
+    }
+    .container {
+      max-width: 600px;
+      margin: 20px auto;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .header {
+      background-color: #6f42c1;
+      color: white;
+      text-align: center;
+      padding: 10px;
+      border-radius: 8px 8px 0 0;
+    }
+    .content {
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .footer {
+      text-align: center;
+      color: #777;
+      font-size: 12px;
+      margin-top: 20px;
+    }
+    .details-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    .details-table th, .details-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: right;
+    }
+    .details-table th {
+      background-color: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>{{#if isFull}}تم استرداد المبلغ{{else}}تم استرداد جزء من المبلغ{{/if}}</h2>
+    </div>
+
+    <div class="content">
+      <p>مرحباً،</p>
+      {{#if cancelled}}
+      <p>تم إلغاء طلبك واسترداد المبلغ المدفوع كاملاً.</p>
+      {{else if isFull}}
+      <p>تم استرداد المبلغ المدفوع لطلبك كاملاً.</p>
+      {{else}}
+      <p>تم استرداد جزء من المبلغ المدفوع لطلبك، ويستمر تنفيذ الطلب كالمعتاد.</p>
+      {{/if}}
+
+      <table class="details-table">
+        <tr>
+          <th>رقم الطلب</th>
+          <td>{{orderId}}</td>
+        </tr>
+        <tr>
+          <th>{{#if isFull}}المبلغ المسترد{{else}}إجمالي المبلغ المسترد حتى الآن{{/if}}</th>
+          <td>{{refundedAmount}} {{currency}}</td>
+        </tr>
+      </table>
+
+      <p>يُعاد المبلغ إلى وسيلة الدفع نفسها، وقد يستغرق ظهوره في حسابك عدة أيام عمل حسب البنك.</p>
+      <p><a href="{{orderUrl}}">عرض الطلب</a></p>
+    </div>
+
+    <div class="footer">
+      <p>&copy; {{year}} {{companyName}}. جميع الحقوق محفوظة.</p>
+    </div>
+  </div>
+</body>
+</html>

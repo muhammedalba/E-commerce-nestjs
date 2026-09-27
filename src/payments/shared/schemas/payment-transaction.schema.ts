@@ -77,6 +77,13 @@ export class PaymentTransaction {
 
   @Prop({ type: Date })
   declare failedAt: Date | undefined;
+
+  /** Total refunded so far, in major units (Moyasar reports the cumulative amount). */
+  @Prop({ type: Number, min: 0 })
+  declare refundedAmount: number | undefined;
+
+  @Prop({ type: Date })
+  declare refundedAt: Date | undefined;
 }
 
 export const PaymentTransactionSchema =

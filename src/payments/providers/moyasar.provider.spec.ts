@@ -134,3 +134,51 @@ describe('MoyasarProvider.verifyWebhook', () => {
     ).resolves.toBe('pay_1');
   });
 });
+
+describe('MoyasarProvider.refundPayment', () => {
+  const providerWithPost = (post: jest.Mock) =>
+    new MoyasarProvider(
+      { post } as never,
+      { findCredentialsByCode: () => Promise.resolve(null) } as never,
+    );
+
+  it('posts the amount in minor units to the payment refund endpoint', async () => {
+    const payment = { id: 'pay_1', status: 'refunded', refunded: 2500 };
+    const post = jest.fn(() => of({ data: payment }));
+
+    await expect(
+      providerWithPost(post).refundPayment('pay_1', 2500),
+    ).resolves.toEqual(payment);
+    expect(post).toHaveBeenCalledWith(
+      'https://api.moyasar.com/v1/payments/pay_1/refund',
+      { amount: 2500 },
+      expect.anything(),
+    );
+  });
+
+  it("turns a Moyasar 4xx into a 400 carrying Moyasar's message", async () => {
+    const post = jest.fn(() =>
+      throwError(() => ({
+        message: '400',
+        response: { status: 400, data: { message: 'Amount exceeds' } },
+      })),
+    );
+
+    await expect(
+      providerWithPost(post).refundPayment('pay_1', 99999),
+    ).rejects.toMatchObject({
+      status: 400,
+      message: 'Moyasar rejected the refund: Amount exceeds',
+    });
+  });
+
+  it('turns network errors and 5xx into a 503', async () => {
+    const post = jest.fn(() =>
+      throwError(() => ({ message: 'timeout of 10000ms exceeded' })),
+    );
+
+    await expect(
+      providerWithPost(post).refundPayment('pay_1', 100),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+});
