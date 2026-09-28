@@ -106,8 +106,6 @@ export class ProductQueryService {
       variants: variantsByProductId.get(product._id.toString()) ?? [],
     }));
 
-    // console.log(this.i18n.localize(data, allLangs));
-
     return {
       results: data.length,
       total,

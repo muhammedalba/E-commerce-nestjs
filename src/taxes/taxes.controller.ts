@@ -46,8 +46,6 @@ export class TaxesController {
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(3600000) // 1 hour
   findAll(@Query() queryString: QueryString) {
-    console.log(queryString);
-
     return this.taxesService.findAll(queryString);
   }
 

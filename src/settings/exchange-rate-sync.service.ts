@@ -254,8 +254,6 @@ export class ExchangeRateSyncService implements OnModuleInit {
     ) {
       return;
     }
-    console.log(this.consecutiveFailures, 'consecutiveFailures');
-
     this.hasNotifiedForCurrentIncident = true;
     try {
       const adminRoles = await this.roleModel
