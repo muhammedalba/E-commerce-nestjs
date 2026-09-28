@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import * as sharp from 'sharp';
+import sharp, { FormatEnum } from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import {
@@ -182,7 +182,7 @@ export class LocalStorageProvider implements IStorageProvider {
         fit: 'inside',
         withoutEnlargement: true,
       })
-      .toFormat(this.IMAGE_FORMAT as keyof sharp.FormatEnum, {
+      .toFormat(this.IMAGE_FORMAT as keyof FormatEnum, {
         quality: this.IMAGE_QUALITY,
       })
       .toFile(outputPath);
