@@ -1,5 +1,5 @@
 import { useContainer } from 'class-validator';
-import cookieParser from 'cookie-parser';
+import * as cookieParser from 'cookie-parser';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
