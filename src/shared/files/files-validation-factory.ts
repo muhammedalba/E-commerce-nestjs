@@ -10,7 +10,7 @@ import { FileValidator } from '@nestjs/common/pipes/file/file-validator.interfac
 import { FileSizeType, FileType } from './types/file.types';
 import { createFileTypeRegex } from './utils/file.util';
 import { NonEmptyArray } from '../utils/array.util';
-import * as bytes from 'bytes';
+import bytes from 'bytes';
 
 const createFileValidators = (
   maxSize: FileSizeType,

@@ -43,13 +43,13 @@ export class SeedService {
 
       // Store information
       siteName: {
-        ar: 'متجري',
-        en: 'My Store',
+        ar: 'مجرة السماء',
+        en: 'Sky Galaxy',
       },
 
       siteDescription: {
-        ar: 'متجر إلكتروني متكامل يوفر لك تجربة تسوق سهلة وآمنة.',
-        en: 'A complete online store providing an easy and secure shopping experience.',
+        ar: 'كاي جالاكسي هي وجهتك الأولى لمواد العزل المائي والحراري، المواد اللاصقة، وأنظمة البناء الحديثة في المملكة العربية السعودية. جودة عالية وتوريد سريع.',
+        en: 'Sky Galaxy is your first destination for waterproofing and thermal insulation materials, adhesives, and modern construction systems in Saudi Arabia. High quality and fast supply.',
       },
 
       // Branding
@@ -63,13 +63,13 @@ export class SeedService {
 
       // SEO
       metaTitle: {
-        ar: 'متجري | متجر إلكتروني',
-        en: 'My Store | Online Store',
+        ar: 'مجرة السماء|عوازل حرارية ومائية عالية الجودة | Sky Galaxy',
+        en: 'High‑Quality Thermal & Waterproof Insulation | Sky Galaxy',
       },
 
       metaDescription: {
-        ar: 'تسوق عبر متجرنا الإلكتروني واحصل على أفضل المنتجات والخدمات.',
-        en: 'Shop online and discover our products and services.',
+        ar: 'Sky Galaxy متجر متخصص يوفر عوازل حرارية ومائية موثوقة بجودة عالية للمباني في السعودية. منتجات عزل احترافية لحماية الأسقف والجدران من الحرارة والرطوبة.',
+        en: 'Sky Galaxy offers premium, reliable thermal and waterproof insulation products for buildings in Saudi Arabia. Professional-grade materials designed to protect roofs and walls from heat and moisture.',
       },
 
       googleTagManagerId: '',
@@ -77,19 +77,20 @@ export class SeedService {
 
       // Social Media
       socialLinks: {
-        facebook: '',
-        instagram: '',
+        facebook:
+          'https://www.facebook.com/people/%D8%B4%D8%B1%D9%83%D8%A9-%D9%85%D8%AC%D8%B1%D8%A9-%D8%A7%D9%84%D8%B3%D9%85%D8%A7%D8%A1-%D9%84%D9%84%D8%AA%D8%AC%D8%A7%D8%B1%D8%A9/61566361613641/',
+        instagram: 'https://www.instagram.com/sky.galaxy.shop',
         twitter: '',
         linkedin: '',
         youtube: '',
         tiktok: '',
-        whatsapp: '',
+        whatsapp: '+966 59 890 9991',
       },
 
       // Contact information
       contactInfo: {
-        email: '',
-        phones: [],
+        email: 'skygalaxy.shop@gmail.com',
+        phones: ['+966 59 890 9991'],
 
         workingDays: {
           ar: 'من الاثنين إلى الجمعة',
@@ -115,20 +116,20 @@ export class SeedService {
         },
 
         area: {
-          ar: 'الصحافة',
-          en: 'Al Sahafah',
+          ar: 'جرير',
+          en: 'Al-Jareer',
         },
 
         street: {
-          ar: 'طريق الملك فهد',
-          en: 'King Fahd Road',
+          ar: 'طريق صلاح الدين الايوبي',
+          en: 'Salah ad-Din al-Ayyubi Road',
         },
 
-        mailBox: '',
-        poBox: '',
+        mailBox: '7284',
+        poBox: '12837',
 
-        vatNo: '',
-        crNo: '',
+        vatNo: '311658655700003',
+        crNo: '1010881633',
       },
 
       // Store features
@@ -155,10 +156,10 @@ export class SeedService {
 
       // Bank transfer
       bankTransferDetails: {
-        bankName: '',
-        accountName: '',
-        accountNumber: '',
-        iban: '',
+        bankName: 'مصرف الراجحي',
+        accountName: 'شركه مجرة السماء للتجارة',
+        accountNumber: '289608019786591',
+        iban: ' SA21 8000 0289 6080 1978 6591',
       },
 
       // Advanced system settings
