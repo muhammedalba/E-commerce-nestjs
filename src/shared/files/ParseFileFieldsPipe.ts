@@ -8,7 +8,7 @@ import { FileSignatureValidator } from './validators/file-signature.validator';
 import { FileValidator } from '@nestjs/common/pipes/file/file-validator.interface';
 import { createFileTypeRegex } from './utils/file.util';
 import { FileSizeType, FileType } from './types/file.types';
-import * as bytes from 'bytes';
+import bytes from 'bytes';
 import { MulterFilesType } from '../utils/interfaces/fileInterface';
 
 interface FileFieldConfig {
@@ -38,7 +38,7 @@ export class ParseFileFieldsPipe implements PipeTransform {
 
   async transform(files: Record<string, MulterFilesType>) {
     if (!files || typeof files !== 'object') {
-      files = {}; // نعاملها كـ كائن فارغ لتفادي الخطأ
+      files = {}; // We treat it as an empty object to avoid the error.
     }
 
     const validators = this.createValidators();
