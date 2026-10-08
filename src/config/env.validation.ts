@@ -60,6 +60,12 @@ class EnvironmentVariables {
   @IsOptional()
   CLIENT_IP_HEADER?: string;
 
+  // Optional: comma-separated Google OAuth client IDs of the mobile apps
+  // (iOS / Android), accepted as ID-token audiences besides GOOGLE_CLIENT_ID.
+  @IsString()
+  @IsOptional()
+  GOOGLE_MOBILE_CLIENT_IDS?: string;
+
   @IsString()
   @IsOptional()
   JWT_EXPIRE_TIME: string = '1d';

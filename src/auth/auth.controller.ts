@@ -37,6 +37,11 @@ import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.int
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 import { ResetPasswordDto } from './shared/dto/reset-Password';
+import {
+  FacebookMobileLoginDto,
+  GoogleMobileLoginDto,
+  RefreshTokenDto,
+} from './shared/dto/mobile-auth.dto';
 
 interface GoogleRequest extends Omit<Request, 'user'> {
   user?: OAuthUser;
@@ -95,6 +100,22 @@ export class AuthController {
     await this.authService.facebookLogin(user, res);
   }
   // ------------ =============================== ---------- //
+  // ------------ ======  MOBILE SOCIAL LOGIN  ====== ---------- //
+  // ------------ =============================== ---------- //
+  // Native apps sign in with the provider SDK on the device and send the
+  // token here; the response carries both tokens in the body (no cookies).
+  @Post('google/mobile')
+  @Throttle({ default: { ttl: 60000, limit: 10 } }) // 10 attempts per minute
+  async googleMobileLogin(@Body() dto: GoogleMobileLoginDto): Promise<any> {
+    return await this.authService.googleMobileLogin(dto.id_token);
+  }
+
+  @Post('facebook/mobile')
+  @Throttle({ default: { ttl: 60000, limit: 10 } }) // 10 attempts per minute
+  async facebookMobileLogin(@Body() dto: FacebookMobileLoginDto): Promise<any> {
+    return await this.authService.facebookMobileLogin(dto.access_token);
+  }
+  // ------------ =============================== ---------- //
   // ------------ ======  LOGIN  ====== ---------- //
   // ------------ =============================== ---------- //
   @Post('login')
@@ -130,6 +151,18 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<any> {
     return await this.authService.refreshToken(req, res);
+  }
+
+  // Mobile clients send the refresh token in the body and get the new one
+  // back in the body (browsers keep using the cookie-based GET above).
+  @Post('refresh-token')
+  @Throttle({ default: { ttl: 60000, limit: 10 } }) // 10 refreshes per minute
+  async refreshTokenFromBody(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+    @Body() dto: RefreshTokenDto,
+  ): Promise<any> {
+    return await this.authService.refreshToken(req, res, dto.refresh_token);
   }
   /* ------------ =============================== ---------- */
   /* ------------ ======  LOGOUT  ====== ------------------- */

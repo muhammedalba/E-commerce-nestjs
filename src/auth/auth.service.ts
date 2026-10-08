@@ -10,6 +10,7 @@ import { PasswordResetService } from './shared/services/password-reset.service';
 import { UserProfileService } from './shared/services/user-profile.service';
 import { GoogleService } from './oauth2/services/google.service';
 import { FacebookService } from './oauth2/services/facebook.service';
+import { MobileOAuthService } from './oauth2/services/mobile-oauth.service';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { JwtPayload } from './shared/types/jwt-payload.interface';
 import { AuthCredentialService } from './shared/services/auth-credential.service';
@@ -27,6 +28,7 @@ export class AuthService {
     private readonly userProfileService: UserProfileService,
     private readonly googleService: GoogleService,
     private readonly facebookService: FacebookService,
+    private readonly mobileOAuthService: MobileOAuthService,
   ) {}
 
   /* ------------ =============================== ---------- */
@@ -51,7 +53,7 @@ export class AuthService {
   /* ------------ ======  LOGOUT  ====== ------------------- */
   /* ------------ =============================== ---------- */
   async logout(
-    req: { user: { user_id: string } },
+    req: { user: { user_id: string; sid?: string } },
     res: Response,
   ): Promise<{ message: string }> {
     return await this.authCredentialService.logout(req, res);
@@ -95,8 +97,12 @@ export class AuthService {
   /* ------------ =============================== ---------- */
   /* ------------ ======  REFRESH TOKEN  ====== ---------- */
   /* ------------ =============================== ---------- */
-  async refreshToken(req: Request, res: Response): Promise<any> {
-    return await this.userProfileService.refreshToken(req, res);
+  async refreshToken(
+    req: Request,
+    res: Response,
+    bodyToken?: string,
+  ): Promise<any> {
+    return await this.userProfileService.refreshToken(req, res, bodyToken);
   }
 
   /* ------------ =============================== ---------- */
@@ -132,5 +138,16 @@ export class AuthService {
   /* ------------ =============================== ---------- */
   async facebookLogin(facebookUser: FacebookOAuthUser, res: Response) {
     await this.facebookService.facebookLogin(facebookUser, res);
+  }
+
+  /* ------------ =============================== ---------- */
+  /* ------------ ======  MOBILE SOCIAL LOGIN  ====== ---------- */
+  /* ------------ =============================== ---------- */
+  async googleMobileLogin(idToken: string) {
+    return await this.mobileOAuthService.googleLogin(idToken);
+  }
+
+  async facebookMobileLogin(accessToken: string) {
+    return await this.mobileOAuthService.facebookLogin(accessToken);
   }
 }

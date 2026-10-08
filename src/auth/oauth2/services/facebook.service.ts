@@ -26,19 +26,9 @@ export class FacebookService {
   ) {}
 
   /**
-   * Processes Facebook OAuth login and registration callback.
-   *
-   * Workflow:
-   * 1. Looks up the user by email extracted from the Facebook profile.
-   * 2. If the user does not exist:
-   *    - Creates a new user record with provider 'facebook' and a randomized password.
-   *    - Assigns the default 'User' role.
-   *    - Generates authentication tokens and attaches them to cookies.
-   * 3. If the user already exists:
-   *    - Verifies the account is active; throws a BadRequestException if blocked.
-   *    - Updates the lastLogin timestamp.
-   *    - Generates fresh authentication tokens and attaches them to cookies.
-   * 4. Redirects the client to the frontend application origin.
+   * Processes the Facebook OAuth web callback: issues tokens (see
+   * {@link issueTokens}), attaches them to cookies, and redirects the client
+   * to the frontend application origin.
    *
    * @param facebookUser - User profile payload received from Facebook OAuth strategy
    * @param res - Express response object for setting cookies and executing the redirect
@@ -46,6 +36,30 @@ export class FacebookService {
    * @returns Redirects to the configured frontend origin
    */
   async facebookLogin(facebookUser: FacebookOAuthUser, res: Response) {
+    const Tokens = await this.issueTokens(facebookUser);
+    this.cookieService.setCookies(res, Tokens);
+    return res.redirect(`${process.env.FRONTEND_ORIGIN}`);
+  }
+
+  /**
+   * Finds or provisions the user for a verified Facebook profile and issues a
+   * token pair. Shared by the web redirect flow and the mobile access-token flow.
+   *
+   * Workflow:
+   * 1. Looks up the user by email extracted from the Facebook profile.
+   * 2. If the user does not exist:
+   *    - Creates a new user record with provider 'facebook' and a randomized password.
+   *    - Assigns the default 'User' role.
+   * 3. If the user already exists:
+   *    - Verifies the account is active; throws a BadRequestException if blocked.
+   *    - Updates the lastLogin timestamp.
+   * 4. Generates authentication tokens.
+   *
+   * @throws {BadRequestException} When the existing user account is deactivated
+   */
+  async issueTokens(
+    facebookUser: Pick<FacebookOAuthUser, 'email' | 'name' | 'picture'>,
+  ): Promise<{ refresh_Token: string; access_token: string }> {
     const { email, name, picture } = facebookUser;
 
     // Step 1: Check if a user already exists with this email address
@@ -85,9 +99,6 @@ export class FacebookService {
 
       // Step 2d: Generate JWT access and refresh tokens
       Tokens = await this.tokenService.generate_Tokens(userId);
-
-      // Step 2e: Attach tokens to secure HTTP cookies
-      this.cookieService.setCookies(res, Tokens);
     } else {
       // Step 3a: Check if existing account is active
       if (!user.isActive) {
@@ -112,12 +123,8 @@ export class FacebookService {
       await this.userModel.findByIdAndUpdate(user._id, {
         $set: { lastLogin: new Date() },
       });
-
-      // Step 3d: Attach updated tokens to secure cookies
-      this.cookieService.setCookies(res, Tokens);
     }
 
-    // Step 4: Redirect user back to the frontend application
-    return res.redirect(`${process.env.FRONTEND_ORIGIN}`);
+    return Tokens;
   }
 }

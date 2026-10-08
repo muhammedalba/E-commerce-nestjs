@@ -260,9 +260,10 @@ export class UserProfileService {
         this.i18n.translate('exception.USER_NOT_FOUND'),
       );
     }
-    // 4) delete refresh tokens for the user
+    // 4) delete refresh tokens for the user (every device's session, so a
+    // stolen session can't outlive the password it was opened with)
     try {
-      await this.RefreshTokenModel.deleteOne({
+      await this.RefreshTokenModel.deleteMany({
         userId: user_id,
       }).lean();
 
@@ -284,17 +285,20 @@ export class UserProfileService {
     return user;
   }
   /**
-   * Rotates the access and refresh tokens using only the `refresh_token` cookie.
+   * Rotates the access and refresh tokens using only the refresh token.
    *
    * @description Implements a secure token rotation flow compliant with RFC 6749:
-   * 1. Extracts the `refresh_token` from the request's httpOnly cookie.
+   * 1. Takes the refresh token from the request body (mobile clients) or the
+   *    httpOnly `refresh_token` cookie (browsers).
    * 2. Validates the token exists in the database and has not expired.
    * 3. Fetches **fresh** user data (role, permissions, status) directly from the database
    *    — never from a stale JWT payload — ensuring real-time enforcement of permission
    *    changes and account blocks.
    * 4. Generates a new access token + refresh token pair (the old refresh token is
    *    automatically deleted by {@link TokenService.generate_Tokens}).
-   * 5. Sets all auth cookies (`access_token`, `refresh_token`, `is_logged_in`) on the response.
+   * 5. Sets all auth cookies (`access_token`, `refresh_token`, `is_logged_in`) on the response,
+   *    or, for a body-supplied token, returns the new refresh token in the body instead.
+   *    The new pair keeps the session id, so logout still targets this device.
    *
    * @security
    * - Does **not** require the expired `access_token` — the `refresh_token` alone is the
@@ -304,15 +308,19 @@ export class UserProfileService {
    *
    * @param req - Express request (must contain `refresh_token` cookie; set via `path: /api/v1/auth/refresh-token`).
    * @param res - Express response (used to set new auth cookies).
-   * @returns `{ message, access_token }` — the new access token for immediate client use.
-   * @throws {BadRequestException} If no refresh token is present in the cookies.
+   * @param bodyToken - Refresh token sent in the body by a mobile client.
+   * @returns `{ message, access_token }` — the new access token for immediate client use,
+   *          plus `refresh_token` when the token came from the body.
+   * @throws {BadRequestException} If no refresh token is present in the body or cookies.
    * @throws {UnauthorizedException} If the refresh token is invalid, expired, or the user is blocked/deleted.
    */
-  async refreshToken(req: Request, res: Response) {
+  async refreshToken(req: Request, res: Response, bodyToken?: string) {
     const cookies = req.cookies as {
       refresh_token?: string;
     };
-    const refreshToken = cookies.refresh_token?.trim() || '';
+    const fromBody = !!bodyToken?.trim();
+    const refreshToken =
+      (fromBody ? bodyToken?.trim() : cookies.refresh_token?.trim()) || '';
 
     if (!refreshToken) {
       throw new BadRequestException(
@@ -324,7 +332,7 @@ export class UserProfileService {
     const tokenDoc = await this.RefreshTokenModel.findOneAndDelete({
       refresh_Token: refreshToken,
     })
-      .select('refresh_Token expiryDate userId')
+      .select('refresh_Token expiryDate userId sessionId')
       .lean()
       .exec();
 
@@ -360,7 +368,7 @@ export class UserProfileService {
       .exec();
 
     if (!user) {
-      await this.RefreshTokenModel.deleteOne({ refresh_Token: refreshToken });
+      await this.RefreshTokenModel.deleteMany({ userId: tokenDoc.userId });
       this.cookieService.clearCookies(res);
       throw new UnauthorizedException(
         this.i18n.translate('exception.USER_NOT_FOUND'),
@@ -368,7 +376,7 @@ export class UserProfileService {
     }
 
     if (!user.isActive) {
-      await this.RefreshTokenModel.deleteOne({ refresh_Token: refreshToken });
+      await this.RefreshTokenModel.deleteMany({ userId: tokenDoc.userId });
       this.cookieService.clearCookies(res);
       throw new UnauthorizedException(
         this.i18n.translate('exception.ACCOUNT_BLOCKED'),
@@ -383,14 +391,24 @@ export class UserProfileService {
       email: user.email,
       permissions: user.role?.permissions || [],
     };
-    // generate new access and refresh token and delete old refresh token
-    const new_Tokens = await this.tokenService.generate_Tokens(userData);
-    // 4) Set cookies using CookieService
-    this.cookieService.setCookies(res, new_Tokens);
+    // generate new access and refresh token in the same session (tokens
+    // issued before sessions existed start one now)
+    const new_Tokens = await this.tokenService.generate_Tokens(
+      userData,
+      undefined,
+      tokenDoc.sessionId,
+    );
+    // 4) Set cookies, or return the refresh token to a mobile client
+    const bodyTokens = this.cookieService.deliverTokens(
+      res,
+      new_Tokens,
+      fromBody,
+    );
 
     return {
       message: this.i18n.translate('success.updated_REFRESH_SUCCESS'),
       access_token: new_Tokens.access_token,
+      ...bodyTokens,
     };
   }
 }

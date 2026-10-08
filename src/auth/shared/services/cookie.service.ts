@@ -1,5 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { Response } from 'express';
+import { Request, Response } from 'express';
+
+/**
+ * Header a native app sends (`x-client-type: mobile`) to receive the refresh
+ * token in the response body instead of cookies, which native HTTP clients
+ * don't manage reliably.
+ */
+const CLIENT_TYPE_HEADER = 'x-client-type';
+
+export function isMobileClient(req: Request): boolean {
+  return req.headers[CLIENT_TYPE_HEADER] === 'mobile';
+}
 
 /**
  * Centralizes authentication cookie configuration.
@@ -15,6 +26,29 @@ import { Response } from 'express';
 @Injectable()
 export class CookieService {
   private readonly isProd = process.env.NODE_ENV === 'production';
+
+  /**
+   * Hands a fresh token pair to the client in the form it can store.
+   *
+   * @description Browsers get the usual httpOnly cookies. Mobile clients get no
+   * cookies; the refresh token is returned for the caller to merge into the
+   * response body (the access token is already in every auth response).
+   *
+   * @param res - Express response used to write cookies.
+   * @param tokens - Freshly generated access and refresh tokens.
+   * @param mobile - Whether to use the body instead of cookies. Defaults to
+   *                 the `x-client-type: mobile` request header.
+   * @returns `{ refresh_token }` for mobile clients, otherwise `{}`.
+   */
+  deliverTokens(
+    res: Response,
+    tokens: { refresh_Token: string; access_token: string },
+    mobile: boolean = isMobileClient(res.req),
+  ): { refresh_token?: string } {
+    if (mobile) return { refresh_token: tokens.refresh_Token };
+    this.setCookies(res, tokens);
+    return {};
+  }
 
   /**
    * Writes the access token, refresh token, and UI login-state cookie.

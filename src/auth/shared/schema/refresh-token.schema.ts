@@ -18,6 +18,12 @@ export class RefreshToken {
   })
   declare userId: string;
 
+  // One login on one device. Kept across rotations so logout can revoke
+  // exactly this device's session (the access token carries it as `sid`).
+  // Absent on tokens issued before sessions existed.
+  @Prop({ type: 'string', index: true })
+  declare sessionId?: string;
+
   @Prop({
     required: true,
     type: Date,

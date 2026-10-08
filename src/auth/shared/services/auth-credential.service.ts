@@ -136,12 +136,13 @@ export class AuthCredentialService {
     newUser.avatar = this.fileUploadService.withBaseUrl(avatarAsset);
     const Tokens = await this.tokenService.generate_Tokens(userId);
 
-    this.cookieService.setCookies(res, Tokens);
+    const bodyTokens = this.cookieService.deliverTokens(res, Tokens);
 
     const userWithTokens = {
       ...newUser.toObject(),
       role: userRole ? userRole.toObject() : undefined,
       access_token: Tokens.access_token,
+      ...bodyTokens,
       password: undefined,
       __v: undefined,
     };
@@ -174,7 +175,7 @@ export class AuthCredentialService {
       _id: { toString(): string };
       email: string;
       password?: string;
-      avatar?: string;
+      avatar?: FileAsset;
       name?: string;
       isActive?: boolean;
       role?: {
@@ -216,27 +217,30 @@ export class AuthCredentialService {
     };
     const Tokens = await this.tokenService.generate_Tokens(userId);
 
-    this.cookieService.setCookies(res, Tokens);
+    const bodyTokens = this.cookieService.deliverTokens(res, Tokens);
 
     const userResponse = {
       ...user,
-      avatar: `${process.env.BASE_URL}${user.avatar}`,
+      avatar: this.fileUploadService.withBaseUrl(user.avatar),
       password: undefined,
       access_token: Tokens.access_token,
+      ...bodyTokens,
     };
 
     return userResponse;
   }
 
   /**
-   * Logs out the authenticated user by revoking a refresh token and clearing cookies.
+   * Logs out the current device by revoking its session and clearing cookies.
    *
-   * @description Deletes one refresh-token document for the authenticated user's ID
-   * and clears all browser auth cookies through `CookieService`.
+   * @description Deletes the refresh token of the session named by the access
+   * token's `sid` claim, so other devices (web / mobile) stay signed in, then
+   * clears all browser auth cookies through `CookieService`.
    *
-   * @security This method relies on `AuthGuard` to supply `req.user`. It currently
-   * revokes one stored refresh token for the user, so callers should not treat this
-   * as an explicit "logout all devices" operation unless that behavior is changed.
+   * @security This method relies on `AuthGuard` to supply `req.user`. Access
+   * tokens issued before sessions existed have no `sid`; for those, one stored
+   * refresh token of the user is revoked as before (they expire within
+   * `JWT_EXPIRE_TIME`).
    *
    * @param req - Request-like object containing the authenticated JWT payload.
    * @param res - Express response used to clear auth cookies and authorization header.
@@ -244,7 +248,7 @@ export class AuthCredentialService {
    * @throws {BadRequestException} If no authenticated user is present or logout fails.
    */
   async logout(
-    req: { user: { user_id: string } },
+    req: { user: { user_id: string; sid?: string } },
     res: Response,
   ): Promise<{ message: string }> {
     if (!req.user) {
@@ -253,9 +257,16 @@ export class AuthCredentialService {
       );
     }
     try {
-      await this.RefreshTokenModel.deleteOne({
-        userId: req.user.user_id,
-      });
+      if (req.user.sid) {
+        await this.RefreshTokenModel.deleteMany({
+          userId: req.user.user_id,
+          sessionId: req.user.sid,
+        });
+      } else {
+        await this.RefreshTokenModel.deleteOne({
+          userId: req.user.user_id,
+        });
+      }
       this.cookieService.clearCookies(res);
       return { message: this.i18n.translate('success.LOGOUT_SUCCESS') };
     } catch {

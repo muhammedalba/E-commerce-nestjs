@@ -22,6 +22,18 @@ export class GoogleService {
   ) {}
 
   async googleLogin(googleUser: OAuthUser, res: Response) {
+    const Tokens = await this.issueTokens(googleUser);
+    this.cookieService.setCookies(res, Tokens);
+    return res.redirect(`${process.env.FRONTEND_ORIGIN}`);
+  }
+
+  /**
+   * Finds or provisions the user for a verified Google profile and issues a
+   * token pair. Shared by the web redirect flow and the mobile ID-token flow.
+   */
+  async issueTokens(
+    googleUser: Pick<OAuthUser, 'email' | 'name' | 'picture'>,
+  ): Promise<{ refresh_Token: string; access_token: string }> {
     const { email, name, picture } = googleUser;
 
     // 1) check user is use
@@ -60,12 +72,6 @@ export class GoogleService {
       };
       // 3) generate access token
       Tokens = await this.tokenService.generate_Tokens(userId);
-      //4) send token to cookies
-      this.cookieService.setCookies(
-        res,
-        Tokens,
-        //  'user', name, picture
-      );
     } else {
       if (!user.isActive) {
         throw new BadRequestException(
@@ -84,15 +90,8 @@ export class GoogleService {
       await this.userModel.findByIdAndUpdate(user._id, {
         $set: { lastLogin: new Date() },
       });
-      this.cookieService.setCookies(
-        res,
-        Tokens,
-        // 'user',
-        // user.name,
-        // user.avatar,
-      );
     }
 
-    return res.redirect(`${process.env.FRONTEND_ORIGIN}`);
+    return Tokens;
   }
 }

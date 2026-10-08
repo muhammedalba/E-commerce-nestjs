@@ -53,20 +53,29 @@ export class TokenService {
    * @param userData - The JWT payload to embed in the access token (user_id, email, role, etc.).
    * @param expiresIn - Optional override for the access token TTL (e.g. `'15m'`).
    *                    Falls back to `JWT_EXPIRE_TIME` env variable, then `'1d'`.
+   * @param sessionId - The session to continue (token rotation). Omit on a new
+   *                    login to start a new session; it is embedded as `sid`.
    * @returns An object containing the signed `access_token` (JWT) and the raw `refresh_Token` (UUID).
    * @throws {InternalServerErrorException} If persisting the refresh token to the DB fails.
    */
-  async generate_Tokens(userData: JwtPayload, expiresIn?: string) {
+  async generate_Tokens(
+    userData: JwtPayload,
+    expiresIn?: string,
+    sessionId: string = uuidv4(),
+  ) {
     // 1) generate new access token
-    const access_token = await this.jwtService.signAsync(userData, {
-      expiresIn: (expiresIn ||
-        process.env.JWT_EXPIRE_TIME ||
-        '1d') as `${number}d`,
-    });
+    const access_token = await this.jwtService.signAsync(
+      { ...userData, sid: sessionId },
+      {
+        expiresIn: (expiresIn ||
+          process.env.JWT_EXPIRE_TIME ||
+          '1d') as `${number}d`,
+      },
+    );
     //2) generate new refresh token
     const refresh_Token = uuidv4();
     // save refresh token in database
-    await this.store_Refresh_Token(userData.user_id, refresh_Token);
+    await this.store_Refresh_Token(userData.user_id, refresh_Token, sessionId);
 
     return { access_token, refresh_Token };
   }
@@ -89,9 +98,14 @@ export class TokenService {
    *
    * @param userId - The MongoDB ObjectId (as string) of the user who owns the token.
    * @param refresh_Token - The UUID v4 refresh token string to persist.
+   * @param sessionId - The session (device) the token belongs to.
    * @throws {InternalServerErrorException} If the database insert fails (e.g. unique constraint violation or connection error).
    */
-  async store_Refresh_Token(userId: string, refresh_Token: string) {
+  async store_Refresh_Token(
+    userId: string,
+    refresh_Token: string,
+    sessionId: string,
+  ) {
     //1) add expiry date to refresh token
     const expiryDate = new Date();
     expiryDate.setDate(
@@ -104,6 +118,7 @@ export class TokenService {
       await this.RefreshTokenModel.create({
         refresh_Token: refresh_Token,
         userId: userId,
+        sessionId: sessionId,
         expiryDate: expiryDate,
       });
     } catch {
