@@ -116,6 +116,12 @@ export class User {
   })
   declare provider: string | undefined;
 
+  // Apple's stable user id (`sub` of the identity token). Apple can hand out
+  // a private relay email instead of the real one, so Apple sign-ins are
+  // matched on this id first, not on the email.
+  @Prop({ type: 'string', unique: true, sparse: true })
+  declare appleId: string | undefined;
+
   @Prop({
     required: false,
     type: Boolean,

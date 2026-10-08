@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { OnEvent } from '@nestjs/event-emitter';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Cart } from './shared/schemas/cart.schema';
@@ -14,6 +15,10 @@ import { CartItem } from './shared/schemas/cart-item.schema';
 import { InventoryAlertService } from 'src/products/services/inventory-alert.service';
 import { SettingsService } from 'src/settings/settings.service';
 import { CouponHelperService } from 'src/coupons/shared/coupon.helper';
+import {
+  USER_EVENTS,
+  UserDeletedEvent,
+} from 'src/users/shared/events/user.events';
 
 @Injectable()
 export class CartService {
@@ -27,6 +32,12 @@ export class CartService {
     private readonly settingsService: SettingsService,
     private readonly couponHelperService: CouponHelperService,
   ) {}
+
+  /** A deleted user's cart has no owner left: remove it. */
+  @OnEvent(USER_EVENTS.DELETED, { async: true })
+  async handleUserDeleted(event: UserDeletedEvent) {
+    await this.cartModel.deleteOne({ user: new Types.ObjectId(event.userId) });
+  }
   // ------------ =============================== ---------- //
   // ------------ ======  VALIDATE COUPON  ====== ---------- //
   // ------------ =============================== ---------- //

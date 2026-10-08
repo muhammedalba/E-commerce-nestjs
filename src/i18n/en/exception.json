@@ -54,6 +54,7 @@
   "REFRESH_TOKEN_INVALID": "Reset token is invalid or expired Please log in again",
   "OAUTH_EMAIL_REQUIRED": "A verified email address is required to sign in. Please allow access to your email and try again.",
   "OAUTH_PROVIDER_UNAVAILABLE": "The sign-in provider is unavailable right now. Please try again later.",
+  "ACCOUNT_DELETE_STAFF": "Staff accounts cannot be deleted from here. Please contact an administrator.",
   "ACTION_NOT_ALLOWED": "This action is not allowed",
   "RESOURCE_LOCKED": "The resource is currently locked",
   "ACCOUNT_NOT_ACTIVE": "Account is not active",

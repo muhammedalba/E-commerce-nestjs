@@ -10,6 +10,7 @@ import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { User } from 'src/auth/shared/schema/user.schema';
 import { Role } from 'src/roles/shared/schemas/role.schema';
 import { OAuthUser } from 'src/auth/shared/types/oauth-user.interface';
+import { oauthDisplayName } from '../utils/display-name.util';
 
 @Injectable()
 export class GoogleService {
@@ -56,7 +57,7 @@ export class GoogleService {
       // 3) create user
       const newUser = await this.userModel.create({
         email: email,
-        name: name,
+        name: oauthDisplayName(name, email, 'Google User'),
         password: randomPassword,
         avatar: picture,
         provider: 'google',

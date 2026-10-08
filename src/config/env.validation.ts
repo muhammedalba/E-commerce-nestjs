@@ -66,6 +66,12 @@ class EnvironmentVariables {
   @IsOptional()
   GOOGLE_MOBILE_CLIENT_IDS?: string;
 
+  // Optional: comma-separated bundle ids of the iOS apps; Sign in with Apple
+  // identity tokens must be issued for one of them. Unset = Apple sign-in off.
+  @IsString()
+  @IsOptional()
+  APPLE_BUNDLE_IDS?: string;
+
   @IsString()
   @IsOptional()
   JWT_EXPIRE_TIME: string = '1d';

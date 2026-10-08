@@ -9,6 +9,7 @@ import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { User } from 'src/auth/shared/schema/user.schema';
 import { Role } from 'src/roles/shared/schemas/role.schema';
 import { FacebookOAuthUser } from 'src/auth/shared/types/oauth-user.interface';
+import { oauthDisplayName } from '../utils/display-name.util';
 
 /**
  * Service responsible for managing Facebook OAuth2 authentication.
@@ -81,7 +82,7 @@ export class FacebookService {
       // Step 2c: Provision new user account
       const newUser = await this.userModel.create({
         email: email,
-        name: name,
+        name: oauthDisplayName(name, email, 'Facebook User'),
         password: randomPassword,
         avatar: picture,
         provider: 'facebook',

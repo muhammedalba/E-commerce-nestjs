@@ -150,4 +150,31 @@ export class AuthService {
   async facebookMobileLogin(accessToken: string) {
     return await this.mobileOAuthService.facebookLogin(accessToken);
   }
+
+  async appleMobileLogin(
+    identityToken: string,
+    nonce: string,
+    fullName?: string,
+  ) {
+    return await this.mobileOAuthService.appleLogin(
+      identityToken,
+      nonce,
+      fullName,
+    );
+  }
+
+  /* ------------ =============================== ---------- */
+  /* ------------ ======  DELETE MY ACCOUNT  ====== ---------- */
+  /* ------------ =============================== ---------- */
+  async deleteMe(
+    req: { user: JwtPayload },
+    password: string | undefined,
+    res: Response,
+  ): Promise<{ message: string }> {
+    return await this.userProfileService.deleteMe(
+      req.user.user_id,
+      password,
+      res,
+    );
+  }
 }

@@ -4,6 +4,7 @@
   "created_SUCCESS": "Created successfully",
   "updated_SUCCESS": "Updated successfully",
   "LOGOUT_SUCCESS": "Logged out successfully",
+  "ACCOUNT_DELETED": "Your account has been deleted",
   "updated_REFRESH_SUCCESS": "Token refreshed successfully",
   "LOGIN_SUCCESS": "Logged in successfully",
   "RESET_CODE_SENDED": "Reset code has been sent to your email",

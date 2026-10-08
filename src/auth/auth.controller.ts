@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Patch,
   Post,
@@ -38,6 +39,8 @@ import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.inter
 import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 import { ResetPasswordDto } from './shared/dto/reset-Password';
 import {
+  AppleMobileLoginDto,
+  DeleteAccountDto,
   FacebookMobileLoginDto,
   GoogleMobileLoginDto,
   RefreshTokenDto,
@@ -114,6 +117,16 @@ export class AuthController {
   @Throttle({ default: { ttl: 60000, limit: 10 } }) // 10 attempts per minute
   async facebookMobileLogin(@Body() dto: FacebookMobileLoginDto): Promise<any> {
     return await this.authService.facebookMobileLogin(dto.access_token);
+  }
+
+  @Post('apple/mobile')
+  @Throttle({ default: { ttl: 60000, limit: 10 } }) // 10 attempts per minute
+  async appleMobileLogin(@Body() dto: AppleMobileLoginDto): Promise<any> {
+    return await this.authService.appleMobileLogin(
+      dto.identity_token,
+      dto.nonce,
+      dto.full_name,
+    );
   }
   // ------------ =============================== ---------- //
   // ------------ ======  LOGIN  ====== ---------- //
@@ -243,5 +256,19 @@ export class AuthController {
     @Body() changePasswordDto: ChangePasswordDto,
   ): Promise<any> {
     return await this.authService.changeMyPassword(request, changePasswordDto);
+  }
+  /* ------------ =============================== ---------- */
+  /* ------------ ======  DELETE MY ACCOUNT  ====== ---------- */
+  /* ------------ =============================== ---------- */
+  @Delete('me')
+  @Throttle({ default: { ttl: 60000, limit: 5 } }) // 5 attempts per minute (password guessing)
+  @UseGuards(AuthGuard)
+  @ClearCache('auth')
+  async deleteMe(
+    @Req() request: { user: JwtPayload },
+    @Body() dto: DeleteAccountDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<any> {
+    return await this.authService.deleteMe(request, dto.password, res);
   }
 }

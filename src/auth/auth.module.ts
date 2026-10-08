@@ -19,6 +19,7 @@ import { FacebookStrategy } from './oauth2/strategy/facebook.strategy';
 import { FacebookAuthGuard } from './oauth2/guards/facebook-auth.guard';
 import { FacebookService } from './oauth2/services/facebook.service';
 import { MobileOAuthService } from './oauth2/services/mobile-oauth.service';
+import { AppleService } from './oauth2/services/apple.service';
 import { User, UserSchema } from './shared/schema/user.schema';
 import { Role, RoleSchema } from 'src/roles/shared/schemas/role.schema';
 
@@ -49,6 +50,7 @@ import { Role, RoleSchema } from 'src/roles/shared/schemas/role.schema';
     FacebookAuthGuard,
     FacebookService,
     MobileOAuthService,
+    AppleService,
   ],
 })
 export class AuthModule {}

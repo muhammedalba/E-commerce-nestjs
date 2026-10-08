@@ -1,9 +1,12 @@
 import {
   BadGatewayException,
   BadRequestException,
+  ForbiddenException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { FileUploadService } from 'src/file-upload/file-upload.service';
@@ -22,6 +25,13 @@ import { User } from '../schema/user.schema';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { FileAsset } from 'src/shared/schema/file-asset.schema';
 import * as bcrypt from 'bcrypt';
+import {
+  USER_EVENTS,
+  UserDeletedEvent,
+} from 'src/users/shared/events/user.events';
+
+/** Level of the default customer role; staff roles sit above it. */
+const CUSTOMER_ROLE_LEVEL = 1;
 
 /**
  * Handles authenticated user profile operations and token lifecycle management.
@@ -49,7 +59,10 @@ export class UserProfileService {
     private readonly fileUploadService: FileUploadService,
     private readonly cookieService: CookieService,
     private readonly tokenService: TokenService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
+
+  private readonly logger = new Logger(UserProfileService.name);
   /**
    * Retrieves the authenticated user's profile.
    *
@@ -410,5 +423,83 @@ export class UserProfileService {
       access_token: new_Tokens.access_token,
       ...bodyTokens,
     };
+  }
+
+  /**
+   * Permanently deletes the authenticated customer's own account.
+   *
+   * @description Required by the App Store and Google Play for apps that let
+   * users create accounts. Deletes the user, its avatar file and every session
+   * (all devices), clears the browser cookies, then emits `user.deleted` so
+   * dependent modules remove data owned by the user (reviews, cart, wishlist).
+   * Orders are kept: they are financial records, and they stay valid without
+   * the user document.
+   *
+   * @security
+   * - Email/password accounts must confirm with their current password, so a
+   *   stolen access token alone cannot delete the account. Social accounts
+   *   have no usable password and rely on the access token.
+   * - Staff accounts (any role above the customer role) are refused; they are
+   *   removed from the dashboard, which guards the last administrator.
+   *
+   * @param userId - The authenticated user's id.
+   * @param password - Current password (email/password accounts).
+   * @param res - Express response used to clear auth cookies.
+   * @throws {ForbiddenException} For staff accounts.
+   * @throws {BadRequestException} If the password is missing or wrong.
+   */
+  async deleteMe(
+    userId: string,
+    password: string | undefined,
+    res: Response,
+  ): Promise<{ message: string }> {
+    const user = await this.userModel
+      .findById(userId)
+      .select('password provider avatar role')
+      .populate<{ role: { level?: number } | null }>('role', 'level')
+      .lean()
+      .exec();
+    if (!user) {
+      throw new UnauthorizedException(
+        this.i18n.translate('exception.USER_NOT_FOUND'),
+      );
+    }
+
+    if ((user.role?.level ?? 0) > CUSTOMER_ROLE_LEVEL) {
+      throw new ForbiddenException(
+        this.i18n.translate('exception.ACCOUNT_DELETE_STAFF'),
+      );
+    }
+
+    // Email/password accounts ('auth') confirm with the password
+    if (!user.provider || user.provider === 'auth') {
+      if (!password) {
+        throw new BadRequestException(
+          this.i18n.translate('exception.PASSWORD_REQUIRED'),
+        );
+      }
+      if (!(await bcrypt.compare(password, user.password || ''))) {
+        throw new BadRequestException(
+          this.i18n.translate('exception.INVALID_CURRENT_PASSWORD'),
+        );
+      }
+    }
+
+    await this.userModel.deleteOne({ _id: user._id });
+    await this.RefreshTokenModel.deleteMany({ userId });
+
+    // Only uploaded avatars are files of ours (Google/Facebook ones are URLs)
+    if (user.avatar && typeof user.avatar === 'object') {
+      await this.fileUploadService.deleteFile(user.avatar).catch((err) => {
+        this.logger.warn(
+          `Avatar of deleted user ${userId} not removed: ${String(err)}`,
+        );
+      });
+    }
+
+    this.eventEmitter.emit(USER_EVENTS.DELETED, new UserDeletedEvent(userId));
+    this.cookieService.clearCookies(res);
+
+    return { message: this.i18n.translate('success.ACCOUNT_DELETED') };
   }
 }

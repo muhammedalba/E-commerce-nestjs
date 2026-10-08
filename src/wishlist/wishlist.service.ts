@@ -1,10 +1,15 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { OnEvent } from '@nestjs/event-emitter';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Wishlist } from './shared/schemas/wishlist.schema';
 import { Product } from 'src/products/shared/schemas/Product.schema';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { WISHLIST_MAX_ITEMS } from './shared/constants/wishlist.constants';
+import {
+  USER_EVENTS,
+  UserDeletedEvent,
+} from 'src/users/shared/events/user.events';
 
 /** Only products that are still sellable are shown / accepted. */
 const AVAILABLE_PRODUCT_FILTER = { isActive: true, isDeleted: { $ne: true } };
@@ -21,6 +26,14 @@ export class WishlistService {
     @InjectModel(Product.name) private readonly ProductModel: Model<Product>,
     protected readonly i18n: CustomI18nService,
   ) {}
+
+  /** A deleted user's wishlist has no owner left: remove it. */
+  @OnEvent(USER_EVENTS.DELETED, { async: true })
+  async handleUserDeleted(event: UserDeletedEvent) {
+    await this.wishlistModel.deleteOne({
+      user: new Types.ObjectId(event.userId),
+    });
+  }
 
   /** Newest first: `$addToSet` appends, so the stored array is oldest → newest. */
   private toIds(products: Types.ObjectId[]): string[] {
