@@ -72,6 +72,17 @@ class EnvironmentVariables {
   @IsOptional()
   APPLE_BUNDLE_IDS?: string;
 
+  // Optional: Firebase project number; when set, the mobile app's App Check
+  // token (x-firebase-appcheck) replaces reCAPTCHA on the public forms.
+  @IsString()
+  @IsOptional()
+  FIREBASE_PROJECT_NUMBER?: string;
+
+  // Optional: comma-separated Firebase app ids allowed to send App Check tokens.
+  @IsString()
+  @IsOptional()
+  FIREBASE_APP_IDS?: string;
+
   @IsString()
   @IsOptional()
   JWT_EXPIRE_TIME: string = '1d';

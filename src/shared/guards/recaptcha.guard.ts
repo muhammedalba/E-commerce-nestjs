@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request } from 'express';
+import { isAppCheckEnabled, verifyAppCheckToken } from './app-check.verifier';
 
 interface RecaptchaVerifyResponse {
   success: boolean;
@@ -46,11 +47,16 @@ function allowedHostnames(): string[] {
 }
 
 /**
- * Google reCAPTCHA v3 guard.
- * The client sends the token in the `x-recaptcha-token` header.
- * Disabled (pass-through) when RECAPTCHA_SECRET_KEY is not set.
+ * Bot check for public forms: Google reCAPTCHA v3 for the website, Firebase
+ * App Check for the mobile app.
  *
- * When Google itself is unreachable the request is accepted but flagged
+ * - Website: token in the `x-recaptcha-token` header. Disabled (pass-through)
+ *   when RECAPTCHA_SECRET_KEY is not set.
+ * - Mobile app: token in the `x-firebase-appcheck` header, verified when
+ *   FIREBASE_PROJECT_NUMBER is set; otherwise the request falls back to the
+ *   reCAPTCHA check.
+ *
+ * When Google / Firebase is unreachable the request is accepted but flagged
  * (see {@link RecaptchaUnverified}) so a real customer is never lost to an outage.
  *
  * Usage: @UseGuards(new RecaptchaGuard('contact'))
@@ -59,11 +65,35 @@ function allowedHostnames(): string[] {
 export class RecaptchaGuard implements CanActivate {
   private static readonly logger = new Logger(RecaptchaGuard.name);
   private static missingSecretWarned = false;
+  private static appCheckOffWarned = false;
 
   constructor(private readonly expectedAction: string) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const logger = RecaptchaGuard.logger;
+    const req = context.switchToHttp().getRequest<RecaptchaRequest>();
+
+    const appCheckToken = req.headers['x-firebase-appcheck'];
+    if (typeof appCheckToken === 'string' && appCheckToken) {
+      if (isAppCheckEnabled()) {
+        const result = await verifyAppCheckToken(appCheckToken);
+        if (result === 'invalid') {
+          throw new ForbiddenException('App Check verification failed');
+        }
+        if (result === 'unavailable') {
+          logger.error('App Check unavailable, accepting as unverified');
+          req.recaptchaUnverified = true;
+        }
+        return true;
+      }
+      if (!RecaptchaGuard.appCheckOffWarned) {
+        RecaptchaGuard.appCheckOffWarned = true;
+        logger.warn(
+          'App Check token received but FIREBASE_PROJECT_NUMBER is not set — using reCAPTCHA rules',
+        );
+      }
+    }
+
     const secret = process.env.RECAPTCHA_SECRET_KEY;
     if (!secret) {
       if (!RecaptchaGuard.missingSecretWarned) {
@@ -73,7 +103,6 @@ export class RecaptchaGuard implements CanActivate {
       return true;
     }
 
-    const req = context.switchToHttp().getRequest<RecaptchaRequest>();
     const token = req.headers['x-recaptcha-token'];
     if (typeof token !== 'string' || !token) {
       throw new ForbiddenException('reCAPTCHA token is missing');
@@ -125,7 +154,7 @@ export class RecaptchaGuard implements CanActivate {
   }
 }
 
-/** `true` when the request passed RecaptchaGuard only because Google was unreachable. */
+/** `true` when the request passed RecaptchaGuard only because Google / Firebase was unreachable. */
 export const RecaptchaUnverified = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): boolean =>
     !!ctx.switchToHttp().getRequest<RecaptchaRequest>().recaptchaUnverified,
