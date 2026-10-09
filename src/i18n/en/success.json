@@ -5,6 +5,8 @@
   "updated_SUCCESS": "Updated successfully",
   "LOGOUT_SUCCESS": "Logged out successfully",
   "ACCOUNT_DELETED": "Your account has been deleted",
+  "DEVICE_REGISTERED": "Notifications enabled on this device",
+  "DEVICE_UNREGISTERED": "Notifications disabled on this device",
   "updated_REFRESH_SUCCESS": "Token refreshed successfully",
   "LOGIN_SUCCESS": "Logged in successfully",
   "RESET_CODE_SENDED": "Reset code has been sent to your email",

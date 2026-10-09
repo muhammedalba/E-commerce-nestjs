@@ -83,6 +83,12 @@ class EnvironmentVariables {
   @IsOptional()
   FIREBASE_APP_IDS?: string;
 
+  // Optional: Firebase service-account JSON key (raw or base64) used to send
+  // phone pushes through FCM. Unset = push notifications off.
+  @IsString()
+  @IsOptional()
+  FIREBASE_SERVICE_ACCOUNT?: string;
+
   @IsString()
   @IsOptional()
   JWT_EXPIRE_TIME: string = '1d';

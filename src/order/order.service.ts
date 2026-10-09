@@ -28,6 +28,7 @@ import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 import { withBaseUrl } from 'src/shared/utils/with-base-url.util';
 import { FileAsset } from 'src/shared/schema/file-asset.schema';
 import { OrderStatus } from './shared/enums/order-status.enum';
+import { orderStatusNotificationAction } from './shared/utils/order-status-notification';
 import { PaymentStatus } from 'src/payments/shared/enums/payment-status.enum';
 import { PaymentRefundedEvent } from 'src/payments/shared/types/payment-events';
 
@@ -561,7 +562,7 @@ export class OrderService {
       throw new BadRequestException('Invalid order ID');
     }
     const order = await this.OrderModel.findById(idParamDto.id).select(
-      ' InvoicePdf DeliveryReceiptImage ',
+      ' InvoicePdf DeliveryReceiptImage status ',
     );
     if (!order) {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
@@ -629,8 +630,8 @@ export class OrderService {
 
     // حساب timestamps المناسبة بناءً على الحالة الجديدة
     const statusTimestamps = this.buildStatusTimestamps(
-      updateOrderDto.status as string | undefined,
-      updateOrderDto.paymentStatus as string | undefined,
+      updateOrderDto.status,
+      updateOrderDto.paymentStatus,
     );
 
     const updatedData = await this.OrderModel.findByIdAndUpdate(
@@ -639,23 +640,17 @@ export class OrderService {
       { new: true, runValidators: true },
     );
 
-    if (
-      updatedData &&
-      ((updateOrderDto.status as string) === 'completed' ||
-        (updateOrderDto.status as string) === 'cancelled')
-    ) {
+    // Tell the customer about a real status change (in-app list + phone push)
+    const action = orderStatusNotificationAction(order.status, newStatus);
+    if (updatedData?.user && action) {
       const orderUserIdStr = updatedData.user.toString();
       this.eventEmitter.emit(`user.notification.${orderUserIdStr}`, {
         userId: orderUserIdStr,
-        action:
-          (updateOrderDto.status as string) === 'completed'
-            ? 'ORDER_DELIVERED'
-            : 'ORDER_CANCELED',
-        message:
-          (updateOrderDto.status as string) === 'completed'
-            ? this.i18n.translateAll('notification.ORDER_DELIVERED')
-            : this.i18n.translateAll('notification.ORDER_CANCELED'),
-        payload: { orderId: updatedData._id },
+        action,
+        message: this.i18n.translateAll(`notification.${action}`, {
+          args: { number: updatedData.invoiceNumber },
+        }),
+        payload: { orderId: String(updatedData._id), status: newStatus },
       });
     }
 

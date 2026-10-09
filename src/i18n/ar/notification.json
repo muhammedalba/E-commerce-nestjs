@@ -1,12 +1,18 @@
 {
   "FORCE_LOGOUT": "تم إيقاف حسابك أو تعديل صلاحياتك. الرجاء تسجيل الدخول مجدداً.",
   "PERMISSIONS_UPDATED": "تم تحديث صلاحياتك من قبل الإدارة.",
-  "ORDER_DELIVERED": "تم توصيل طلبك بنجاح!",
-  "ORDER_CANCELED": "تم إلغاء طلبك.",
+  "ORDER_PROCESSING": "طلبك رقم #{number} قيد التجهيز.",
+  "ORDER_SHIPPED": "تم شحن طلبك رقم #{number} وهو في الطريق إليك.",
+  "ORDER_DELIVERED": "تم توصيل طلبك رقم #{number}.",
+  "ORDER_COMPLETED": "اكتمل طلبك رقم #{number}. شكراً لتسوقك معنا!",
+  "ORDER_CANCELED": "تم إلغاء طلبك رقم #{number}.",
   "DIRECT_SEND_SUCCESS": "تم إرسال الإشعار للمستخدم المستهدف بنجاح",
   "BROADCAST_SEND_SUCCESS": "تم إرسال الإشعار لجميع المستخدمين بنجاح",
   "ROLE_SEND_SUCCESS": "تم إرسال الإشعار لجميع مستخدمي الدور المحدد بنجاح",
   "NEW_REVIEW_PENDING": "تقييم جديد على \"{product}\" بانتظار الموافقة",
   "REVIEW_APPROVED": "تمت الموافقة على تقييمك للمنتج \"{product}\" وأصبح منشوراً",
-  "REVIEW_REPLIED": "قام المتجر بالرد على تقييمك للمنتج \"{product}\""
+  "REVIEW_REPLIED": "قام المتجر بالرد على تقييمك للمنتج \"{product}\"",
+  "PUSH_TITLE_ORDER": "تحديث الطلب",
+  "PUSH_TITLE_REVIEW": "تقييمك",
+  "PUSH_TITLE_DEFAULT": "سكاي جالاكسي"
 }

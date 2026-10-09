@@ -389,8 +389,7 @@ export class CheckoutOrchestratorService {
     });
 
     let orderResponse:
-      | { orderId?: string; success?: boolean; error?: string }
-      | undefined;
+      { orderId?: string; success?: boolean; error?: string } | undefined;
     try {
       this.logger.log('Emitting checkout.placeOrderCommand...');
       this.logger.log(
@@ -402,8 +401,7 @@ export class CheckoutOrchestratorService {
         orderPayload,
       );
       orderResponse = results[0] as
-        | { orderId?: string; success?: boolean; error?: string }
-        | undefined;
+        { orderId?: string; success?: boolean; error?: string } | undefined;
       this.logger.log('Order event response: ' + JSON.stringify(orderResponse));
     } catch (error: unknown) {
       const err = error as Error;

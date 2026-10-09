@@ -144,7 +144,7 @@ export class PaymentsService {
       .lean();
 
     // 4. Localize and Return
-    return this.i18n.localize(methods) as Record<string, unknown>[];
+    return this.i18n.localize(methods);
   }
 
   // get all payment methods for admin

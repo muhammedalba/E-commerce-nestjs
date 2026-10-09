@@ -1,12 +1,18 @@
 {
   "FORCE_LOGOUT": "Your account has been suspended or your permissions have been modified. Please log in again.",
   "PERMISSIONS_UPDATED": "Your permissions have been updated by the administration.",
-  "ORDER_DELIVERED": "Your order has been delivered successfully!",
-  "ORDER_CANCELED": "Your order has been cancelled.",
+  "ORDER_PROCESSING": "Your order #{number} is being prepared.",
+  "ORDER_SHIPPED": "Your order #{number} has been shipped and is on its way.",
+  "ORDER_DELIVERED": "Your order #{number} has been delivered.",
+  "ORDER_COMPLETED": "Your order #{number} is complete. Thank you for shopping with us!",
+  "ORDER_CANCELED": "Your order #{number} has been cancelled.",
   "DIRECT_SEND_SUCCESS": "Notification sent to the target user successfully",
   "BROADCAST_SEND_SUCCESS": "Notification sent to all users successfully",
   "ROLE_SEND_SUCCESS": "Notification sent to all users of the selected role successfully",
   "NEW_REVIEW_PENDING": "A new review on \"{product}\" is awaiting approval",
   "REVIEW_APPROVED": "Your review on \"{product}\" has been approved and is now published",
-  "REVIEW_REPLIED": "The store replied to your review on \"{product}\""
+  "REVIEW_REPLIED": "The store replied to your review on \"{product}\"",
+  "PUSH_TITLE_ORDER": "Order update",
+  "PUSH_TITLE_REVIEW": "Your review",
+  "PUSH_TITLE_DEFAULT": "SkyGalaxy"
 }
