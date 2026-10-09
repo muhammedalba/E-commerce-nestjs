@@ -89,11 +89,8 @@ export class PaymentsService {
     currency?: string;
     countryId?: string;
   }): Promise<Record<string, unknown>[]> {
-    // 1. Check if payments are enabled (Ensure getSettings uses caching under the hood)
+    // 1. Check if online payments are enabled (Ensure getSettings uses caching under the hood)
     const settings = await this.settingsService.getSettings();
-    if (!settings.paymentsEnabled) {
-      return [];
-    }
 
     // 2. Build Query Declaratively
     const filterQuery: import('mongoose').FilterQuery<PaymentMethodDocument> = {
@@ -102,12 +99,15 @@ export class PaymentsService {
 
     const andConditions: any[] = [
       // Online methods without an integration would never charge the customer.
-      {
-        $or: [
-          { type: { $nin: ONLINE_PAYMENT_TYPES } },
-          { code: { $in: SUPPORTED_ONLINE_PAYMENT_CODES } },
-        ],
-      },
+      // With online payments disabled, only offline methods (COD, bank transfer) remain.
+      settings.paymentsEnabled
+        ? {
+            $or: [
+              { type: { $nin: ONLINE_PAYMENT_TYPES } },
+              { code: { $in: SUPPORTED_ONLINE_PAYMENT_CODES } },
+            ],
+          }
+        : { type: { $nin: ONLINE_PAYMENT_TYPES } },
     ];
 
     if (query?.currency) {
@@ -137,9 +137,9 @@ export class PaymentsService {
     // 3. Fetch Data
     const methods = await this.paymentMethodModel
       .find(filterQuery)
-      .sort({ displayOrder: 1 })
+      .sort({ displayOrder: 1, _id: 1 })
       .select(
-        'publicConfig code name provider description type feeType fixedFee percentageFee passFeesToCustomer requiresOnlineConfirmation requiresAdditionalInfo icon displayOrder',
+        'publicConfig code name provider description type feeType fixedFee percentageFee passFeesToCustomer requiresOnlineConfirmation requiresAdditionalInfo icon displayOrder isDefault',
       )
       .lean();
 
@@ -161,7 +161,10 @@ export class PaymentsService {
 
     features.limitFields().paginate(total);
 
-    const data = await features.getQuery().sort({ displayOrder: 1 }).lean();
+    const data = await features
+      .getQuery()
+      .sort({ displayOrder: 1, _id: 1 })
+      .lean();
 
     return {
       results: data.length,
@@ -177,17 +180,22 @@ export class PaymentsService {
   async findByCode(code: string): Promise<PaymentMethod | null> {
     const settings = await this.settingsService.getSettings();
 
-    if (!settings.paymentsEnabled) {
-      return null;
-    }
-
-    return this.paymentMethodModel.findOne({ code, isActive: true }).lean();
+    // `paymentsEnabled` only switches off online methods; offline ones stay usable.
+    return this.paymentMethodModel
+      .findOne({
+        code,
+        isActive: true,
+        ...(!settings.paymentsEnabled && {
+          type: { $nin: ONLINE_PAYMENT_TYPES },
+        }),
+      })
+      .lean();
   }
 
   /**
    * Loads a method's stored credentials for server-side provider calls.
    * Unlike findByCode it ignores `paymentsEnabled` and `isActive`: payments
-   * already in flight must still be verified after an admin disables payments
+   * already in flight must still be verified after an admin disables online payments
    * or the method, instead of silently falling back to environment keys.
    */
   async findCredentialsByCode(code: string): Promise<PaymentMethod | null> {

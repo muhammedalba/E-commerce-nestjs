@@ -11,7 +11,10 @@ jest.mock('src/settings/settings.service', () => ({
   SettingsService: class {},
 }));
 
-const createService = (method: Record<string, unknown> | null) => {
+const createService = (
+  method: Record<string, unknown> | null,
+  paymentsEnabled = true,
+) => {
   const lean = jest.fn(() => Promise.resolve(method));
   const find = jest.fn(() => ({
     sort: () => ({ select: () => ({ lean: () => Promise.resolve([]) }) }),
@@ -20,7 +23,7 @@ const createService = (method: Record<string, unknown> | null) => {
   const service = new PaymentsService(
     model as never,
     {
-      getSettings: () => Promise.resolve({ paymentsEnabled: true }),
+      getSettings: () => Promise.resolve({ paymentsEnabled }),
     } as never,
     { localize: (v: unknown) => v } as never,
   );
@@ -83,6 +86,63 @@ describe('PaymentsService.getActiveMethods', () => {
         ],
       }),
     );
+  });
+
+  it('keeps only offline methods when online payments are disabled', async () => {
+    const { service, model } = createService(null, false);
+
+    await service.getActiveMethods();
+
+    expect(model.find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        $and: [
+          {
+            type: {
+              $nin: [
+                PaymentType.CARD,
+                PaymentType.WALLET,
+                PaymentType.BUY_NOW_PAY_LATER,
+              ],
+            },
+          },
+        ],
+      }),
+    );
+  });
+});
+
+describe('PaymentsService.findByCode with online payments disabled', () => {
+  it('looks up offline methods only', async () => {
+    const { service, model } = createService(
+      { code: 'cod', type: PaymentType.CASH_ON_DELIVERY },
+      false,
+    );
+
+    await expect(service.findByCode('cod')).resolves.toMatchObject({
+      code: 'cod',
+    });
+    expect(model.findOne).toHaveBeenCalledWith({
+      code: 'cod',
+      isActive: true,
+      type: {
+        $nin: [
+          PaymentType.CARD,
+          PaymentType.WALLET,
+          PaymentType.BUY_NOW_PAY_LATER,
+        ],
+      },
+    });
+  });
+
+  it('does not restrict the type while online payments are enabled', async () => {
+    const { service, model } = createService(null);
+
+    await service.findByCode('moyasar');
+
+    expect(model.findOne).toHaveBeenCalledWith({
+      code: 'moyasar',
+      isActive: true,
+    });
   });
 });
 

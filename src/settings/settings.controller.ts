@@ -153,7 +153,8 @@ export class SettingsController {
   @Patch()
   @RequirePermission(Permissions.UPDATE_SETTINGS)
   @UseGuards(AuthGuard, PermissionsGuard)
-  @ClearCache('settings')
+  // `paymentsEnabled` changes which methods the cached public list returns.
+  @ClearCache('settings', 'payments')
   @UseInterceptors(
     FileFieldsInterceptor(SettingsController.imageSize),
 

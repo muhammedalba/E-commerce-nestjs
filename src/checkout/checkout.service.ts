@@ -217,7 +217,6 @@ export class CheckoutService {
       chosenPaymentMethod = await this.validatePaymentMethod(
         dto.paymentMethodId,
         chosenShipping,
-        settings,
       );
     }
 
@@ -443,19 +442,15 @@ export class CheckoutService {
   }
 
   /**
-   * Validates that the chosen payment method is active in settings and that
-   * COD is supported by the selected shipping provider when applicable.
+   * Validates that the chosen payment method is available (online methods are
+   * rejected while `paymentsEnabled` is off) and that COD is supported by the
+   * selected shipping provider when applicable.
    */
   private async validatePaymentMethod(
     paymentMethodId: string,
     chosenShipping: ShippingCalculationResult,
-    settings: Setting,
   ) {
     if (!paymentMethodId) return null;
-
-    if (!settings.paymentsEnabled) {
-      throw new BadRequestException('Payments are currently disabled');
-    }
 
     return await this.paymentsService.validatePaymentMethod(
       paymentMethodId,
