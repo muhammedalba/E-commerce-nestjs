@@ -11,12 +11,15 @@ import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { FileUploadService } from 'src/file-upload/file-upload.service';
 import { SupplierStatistics } from './shared/Suppliers-helper/supplier-statistics.service';
+import { Product } from 'src/products/shared/schemas/Product.schema';
+import { assertNoLinkedProducts } from 'src/shared/utils/linked-products.util';
 
 @Injectable()
 export class SupplierService extends BaseService<SupplierDocument> {
   protected slugSourceField = 'name';
   constructor(
     @InjectModel(Supplier.name) private SupplierModel: Model<SupplierDocument>,
+    @InjectModel(Product.name) private productModel: Model<Product>,
     protected readonly fileUploadService: FileUploadService,
     protected readonly i18n: CustomI18nService,
     protected readonly supplierStatistics: SupplierStatistics,
@@ -82,6 +85,11 @@ export class SupplierService extends BaseService<SupplierDocument> {
   // ------------ ======  DELETE SUPPLIER  ====== ---------- //
   // ------------ =============================== ---------- //
   async remove(idParamDto: IdParamDto): Promise<void> {
+    await assertNoLinkedProducts(
+      this.productModel,
+      { supplier: idParamDto.id },
+      this.i18n,
+    );
     return await this.deleteOneDoc(idParamDto, 'avatar');
   }
 }

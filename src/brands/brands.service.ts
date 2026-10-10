@@ -11,12 +11,15 @@ import { UpdateBrandDto } from './shared/dto/update-brand.dto';
 import { BaseService } from 'src/shared/utils/service/base.service';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { BrandsStatistics } from './shared/brands-helper/brands-statistics.service';
+import { Product } from 'src/products/shared/schemas/Product.schema';
+import { assertNoLinkedProducts } from 'src/shared/utils/linked-products.util';
 
 @Injectable()
 export class BrandsService extends BaseService<BrandDocument> {
   protected slugSourceField = 'name';
   constructor(
     @InjectModel(Brand.name) private brandModel: Model<BrandDocument>,
+    @InjectModel(Product.name) private productModel: Model<Product>,
     protected readonly fileUploadService: FileUploadService,
     protected readonly brandsStatistics: BrandsStatistics,
     protected readonly i18n: CustomI18nService,
@@ -93,6 +96,11 @@ export class BrandsService extends BaseService<BrandDocument> {
   // ------------ ======  delete brand   ====== ---------- //
   // ------------ =============================== ---------- //
   async deleteOne(idParamDto: IdParamDto) {
+    await assertNoLinkedProducts(
+      this.productModel,
+      { brand: idParamDto.id },
+      this.i18n,
+    );
     return await this.deleteOneDoc(idParamDto, 'image');
   }
 }

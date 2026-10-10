@@ -14,6 +14,8 @@ import { SubCategoriesStatistics } from './shared/sub-categories-helper/sub-cate
 
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
+import { Product } from 'src/products/shared/schemas/Product.schema';
+import { assertNoLinkedProducts } from 'src/shared/utils/linked-products.util';
 
 @Injectable()
 export class SubCategoryService extends BaseService<SubCategoryDocument> {
@@ -21,6 +23,7 @@ export class SubCategoryService extends BaseService<SubCategoryDocument> {
   constructor(
     @InjectModel(SubCategory.name)
     private SubCategoryModel: Model<SubCategoryDocument>,
+    @InjectModel(Product.name) private productModel: Model<Product>,
     protected readonly i18n: CustomI18nService,
     protected readonly SubCategoriesStatistics: SubCategoriesStatistics,
   ) {
@@ -89,6 +92,11 @@ export class SubCategoryService extends BaseService<SubCategoryDocument> {
   // ------------ ======  DELETE SUP CATEGORY  ====== ---------- //
   // ------------ =============================== ---------- //
   async remove(idParamDto: IdParamDto) {
+    await assertNoLinkedProducts(
+      this.productModel,
+      { SubCategories: idParamDto.id },
+      this.i18n,
+    );
     return await this.deleteOneDoc(idParamDto);
   }
 }
