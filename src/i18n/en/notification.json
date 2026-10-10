@@ -14,5 +14,7 @@
   "REVIEW_REPLIED": "The store replied to your review on \"{product}\"",
   "PUSH_TITLE_ORDER": "Order update",
   "PUSH_TITLE_REVIEW": "Your review",
-  "PUSH_TITLE_DEFAULT": "SkyGalaxy"
+  "PUSH_TITLE_DEFAULT": "SkyGalaxy",
+  "PUSH_TITLE_APP_UPDATE": "New update available",
+  "APP_UPDATE_AVAILABLE": "Version {version} of the app is now available. Update now to get the latest features."
 }

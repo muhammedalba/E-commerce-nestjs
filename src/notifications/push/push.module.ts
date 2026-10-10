@@ -26,6 +26,6 @@ import { DeviceToken, DeviceTokenSchema } from './schemas/device-token.schema';
     PushNotificationsService,
     PushNotificationsListener,
   ],
-  exports: [PushNotificationsService],
+  exports: [PushNotificationsService, DeviceTokensService],
 })
 export class PushModule {}

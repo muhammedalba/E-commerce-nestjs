@@ -39,6 +39,10 @@ export class DeviceToken {
   @Prop({ type: String, enum: ['ar', 'en'], default: 'ar' })
   declare lang: 'ar' | 'en';
 
+  /** App version of the install (feeds the version adoption stats). */
+  @Prop({ type: String })
+  declare appVersion?: string;
+
   /** Refreshed on every registration; idle tokens expire (FCM marks them stale). */
   @Prop({
     type: Date,

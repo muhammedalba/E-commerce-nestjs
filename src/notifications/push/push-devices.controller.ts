@@ -51,6 +51,7 @@ export class PushDevicesController {
       token: dto.token,
       platform: dto.platform,
       lang: dto.lang ?? (this.i18n.getLang() === 'en' ? 'en' : 'ar'),
+      appVersion: dto.appVersion,
     });
     return { message: this.i18n.translate('success.DEVICE_REGISTERED') };
   }

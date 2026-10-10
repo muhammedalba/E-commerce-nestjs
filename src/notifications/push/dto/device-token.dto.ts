@@ -4,8 +4,10 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
 } from 'class-validator';
+import { APP_VERSION_PATTERN } from 'src/app-versions/shared/utils/compare-versions';
 import { DevicePlatform } from '../schemas/device-token.schema';
 
 /** Body of `PUT push/devices`: the install's current FCM token. */
@@ -22,6 +24,11 @@ export class RegisterDeviceDto {
   @IsOptional()
   @IsIn(['ar', 'en'])
   lang?: 'ar' | 'en';
+
+  /** Installed app version, e.g. `1.4.2`. */
+  @IsOptional()
+  @Matches(APP_VERSION_PATTERN, { message: 'appVersion must look like 1.2.3' })
+  appVersion?: string;
 }
 
 /** Body of `DELETE push/devices`. */

@@ -5,15 +5,18 @@ const FCM_SCOPE = 'https://www.googleapis.com/auth/firebase.messaging';
 const SEND_TIMEOUT_MS = 10_000;
 const MAX_RETRY_DELAY_MS = 10_000;
 
-/** One push to one device. `data` values must be strings (FCM rule). */
-export interface FcmMessage {
-  token: string;
+/** Who receives a push: one device, or every install subscribed to a topic. */
+export type FcmTarget =
+  { token: string; topic?: never } | { topic: string; token?: never };
+
+/** One push to one device or topic. `data` values must be strings (FCM rule). */
+export type FcmMessage = FcmTarget & {
   title: string;
   body: string;
   data?: Record<string, string>;
   /** Newer pushes with the same key replace older ones in the tray. */
   collapseKey?: string;
-}
+};
 
 /**
  * - `sent`: FCM accepted it.
@@ -144,9 +147,9 @@ export class FcmClient {
 }
 
 function toFcmPayload(message: FcmMessage) {
-  const { token, title, body, data, collapseKey } = message;
+  const { token, topic, title, body, data, collapseKey } = message;
   return {
-    token,
+    ...(token ? { token } : { topic }),
     notification: { title, body },
     data: data ?? {},
     android: {

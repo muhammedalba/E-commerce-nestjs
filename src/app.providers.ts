@@ -1,6 +1,7 @@
 import { Provider } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { MaintenanceGuard } from './shared/guards/maintenance.guard';
+import { AppVersionGuard } from './shared/guards/app-version.guard';
 import { CustomThrottlerGuard } from './shared/guards/custom-throttler.guard';
 import { TransformInterceptor } from './shared/interceptors/transform.interceptor';
 import { LoggingInterceptor } from './shared/interceptors/logging.interceptor';
@@ -13,6 +14,12 @@ export const appProviders: Provider[] = [
   {
     provide: APP_GUARD,
     useClass: CustomThrottlerGuard,
+  },
+  // Global mobile app forced-update guard (426). Before maintenance, so an
+  // unsupported app shows its update screen rather than the maintenance one.
+  {
+    provide: APP_GUARD,
+    useClass: AppVersionGuard,
   },
   // Global maintenance mode guard
   {

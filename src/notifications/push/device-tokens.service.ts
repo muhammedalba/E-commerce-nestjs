@@ -12,6 +12,12 @@ export interface ActiveDevice {
   lang: 'ar' | 'en';
 }
 
+export interface VersionStat {
+  platform: DevicePlatform;
+  appVersion: string | null;
+  devices: number;
+}
+
 /**
  * Stores the FCM tokens of the user's app installs.
  *
@@ -36,7 +42,12 @@ export class DeviceTokensService {
   async register(
     userId: string,
     sessionId: string,
-    device: { token: string; platform: DevicePlatform; lang: 'ar' | 'en' },
+    device: {
+      token: string;
+      platform: DevicePlatform;
+      lang: 'ar' | 'en';
+      appVersion?: string;
+    },
   ): Promise<void> {
     const update = {
       $set: {
@@ -45,6 +56,7 @@ export class DeviceTokensService {
         platform: device.platform,
         lang: device.lang,
         lastSeenAt: new Date(),
+        ...(device.appVersion && { appVersion: device.appVersion }),
       },
     };
     try {
@@ -93,6 +105,30 @@ export class DeviceTokensService {
     return devices
       .filter((d) => liveSessions.has(d.sessionId))
       .map((d) => ({ token: d.token, lang: d.lang }));
+  }
+
+  /**
+   * Registered installs per platform and app version (`null` = an install
+   * that did not report its version), most installs first.
+   */
+  async versionStats(): Promise<VersionStat[]> {
+    return this.deviceTokenModel.aggregate<VersionStat>([
+      {
+        $group: {
+          _id: { platform: '$platform', appVersion: '$appVersion' },
+          devices: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          platform: '$_id.platform',
+          appVersion: { $ifNull: ['$_id.appVersion', null] },
+          devices: 1,
+        },
+      },
+      { $sort: { devices: -1 } },
+    ]);
   }
 
   async remove(tokens: string[]): Promise<void> {

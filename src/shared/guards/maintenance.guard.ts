@@ -85,6 +85,8 @@ export class MaintenanceGuard implements CanActivate {
     return (
       route === '/auth/login' ||
       route === '/auth/verify-Pass-Reset-Code' ||
+      // The mobile app's update check: an update may be the fix.
+      route === '/app-versions/check' ||
       route === '/settings' ||
       route.startsWith('/settings/')
     );

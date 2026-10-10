@@ -36,6 +36,7 @@ import { SeedModule } from './seed/seed.module';
 import { RolesModule } from './roles/roles.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PushModule } from './notifications/push/push.module';
+import { AppVersionsModule } from './app-versions/app-versions.module';
 import { ContactModule } from './contact/contact.module';
 import { QuoteRequestsModule } from './quote-requests/quote-requests.module';
 import { ReviewsModule } from './reviews/reviews.module';
@@ -116,6 +117,7 @@ import { createKeyv } from 'cacheable';
     RolesModule,
     NotificationsModule,
     PushModule,
+    AppVersionsModule,
     ContactModule,
     QuoteRequestsModule,
     ReviewsModule,

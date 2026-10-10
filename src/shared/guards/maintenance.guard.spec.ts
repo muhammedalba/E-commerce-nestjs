@@ -53,6 +53,7 @@ describe('MaintenanceGuard auth routes', () => {
     '/api/v1/settings',
     '/api/v1/settings?lang=ar',
     '/api/v1/settings/clear-cache',
+    '/api/v1/app-versions/check?platform=ios&version=1.0.0',
   ])('lets %s through during maintenance', async (url) => {
     await expect(createGuard().canActivate(contextFor(url))).resolves.toBe(
       true,

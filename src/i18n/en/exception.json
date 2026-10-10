@@ -123,5 +123,8 @@
     "LIMIT_REACHED": "You have reached the maximum number of items in your wishlist",
     "PRODUCT_NOT_AVAILABLE": "Product not found or unavailable",
     "WISHLIST_DISABLED": "Wishlist is currently disabled"
-  }
+  },
+  "APP_UPDATE_REQUIRED": "This version of the app is no longer supported. Please update the app to continue.",
+  "APP_MIN_VERSION_ABOVE_LATEST": "The minimum supported version cannot be higher than the latest version.",
+  "PUSH_UNAVAILABLE": "Push notifications are currently unavailable. Please try again later."
 }

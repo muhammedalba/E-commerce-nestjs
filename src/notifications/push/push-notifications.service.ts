@@ -52,4 +52,28 @@ export class PushNotificationsService {
       this.logger.log(`Dropped ${dead.length} dead device token(s)`);
     }
   }
+
+  /**
+   * Broadcasts a push to every install subscribed to a topic — guests
+   * included, since topics need no login. One topic per language
+   * (`<topic>_ar` / `<topic>_en`), so each install reads its own language.
+   *
+   * @returns false when push is disabled or FCM rejected a message.
+   */
+  async sendToTopic(topic: string, push: UserPush): Promise<boolean> {
+    if (!this.fcm.isEnabled()) return false;
+
+    const results = await Promise.all(
+      (['ar', 'en'] as const).map((lang) =>
+        this.fcm.send({
+          topic: `${topic}_${lang}`,
+          title: push.title[lang],
+          body: push.body[lang],
+          data: push.data,
+          collapseKey: push.collapseKey,
+        }),
+      ),
+    );
+    return results.every((r) => r === 'sent');
+  }
 }

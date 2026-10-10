@@ -14,5 +14,7 @@
   "REVIEW_REPLIED": "قام المتجر بالرد على تقييمك للمنتج \"{product}\"",
   "PUSH_TITLE_ORDER": "تحديث الطلب",
   "PUSH_TITLE_REVIEW": "تقييمك",
-  "PUSH_TITLE_DEFAULT": "سكاي جالاكسي"
+  "PUSH_TITLE_DEFAULT": "سكاي جالاكسي",
+  "PUSH_TITLE_APP_UPDATE": "تحديث جديد متاح",
+  "APP_UPDATE_AVAILABLE": "الإصدار {version} من التطبيق متاح الآن. حدّث التطبيق للحصول على أحدث المزايا."
 }

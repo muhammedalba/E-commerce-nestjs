@@ -13,3 +13,10 @@ export const PUSH_TITLE_KEYS: readonly [prefix: string, key: string][] = [
   ['REVIEW_', 'notification.PUSH_TITLE_REVIEW'],
 ];
 export const DEFAULT_PUSH_TITLE_KEY = 'notification.PUSH_TITLE_DEFAULT';
+
+/**
+ * FCM topic of the "new version" announcements of one platform. The app
+ * subscribes to `<topic>_<lang>` (e.g. `app_updates_android_ar`) on start
+ * and moves to the other language's topic when the user switches language.
+ */
+export const appUpdateTopic = (platform: string) => `app_updates_${platform}`;
