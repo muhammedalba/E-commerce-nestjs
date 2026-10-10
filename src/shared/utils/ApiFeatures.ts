@@ -1,6 +1,7 @@
 import { Query, Types } from 'mongoose';
 import { PaginationResult, QueryString } from './interfaces/queryInterface';
 import { searchStrategies } from './strategies/search.strategy';
+import { parsePagination } from './pagination.util';
 
 export class ApiFeatures<T> {
   private mongooseQuery: Query<T[], T>;
@@ -211,9 +212,10 @@ export class ApiFeatures<T> {
   }
 
   paginate(totalDocuments: number) {
-    const page = parseInt(this.queryString.page ?? '1', 10);
-    const limit = parseInt(this.queryString.limit ?? '15', 10);
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = parsePagination(
+      this.queryString.page,
+      this.queryString.limit,
+    );
     const endIndex = page * limit;
 
     const pagination: PaginationResult = {

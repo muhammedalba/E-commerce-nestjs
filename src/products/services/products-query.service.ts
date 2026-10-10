@@ -9,6 +9,7 @@ import {
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { ApiFeatures } from 'src/shared/utils/ApiFeatures';
+import { parsePagination } from 'src/shared/utils/pagination.util';
 import {
   PaginationResult,
   QueryString,
@@ -146,9 +147,10 @@ export class ProductQueryService {
     // 2. تجهيز الفلاتر
     const features = this.prepareFeatures(queryString, productIds);
 
-    const page = parseInt(queryString.page ?? '1', 10);
-    const limit = parseInt(queryString.limit ?? '15', 10);
-    const skip = (page - 1) * limit;
+    const { limit, skip } = parsePagination(
+      queryString.page,
+      queryString.limit,
+    );
 
     // 3. تشغيل استعلام العد وجلب البيانات بالتوازي
     const [total, products] = await Promise.all([

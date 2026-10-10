@@ -30,6 +30,7 @@ import {
   NotificationTargetType,
 } from './shared/dto/send-notification.dto';
 import { UNIFIED_NOTIFICATION_ACTIONS } from './shared/constants';
+import { parsePagination } from 'src/shared/utils/pagination.util';
 
 interface NotificationEvent {
   userId?: string;
@@ -151,9 +152,10 @@ export class NotificationsController {
     @Query('page') page = '1',
     @Query('limit') limit = '20',
   ) {
+    const pagination = parsePagination(page, limit, 20);
     const result = await this.notificationsService.getAllNotificationsByAdmin(
-      parseInt(page, 10),
-      parseInt(limit, 10),
+      pagination.page,
+      pagination.limit,
     );
     return this.i18n.localize(result) as Record<string, any>;
   }
@@ -193,10 +195,11 @@ export class NotificationsController {
     if (!userId) {
       return { success: false, message: 'غير مصرح' };
     }
+    const pagination = parsePagination(page, limit, 20);
     const result = await this.notificationsService.getUserNotifications(
       userId,
-      parseInt(page, 10),
-      parseInt(limit, 10),
+      pagination.page,
+      pagination.limit,
     );
     const localizedResult = this.i18n.localize(result) as Record<string, any>;
     return { success: true, ...localizedResult };
