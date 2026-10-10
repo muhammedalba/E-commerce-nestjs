@@ -53,19 +53,35 @@ export class ProductQueryService {
   // 1. CORE LOGIC
   // ─────────────────────────────────────────────────────────────
 
+  /**
+   * @param textSearch match `keywords` through the product text index
+   * (`$text`, ranked by relevance unless a sort is given) instead of the
+   * substring regex search, which has to scan every product.
+   */
   private prepareFeatures(
     queryString: QueryString,
     productIds?: Types.ObjectId[],
+    textSearch = false,
   ) {
     const filter: FilterQuery<ProductDocument> = productIds
       ? { _id: { $in: productIds } }
       : {};
     const baseQuery = this.productModel.find(filter);
-    const features = new ApiFeatures(baseQuery, queryString)
-      .filter()
-      .search(Product.name);
+    const features = new ApiFeatures(baseQuery, queryString).filter();
+    const keywords = queryString.keywords?.trim();
 
-    features.sort().limitFields();
+    if (textSearch && keywords) {
+      const query = features.getQuery().find({ $text: { $search: keywords } });
+      if (queryString.sort) {
+        features.sort();
+      } else {
+        query.sort({ score: { $meta: 'textScore' }, createdAt: -1 });
+      }
+    } else {
+      features.search(Product.name).sort();
+    }
+
+    features.limitFields();
     return features;
   }
 
@@ -145,7 +161,21 @@ export class ProductQueryService {
     }
 
     // 2. تجهيز الفلاتر
-    const features = this.prepareFeatures(queryString, productIds);
+    // $text matches whole words only, with no Arabic stemming ("هاتف" does
+    // not match "الهاتف") and no partial words ("iph"): when it finds nothing,
+    // fall back to the substring regex search.
+    const keywords = queryString.keywords?.trim();
+    let features = this.prepareFeatures(queryString, productIds, !!keywords);
+    let textTotal: number | undefined;
+    if (keywords) {
+      textTotal = await this.productModel.countDocuments(
+        features.getQuery().getFilter(),
+      );
+      if (textTotal === 0) {
+        features = this.prepareFeatures(queryString, productIds);
+        textTotal = undefined;
+      }
+    }
 
     const { limit, skip } = parsePagination(
       queryString.page,
@@ -154,7 +184,8 @@ export class ProductQueryService {
 
     // 3. تشغيل استعلام العد وجلب البيانات بالتوازي
     const [total, products] = await Promise.all([
-      this.productModel.countDocuments(features.getQuery().getFilter()),
+      textTotal ??
+        this.productModel.countDocuments(features.getQuery().getFilter()),
       features
         .getQuery()
         .skip(skip)
