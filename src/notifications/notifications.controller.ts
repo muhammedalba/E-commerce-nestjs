@@ -103,13 +103,7 @@ export class NotificationsController {
     }
 
     const keepAlive$ = interval(30000).pipe(
-      map(
-        () =>
-          ({
-            action: 'ping',
-            message: '',
-          }) as NotificationEvent,
-      ),
+      map((): NotificationEvent => ({ action: 'ping', message: '' })),
     );
 
     streams.push(keepAlive$);
