@@ -3,8 +3,14 @@ import {
   Inject,
   Logger,
   BadRequestException,
+  Optional,
   forwardRef,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  SETTINGS_UPDATED_EVENT,
+  SettingsUpdatedEvent,
+} from './shared/settings.events';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Model, Connection } from 'mongoose';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -148,17 +154,26 @@ export class SettingsService {
     private readonly exchangeRateSyncService: ExchangeRateSyncService,
 
     private readonly httpService: HttpService,
+
+    @Optional()
+    private readonly eventEmitter?: EventEmitter2,
   ) {}
 
   /**
    * Strips the encrypted Google Places API key from a settings object and
    * replaces it with a boolean flag, so the secret never reaches the public
-   * `GET /settings` response or the settings cache.
+   * `GET /settings` response or the settings cache. The admin-only backup
+   * configuration is dropped too (served by `GET /backup/settings`).
    */
-  private toPublicSettings<T extends { googlePlacesApiKey?: string }>(
+  private toPublicSettings<
+    T extends { googlePlacesApiKey?: string; backup?: unknown },
+  >(
     settings: T,
-  ): Omit<T, 'googlePlacesApiKey'> & { hasGooglePlacesApiKey: boolean } {
-    const { googlePlacesApiKey, ...rest } = settings;
+  ): Omit<T, 'googlePlacesApiKey' | 'backup'> & {
+    hasGooglePlacesApiKey: boolean;
+  } {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { googlePlacesApiKey, backup, ...rest } = settings;
     return { ...rest, hasGooglePlacesApiKey: !!googlePlacesApiKey };
   }
 
@@ -340,9 +355,7 @@ export class SettingsService {
         const file = fileArray?.[0];
         const dtoValue = dto[key];
         const oldAsset = currentSettings[key as keyof Setting] as
-          | FileAsset
-          | string
-          | undefined;
+          FileAsset | string | undefined;
 
         if (file) {
           // CASE A: New file uploaded – replace old file
@@ -390,6 +403,12 @@ export class SettingsService {
 
     // Notify the frontend to regenerate statically cached pages (ISR)
     await this.revalidationService.revalidate(['settings', 'public-settings']);
+
+    // In-process listeners (e.g. the backup scheduler re-derives its timezone
+    // when the business address changes).
+    this.eventEmitter?.emit(SETTINGS_UPDATED_EVENT, {
+      changedKeys: Object.keys(dto),
+    } satisfies SettingsUpdatedEvent);
 
     // Re-sync the exchange rate immediately when the store switches currency,
     // instead of waiting for the next hourly cron run. This is awaited so the

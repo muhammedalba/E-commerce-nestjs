@@ -16,6 +16,7 @@ import { User } from '../../auth/shared/schema/user.schema';
 import {
   Permissions,
   PERMISSIONS_METADATA,
+  expandPermissions,
 } from '../shared/enums/permissions.enum';
 import { JwtPayload } from '../../auth/shared/types/jwt-payload.interface';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
@@ -372,19 +373,18 @@ export class RolesService {
     if (!activeRoleId) return [];
 
     const cacheKey = `role_permissions:${activeRoleId}`;
-    let userPermissions = await this.cacheManager.get<string[]>(cacheKey);
+    const cached = await this.cacheManager.get<string[]>(cacheKey);
+    let userPermissions: string[];
 
-    if (!userPermissions) {
+    if (cached) {
+      userPermissions = expandPermissions(cached);
+    } else {
       const role = await this.roleModel
         .findById(activeRoleId)
         .select('permissions')
         .lean();
 
-      const permissionsSet = new Set(role?.permissions || []);
-      if (permissionsSet.has(Permissions.UPDATE_SETTINGS)) {
-        permissionsSet.add(Permissions.VIEW_SETTINGS);
-      }
-      userPermissions = Array.from(permissionsSet);
+      userPermissions = expandPermissions(role?.permissions);
 
       await this.cacheManager.set(
         cacheKey,

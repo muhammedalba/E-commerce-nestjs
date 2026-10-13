@@ -16,7 +16,7 @@ async function run() {
 
   console.log('🌱 Connecting to MongoDB...');
   await mongoose.connect(mongoUri, {
-    dbName: 'skyGalaxy',
+    dbName: process.env.MONGODB_DB_NAME || 'skyGalaxy',
   });
   console.log('✅ Connected to MongoDB (skyGalaxy)');
 

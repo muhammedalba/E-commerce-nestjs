@@ -5,6 +5,10 @@ import { HydratedDocument } from 'mongoose';
 import { FileAsset } from 'src/shared/schema/file-asset.schema';
 import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
 import { withBaseUrl } from 'src/shared/utils/with-base-url.util';
+import {
+  BackupSettings,
+  DEFAULT_BACKUP_SETTINGS,
+} from 'src/backup/backup.types';
 
 export type SettingDocument = HydratedDocument<Setting>;
 
@@ -208,6 +212,7 @@ export class Setting {
   @Prop({ type: Boolean, default: true })
   declare allowRegistration: boolean;
 
+  /** @deprecated Has no effect; see `backup` below (Admin > Backups). */
   @Prop({ type: Boolean, default: false })
   declare autoBackup: boolean;
 
@@ -245,6 +250,11 @@ export class Setting {
   // Inventory alert settings
   @Prop({ type: Boolean, default: true })
   declare inventoryAlertsEnabled: boolean;
+
+  // Database backup schedule (admin-only, managed through /backup/settings;
+  // never part of the public settings response). Credentials stay in env.
+  @Prop({ type: Object, default: () => ({ ...DEFAULT_BACKUP_SETTINGS }) })
+  declare backup: BackupSettings;
 
   // Dynamic fields (not saved in the database)
   hasCustomShippingRates?: boolean;

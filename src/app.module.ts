@@ -43,6 +43,7 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { FileUploadDiskStorageModule } from './file-upload/file-upload.module';
 import { SharedModule } from './shared/shared.module';
 import { RedisModule } from './shared/redis/redis.module';
+import { BackupModule } from './backup/backup.module';
 import { appProviders } from './app.providers';
 import { createKeyv } from 'cacheable';
 
@@ -124,6 +125,7 @@ import { createKeyv } from 'cacheable';
     FileUploadDiskStorageModule,
     SharedModule,
     RedisModule,
+    BackupModule,
   ],
   controllers: [AppController],
   providers: [...appProviders],

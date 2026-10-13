@@ -69,3 +69,62 @@ describe('MaintenanceGuard auth routes', () => {
     await expect(createGuard().canActivate(contextFor(url))).rejects.toThrow();
   });
 });
+
+describe('MaintenanceGuard backup routes', () => {
+  /** A signed-in staff member whose role holds `permissions`. */
+  const guardFor = (permissions: string[]) =>
+    new MaintenanceGuard(
+      {
+        getSettings: () =>
+          Promise.resolve({ maintenanceMode: true, maintenanceMessage: {} }),
+      } as never,
+      {
+        verifyAsync: () => Promise.resolve({ user_id: 'u1', level: 10 }),
+      } as never,
+      {
+        get: () => Promise.resolve(undefined),
+        set: () => Promise.resolve(),
+      } as never,
+      {
+        findById: () => ({
+          select: () => ({ lean: () => Promise.resolve({ role: 'role-1' }) }),
+        }),
+      } as never,
+      {
+        findById: () => ({
+          select: () => ({ lean: () => Promise.resolve({ permissions }) }),
+        }),
+      } as never,
+    );
+  const signedIn = (url: string) =>
+    ({
+      switchToHttp: () => ({
+        getRequest: () => ({
+          url,
+          headers: { authorization: 'Bearer t' },
+        }),
+      }),
+    }) as unknown as ExecutionContext;
+
+  it('lets roles with a backup permission use the Backups API', async () => {
+    await expect(
+      guardFor(['run_backup']).canActivate(
+        signedIn('/api/v1/backup/files?fresh=1'),
+      ),
+    ).resolves.toBe(true);
+  });
+
+  it('keeps the rest of the store closed to them, and the Backups API to others', async () => {
+    await expect(
+      guardFor(['run_backup']).canActivate(signedIn('/api/v1/orders')),
+    ).rejects.toThrow();
+    await expect(
+      guardFor(['view_orders']).canActivate(signedIn('/api/v1/backup/files')),
+    ).rejects.toThrow();
+    await expect(
+      guardFor(['run_backup']).canActivate(
+        signedIn('/api/v1/orders?next=/backup/files'),
+      ),
+    ).rejects.toThrow();
+  });
+});

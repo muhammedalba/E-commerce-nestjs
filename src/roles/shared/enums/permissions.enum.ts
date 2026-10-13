@@ -116,6 +116,48 @@ export enum Permissions {
   VIEW_REVIEWS = 'view_reviews',
   MANAGE_REVIEWS = 'manage_reviews',
   DELETE_REVIEW = 'delete_review',
+
+  // ---- Database backups ----
+  VIEW_BACKUPS = 'view_backups',
+  MANAGE_BACKUP_SETTINGS = 'manage_backup_settings',
+  RUN_BACKUP = 'run_backup',
+  VERIFY_BACKUP = 'verify_backup',
+  RESTORE_BACKUP_TEST = 'restore_backup_test',
+  RESTORE_BACKUP_FILES = 'restore_backup_files',
+  DOWNLOAD_BACKUP = 'download_backup',
+  UPLOAD_BACKUP = 'upload_backup',
+}
+
+/** Backup permissions; holding any of them implies VIEW_BACKUPS. */
+export const BACKUP_PERMISSIONS: Permissions[] = [
+  Permissions.VIEW_BACKUPS,
+  Permissions.MANAGE_BACKUP_SETTINGS,
+  Permissions.RUN_BACKUP,
+  Permissions.VERIFY_BACKUP,
+  Permissions.RESTORE_BACKUP_TEST,
+  Permissions.RESTORE_BACKUP_FILES,
+  Permissions.DOWNLOAD_BACKUP,
+  Permissions.UPLOAD_BACKUP,
+];
+
+/**
+ * A role's stored permissions plus the ones they imply:
+ * - UPDATE_SETTINGS ⇒ VIEW_SETTINGS;
+ * - any backup permission ⇒ VIEW_BACKUPS.
+ *
+ * The single place these rules live: every reader of role permissions
+ * (guards, `/roles/my-permissions`) must go through it, because they share
+ * one cache entry per role.
+ */
+export function expandPermissions(
+  permissions: readonly string[] | null | undefined,
+): Permissions[] {
+  const set = new Set((permissions ?? []) as Permissions[]);
+  if (set.has(Permissions.UPDATE_SETTINGS)) set.add(Permissions.VIEW_SETTINGS);
+  if (BACKUP_PERMISSIONS.some((p) => set.has(p))) {
+    set.add(Permissions.VIEW_BACKUPS);
+  }
+  return [...set];
 }
 
 export const PERMISSIONS_METADATA: PermissionMetadata[] = [
@@ -522,4 +564,11 @@ export const PERMISSIONS_METADATA: PermissionMetadata[] = [
     groupKey: 'permissions.groups.reviews',
     labelKey: 'permissions.labels.delete_review',
   },
+
+  // ── Database backups ──────────────────────────────────────────────────────
+  ...BACKUP_PERMISSIONS.map((key) => ({
+    key,
+    groupKey: 'permissions.groups.backups',
+    labelKey: `permissions.labels.${key}`,
+  })),
 ];

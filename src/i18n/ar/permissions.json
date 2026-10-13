@@ -14,7 +14,8 @@
     "shipping_taxes": "الشحن والضرائب",
     "payment_methods": "طرق الدفع",
     "notifications": "الإشعارات",
-    "reviews": "التقييمات"
+    "reviews": "التقييمات",
+    "backups": "النسخ الاحتياطي"
   },
   "labels": {
     "access_dashboard": "دخول لوحة التحكم",
@@ -91,6 +92,14 @@
     "delete_payment_method": "حذف طريقة دفع",
     "view_reviews": "عرض التقييمات",
     "manage_reviews": "إدارة التقييمات (قبول، رفض، رد)",
-    "delete_review": "حذف التقييم"
+    "delete_review": "حذف التقييم",
+    "view_backups": "عرض النسخ الاحتياطية (القائمة، الحالة، الإعدادات)",
+    "manage_backup_settings": "إدارة إعدادات النسخ والاتصال بـ Google Drive",
+    "run_backup": "تشغيل نسخة احتياطية الآن",
+    "verify_backup": "فحص النسخ الاحتياطية",
+    "restore_backup_test": "استعادة نسخة إلى قاعدة الاختبار",
+    "restore_backup_files": "استعادة الملفات المرفوعة إلى المتجر الحي",
+    "download_backup": "تنزيل النسخ الاحتياطية (مشفّرة)",
+    "upload_backup": "رفع / حذف النسخ المرفوعة يدوياً"
   }
 }

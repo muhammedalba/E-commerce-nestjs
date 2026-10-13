@@ -11,7 +11,8 @@ export const MongooseConfig = MongooseModule.forRootAsync({
     }
     return {
       uri,
-      dbName: 'skyGalaxy',
+      // Validated in env.validation.ts; defaults to the historical name.
+      dbName: configService.get<string>('MONGODB_DB_NAME') || 'skyGalaxy',
     };
   },
   inject: [ConfigService],
