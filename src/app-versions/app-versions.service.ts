@@ -9,6 +9,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Cache } from 'cache-manager';
 import { Model, Types } from 'mongoose';
 import { AuditService } from 'src/audit/audit.service';
+import { AUDIT_MODULES } from 'src/audit/shared/audit.constants';
 import { DeviceTokensService } from 'src/notifications/push/device-tokens.service';
 import { appUpdateTopic } from 'src/notifications/push/push.constants';
 import { PushNotificationsService } from 'src/notifications/push/push-notifications.service';
@@ -147,7 +148,7 @@ export class AppVersionsService {
     await this.cacheInvalidation.clearResources([APP_VERSIONS_CACHE_RESOURCE]);
     await this.auditService.log({
       action: 'UPDATE_APP_VERSION_POLICY',
-      module: 'app-versions',
+      module: AUDIT_MODULES.APP_VERSIONS,
       userId: actor.userId,
       userEmail: actor.email,
       ipAddress: actor.ipAddress,

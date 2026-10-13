@@ -21,6 +21,18 @@ import {
 import { JwtPayload } from '../../auth/shared/types/jwt-payload.interface';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { CreateRoleDto, UpdateRoleDto } from '../shared/dto/role.dto';
+import { AuditService, auditActorOf } from 'src/audit/audit.service';
+import { AuditAction } from 'src/audit/shared/schema/audit-log.schema';
+import { AUDIT_MODULES } from 'src/audit/shared/audit.constants';
+
+/** What the audit log keeps of a role. */
+const roleSnapshot = (role: Role & { _id: unknown }) => ({
+  roleId: String(role._id),
+  name: role.name,
+  description: role.description,
+  level: role.level,
+  permissions: [...(role.permissions ?? [])],
+});
 
 /**
  * Service responsible for managing Roles and Permissions within the system.
@@ -35,6 +47,7 @@ export class RolesService {
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
     private readonly i18n: CustomI18nService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly audit: AuditService,
   ) {}
 
   /**
@@ -140,7 +153,11 @@ export class RolesService {
    * @returns The newly created role document.
    * @throws {ForbiddenException} If attempting to create a role at or above the user's own level.
    */
-  async createRole(createRoleDto: CreateRoleDto, currentUser: JwtPayload) {
+  async createRole(
+    createRoleDto: CreateRoleDto,
+    currentUser: JwtPayload,
+    ipAddress?: string,
+  ) {
     if (createRoleDto.level >= currentUser.level) {
       throw new ForbiddenException(
         this.i18n.translate('exception.role.CANNOT_CREATE_HIGHER_ROLE'),
@@ -155,7 +172,14 @@ export class RolesService {
       createRoleDto.permissions = Array.from(permissionsSet);
     }
 
-    return this.roleModel.create(createRoleDto);
+    const role = await this.roleModel.create(createRoleDto);
+    await this.audit.record(
+      AuditAction.CREATE,
+      AUDIT_MODULES.ROLES,
+      auditActorOf(currentUser, ipAddress),
+      { newData: roleSnapshot(role) },
+    );
+    return role;
   }
 
   /**
@@ -173,6 +197,7 @@ export class RolesService {
     roleId: string,
     updateRoleDto: UpdateRoleDto,
     currentUser: JwtPayload,
+    ipAddress?: string,
   ) {
     const targetRole = await this.roleModel.findById(roleId);
     if (!targetRole)
@@ -208,12 +233,32 @@ export class RolesService {
       updateRoleDto.permissions = Array.from(permissionsSet);
     }
 
+    const previous = roleSnapshot(targetRole);
     Object.assign(targetRole, updateRoleDto);
     const updatedRole = await targetRole.save();
 
     if (updateRoleDto.permissions) {
       await this.invalidateUsersCache(roleId, 'REFRESH_PERMISSIONS');
     }
+
+    const next = roleSnapshot(updatedRole);
+    await this.audit.record(
+      AuditAction.UPDATE,
+      AUDIT_MODULES.ROLES,
+      auditActorOf(currentUser, ipAddress),
+      {
+        previousData: previous,
+        newData: {
+          ...next,
+          permissionsAdded: next.permissions.filter(
+            (p) => !previous.permissions.includes(p),
+          ),
+          permissionsRemoved: previous.permissions.filter(
+            (p) => !next.permissions.includes(p),
+          ),
+        },
+      },
+    );
 
     return updatedRole;
   }
@@ -230,7 +275,11 @@ export class RolesService {
    * @throws {ForbiddenException} If attempting to delete a system-defined role.
    * @throws {InternalServerErrorException} If the default 'User' role cannot be found in the database.
    */
-  async deleteRole(roleId: string, currentUser: JwtPayload) {
+  async deleteRole(
+    roleId: string,
+    currentUser: JwtPayload,
+    ipAddress?: string,
+  ) {
     const targetRole = await this.roleModel.findById(roleId);
     if (!targetRole)
       throw new NotFoundException(
@@ -276,6 +325,18 @@ export class RolesService {
 
     // 3. Invalidate cache and emit real-time logout events ONLY after successful transaction commit
     await this.invalidateUsersCache(roleId, 'FORCE_LOGOUT', affectedUsers);
+
+    await this.audit.record(
+      AuditAction.DELETE,
+      AUDIT_MODULES.ROLES,
+      auditActorOf(currentUser, ipAddress),
+      {
+        previousData: {
+          ...roleSnapshot(targetRole),
+          reassignedUsers: affectedUsers.length,
+        },
+      },
+    );
 
     return { message: this.i18n.translate('exception.role.SUCCESS_DELETE') };
   }

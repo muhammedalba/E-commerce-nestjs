@@ -17,8 +17,21 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 const DB_URL = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/skyGalaxy';
 
 async function run() {
-  await mongoose.connect(DB_URL);
-  const db = mongoose.connection.db;
+  // Same database as the app (src/config/db/mongoose.config.ts). Use the
+  // instance connect() returns: with `import * as`, the namespace object does
+  // not carry mongoose's prototype getters (`connection`).
+  const conn = await mongoose.connect(DB_URL, {
+    dbName: process.env.MONGODB_DB_NAME || 'skyGalaxy',
+  });
+  try {
+    await recalculate(conn);
+  } finally {
+    await conn.disconnect();
+  }
+}
+
+async function recalculate(conn: typeof mongoose) {
+  const db = conn.connection.db;
   if (!db) throw new Error('No database connection');
 
   const stats = await db
@@ -66,11 +79,9 @@ async function run() {
   console.log(
     `Reset ${reset.modifiedCount} products; applied ratings to ${stats.length} products with approved reviews.`,
   );
-  await mongoose.disconnect();
 }
 
-run().catch(async (err) => {
+run().catch((err) => {
   console.error('Rating recalculation failed:', err);
-  await mongoose.disconnect();
-  process.exit(1);
+  process.exitCode = 1;
 });

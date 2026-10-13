@@ -22,12 +22,23 @@ import { UsersStatistics } from './users-helper/users-statistics.service';
 import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
 import { Role } from 'src/roles/shared/schemas/role.schema';
 import { USER_EVENTS, UserDeletedEvent } from './shared/events/user.events';
+import { AuditService, auditActorOf } from 'src/audit/audit.service';
+import { AuditAction } from 'src/audit/shared/schema/audit-log.schema';
+import { AUDIT_MODULES } from 'src/audit/shared/audit.constants';
+
+/** User fields an admin edit is recorded with in the audit log. */
+const AUDITED_USER_FIELDS = ['name', 'email', 'phone', 'isActive'] as const;
+
+const roleIdOf = (role: PopulatedUser['role']): string | undefined => {
+  if (!role) return undefined;
+  if (typeof role === 'string') return role;
+  if (role instanceof Types.ObjectId) return role.toString();
+  return role._id?.toString();
+};
 
 type PopulatedUser = Omit<UserDocument, 'role'> & {
   role?:
-    | { _id?: Types.ObjectId | string; level?: number }
-    | Types.ObjectId
-    | string;
+    { _id?: Types.ObjectId | string; level?: number } | Types.ObjectId | string;
 };
 
 /**
@@ -47,6 +58,7 @@ export class UsersService extends BaseService<UserDocument> {
     protected readonly i18n: CustomI18nService,
     protected readonly usersStatistics: UsersStatistics,
     private readonly eventEmitter: EventEmitter2,
+    private readonly audit: AuditService,
   ) {
     super(userModel, i18n, fileUploadService, {
       defaultFileName: 'avatar.png',
@@ -133,6 +145,7 @@ export class UsersService extends BaseService<UserDocument> {
     createUserDto: CreateUserDto,
     file: MulterFileType,
     currentUser: JwtPayload,
+    ipAddress?: string,
   ): Promise<any> {
     if (createUserDto.role) {
       await this.validateRoleAssignment(
@@ -142,12 +155,30 @@ export class UsersService extends BaseService<UserDocument> {
       );
     }
 
-    return await this.createOneDoc(createUserDto, file, {
+    const created = await this.createOneDoc(createUserDto, file, {
       fileFieldName: 'avatar',
       checkField: 'email',
       fieldValue: createUserDto.email,
       useDefaultFile: true,
     });
+
+    await this.audit.record(
+      AuditAction.CREATE,
+      AUDIT_MODULES.USERS,
+      auditActorOf(currentUser, ipAddress),
+      {
+        newData: {
+          targetUserId: String(created._id),
+          name: createUserDto.name,
+          email: createUserDto.email,
+          phone: createUserDto.phone,
+          isActive: createUserDto.isActive,
+          role: createUserDto.role?.toString(),
+        },
+      },
+    );
+
+    return created;
   }
 
   /**
@@ -198,6 +229,7 @@ export class UsersService extends BaseService<UserDocument> {
     updateUserDto: UpdateUserDto,
     file: MulterFileType,
     currentUser: JwtPayload,
+    ipAddress?: string,
   ): Promise<any> {
     // 1. Validate modification authorization against the target user's current role level
     const oldTargetUser = await this.validateTargetUserModification(
@@ -229,16 +261,7 @@ export class UsersService extends BaseService<UserDocument> {
     );
 
     // 3. Invalidate permission cache and broadcast real-time SSE permission refresh event upon role change
-    let oldRoleId: string | undefined;
-    if (oldTargetUser.role) {
-      if (typeof oldTargetUser.role === 'string') {
-        oldRoleId = oldTargetUser.role;
-      } else if (oldTargetUser.role instanceof Types.ObjectId) {
-        oldRoleId = oldTargetUser.role.toString();
-      } else if ('_id' in oldTargetUser.role && oldTargetUser.role._id) {
-        oldRoleId = oldTargetUser.role._id.toString();
-      }
-    }
+    const oldRoleId = roleIdOf(oldTargetUser.role);
     const newRoleId = updateUserDto.role?.toString();
 
     if (newRoleId && oldRoleId !== newRoleId) {
@@ -256,6 +279,30 @@ export class UsersService extends BaseService<UserDocument> {
       });
     }
 
+    // 4. Audit: only the fields that were sent; passwords are never recorded.
+    const previousData: Record<string, unknown> = {
+      targetUserId: idParamDto.id,
+    };
+    const newData: Record<string, unknown> = { targetUserId: idParamDto.id };
+    for (const field of AUDITED_USER_FIELDS) {
+      if (updateUserDto[field] === undefined) continue;
+      previousData[field] = (oldTargetUser as unknown as User)[field];
+      newData[field] = updateUserDto[field];
+    }
+    if (newRoleId && oldRoleId !== newRoleId) {
+      previousData.role = oldRoleId;
+      newData.role = newRoleId;
+    }
+    if (updateUserDto.password) newData.passwordChanged = true;
+    if (file) newData.avatarChanged = true;
+
+    await this.audit.record(
+      AuditAction.UPDATE,
+      AUDIT_MODULES.USERS,
+      auditActorOf(currentUser, ipAddress),
+      { previousData, newData },
+    );
+
     return updatedUser;
   }
 
@@ -272,9 +319,10 @@ export class UsersService extends BaseService<UserDocument> {
   async deleteUser(
     idParamDto: IdParamDto,
     currentUser: JwtPayload,
+    ipAddress?: string,
   ): Promise<void> {
     // 1. Validate deletion authorization against the target user's current role level
-    await this.validateTargetUserModification(
+    const targetUser = await this.validateTargetUserModification(
       idParamDto.id,
       currentUser.level,
       'exception.user.CANNOT_DELETE_HIGHER_USER',
@@ -286,6 +334,21 @@ export class UsersService extends BaseService<UserDocument> {
     this.eventEmitter.emit(
       USER_EVENTS.DELETED,
       new UserDeletedEvent(idParamDto.id),
+    );
+
+    const deleted = targetUser as unknown as User;
+    await this.audit.record(
+      AuditAction.DELETE,
+      AUDIT_MODULES.USERS,
+      auditActorOf(currentUser, ipAddress),
+      {
+        previousData: {
+          targetUserId: idParamDto.id,
+          name: deleted.name,
+          email: deleted.email,
+          role: roleIdOf(targetUser.role),
+        },
+      },
     );
 
     return deleteResult;

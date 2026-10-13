@@ -7,7 +7,11 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFiles,
+  Req,
 } from '@nestjs/common';
+import { Request } from 'express';
+import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
+import { auditActorOf } from 'src/audit/audit.service';
 import { CacheTTL } from '@nestjs/cache-manager';
 import { SettingsService } from './settings.service';
 import { UpdateSettingDto } from './shared/dto/update-setting.dto';
@@ -199,8 +203,13 @@ export class SettingsController {
     )
     files: { favicon?: Express.Multer.File[]; logo?: Express.Multer.File[] },
     @Body() updateSettingDto: UpdateSettingDto,
+    @Req() req: Omit<Request, 'user'> & { user?: JwtPayload },
   ) {
-    return await this.settingsService.updateSettings(updateSettingDto, files);
+    return await this.settingsService.updateSettings(
+      updateSettingDto,
+      files,
+      auditActorOf(req.user, req.ip),
+    );
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

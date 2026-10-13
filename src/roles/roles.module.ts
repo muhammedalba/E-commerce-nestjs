@@ -5,6 +5,7 @@ import { RolesService } from './services/roles.service';
 import { RolesSeederService } from './services/roles-seeder.service';
 import { Role, RoleSchema } from './shared/schemas/role.schema';
 import { User, UserSchema } from '../auth/shared/schema/user.schema';
+import { AuditModule } from '../audit/audit.module';
 
 @Global()
 @Module({
@@ -13,6 +14,7 @@ import { User, UserSchema } from '../auth/shared/schema/user.schema';
       { name: Role.name, schema: RoleSchema },
       { name: User.name, schema: UserSchema },
     ]),
+    AuditModule,
     // No own CacheModule: this module is @Global, so exporting one created a
     // second global CACHE_MANAGER and cache clears could hit the wrong instance.
     // Uses the app-wide cache (AppModule); every set() passes an explicit TTL.

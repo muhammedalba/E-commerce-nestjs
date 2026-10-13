@@ -37,6 +37,9 @@ import {
   isGoogleHost,
   parseGoogleMapsUrl,
 } from './shared/utils/google-maps-url.util';
+import { AuditActor, AuditService } from 'src/audit/audit.service';
+import { AuditAction } from 'src/audit/shared/schema/audit-log.schema';
+import { AUDIT_MODULES } from 'src/audit/shared/audit.constants';
 
 /** Cache key used to store/retrieve the global settings object. */
 const SETTINGS_CACHE_KEY = 'settings:global';
@@ -157,6 +160,9 @@ export class SettingsService {
 
     @Optional()
     private readonly eventEmitter?: EventEmitter2,
+
+    @Optional()
+    private readonly audit?: AuditService,
   ) {}
 
   /**
@@ -310,6 +316,7 @@ export class SettingsService {
   async updateSettings(
     dto: UpdateSettingDto,
     files?: { favicon?: Express.Multer.File[]; logo?: Express.Multer.File[] },
+    actor?: AuditActor,
   ): Promise<Setting> {
     if (dto.storageProvider === 'cloudinary') {
       const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
@@ -410,6 +417,16 @@ export class SettingsService {
       changedKeys: Object.keys(dto),
     } satisfies SettingsUpdatedEvent);
 
+    if (actor) {
+      // Public views on both sides, so only real changes show up (the Places
+      // key appears as `hasGooglePlacesApiKey`).
+      await this.auditSettingsChange(
+        actor,
+        currentSettings,
+        updatedDoc ? this.toPublicSettings(updatedDoc) : null,
+      );
+    }
+
     // Re-sync the exchange rate immediately when the store switches currency,
     // instead of waiting for the next hourly cron run. This is awaited so the
     // response (and whatever refetches off it) already carries the freshly
@@ -423,6 +440,33 @@ export class SettingsService {
     return (updatedDoc
       ? this.toPublicSettings(updatedDoc)
       : updatedDoc) as unknown as Setting;
+  }
+
+  /**
+   * Records the settings that actually changed (before / after).
+   */
+  private async auditSettingsChange(
+    actor: AuditActor,
+    before: Setting,
+    after: Record<string, unknown> | null,
+  ): Promise<void> {
+    if (!this.audit || !after) return;
+    const previousData: Record<string, unknown> = {};
+    const newData: Record<string, unknown> = {};
+    const prev = before as unknown as Record<string, unknown>;
+    for (const [key, value] of Object.entries(after)) {
+      if (['_id', '__v', 'key', 'createdAt', 'updatedAt'].includes(key)) {
+        continue;
+      }
+      if (JSON.stringify(prev[key]) === JSON.stringify(value)) continue;
+      previousData[key] = prev[key];
+      newData[key] = value;
+    }
+    if (!Object.keys(newData).length) return;
+    await this.audit.record(AuditAction.UPDATE, AUDIT_MODULES.SETTINGS, actor, {
+      previousData,
+      newData,
+    });
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

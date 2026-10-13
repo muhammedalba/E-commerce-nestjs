@@ -15,7 +15,8 @@
     "payment_methods": "Payment Methods",
     "notifications": "Notifications",
     "reviews": "Reviews",
-    "backups": "Database Backups"
+    "backups": "Database Backups",
+    "audit": "Audit Log"
   },
   "labels": {
     "access_dashboard": "Access Dashboard",
@@ -100,6 +101,8 @@
     "restore_backup_test": "Restore a Backup into the Test Database",
     "restore_backup_files": "Restore Uploaded Files into the Live Store",
     "download_backup": "Download Backups (encrypted)",
-    "upload_backup": "Upload / Delete Uploaded Backups"
+    "upload_backup": "Upload / Delete Uploaded Backups",
+    "view_audit_logs": "View Audit Log (who did what, and when)",
+    "view_audit_log_details": "View Audit Entry Details (data before / after)"
   }
 }

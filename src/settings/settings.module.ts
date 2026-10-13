@@ -7,6 +7,7 @@ import { SettingsController } from './settings.controller';
 import { Setting, SettingSchema } from './shared/schema/setting.schema';
 import { ExchangeRateSyncService } from './exchange-rate-sync.service';
 import { Role, RoleSchema } from 'src/roles/shared/schemas/role.schema';
+import { AuditModule } from 'src/audit/audit.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { Role, RoleSchema } from 'src/roles/shared/schemas/role.schema';
       { name: Role.name, schema: RoleSchema },
     ]),
     HttpModule,
+    AuditModule,
     // Reuses the queue already registered by EmailModule — same Redis-backed
     // queue, so the exchange-rate failure alert is delivered asynchronously
     // exactly like outbound emails are (with retry/backoff).

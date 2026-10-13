@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 import { MODEL_NAMES } from 'src/shared/constants/models.constants';
+import { AUDIT_LOG_TTL_SECONDS } from '../audit.constants';
 
 export type AuditLogDocument = HydratedDocument<AuditLog>;
 
@@ -37,9 +38,17 @@ export class AuditLog {
 
   @Prop({ default: '' })
   declare ipAddress: string;
+
+  createdAt?: Date;
 }
 
 export const AuditLogSchema = SchemaFactory.createForClass(AuditLog);
 
+// Entries expire after a year; also serves the default "newest first" sort.
+AuditLogSchema.index(
+  { createdAt: 1 },
+  { expireAfterSeconds: AUDIT_LOG_TTL_SECONDS },
+);
 AuditLogSchema.index({ module: 1, createdAt: -1 });
-AuditLogSchema.index({ userId: 1 });
+AuditLogSchema.index({ action: 1, createdAt: -1 });
+AuditLogSchema.index({ userId: 1, createdAt: -1 });

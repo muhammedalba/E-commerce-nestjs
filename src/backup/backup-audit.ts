@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { AuditService } from 'src/audit/audit.service';
+import { AUDIT_MODULES } from 'src/audit/shared/audit.constants';
 import { sanitizeError } from './backup.types';
 
 /** Who triggered a backup operation (for the audit log). */
@@ -23,7 +24,7 @@ export async function auditBackup(
   await audit
     .log({
       action,
-      module: 'backup',
+      module: AUDIT_MODULES.BACKUP,
       userId: actor.userId,
       userEmail: actor.email,
       ipAddress: actor.ipAddress,

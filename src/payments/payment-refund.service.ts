@@ -10,6 +10,7 @@ import { PaymentProviderFactory } from './providers/payment-provider.factory';
 import { PaymentTransactionService } from './payment-transaction.service';
 import { AuditService } from 'src/audit/audit.service';
 import { AuditAction } from 'src/audit/shared/schema/audit-log.schema';
+import { AUDIT_MODULES } from 'src/audit/shared/audit.constants';
 import { fromMinorUnits, toMinorUnits } from './shared/utils/currency.util';
 
 export interface RefundResult {
@@ -108,7 +109,7 @@ export class PaymentRefundService {
     try {
       await this.auditService.log({
         action: AuditAction.PAYMENT_REFUNDED,
-        module: 'PAYMENT',
+        module: AUDIT_MODULES.PAYMENT,
         userId: admin.id,
         userEmail: admin.email ?? '',
         previousData: {

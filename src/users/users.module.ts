@@ -6,6 +6,7 @@ import { User, UserSchema } from 'src/auth/shared/schema/user.schema';
 import { UsersStatistics } from './users-helper/users-statistics.service';
 
 import { Role, RoleSchema } from 'src/roles/shared/schemas/role.schema';
+import { AuditModule } from 'src/audit/audit.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { Role, RoleSchema } from 'src/roles/shared/schemas/role.schema';
       { name: User.name, schema: UserSchema },
       { name: Role.name, schema: RoleSchema },
     ]),
+    AuditModule,
   ],
   controllers: [UsersController],
   providers: [UsersService, UsersStatistics],

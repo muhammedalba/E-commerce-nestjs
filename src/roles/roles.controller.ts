@@ -34,7 +34,11 @@ export class RolesController {
     @Body() createRoleDto: CreateRoleDto,
     @Req() req: AuthenticatedRequest,
   ) {
-    const role = await this.rolesService.createRole(createRoleDto, req.user);
+    const role = await this.rolesService.createRole(
+      createRoleDto,
+      req.user,
+      req.ip,
+    );
     return { success: true, data: role };
   }
 
@@ -46,7 +50,12 @@ export class RolesController {
     @Body() updateRoleDto: UpdateRoleDto,
     @Req() req: AuthenticatedRequest,
   ) {
-    return await this.rolesService.updateRole(id, updateRoleDto, req.user);
+    return await this.rolesService.updateRole(
+      id,
+      updateRoleDto,
+      req.user,
+      req.ip,
+    );
   }
 
   // ─── Delete Role ──────────────────────────────────────────────────────────
@@ -56,7 +65,7 @@ export class RolesController {
     @Param('id') id: string,
     @Req() req: AuthenticatedRequest,
   ): Promise<{ message: string }> {
-    return await this.rolesService.deleteRole(id, req.user);
+    return await this.rolesService.deleteRole(id, req.user, req.ip);
   }
 
   // ─── Get All Roles ────────────────────────────────────────────────────────

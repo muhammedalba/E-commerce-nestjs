@@ -70,7 +70,7 @@ export class UsersController {
     file: MulterFileType,
     @Req() req: AuthenticatedRequest,
   ) {
-    return this.usersService.createUser(CreateUserDto, file, req.user);
+    return this.usersService.createUser(CreateUserDto, file, req.user, req.ip);
   }
   /* ------------ =============================== ---------- */
   /* ------------ ======  GET ALL USERS  ====== ---------------- */
@@ -113,6 +113,7 @@ export class UsersController {
       updateUserDto,
       file,
       req.user,
+      req.ip,
     );
   }
   /* ------------ =============================== ---------- */
@@ -125,6 +126,6 @@ export class UsersController {
     @Param() idParamDto: IdParamDto,
     @Req() req: AuthenticatedRequest,
   ) {
-    return this.usersService.deleteUser(idParamDto, req.user);
+    return this.usersService.deleteUser(idParamDto, req.user, req.ip);
   }
 }

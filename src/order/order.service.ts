@@ -22,6 +22,7 @@ import { OrdersStatisticsService } from './shared/order-helper/order-statistics.
 import { User } from 'src/auth/shared/schema/user.schema';
 import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/shared/schema/audit-log.schema';
+import { AUDIT_MODULES } from '../audit/shared/audit.constants';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Permissions } from 'src/roles/shared/enums/permissions.enum';
 import { withBaseUrl } from 'src/shared/utils/with-base-url.util';
@@ -955,10 +956,20 @@ export class OrderService {
       // 2) Audit Log
       await this.auditService.log({
         action: AuditAction.ORDER_PLACED,
-        module: 'ORDER',
+        module: AUDIT_MODULES.ORDER,
         userId: orderPayload.user,
         userEmail: orderPayload.userEmail,
-        newData: savedOrder.toObject(),
+        // Summary only: the full order (address, phone…) stays in the order.
+        newData: {
+          orderId: savedOrder._id.toString(),
+          status: savedOrder.status,
+          paymentStatus: savedOrder.paymentStatus,
+          paymentMethodCode: savedOrder.paymentMethodCode,
+          itemsCount: savedOrder.items?.length ?? 0,
+          totalQuantity: savedOrder.totalQuantity,
+          grandTotal: savedOrder.grandTotal,
+          currency: savedOrder.currency,
+        },
         previousData: {},
       });
 

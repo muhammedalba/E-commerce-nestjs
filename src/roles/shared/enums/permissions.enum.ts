@@ -126,6 +126,10 @@ export enum Permissions {
   RESTORE_BACKUP_FILES = 'restore_backup_files',
   DOWNLOAD_BACKUP = 'download_backup',
   UPLOAD_BACKUP = 'upload_backup',
+
+  // ---- Audit log ----
+  VIEW_AUDIT_LOGS = 'view_audit_logs',
+  VIEW_AUDIT_LOG_DETAILS = 'view_audit_log_details',
 }
 
 /** Backup permissions; holding any of them implies VIEW_BACKUPS. */
@@ -141,9 +145,20 @@ export const BACKUP_PERMISSIONS: Permissions[] = [
 ];
 
 /**
+ * Audit log permissions; holding any of them implies VIEW_AUDIT_LOGS.
+ * There is deliberately no edit/delete permission: entries are immutable and
+ * expire through the TTL index on the audit log schema.
+ */
+export const AUDIT_PERMISSIONS: Permissions[] = [
+  Permissions.VIEW_AUDIT_LOGS,
+  Permissions.VIEW_AUDIT_LOG_DETAILS,
+];
+
+/**
  * A role's stored permissions plus the ones they imply:
  * - UPDATE_SETTINGS ⇒ VIEW_SETTINGS;
- * - any backup permission ⇒ VIEW_BACKUPS.
+ * - any backup permission ⇒ VIEW_BACKUPS;
+ * - any audit permission ⇒ VIEW_AUDIT_LOGS.
  *
  * The single place these rules live: every reader of role permissions
  * (guards, `/roles/my-permissions`) must go through it, because they share
@@ -156,6 +171,9 @@ export function expandPermissions(
   if (set.has(Permissions.UPDATE_SETTINGS)) set.add(Permissions.VIEW_SETTINGS);
   if (BACKUP_PERMISSIONS.some((p) => set.has(p))) {
     set.add(Permissions.VIEW_BACKUPS);
+  }
+  if (AUDIT_PERMISSIONS.some((p) => set.has(p))) {
+    set.add(Permissions.VIEW_AUDIT_LOGS);
   }
   return [...set];
 }
@@ -569,6 +587,13 @@ export const PERMISSIONS_METADATA: PermissionMetadata[] = [
   ...BACKUP_PERMISSIONS.map((key) => ({
     key,
     groupKey: 'permissions.groups.backups',
+    labelKey: `permissions.labels.${key}`,
+  })),
+
+  // ── Audit log ─────────────────────────────────────────────────────────────
+  ...AUDIT_PERMISSIONS.map((key) => ({
+    key,
+    groupKey: 'permissions.groups.audit',
     labelKey: `permissions.labels.${key}`,
   })),
 ];
