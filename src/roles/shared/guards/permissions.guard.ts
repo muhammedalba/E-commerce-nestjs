@@ -13,7 +13,7 @@ import { Model } from 'mongoose';
 import { User } from '../../../auth/shared/schema/user.schema';
 import { Role } from '../schemas/role.schema';
 import { PERMISSIONS_KEY } from '../decorators/require-permission.decorator';
-import { Permissions } from '../enums/permissions.enum';
+import { Permissions, expandPermissions } from '../enums/permissions.enum';
 import { JwtPayload } from '../../../auth/shared/types/jwt-payload.interface';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 
@@ -72,26 +72,20 @@ export class PermissionsGuard implements CanActivate {
     }
 
     const cacheKey = `role_permissions:${roleId}`;
-    let userPermissions = await this.cacheManager.get<Permissions[]>(cacheKey);
+    const cached = await this.cacheManager.get<Permissions[]>(cacheKey);
+    let userPermissions: Permissions[];
 
-    if (!userPermissions) {
+    if (cached) {
+      // Expanded on read too: entries cached by an older version lack implications.
+      userPermissions = expandPermissions(cached);
+    } else {
       // Fetch role directly from DB using roleId
       const role = await this.roleModel
         .findById(roleId)
         .select('permissions')
         .lean();
 
-      const fetchedPermissions: Permissions[] =
-        role && Array.isArray(role.permissions) ? role.permissions : [];
-
-      if (
-        fetchedPermissions.includes(Permissions.UPDATE_SETTINGS) &&
-        !fetchedPermissions.includes(Permissions.VIEW_SETTINGS)
-      ) {
-        fetchedPermissions.push(Permissions.VIEW_SETTINGS);
-      }
-
-      userPermissions = fetchedPermissions;
+      userPermissions = expandPermissions(role?.permissions);
 
       // Cache the permissions for 12 hours (12 * 60 * 60 * 1000)
       await this.cacheManager.set(

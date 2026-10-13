@@ -106,6 +106,17 @@ interface OrderRefundedJobData {
   lang?: string;
 }
 
+export interface BackupFailedJobData {
+  email: string;
+  jobId: string;
+  trigger: string;
+  attemptsMade: number;
+  failedAt: string;
+  reason: string;
+  subject: string;
+  lang?: string;
+}
+
 interface AdminRoleNotificationJobData {
   roleId: string;
   action: string;
@@ -126,6 +137,7 @@ type MailJob =
       'exchange-rate-sync-failed'
     >
   | Job<OrderRefundedJobData, MailJobResult, 'order-refunded'>
+  | Job<BackupFailedJobData, MailJobResult, 'backup-failed'>
   | Job<AdminRoleNotificationJobData, MailJobResult, 'admin-role-notification'>;
 
 type MailJobResult = Record<string, never>;
@@ -334,6 +346,10 @@ export class MailProcessor extends WorkerHost {
       }
       case 'order-refunded': {
         await this.emailService.send_order_refunded(job.data);
+        return {};
+      }
+      case 'backup-failed': {
+        await this.emailService.send_backup_failure_alert(job.data);
         return {};
       }
       case 'admin-role-notification': {

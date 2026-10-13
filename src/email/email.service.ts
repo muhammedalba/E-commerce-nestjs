@@ -3,6 +3,7 @@ import { ISendMailOptions, MailerService } from '@nestjs-modules/mailer';
 import { existsSync } from 'fs';
 import * as path from 'path';
 import { I18nContext } from 'nestjs-i18n';
+import { BackupFailedJobData } from './mail.processor';
 
 @Injectable()
 export class EmailService {
@@ -383,6 +384,31 @@ export class EmailService {
         isFull: refund.isFull,
         cancelled: refund.cancelled,
         orderUrl: refund.orderUrl,
+        year: new Date().getFullYear(),
+        companyName: process.env.APP_NAME,
+      },
+    });
+  }
+
+  /**
+   * Alerts the admin that a database backup failed after all retries.
+   * `reason` must already be sanitized (no credentials or URIs).
+   */
+  async send_backup_failure_alert(alert: BackupFailedJobData): Promise<void> {
+    const resolvedLang = alert.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
+
+    await this.sendMail({
+      to: alert.email,
+      subject: alert.subject,
+      template: `backup-failure-alert-${resolvedLang}`,
+      context: {
+        subject: alert.subject,
+        adminName: process.env.SUPER_ADMIN_NAME || 'Admin',
+        jobId: alert.jobId,
+        trigger: alert.trigger,
+        attemptsMade: alert.attemptsMade,
+        failedAt: alert.failedAt,
+        reason: alert.reason,
         year: new Date().getFullYear(),
         companyName: process.env.APP_NAME,
       },

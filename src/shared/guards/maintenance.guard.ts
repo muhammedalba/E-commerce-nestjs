@@ -6,7 +6,10 @@ import {
   Inject,
 } from '@nestjs/common';
 import { SettingsService } from 'src/settings/settings.service';
-import { Permissions } from 'src/roles/shared/enums/permissions.enum';
+import {
+  Permissions,
+  expandPermissions,
+} from 'src/roles/shared/enums/permissions.enum';
 import { JwtService } from '@nestjs/jwt';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
@@ -55,11 +58,16 @@ export class MaintenanceGuard implements CanActivate {
     // 2. Allow essential authentication routes to enable administrative login
     if (this.isAuthRoute(request.url)) return true;
     if (this.isPaymentCallbackRoute(request.url)) return true;
+    // One-time backup download links carry their own credential (token).
+    if (this.isBackupDownloadRoute(request.url)) return true;
 
     // 3. Extract access token and verify user authorization
     const token = this.extractTokenFromHeader(request);
     if (token) {
-      const hasAccess = await this.verifyUserAccess(token);
+      const hasAccess = await this.verifyUserAccess(
+        token,
+        this.isBackupRoute(request.url),
+      );
       if (hasAccess) return true;
     }
 
@@ -93,6 +101,20 @@ export class MaintenanceGuard implements CanActivate {
   }
 
   /**
+   * One-time backup download links (`/backup/download/<token>`): the token is
+   * the credential, there is no session to check.
+   */
+  private isBackupDownloadRoute(url: string): boolean {
+    return /\/backup\/download\/[A-Za-z0-9_-]{43}$/.test(url.split('?')[0]);
+  }
+
+  /** `/backup/...` (the Backups page API), matched on the path after the prefix. */
+  private isBackupRoute(url: string): boolean {
+    const route = url.split('?')[0].replace(/^\/api\/v1/, '');
+    return route === '/backup' || route.startsWith('/backup/');
+  }
+
+  /**
    * Payment settlement routes stay reachable during maintenance: Moyasar keeps
    * delivering webhooks and customers keep returning from 3DS, while the
    * expiry cron keeps running. Blocking them would expire orders that were paid.
@@ -117,7 +139,10 @@ export class MaintenanceGuard implements CanActivate {
    * @param token - The raw JWT access token.
    * @returns A promise resolving to true if authorized, false otherwise.
    */
-  private async verifyUserAccess(token: string): Promise<boolean> {
+  private async verifyUserAccess(
+    token: string,
+    backupRoute = false,
+  ): Promise<boolean> {
     try {
       const userPayload = await this.jwtService.verifyAsync<JwtPayload>(token);
 
@@ -131,6 +156,13 @@ export class MaintenanceGuard implements CanActivate {
 
       // Convert permissions array to Set for O(1) high-performance lookup
       const userPermissionsSet = new Set(permissionsArray);
+
+      // Maintenance is when backups matter most (e.g. before a migration):
+      // the Backups API stays open to roles holding backup permissions. The
+      // route's own PermissionsGuard still checks the exact permission.
+      if (backupRoute && userPermissionsSet.has(Permissions.VIEW_BACKUPS)) {
+        return true;
+      }
 
       const requiredPermissions = [
         Permissions.UPDATE_SETTINGS,
@@ -182,7 +214,7 @@ export class MaintenanceGuard implements CanActivate {
     const cachedPermissions =
       await this.cacheManager.get<Permissions[]>(cacheKey);
     if (cachedPermissions) {
-      return cachedPermissions;
+      return expandPermissions(cachedPermissions);
     }
 
     // 3. Fetch from DB on cache miss
@@ -191,18 +223,8 @@ export class MaintenanceGuard implements CanActivate {
       .select('permissions')
       .lean();
 
-    const fetchedPermissions = roleDoc?.permissions || [];
-
-    // 4. Convert to Set to ensure uniqueness and facilitate dependency injection
-    const permissionsSet = new Set(fetchedPermissions);
-
-    // Enforce permission dependency: automatically include VIEW_SETTINGS if UPDATE_SETTINGS exists
-    if (permissionsSet.has(Permissions.UPDATE_SETTINGS)) {
-      permissionsSet.add(Permissions.VIEW_SETTINGS);
-    }
-
-    // 5. Convert Set back to Array for optimal JSON serialization in cache storage
-    const finalPermissions = Array.from(permissionsSet);
+    // 4. Add implied permissions (shared rules, same cache entry as the guards)
+    const finalPermissions = expandPermissions(roleDoc?.permissions);
 
     // Store resolved permissions in cache with a 12-hour TTL (43,200,000 ms)
     await this.cacheManager.set(

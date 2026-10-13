@@ -8,7 +8,7 @@ dotenv.config();
 async function run() {
   console.log('Mongo URI:', process.env.MONGODB_URI);
   await mongoose.connect(process.env.MONGODB_URI!, {
-    dbName: 'skyGalaxy',
+    dbName: process.env.MONGODB_DB_NAME || 'skyGalaxy',
   });
   console.log('Connected to MongoDB');
 

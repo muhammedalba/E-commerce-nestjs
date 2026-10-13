@@ -14,7 +14,8 @@
     "shipping_taxes": "Shipping & Taxes",
     "payment_methods": "Payment Methods",
     "notifications": "Notifications",
-    "reviews": "Reviews"
+    "reviews": "Reviews",
+    "backups": "Database Backups"
   },
   "labels": {
     "access_dashboard": "Access Dashboard",
@@ -91,6 +92,14 @@
     "delete_payment_method": "Delete Payment Method",
     "view_reviews": "View Reviews",
     "manage_reviews": "Manage Reviews (approve, reject, reply)",
-    "delete_review": "Delete Review"
+    "delete_review": "Delete Review",
+    "view_backups": "View Backups (list, status, settings)",
+    "manage_backup_settings": "Manage Backup Settings & Drive Connection",
+    "run_backup": "Run a Backup Now",
+    "verify_backup": "Verify Backups",
+    "restore_backup_test": "Restore a Backup into the Test Database",
+    "restore_backup_files": "Restore Uploaded Files into the Live Store",
+    "download_backup": "Download Backups (encrypted)",
+    "upload_backup": "Upload / Delete Uploaded Backups"
   }
 }

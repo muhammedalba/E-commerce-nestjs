@@ -286,6 +286,11 @@ export class UpdateSettingDto {
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   @IsOptional()
+  /**
+   * @deprecated Has no effect. Database backups are configured in Admin >
+   * Backups (`/backup/settings`). Still accepted so older forms that send
+   * the whole settings object keep working.
+   */
   autoBackup?: boolean;
 
   @IsString()
