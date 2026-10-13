@@ -191,6 +191,12 @@ export const OrderSchema = SchemaFactory.createForClass(Order);
 // this product?") — also serves any query filtering by `user` (e.g. my-orders).
 OrderSchema.index({ user: 1, 'items.productId': 1, status: 1 });
 
+// Admin order list (default sort -createdAt, date range filter) and the
+// dashboard statistics, which all match on a createdAt range.
+OrderSchema.index({ createdAt: -1 });
+// Admin order list filtered by status, still sorted by newest first.
+OrderSchema.index({ status: 1, createdAt: -1 });
+
 // الزيادة التلقائية لرقم الفاتورة بشكل حتمي وآمن للطلبات المتزامنة تلقائياً
 OrderSchema.pre('save', async function (next) {
   if (this.isNew && !this.invoiceNumber) {

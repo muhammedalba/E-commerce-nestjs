@@ -10,6 +10,10 @@ import { CategoriesController } from './categories.controller';
 import { CategoriesService } from './categories.service';
 import { AuthModule } from 'src/auth/auth.module';
 import { CategoriesStatisticsService } from './categories-helper/categories-statistics.service';
+import {
+  Product,
+  ProductSchema,
+} from 'src/products/shared/schemas/Product.schema';
 
 @Module({
   imports: [
@@ -17,6 +21,7 @@ import { CategoriesStatisticsService } from './categories-helper/categories-stat
     MongooseModule.forFeature([
       { name: Category.name, schema: CategorySchema },
       { name: SubCategory.name, schema: SubCategorySchema },
+      { name: Product.name, schema: ProductSchema },
     ]),
   ],
   controllers: [CategoriesController],

@@ -15,6 +15,8 @@ import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { IdParamDto } from 'src/shared/dto/id-param.dto';
 import { CategoriesStatisticsService } from './categories-helper/categories-statistics.service';
+import { Product } from 'src/products/shared/schemas/Product.schema';
+import { assertNoLinkedProducts } from 'src/shared/utils/linked-products.util';
 
 @Injectable()
 export class CategoriesService extends BaseService<CategoryDocument> {
@@ -23,6 +25,7 @@ export class CategoriesService extends BaseService<CategoryDocument> {
     @InjectModel(Category.name) private categoryModel: Model<CategoryDocument>,
     @InjectModel(SubCategory.name)
     private subCategoryModel: Model<SubCategoryDocument>,
+    @InjectModel(Product.name) private productModel: Model<Product>,
     protected readonly fileUploadService: FileUploadService,
     protected readonly i18n: CustomI18nService,
     protected readonly categoriesStatistics: CategoriesStatisticsService,
@@ -103,6 +106,20 @@ export class CategoriesService extends BaseService<CategoryDocument> {
   // ------------ ======  delete category   ====== ---------- //
   // ------------ =============================== ---------- //
   async deleteOne(idParamDto: IdParamDto) {
+    // Its sub-categories are deleted with it, so their products block it too.
+    const subCategoryIds = await this.subCategoryModel.distinct('_id', {
+      category: idParamDto.id,
+    });
+    await assertNoLinkedProducts(
+      this.productModel,
+      {
+        $or: [
+          { category: idParamDto.id },
+          { SubCategories: { $in: subCategoryIds } },
+        ],
+      },
+      this.i18n,
+    );
     await this.deleteOneDoc(idParamDto, 'image');
     await this.subCategoryModel.deleteMany({ category: idParamDto.id });
     return;

@@ -6,10 +6,17 @@ import { Brand, BrandSchema } from './shared/schemas/brand.schema';
 
 import { AuthModule } from 'src/auth/auth.module';
 import { BrandsStatistics } from './shared/brands-helper/brands-statistics.service';
+import {
+  Product,
+  ProductSchema,
+} from 'src/products/shared/schemas/Product.schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Brand.name, schema: BrandSchema }]),
+    MongooseModule.forFeature([
+      { name: Brand.name, schema: BrandSchema },
+      { name: Product.name, schema: ProductSchema },
+    ]),
     AuthModule,
   ],
   controllers: [BrandsController],

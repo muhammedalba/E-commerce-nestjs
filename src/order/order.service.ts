@@ -24,7 +24,6 @@ import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/shared/schema/audit-log.schema';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Permissions } from 'src/roles/shared/enums/permissions.enum';
-import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 import { withBaseUrl } from 'src/shared/utils/with-base-url.util';
 import { FileAsset } from 'src/shared/schema/file-asset.schema';
 import { OrderStatus } from './shared/enums/order-status.enum';
@@ -186,16 +185,27 @@ export class OrderService {
       delete queryString.status;
     }
 
-    const total = await this.OrderModel.countDocuments(filterQuery);
+    // Built here instead of ApiFeatures.search(): its $or would replace the
+    // paymentMethod $or above, and customer name/email need a user lookup.
+    const keywords = queryString.keywords?.trim();
+    delete queryString.keywords;
+    if (keywords) {
+      filterQuery.$and = [await this.buildOrderSearchFilter(keywords)];
+    }
+
     const features = new ApiFeatures(
       this.OrderModel.find(filterQuery),
       queryString,
     )
       .filter()
-      .search(MODEL_NAMES.ORDER)
       .sort()
-      .limitFields()
-      .paginate(total);
+      .limitFields();
+    // Count after filter(), so the total includes the `user` restriction and
+    // the other query-string filters, like the page itself.
+    const total = await this.OrderModel.countDocuments(
+      features.getQuery().getFilter(),
+    );
+    features.paginate(total);
 
     const data = await features
       .getQuery()
@@ -264,6 +274,50 @@ export class OrderService {
       pagination: features.getPagination(),
       data,
     };
+  }
+
+  /**
+   * Every word of the search must match one of: the recipient's first name,
+   * last name or phone, or the account holder's name/email. Splitting into
+   * words lets a full name ("Sara Ahmed") match firstName + lastName, which
+   * are stored apart. Orders store only the user's id, so matching users are
+   * looked up first and their orders matched by id.
+   * A number also matches the invoice number exactly.
+   */
+  private async buildOrderSearchFilter(keywords: string) {
+    // Each word costs one users query: cap them so a long input stays cheap.
+    const words = keywords.split(/\s+/).filter(Boolean).slice(0, 5);
+
+    const wordFilters = await Promise.all(
+      words.map(async (word) => {
+        const regex = {
+          $regex: word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+          $options: 'i',
+        };
+        const users = await this.UserModel.find({
+          $or: [{ name: regex }, { email: regex }],
+        })
+          .select('_id')
+          .lean();
+
+        return {
+          $or: [
+            { 'shippingAddress.firstName': regex },
+            { 'shippingAddress.lastName': regex },
+            { 'shippingAddress.phone': regex },
+            ...(users.length
+              ? [{ user: { $in: users.map((u) => u._id) } }]
+              : []),
+          ],
+        };
+      }),
+    );
+
+    const conditions: Record<string, unknown>[] = [{ $and: wordFilters }];
+    if (/^\d+$/.test(keywords)) {
+      conditions.push({ invoiceNumber: Number(keywords) });
+    }
+    return { $or: conditions };
   }
   // =============================================================
   // =============================================================

@@ -12,12 +12,17 @@ import {
   Category,
   CategorySchema,
 } from 'src/categories/shared/schemas/category.schema';
+import {
+  Product,
+  ProductSchema,
+} from 'src/products/shared/schemas/Product.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: SubCategory.name, schema: SubCategorySchema },
       { name: Category.name, schema: CategorySchema },
+      { name: Product.name, schema: ProductSchema },
     ]),
     AuthModule,
   ],

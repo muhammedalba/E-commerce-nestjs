@@ -126,5 +126,6 @@
   },
   "APP_UPDATE_REQUIRED": "This version of the app is no longer supported. Please update the app to continue.",
   "APP_MIN_VERSION_ABOVE_LATEST": "The minimum supported version cannot be higher than the latest version.",
-  "PUSH_UNAVAILABLE": "Push notifications are currently unavailable. Please try again later."
+  "PUSH_UNAVAILABLE": "Push notifications are currently unavailable. Please try again later.",
+  "IN_USE_BY_PRODUCTS": "This item cannot be deleted because products are still linked to it (including products in the trash). Move them to another item or delete them permanently first."
 }
