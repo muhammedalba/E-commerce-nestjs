@@ -169,6 +169,11 @@ export class UpdateSettingDto {
   @IsOptional()
   siteDescription?: FieldLocalizeDto;
 
+  @ValidateNested()
+  @Type(() => FieldLocalizeDto)
+  @IsOptional()
+  legalName?: FieldLocalizeDto;
+
   @IsOptional()
   @IsString()
   logo?: string;

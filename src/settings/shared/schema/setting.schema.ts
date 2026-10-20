@@ -34,6 +34,12 @@ export class Setting {
   @Type(() => FieldLocalizeDto)
   declare siteDescription: FieldLocalizeDto;
 
+  // Legal (registered) company name used on invoices and official documents
+  @Prop({ type: Object, default: { ar: '', en: '' } })
+  @ValidateNested()
+  @Type(() => FieldLocalizeDto)
+  declare legalName: FieldLocalizeDto;
+
   @Prop({
     required: false,
     type: Object,

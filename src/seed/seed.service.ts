@@ -52,6 +52,11 @@ export class SeedService {
         en: 'Sky Galaxy is your first destination for waterproofing and thermal insulation materials, adhesives, and modern construction systems in Saudi Arabia. High quality and fast supply.',
       },
 
+      legalName: {
+        ar: 'شركة مجرة السماء للتجارة',
+        en: 'Sky Galaxy co. For trading',
+      },
+
       // Branding
       // logo: '/uploads/Setting/default.png',
       // favicon: '/uploads/Setting/default.png',

@@ -167,6 +167,7 @@ export class SettingsController {
       'metaDescription',
       'siteName',
       'siteDescription',
+      'legalName',
       'footerText',
       'maintenanceMessage',
       'googleTagManagerId',
