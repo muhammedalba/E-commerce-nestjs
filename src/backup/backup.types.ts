@@ -107,33 +107,8 @@ export function scheduleRunTimes(perDay: number, time: string): string[] {
  * is stored, logged in a run record, returned to the admin UI or emailed:
  * connection strings, bearer/OAuth tokens, `key=`/`token=` parameters.
  */
-function safeJson(value: unknown): string {
-  try {
-    return JSON.stringify(value) ?? '';
-  } catch {
-    return 'Unknown error';
-  }
-}
-
-export function sanitizeError(err: unknown, maxLength = 500): string {
-  const raw =
-    err instanceof Error
-      ? `${err.name}: ${err.message}`
-      : typeof err === 'string'
-        ? err
-        : safeJson(err);
-  return raw
-    .replace(/mongodb(\+srv)?:\/\/[^\s'"]+/gi, 'mongodb://[redacted]')
-    .replace(/https?:\/\/[^\s'"]*@[^\s'"]+/gi, '[redacted-url]')
-    .replace(/(bearer\s+)[\w\-.~+/=]+/gi, '$1[redacted]')
-    .replace(/ya29\.[\w\-.]+/g, '[redacted-token]')
-    .replace(/1\/\/[\w\-.]{20,}/g, '[redacted-token]')
-    .replace(
-      /((?:access_token|refresh_token|client_secret|token|key|password|secret)["']?\s*[:=]\s*["']?)[^\s&"',}]+/gi,
-      '$1[redacted]',
-    )
-    .slice(0, maxLength);
-}
+// Re-exported from shared utility — kept here for backward compatibility.
+export { sanitizeError } from '../shared/utils/sanitize-error.util';
 
 // ─── verification, test restore, manual uploads ─────────────────────────────
 

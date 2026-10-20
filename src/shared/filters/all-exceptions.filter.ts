@@ -9,6 +9,7 @@ import {
 import { I18nService, I18nValidationException } from 'nestjs-i18n';
 import { Response, Request } from 'express';
 import { ApiResponse } from '../interfaces/api-response.interface';
+import { sanitizeError } from '../utils/sanitize-error.util';
 
 interface I18nValidationError {
   property: string;
@@ -45,17 +46,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
     ) {
       status = HttpStatus.CONFLICT;
       const keyValue = (exception as Record<string, unknown>).keyValue as
-        | Record<string, unknown>
-        | undefined;
+        Record<string, unknown> | undefined;
       const field = keyValue ? Object.keys(keyValue)[0] : '';
       message = field
         ? `The field '${field}' must be unique. Value already exists.`
         : 'Resource already exists';
     } else if (exception instanceof Error) {
-      message = exception.message;
+      message = sanitizeError(exception);
       console.error('💥 Unexpected Server Error:', exception);
     } else {
-      console.error('💥 Unknown Server Exception:', exception);
+      console.error('💥 Unknown Server Exception:', sanitizeError(exception));
     }
 
     // Special handling for I18nValidationException
