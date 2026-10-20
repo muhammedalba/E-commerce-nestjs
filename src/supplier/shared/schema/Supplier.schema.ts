@@ -4,7 +4,7 @@ import { FileAsset } from 'src/shared/schema/file-asset.schema';
 
 @Schema({ timestamps: true })
 export class Supplier {
-  @Prop({ required: true })
+  @Prop({ required: true, trim: true })
   declare name: string;
 
   @Prop({ required: true })

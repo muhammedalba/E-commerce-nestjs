@@ -48,8 +48,6 @@ type PopulatedUser = Omit<UserDocument, 'role'> & {
  */
 @Injectable()
 export class UsersService extends BaseService<UserDocument> {
-  protected slugSourceField = 'name';
-
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Role.name) private roleModel: Model<Role>,
@@ -62,6 +60,7 @@ export class UsersService extends BaseService<UserDocument> {
   ) {
     super(userModel, i18n, fileUploadService, {
       defaultFileName: 'avatar.png',
+      slugSourceField: 'name',
       fieldTakenExceptionKey: 'exception.EMAIL_EXISTS',
       postCreateTransform: (doc: Record<string, unknown>) => {
         const raw =

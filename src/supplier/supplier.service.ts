@@ -16,7 +16,6 @@ import { assertNoLinkedProducts } from 'src/shared/utils/linked-products.util';
 
 @Injectable()
 export class SupplierService extends BaseService<SupplierDocument> {
-  protected slugSourceField = 'name';
   constructor(
     @InjectModel(Supplier.name) private SupplierModel: Model<SupplierDocument>,
     @InjectModel(Product.name) private productModel: Model<Product>,
@@ -26,6 +25,7 @@ export class SupplierService extends BaseService<SupplierDocument> {
   ) {
     super(SupplierModel, i18n, fileUploadService, {
       defaultFileName: 'avatar.png',
+      slugSourceField: 'name',
     });
   }
   // ------------ =============================== ---------- //

@@ -4,7 +4,8 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Model, Types } from 'mongoose';
+import { FilterQuery, Model, Types } from 'mongoose';
+import { TranslateOptions } from 'nestjs-i18n';
 import { CustomI18nService } from '../i18n/custom-i18n.service';
 import { ApiFeatures } from '../ApiFeatures';
 import { QueryString } from '../interfaces/queryInterface';
@@ -150,7 +151,7 @@ export class BaseService<T> {
    * @param option - Optional translation variables.
    * @returns The translated string in the current locale.
    */
-  protected t(key: string, option?: any): string {
+  protected t(key: string, option?: TranslateOptions): string {
     return this.i18n.translate(key, option);
   }
 
@@ -295,9 +296,7 @@ export class BaseService<T> {
     }
     try {
       const newDoc = await this.model.create(CreateDataDto);
-      const rawDoc = (newDoc as any).toObject
-        ? (newDoc as any).toObject()
-        : { ...(newDoc as any) };
+      const rawDoc = newDoc.toObject() as Record<string, unknown>;
 
       const newDocFilter: Record<string, unknown> = this.serviceOptions
         .postCreateTransform
@@ -381,7 +380,15 @@ export class BaseService<T> {
   }
 
   /**
-   * Retrieves a single document by its ID with support for field selection and population.
+   * Builds a lookup filter from an id param: a 24-char hex string matches `_id`,
+   * anything else matches `slug` (same rule as `IsIdOrSlugConstraint`).
+   */
+  protected buildIdFilter(id: string): FilterQuery<T> {
+    return /^[a-f\d]{24}$/i.test(id) ? { _id: id } : { slug: id };
+  }
+
+  /**
+   * Retrieves a single document by its ID or slug with support for field selection and population.
    */
   async findOneDoc(
     idParamDto: IdParamDto,
@@ -389,7 +396,7 @@ export class BaseService<T> {
     allLangs: boolean = false,
     populate?: { path: string; select: string },
   ): Promise<T> {
-    let query = this.model.findById(idParamDto.id);
+    let query = this.model.findOne(this.buildIdFilter(idParamDto.id));
 
     if (selectedFields) {
       query = query.select(selectedFields);
@@ -460,20 +467,12 @@ export class BaseService<T> {
     } else {
       // Clean signature: updateOneDoc(idParam, updateDto, file, selectedFields, options)
       selectedFields = typeof arg4 === 'string' ? arg4 : '';
-      options = (
+      options =
         typeof arg4 === 'object'
           ? arg4
           : typeof arg5 === 'object'
             ? arg5
-            : undefined
-      ) as
-        | {
-            fileFieldName?: string;
-            fieldValue?: string;
-            checkField?: string;
-            onlyActive?: boolean;
-          }
-        | undefined;
+            : undefined;
     }
 
     const {
@@ -484,12 +483,11 @@ export class BaseService<T> {
     } = options || {};
 
     const doc = (await this.model
-      .findById(idParamDto.id)
+      .findOne(this.buildIdFilter(idParamDto.id))
       .select(`${selectedFields} _id ${fileFieldName}`)
       .lean()
       .exec()) as
-      | (Record<string, unknown> & { _id: Types.ObjectId | string })
-      | null;
+      (Record<string, unknown> & { _id: Types.ObjectId | string }) | null;
 
     if (!doc) {
       throw new NotFoundException(this.t('exception.NOT_FOUND'));
@@ -557,17 +555,8 @@ export class BaseService<T> {
     idParamDto: IdParamDto,
     fileFieldName?: string,
   ): Promise<void> {
-    const isDocFound = await this.model.exists({ _id: idParamDto.id });
-    if (!isDocFound) {
-      throw new NotFoundException(
-        this.t(
-          this.serviceOptions.fieldTakenExceptionKey ?? 'exception.NOT_FOUND',
-        ),
-      );
-    }
-
     const doc = (await this.model
-      .findById(idParamDto.id)
+      .findOne(this.buildIdFilter(idParamDto.id))
       .select(`${fileFieldName}`)
       .lean()) as
       | (Record<string, FileAsset | string | undefined> & {

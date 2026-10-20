@@ -19,7 +19,6 @@ import { assertNoLinkedProducts } from 'src/shared/utils/linked-products.util';
 
 @Injectable()
 export class SubCategoryService extends BaseService<SubCategoryDocument> {
-  protected slugSourceField = 'name';
   constructor(
     @InjectModel(SubCategory.name)
     private SubCategoryModel: Model<SubCategoryDocument>,
@@ -27,7 +26,9 @@ export class SubCategoryService extends BaseService<SubCategoryDocument> {
     protected readonly i18n: CustomI18nService,
     protected readonly SubCategoriesStatistics: SubCategoriesStatistics,
   ) {
-    super(SubCategoryModel, i18n, undefined, undefined);
+    super(SubCategoryModel, i18n, undefined, {
+      slugSourceField: 'name',
+    });
   }
 
   // ------------ =============================== ---------- //

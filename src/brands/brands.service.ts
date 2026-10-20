@@ -16,7 +16,6 @@ import { assertNoLinkedProducts } from 'src/shared/utils/linked-products.util';
 
 @Injectable()
 export class BrandsService extends BaseService<BrandDocument> {
-  protected slugSourceField = 'name';
   constructor(
     @InjectModel(Brand.name) private brandModel: Model<BrandDocument>,
     @InjectModel(Product.name) private productModel: Model<Product>,
@@ -24,7 +23,9 @@ export class BrandsService extends BaseService<BrandDocument> {
     protected readonly brandsStatistics: BrandsStatistics,
     protected readonly i18n: CustomI18nService,
   ) {
-    super(brandModel, i18n, fileUploadService);
+    super(brandModel, i18n, fileUploadService, {
+      slugSourceField: 'name',
+    });
   }
 
   // ------------ =============================== ---------- //

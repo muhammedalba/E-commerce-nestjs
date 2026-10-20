@@ -20,7 +20,6 @@ import { assertNoLinkedProducts } from 'src/shared/utils/linked-products.util';
 
 @Injectable()
 export class CategoriesService extends BaseService<CategoryDocument> {
-  protected slugSourceField = 'name';
   constructor(
     @InjectModel(Category.name) private categoryModel: Model<CategoryDocument>,
     @InjectModel(SubCategory.name)
@@ -30,7 +29,9 @@ export class CategoriesService extends BaseService<CategoryDocument> {
     protected readonly i18n: CustomI18nService,
     protected readonly categoriesStatistics: CategoriesStatisticsService,
   ) {
-    super(categoryModel, i18n, fileUploadService);
+    super(categoryModel, i18n, fileUploadService, {
+      slugSourceField: 'name',
+    });
   }
 
   // ------------ =============================== ---------- //

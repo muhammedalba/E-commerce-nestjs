@@ -33,7 +33,6 @@ export interface ShippingCalculationResult {
 
 @Injectable()
 export class ShippingService extends BaseService<ShippingProviderDocument> {
-  protected slugSourceField = 'name';
   constructor(
     @InjectModel(ShippingProvider.name)
     private readonly providerModel: Model<ShippingProviderDocument>,
@@ -44,7 +43,9 @@ export class ShippingService extends BaseService<ShippingProviderDocument> {
     protected readonly fileUploadService: FileUploadService,
     protected readonly i18n: CustomI18nService,
   ) {
-    super(providerModel, i18n, fileUploadService);
+    super(providerModel, i18n, fileUploadService, {
+      slugSourceField: 'name',
+    });
   }
 
   /* ================================================ */
