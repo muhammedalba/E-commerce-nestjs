@@ -1,14 +1,11 @@
 import { Model, Types } from 'mongoose';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import {
-  Inject,
   Injectable,
   Logger,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
 import { Product } from '../shared/schemas/Product.schema';
 import { ProductVariant } from '../shared/schemas/ProductVariant.schema';
 import { OrdersStatisticsService } from 'src/order/shared/order-helper/order-statistics.service';
@@ -46,22 +43,14 @@ export class ProductsStatistics {
     @InjectModel(ProductVariant.name)
     private readonly VariantModel: Model<ProductVariant>,
     private readonly ordersStatisticsService: OrdersStatisticsService,
-    @Inject(CACHE_MANAGER)
-    private readonly cacheManager: Cache,
     @InjectModel(Product.name)
     private readonly ProductModel: Model<Product>,
   ) {}
-  async Products_statistics(
-    startDate?: string,
-    endDate?: string,
-    sortBy: 'sold' | 'ratingsAverage' | 'stock' = 'sold',
-  ) {
+  async Products_statistics(startDate?: string, endDate?: string) {
+    // No service-level cache: the controller's CustomCacheInterceptor already caches
+    // this response and @ClearCache('products') invalidates it on every product change.
     const lang: 'ar' | 'en' =
       I18nContext.current()?.lang === 'en' ? 'en' : 'ar';
-    const cacheKey = `products:stats:v1:${lang}:${sortBy}:${startDate}:${endDate}`;
-
-    const cached = await this.cacheManager.get(cacheKey);
-    if (cached) return cached;
 
     // Properly preparing the timeframe
     const today = new Date();
@@ -109,7 +98,6 @@ export class ProductsStatistics {
         },
       };
 
-      await this.cacheManager.set(cacheKey, result, 300_000);
       return result;
     } catch (error) {
       this.logger.error(

@@ -15,6 +15,8 @@ import { AuthGuard } from '../auth/shared/guards/auth.guard';
 import { FileUploadService } from '../file-upload/file-upload.service';
 import { createParseFilePipe } from '../shared/files/files-validation-factory';
 import { FileAsset } from 'src/shared/schema/file-asset.schema';
+import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
+import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 
 @Controller('checkout')
 @UseGuards(AuthGuard)
@@ -74,7 +76,9 @@ export class CheckoutController {
   }
 
   @Post('place-order')
-  @UseInterceptors(FileInterceptor('transferReceiptImg'))
+  // A new order changes the cached /order list & statistics (admin + dashboard)
+  @ClearCache('order')
+  @UseInterceptors(ClearCacheInterceptor, FileInterceptor('transferReceiptImg'))
   async placeOrder(
     @Body('notes') notes: string,
     @Req() req: { user: { user_id: string; email: string } },

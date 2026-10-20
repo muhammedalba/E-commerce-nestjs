@@ -54,6 +54,9 @@ const createService = () => {
     sendOrderEmail: jest.fn(() => Promise.resolve()),
   };
   const eventEmitter = { emit: jest.fn() };
+  const cacheInvalidation = {
+    clearResources: jest.fn(() => Promise.resolve()),
+  };
 
   const service = new OrderService(
     OrderModel as never,
@@ -68,6 +71,7 @@ const createService = () => {
     {} as never,
     {} as never,
     eventEmitter as never,
+    cacheInvalidation as never,
   );
 
   return {
@@ -77,6 +81,7 @@ const createService = () => {
     productHelperService,
     couponHelperService,
     eventEmitter,
+    cacheInvalidation,
   };
 };
 
@@ -118,6 +123,15 @@ describe('OrderService Moyasar payment saga', () => {
       paymentStatus: 'FAILED',
     });
     expect(productHelperService.releaseReservation).toHaveBeenCalledTimes(1);
+  });
+
+  it('payment handlers expire the cached /order responses, even when the order is unchanged', async () => {
+    const { service, OrderModel, cacheInvalidation } = createService();
+    OrderModel.findOneAndUpdate.mockReturnValueOnce(query(null));
+
+    await service.handlePaymentFailed({ orderId: 'o1', reason: 'Declined' });
+
+    expect(cacheInvalidation.clearResources).toHaveBeenCalledWith(['order']);
   });
 
   it('payment.succeeded marks the coupon, counts the order and confirms the reservation', async () => {

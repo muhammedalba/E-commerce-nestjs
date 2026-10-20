@@ -10,6 +10,7 @@ import {
 } from 'src/products/shared/schemas/ProductVariant.schema';
 import { FileAsset } from 'src/shared/schema/file-asset.schema';
 import { ShippingProfile } from 'src/products/shared/schemas/shipping-profile.schema';
+import { OrderItem } from '../schemas/order-item.schema';
 
 type ValidatedItem = {
   product: {
@@ -29,9 +30,16 @@ type ValidatedItem = {
     attributes: Record<string, unknown>;
     shippingProfile?: ShippingProfile;
   };
+  /** Display data persisted on the order item so it survives later catalog edits */
+  snapshot: OrderItemSnapshot;
   quantity: number;
   totalPrice?: number;
 };
+
+export type OrderItemSnapshot = Pick<
+  OrderItem,
+  'sku' | 'attributes' | 'components' | 'label' | 'title' | 'image'
+>;
 
 @Injectable()
 export class OrderHelperService {
@@ -160,6 +168,16 @@ export class OrderHelperService {
           sku: variant.sku,
           attributes: variant.attributes || {},
           shippingProfile: variant.shippingProfile,
+        },
+        snapshot: {
+          sku: variant.sku,
+          attributes: variant.attributes || {},
+          components: variant.components?.length
+            ? variant.components
+            : undefined,
+          label: variant.label,
+          title: product.title,
+          image: variant.image || product.imageCover,
         },
         quantity: item.quantity,
         totalPrice: itemTotal,

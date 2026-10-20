@@ -65,7 +65,7 @@ export class CartService {
       .populate({
         path: 'items.variant',
         select:
-          'sku price priceAfterDiscount stock attributes label shippingProfile',
+          'sku price priceAfterDiscount stock attributes components label shippingProfile',
       })
       .exec();
 

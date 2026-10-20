@@ -6,7 +6,10 @@ import { Order } from './shared/schemas/Order.schema';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { FileUploadService } from 'src/file-upload/file-upload.service';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
-import { OrderHelperService } from './shared/order-helper/order-helper.service';
+import {
+  OrderHelperService,
+  OrderItemSnapshot,
+} from './shared/order-helper/order-helper.service';
 import { OrderEmailService } from './shared/order-helper/order-email.service';
 import { CouponHelperService } from '../coupons/shared/coupon.helper';
 import {
@@ -24,6 +27,7 @@ import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/shared/schema/audit-log.schema';
 import { AUDIT_MODULES } from '../audit/shared/audit.constants';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
+import { CacheInvalidationService } from 'src/shared/services/cache-invalidation.service';
 import { Permissions } from 'src/roles/shared/enums/permissions.enum';
 import { withBaseUrl } from 'src/shared/utils/with-base-url.util';
 import { FileAsset } from 'src/shared/schema/file-asset.schema';
@@ -56,6 +60,7 @@ interface ProductPopulated {
 
 interface OrderItemPopulated {
   productId?: ProductPopulated;
+  image?: FileAsset | string;
   [key: string]: unknown;
 }
 
@@ -83,8 +88,24 @@ export class OrderService {
     private readonly auditService: AuditService,
     @InjectConnection() private readonly connection: Connection,
     private readonly eventEmitter: EventEmitter2,
+    private readonly cacheInvalidation: CacheInvalidationService,
   ) {}
   private readonly logger = new Logger(OrderService.name);
+
+  /**
+   * Expires the cached /order responses (admin list + statistics + dashboard).
+   * The saga handlers below change orders outside any order HTTP request
+   * (payment webhook, payment scheduler, refunds), where @ClearCache can't run.
+   */
+  private async invalidateOrderCache(): Promise<void> {
+    try {
+      await this.cacheInvalidation.clearResources(['order']);
+    } catch (err: unknown) {
+      this.logger.warn(
+        `Failed to clear order cache: ${(err as Error).message}`,
+      );
+    }
+  }
 
   /**
    * يبني كائن الـ timestamps المناسب بناءً على الحالة الجديدة.
@@ -218,7 +239,7 @@ export class OrderService {
       .populate({ path: 'items.productId', select: 'title slug imageCover' })
       .populate({
         path: 'items.variantId',
-        select: 'sku price priceAfterDiscount label attributes',
+        select: 'sku price priceAfterDiscount label attributes components',
       })
       .lean()
       .exec();
@@ -234,6 +255,7 @@ export class OrderService {
             imageCover?: { url: string };
             images?: string[];
           };
+          image?: FileAsset | string;
         }>;
       };
 
@@ -253,6 +275,7 @@ export class OrderService {
 
       if (typedItem.items) {
         typedItem.items.forEach((orderItem) => {
+          if (orderItem.image) orderItem.image = withBaseUrl(orderItem.image);
           if (orderItem.productId) {
             if (orderItem.productId.imageCover?.url) {
               orderItem.productId.imageCover.url = String(
@@ -367,7 +390,7 @@ export class OrderService {
       .populate({ path: 'items.productId', select: 'title slug imageCover' })
       .populate({
         path: 'items.variantId',
-        select: 'sku price priceAfterDiscount label attributes',
+        select: 'sku price priceAfterDiscount label attributes components',
       })
       .populate({ path: 'couponId', select: 'name type discount' })
       .lean()
@@ -378,11 +401,13 @@ export class OrderService {
       const typedItem = item as unknown as {
         items?: Array<{
           productId?: { imageCover?: { url: string } };
+          image?: FileAsset | string;
         }>;
       };
 
       if (typedItem.items) {
         typedItem.items.forEach((orderItem) => {
+          if (orderItem.image) orderItem.image = withBaseUrl(orderItem.image);
           if (orderItem.productId?.imageCover?.url) {
             orderItem.productId.imageCover.url = String(
               withBaseUrl(orderItem.productId.imageCover.url),
@@ -435,7 +460,7 @@ export class OrderService {
         { path: 'items.productId', select: 'title imageCover slug images' },
         {
           path: 'items.variantId',
-          select: 'sku price priceAfterDiscount label attributes',
+          select: 'sku price priceAfterDiscount label attributes components',
         },
         { path: 'shippingAddress.country', select: 'name' },
         { path: 'shippingAddress.city', select: 'name' },
@@ -477,6 +502,8 @@ export class OrderService {
 
     if (Array.isArray(order.items)) {
       for (const item of order.items) {
+        if (item.image) item.image = withBaseUrl(item.image);
+
         const product = item.productId;
         if (!product) continue;
 
@@ -518,7 +545,7 @@ export class OrderService {
         { path: 'items.productId', select: 'title imageCover slug images' },
         {
           path: 'items.variantId',
-          select: 'sku price priceAfterDiscount label attributes',
+          select: 'sku price priceAfterDiscount label attributes components',
         },
         { path: 'shippingAddress.country', select: 'name' },
         { path: 'shippingAddress.city', select: 'name' },
@@ -574,6 +601,8 @@ export class OrderService {
 
     if (Array.isArray(order.items)) {
       for (const item of order.items) {
+        if (item.image) item.image = withBaseUrl(item.image);
+
         const product = item.productId;
         if (!product) continue;
 
@@ -890,9 +919,15 @@ export class OrderService {
       }
 
       // 1) Create Order Document
+      // Snapshot display data from the validated (DB-fresh) variants so the
+      // order keeps showing what was bought even if the catalog changes later.
+      const snapshotByVariant = new Map<string, OrderItemSnapshot>(
+        validatedItems.map((v) => [v.variant.id.toString(), v.snapshot]),
+      );
       const mappedOrderItems = Array.isArray(orderPayload.items)
         ? orderPayload.items.map((item) => ({
             ...item,
+            ...snapshotByVariant.get(String(item.variantId)),
             shippingSnapshot: item.shippingSnapshot || item.shippingProfile,
           }))
         : [];
@@ -1166,6 +1201,8 @@ export class OrderService {
         `payment.succeeded failed for order ${payload.orderId}: ${error.message}`,
         error.stack,
       );
+    } finally {
+      await this.invalidateOrderCache();
     }
   }
 
@@ -1277,6 +1314,8 @@ export class OrderService {
         `payment.refunded failed for order ${payload.orderId}: ${error.message}`,
         error.stack,
       );
+    } finally {
+      await this.invalidateOrderCache();
     }
   }
 
@@ -1321,6 +1360,8 @@ export class OrderService {
         `payment.failed handler failed: ${error.message}`,
         error.stack,
       );
+    } finally {
+      await this.invalidateOrderCache();
     }
   }
 
@@ -1381,6 +1422,8 @@ export class OrderService {
         `Superseding unpaid orders of user ${payload.userId} failed: ${error.message}`,
         error.stack,
       );
+    } finally {
+      await this.invalidateOrderCache();
     }
   }
 
@@ -1427,6 +1470,8 @@ export class OrderService {
         `payment.expired handler failed: ${error.message}`,
         error.stack,
       );
+    } finally {
+      await this.invalidateOrderCache();
     }
   }
 
@@ -1466,6 +1511,8 @@ export class OrderService {
         `CRITICAL: Compensating Action for 'order.failed' crashed: ${error.message}`,
         error.stack,
       );
+    } finally {
+      await this.invalidateOrderCache();
     }
   }
 }

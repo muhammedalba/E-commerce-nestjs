@@ -5,6 +5,12 @@ import {
   ShippingProfile,
   ShippingProfileSchema,
 } from 'src/products/shared/schemas/shipping-profile.schema';
+import {
+  VariantComponent,
+  VariantComponentSchema,
+} from 'src/products/shared/schemas/ProductVariant.schema';
+import { FileAsset } from 'src/shared/schema/file-asset.schema';
+import { FieldLocalizeDto } from 'src/shared/utils/field-locolaized.dto';
 
 @Schema({ _id: false }) // nested schema
 export class OrderItem {
@@ -55,6 +61,23 @@ export class OrderItem {
   // Snapshot of variant attributes at order time
   @Prop({ type: Object })
   declare attributes: Record<string, unknown>;
+
+  // Snapshot of kit components (A+B products) at order time
+  @Prop({ type: [VariantComponentSchema], default: undefined })
+  declare components?: VariantComponent[];
+
+  // Snapshot of variant label at order time
+  @Prop({ type: String })
+  declare label?: string;
+
+  // Snapshot of localized product title ({ ar, en }) at order time
+  @Prop({ type: Object })
+  declare title?: FieldLocalizeDto;
+
+  // Reference to the image shown at order time (variant image or product cover).
+  // The file itself is not copied, so it may 404 if the product image is later replaced/deleted.
+  @Prop({ type: MongooseSchema.Types.Mixed })
+  declare image?: FileAsset | string;
 
   // Snapshot of variant logistics shipping profile at order time
   @Prop({ type: ShippingProfileSchema, required: false })
