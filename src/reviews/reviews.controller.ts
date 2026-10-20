@@ -131,8 +131,11 @@ export class ReviewsController {
   @Get('statistics')
   @RequirePermission(Permissions.VIEW_REVIEWS)
   @UseGuards(AuthGuard, PermissionsGuard)
-  async statistics() {
-    return await this.reviewsService.statistics();
+  async statistics(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return await this.reviewsService.statistics(startDate, endDate);
   }
 
   // ------------ ======  approve / reject  ====== ---------- //

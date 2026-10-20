@@ -52,7 +52,10 @@ export const SupplierSchema = SchemaFactory.createForClass(Supplier);
 SupplierSchema.index({ name: 1 }, { unique: true, sparse: true });
 SupplierSchema.index({ slug: 1 }, { unique: true, sparse: true });
 
-// ─── Auto-exclude soft-deleted documents ─────────────────
+// ─── Hide inactive suppliers by default ──────────────────
+// isActive is the admin's active/inactive toggle (deletion is a hard delete).
+// Pass any explicit `isActive` filter to include inactive ones.
+// Note: query hooks don't run on aggregate() — filter there manually if needed.
 SupplierSchema.pre(['find', 'countDocuments'], function () {
   if (this.getFilter().isActive === undefined) {
     this.where({ isActive: { $ne: false } });

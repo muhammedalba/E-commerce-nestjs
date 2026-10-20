@@ -138,11 +138,17 @@ export class ReviewsQueryService {
   // ------------ =============================== ---------- //
   // ------------ ======  statistics  ====== ---------- //
   // ------------ =============================== ---------- //
-  async statistics() {
+  /** All-time counts unless a date range is given (dashboard filter). */
+  async statistics(startDate?: string, endDate?: string) {
+    const createdAt: { $gte?: Date; $lte?: Date } = {};
+    if (startDate) createdAt.$gte = new Date(startDate);
+    if (endDate) createdAt.$lte = new Date(endDate);
+    const match = startDate || endDate ? { createdAt } : {};
+
     const grouped = await this.reviewModel.aggregate<{
       _id: ReviewStatus;
       count: number;
-    }>([{ $group: { _id: '$status', count: { $sum: 1 } } }]);
+    }>([{ $match: match }, { $group: { _id: '$status', count: { $sum: 1 } } }]);
 
     const counts = Object.fromEntries(
       Object.values(ReviewStatus).map((status) => [

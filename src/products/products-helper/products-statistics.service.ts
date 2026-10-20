@@ -58,7 +58,7 @@ export class ProductsStatistics {
   ) {
     const lang: 'ar' | 'en' =
       I18nContext.current()?.lang === 'en' ? 'en' : 'ar';
-    const cacheKey = `products:stats:v2:${lang}:${sortBy}:${startDate}:${endDate}`;
+    const cacheKey = `products:stats:v1:${lang}:${sortBy}:${startDate}:${endDate}`;
 
     const cached = await this.cacheManager.get(cacheKey);
     if (cached) return cached;
@@ -276,6 +276,8 @@ export class ProductsStatistics {
             ],
           },
           productCount: 1,
+          // true for the "Unknown" fallback group (no brand, or brand not found)
+          isUnassigned: { $eq: [{ $type: '$brandInfo' }, 'missing'] },
         },
       },
       { $sort: { productCount: -1 } },
@@ -328,6 +330,8 @@ export class ProductsStatistics {
           _id: 0,
           supplierId: '$_id',
           supplierName: { $ifNull: ['$supplierInfo.name', 'Direct Sourcing'] },
+          // true for the "Direct Sourcing" fallback group (no supplier, or supplier not found)
+          isUnassigned: { $eq: [{ $type: '$supplierInfo' }, 'missing'] },
           totalItems: 1,
           investmentValue: 1,
         },
@@ -345,18 +349,26 @@ export class ProductsStatistics {
       inventoryAndCompositionSummary, // <== The new combined query
       lowStockCount,
     ] = await Promise.all([
-      // Total products in the system
-      this.ProductModel.countDocuments(),
+      // Total products in the system (active + inactive, excluding soft-deleted).
+      // The explicit isActive filter bypasses the schema hook that hides inactive
+      // products (null also matches a missing field)
+      this.ProductModel.countDocuments({
+        isActive: { $in: [true, false, null] },
+      }),
 
       // Products grouped by status (active / inactive) for non-deleted products
       this.ProductModel.aggregate([
         { $match: { isDeleted: { $ne: true } } },
-        { $group: { _id: '$isActive', count: { $sum: 1 } } },
+        // missing field = active, as in the schema hook
+        {
+          $group: { _id: { $ifNull: ['$isActive', true] }, count: { $sum: 1 } },
+        },
       ]),
 
-      // Products added during the specified period
+      // Products added during the specified period (active + inactive)
       this.ProductModel.countDocuments({
         createdAt: { $gte: start, $lte: end },
+        isActive: { $in: [true, false, null] },
       }),
 
       // Optimized query: Calculate total stock and composition (simple/variable) in one step

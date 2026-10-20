@@ -29,6 +29,9 @@ import { AUDIT_MODULES } from 'src/audit/shared/audit.constants';
 /** User fields an admin edit is recorded with in the audit log. */
 const AUDITED_USER_FIELDS = ['name', 'email', 'phone', 'isActive'] as const;
 
+/** Role level of SuperAdmin — those accounts are hidden from everyone else. */
+const SUPER_ADMIN_LEVEL = 100;
+
 const roleIdOf = (role: PopulatedUser['role']): string | undefined => {
   if (!role) return undefined;
   if (typeof role === 'string') return role;
@@ -187,11 +190,32 @@ export class UsersService extends BaseService<UserDocument> {
    * @param queryString - Parsed query parameters for filtering, sorting, and pagination.
    * @returns A paginated result object containing user documents and metadata.
    */
-  async getUsers(queryString: QueryString): Promise<any> {
-    return await this.findAllDoc(queryString, {
-      path: 'role',
-      select: 'name level',
-    });
+  async getUsers(
+    queryString: QueryString,
+    currentUser: JwtPayload,
+  ): Promise<any> {
+    // SuperAdmin accounts are visible to SuperAdmin only
+    const baseFilter =
+      currentUser.level >= SUPER_ADMIN_LEVEL
+        ? {}
+        : { role: { $nin: await this.superAdminRoleIds() } };
+
+    return await this.findAllDoc(
+      queryString,
+      { path: 'role', select: 'name level' },
+      false,
+      false,
+      baseFilter,
+    );
+  }
+
+  /** SuperAdmin role ids in both forms, since `role` may be stored as ObjectId or string. */
+  private async superAdminRoleIds(): Promise<(Types.ObjectId | string)[]> {
+    const roles = await this.roleModel
+      .find({ level: SUPER_ADMIN_LEVEL })
+      .select('_id')
+      .lean();
+    return roles.flatMap((r) => [r._id, r._id.toString()]);
   }
 
   /**
@@ -202,11 +226,22 @@ export class UsersService extends BaseService<UserDocument> {
    * @returns The populated user document.
    * @throws {NotFoundException} If the user does not exist.
    */
-  async findOne(idParamDto: IdParamDto) {
-    return await this.findOneDoc(idParamDto, '-__v', false, {
+  async findOne(idParamDto: IdParamDto, currentUser: JwtPayload) {
+    const user = await this.findOneDoc(idParamDto, '-__v', false, {
       path: 'role',
       select: 'name level',
     });
+
+    // Hide SuperAdmin accounts from everyone else — same response as a missing user
+    const role = user.role as { level?: number } | undefined;
+    if (
+      currentUser.level < SUPER_ADMIN_LEVEL &&
+      (role?.level ?? 0) >= SUPER_ADMIN_LEVEL
+    ) {
+      throw new NotFoundException(this.t('exception.NOT_FOUND'));
+    }
+
+    return user;
   }
 
   /**

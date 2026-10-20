@@ -42,6 +42,21 @@ export class UsersStatistics {
       const userRoleId = userRole ? userRole._id : null;
       const userRoleIds = userRoleId ? [userRoleId, userRoleId.toString()] : [];
 
+      // SuperAdmin (level 100) is hidden from every user statistic.
+      // `role` may be stored as ObjectId or string, so match both forms.
+      const superAdminRoles = await this.roleModel
+        .find({ level: 100 })
+        .select('_id')
+        .lean();
+      const superAdminRoleIds = superAdminRoles.flatMap((r) => [
+        r._id,
+        r._id.toString(),
+      ]);
+      const baseMatch = {
+        isDeleted: { $ne: true },
+        role: { $nin: superAdminRoleIds },
+      };
+
       const [
         totalUsersRaw,
         statusCounts,
@@ -49,18 +64,22 @@ export class UsersStatistics {
         periodNewCustomers,
         dailyRegistrationsRaw, // <== إحصائية جديدة (منحنى النمو)
       ] = await Promise.all([
-        // إجمالي المستخدمين (باستثناء المحذوفين إن وجد)
-        this.UserModel.countDocuments({ isDeleted: { $ne: true } }),
+        // إجمالي المستخدمين النشطين وغير النشطين (باستثناء المحذوفين والسوبر أدمن)
+        // شرط isActive الصريح يتجاوز الـ hook الذي يخفي غير النشطين (null يطابق الحقل المفقود)
+        this.UserModel.countDocuments({
+          ...baseMatch,
+          isActive: { $in: [true, false, null] },
+        }),
 
         // توزيع الحالات (نشط / غير نشط)
         this.UserModel.aggregate<StatusAggResult>([
-          { $match: { isDeleted: { $ne: true } } },
+          { $match: baseMatch },
           { $group: { _id: '$isActive', count: { $sum: 1 } } },
         ]),
 
         // توزيع الأدوار (Admin, User, Manager...) باستخدام $lookup لجلب اسم الدور
         this.UserModel.aggregate<RoleAggResult>([
-          { $match: { isDeleted: { $ne: true } } },
+          { $match: baseMatch },
           {
             $lookup: {
               from: 'roles',

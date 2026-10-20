@@ -11,12 +11,16 @@ export class SupplierStatistics {
 
   async suppliers_statistics() {
     // إجمالي الموردين وعدد حسب الحالة
-    const totalSuppliers = await this.supplierModel.countDocuments();
+    // Explicit isActive filter bypasses the schema's "hide inactive" hook, so the
+    // total matches suppliersByStatus below (null also matches a missing field)
+    const totalSuppliers = await this.supplierModel.countDocuments({
+      isActive: { $in: [true, false, null] },
+    });
 
     const suppliersByStatus = await this.supplierModel.aggregate([
       {
         $group: {
-          _id: '$isActive',
+          _id: { $ifNull: ['$isActive', true] }, // missing field = active, as in the schema hook
           count: { $sum: 1 },
         },
       },

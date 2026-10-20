@@ -40,8 +40,8 @@ export class ReviewsService {
     return this.queryService.findAllForAdmin(queryString);
   }
 
-  async statistics() {
-    return this.queryService.statistics();
+  async statistics(startDate?: string, endDate?: string) {
+    return this.queryService.statistics(startDate, endDate);
   }
 
   // =========================================================================================

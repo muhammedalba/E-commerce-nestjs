@@ -79,8 +79,11 @@ export class UsersController {
   @RequirePermission(Permissions.VIEW_USERS)
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(60000) // 60 seconds
-  async getUsers(@Query() QueryDto: QueryString): Promise<any> {
-    return await this.usersService.getUsers(QueryDto);
+  async getUsers(
+    @Query() QueryDto: QueryString,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<any> {
+    return await this.usersService.getUsers(QueryDto, req.user);
   }
   /* ------------ =============================== ---------- */
   /* ------------ ======  GET USER BY ID  ====== ---------------- */
@@ -89,8 +92,8 @@ export class UsersController {
   @RequirePermission(Permissions.VIEW_USERS)
   @UseInterceptors(CustomCacheInterceptor)
   @CacheTTL(60000) // 60 seconds
-  findOne(@Param() IdParamDto: IdParamDto) {
-    return this.usersService.findOne(IdParamDto);
+  findOne(@Param() IdParamDto: IdParamDto, @Req() req: AuthenticatedRequest) {
+    return this.usersService.findOne(IdParamDto, req.user);
   }
   /* ------------ =============================== ---------- */
   /* ------------ ======  UPDATE USER  ====== ---------------- */

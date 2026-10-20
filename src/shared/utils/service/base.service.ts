@@ -332,6 +332,8 @@ export class BaseService<T> {
         }
       | boolean,
     arg4: boolean = false,
+    /** Fixed conditions applied before the user's query filters (e.g. hidden records) */
+    baseFilter: FilterQuery<T> = {},
   ): Promise<{
     results: number;
     pagination: any;
@@ -353,7 +355,7 @@ export class BaseService<T> {
       allLangs = typeof arg3 === 'boolean' ? arg3 : false;
     }
 
-    const features = new ApiFeatures(this.model.find(), queryString)
+    const features = new ApiFeatures(this.model.find(baseFilter), queryString)
       .filter()
       .search(targetModelName);
 
