@@ -314,6 +314,7 @@ export class CheckoutOrchestratorService {
           addressType?: string;
           companyName?: string;
           vendorVatNo?: string;
+          commercialRegNo?: string;
         };
       };
     };
@@ -347,6 +348,7 @@ export class CheckoutOrchestratorService {
       addressType: sessionAddress.addressType || 'home',
       companyName: sessionAddress.companyName,
       vendorVatNo: sessionAddress.vendorVatNo,
+      commercialRegNo: sessionAddress.commercialRegNo,
     };
 
     const orderPayload = {
