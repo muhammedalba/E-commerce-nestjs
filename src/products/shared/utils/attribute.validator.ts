@@ -1,9 +1,31 @@
 import { BadRequestException } from '@nestjs/common';
-import { isMeasuredAttribute, normalizeAttributes } from './data-normalizer';
+import {
+  isMeasuredAttribute,
+  normalizeAttributes,
+  normalizeUnit,
+} from './data-normalizer';
 
 // ─── Attribute Definition Interfaces ──────────────────────
 
 export type AttributeType = 'string' | 'number';
+
+// Keep in sync with ATTRIBUTE_CONFIG in the client (shared/constants/product-constants.ts),
+// which holds each attribute's type, units and display labels.
+export const ALLOWED_ATTRIBUTE_NAMES = [
+  'weight',
+  'volume',
+  'thickness',
+  'length',
+  'diameter',
+  'density',
+  'size',
+  'gsm',
+  'color',
+  'type',
+  'packaging_type',
+  'dimensions',
+  'components_kit',
+] as const;
 
 export interface AllowedAttribute {
   name: string; // e.g. "color", "weight", "volume"
@@ -94,10 +116,10 @@ export function validateAttributes(
       }
       // Check allowed units if provided
       if (def.allowedUnits && def.allowedUnits.length > 0) {
-        const normalizedUnits = def.allowedUnits.map((u) =>
-          u.trim().toLowerCase(),
-        );
-        if (!normalizedUnits.includes(value.unit.trim().toLowerCase())) {
+        const toUnit = (u: string) =>
+          normalizeUnit(u) ?? u.trim().toLowerCase();
+        const normalizedUnits = def.allowedUnits.map(toUnit);
+        if (!normalizedUnits.includes(toUnit(value.unit))) {
           throw new BadRequestException(
             `Invalid unit "${value.unit}" for attribute "${key}". Allowed: ${def.allowedUnits.join(', ')}`,
           );

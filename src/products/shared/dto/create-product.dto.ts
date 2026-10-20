@@ -9,13 +9,18 @@ import {
   ValidateNested,
   IsBoolean,
   ArrayMinSize,
+  IsIn,
 } from 'class-validator';
 import { i18nValidationMessage } from 'nestjs-i18n';
 import { Transform, Type } from 'class-transformer';
+import { ALLOWED_ATTRIBUTE_NAMES } from '../utils/attribute.validator';
 
 export class ProductAttributeDefinitionDto {
   @IsString()
   @IsNotEmpty()
+  @IsIn(ALLOWED_ATTRIBUTE_NAMES, {
+    message: i18nValidationMessage('validation.IS_ENUM'),
+  })
   @Transform(({ value }: { value: string }) =>
     value?.toString().trim().toLowerCase(),
   )

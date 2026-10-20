@@ -8,12 +8,21 @@ import {
 // ─── Valid Units Set (for fast lookup) ────────────────────
 const VALID_UNITS = new Set(Object.values(MeasurementUnit));
 
+// Aliases folded into one canonical unit so stored data and filters match.
+// Liters are stored as "ltr".
+const UNIT_ALIASES: Partial<Record<string, MeasurementUnit>> = {
+  l: MeasurementUnit.LTR,
+  liter: MeasurementUnit.LTR,
+  litre: MeasurementUnit.LTR,
+};
+
 /**
- * Normalizes a unit string → lowercase + trimmed.
+ * Normalizes a unit string → lowercase + trimmed, with aliases resolved.
  * Returns the normalized unit or null if invalid.
  */
 export function normalizeUnit(unit: string): string | null {
-  const normalized = unit.trim().toLowerCase();
+  const lowered = unit.trim().toLowerCase();
+  const normalized = UNIT_ALIASES[lowered] ?? lowered;
   return VALID_UNITS.has(normalized as MeasurementUnit) ? normalized : null;
 }
 
