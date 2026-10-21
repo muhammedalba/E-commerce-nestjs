@@ -112,6 +112,7 @@ export class EmailService {
 
     subject: string,
     lang?: string,
+    currency?: string,
   ): Promise<void> {
     const resolvedLang =
       lang ??
@@ -136,7 +137,7 @@ export class EmailService {
         orderTotal,
         orderLink,
         products,
-        currency: 'ل.س',
+        currency: currency || 'SAR',
         year: new Date().getFullYear(),
         companyName: process.env.APP_NAME,
       },

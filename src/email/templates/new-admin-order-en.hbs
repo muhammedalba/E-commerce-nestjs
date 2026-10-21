@@ -1,14 +1,14 @@
-<html lang='ar'>
+<html lang='en' dir='ltr'>
   <head>
     <meta charset='UTF-8' />
-    <title>طلب جديد تم إنشاؤه</title>
+    <title>New order placed</title>
     <style>
       body {
         background-color: #f4f4f7;
         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
         padding: 0;
         margin: 0;
-        direction: rtl;
+        direction: ltr;
       }
       .container {
         max-width: 600px;
@@ -28,7 +28,7 @@
       }
       .content {
         padding: 30px;
-        text-align: right;
+        text-align: left;
       }
       .content h2 {
         color: #333333;
@@ -83,28 +83,28 @@
   </head>
   <body>
     <div class='container'>
-      <div class='header'>new order!</div>
+      <div class='header'>New Order!</div>
       <div class='content'>
-        <h2>hallo {{adminName}},</h2>
-        <p>order created with : <strong>{{customerName}}</strong>.</p>
-        <p>order details:</p>
+        <h2>Hello {{adminName}},</h2>
+        <p>A new order was placed by <strong>{{customerName}}</strong>.</p>
+        <p>Order details:</p>
         <p>
-          رقم الطلب:
+          Order number:
           <strong>{{orderId}}</strong><br />
-          التاريخ:
+          Date:
           <strong>{{orderDate}}</strong><br />
-          المبلغ الإجمالي:
-          <strong>{{orderTotal}}</strong>
+          Total amount:
+          <strong>{{orderTotal}} {{currency}}</strong>
         </p>
 
 <table class="product-table" style="width:100%; border-collapse: collapse; margin-top: 20px;">
   <thead style="background-color: #f0f0f0;">
     <tr>
-      <th style="padding: 10px; border: 1px solid #ddd;">المنتج</th>
-      <th style="padding: 10px; border: 1px solid #ddd;">الصورة</th>
-      <th style="padding: 10px; border: 1px solid #ddd;">سعر الوحدة</th>
-      <th style="padding: 10px; border: 1px solid #ddd;">الكمية المطلوبة</th>
-      <th style="padding: 10px; border: 1px solid #ddd;">الإجمالي</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">Product</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">Image</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">Unit price</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">Quantity</th>
+      <th style="padding: 10px; border: 1px solid #ddd;">Total</th>
     </tr>
   </thead>
   <tbody>
@@ -123,12 +123,12 @@
 </table>
 
 
-        <a href='{{orderLink}}' class='button'>عرض الطلب الآن</a>
+        <a href='{{orderLink}}' class='button'>View order</a>
       </div>
       <div class='footer'>
         &copy;
         {{year}}
-        {{companyName}}. جميع الحقوق محفوظة.
+        {{companyName}}. All rights reserved.
       </div>
     </div>
   </body>

@@ -349,10 +349,11 @@ export class OrderService {
   // =============================================================
 
   /**
-   * يُعيد طلبات المستخدم الحالي فقط، بحقول محدودة (whitelist) مناسبة لواجهة
-   * العميل — على عكس findAll (المخصصة للوحة تحكم الأدمن) لا يتم هنا كشف أي
-   * حقول داخلية/إدارية (مثل notes أو isDeleted)، ولا يُفتح للعميل أي فلتر
-   * عام غير الفرز والترقيم.
+   * Returns only the current user's requests, with a limited set of fields (a whitelist)
+   * suitable for the client-facing interface. Unlike `findAll` (intended for the
+   * admin dashboard), this method does not expose any internal or administrative
+   * fields (such as `notes` or `isDeleted`), nor does it allow for any general
+   * filtering beyond sorting and pagination.
    */
   async findMyOrders(userId: string, queryString: QueryString) {
     const filterQuery = { user: new Types.ObjectId(userId) };
@@ -384,7 +385,7 @@ export class OrderService {
     const data = await features
       .getQuery()
       .select(
-        'items status paymentStatus grandTotal totalPrice totalQuantity currency ' +
+        'items  invoiceNumber status paymentStatus grandTotal totalPrice totalQuantity currency ' +
           'discountAmount couponCode ' +
           'createdAt checkedOutAt processingAt shippedAt deliveredAt paidAt completedAt cancelledAt',
       )
@@ -449,7 +450,7 @@ export class OrderService {
       user: new Types.ObjectId(userId),
     })
       .select(
-        'items status paymentStatus paymentMethodCode paymentMethod shippingMethod ' +
+        'items status paymentStatus paymentMethodCode  paymentMethod shippingMethod ' +
           'shippingAddress shippingProviderId shippingRateId shippingAmount taxAmount chargedTaxAmount ' +
           'productsAmountBeforeTax productsAmountAfterTax taxPercentage taxesIncluded applyTaxOnCharges ' +
           'paymentFees grandTotal totalPrice totalQuantity discountAmount currency ' +

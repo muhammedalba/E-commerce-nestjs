@@ -219,8 +219,7 @@ export class PaymentTransactionService {
     } else if (paymentStatus === 'failed') {
       // Moyasar puts the issuer / 3DS outcome on the payment source.
       const source = payload.source as
-        | { message?: unknown; response_code?: unknown }
-        | undefined;
+        { message?: unknown; response_code?: unknown } | undefined;
       const failureReason =
         (typeof source?.message === 'string' && source.message) ||
         (typeof payload.message === 'string' && payload.message) ||
@@ -372,12 +371,13 @@ export class PaymentTransactionService {
    * or client-side tampering. It updates the internal transaction state if a discrepancy is found.
    *
    * @param {string} providerPaymentId - The unique payment identifier provided by Moyasar.
-   * @returns {Promise<{ orderId: string; orderStatus?: string; paymentStatus: string; amount: number; currency: string }>} A promise resolving to the consolidated payment and order status details.
+   * @returns {Promise<{ orderId: string; orderStatus?: string; invoiceNumber?: number; paymentStatus: string; amount: number; currency: string }>} A promise resolving to the consolidated payment and order status details.
    * @throws {NotFoundException} If the payment or internal transaction cannot be found.
    * @throws {BadRequestException} If the payment payload is missing required metadata like orderId.
    */
   async verifyPaymentStatus(providerPaymentId: string): Promise<{
     orderId: string;
+    invoiceNumber?: number;
     orderStatus?: string;
     paymentStatus: string;
     failureCategory?: PaymentFailureCategory;
@@ -442,13 +442,13 @@ export class PaymentTransactionService {
     return {
       orderId: transaction.orderId.toString(),
       orderStatus: order?.status,
+      invoiceNumber: order?.invoiceNumber,
       paymentStatus: transaction.status, // INITIATED, PENDING, PAID, FAILED
       // Category only: the raw issuer message (e.g. "stolen card") stays server-side.
       failureCategory:
         transaction.status === PaymentStatus.FAILED
           ? (transaction.metadata?.failureCategory as
-              | PaymentFailureCategory
-              | undefined)
+              PaymentFailureCategory | undefined)
           : undefined,
       amount: transaction.amount,
       currency: transaction.currency,

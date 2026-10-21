@@ -218,6 +218,15 @@ OrderSchema.index({ user: 1, 'items.productId': 1, status: 1 });
 OrderSchema.index({ createdAt: -1 });
 // Admin order list filtered by status, still sorted by newest first.
 OrderSchema.index({ status: 1, createdAt: -1 });
+// Lookup by invoice number; unique guards against a duplicate serial.
+// Partial: orders from before the counter have no invoiceNumber.
+OrderSchema.index(
+  { invoiceNumber: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { invoiceNumber: { $type: 'number' } },
+  },
+);
 
 // الزيادة التلقائية لرقم الفاتورة بشكل حتمي وآمن للطلبات المتزامنة تلقائياً
 OrderSchema.pre('save', async function (next) {

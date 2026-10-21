@@ -4,6 +4,10 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { HydratedDocument } from 'mongoose';
 import { Order } from '../schemas/Order.schema';
+import { withBaseUrl } from 'src/shared/utils/with-base-url.util';
+import { SettingsService } from 'src/settings/settings.service';
+import { Setting } from 'src/settings/shared/schema/setting.schema';
+import { resolveStoreTimezone } from 'src/backup/store-timezone';
 
 type OrderDocument = HydratedDocument<Order>;
 
@@ -14,7 +18,44 @@ export class OrderEmailService {
   constructor(
     @InjectQueue('mail-queue') private readonly mailQueue: Queue,
     private readonly i18n: I18nService,
+    private readonly settingsService: SettingsService,
   ) {}
+
+  /**
+   * The order's currency (the store's at checkout) as shown in an email: the
+   * store's symbol (e.g. ر.س) in Arabic while it is still the store currency,
+   * otherwise — and always in English — its code (SAR).
+   */
+  private currencyLabel(
+    orderCurrency: string | undefined,
+    settings: Setting | null,
+    lang: string,
+  ): string {
+    const code = orderCurrency || settings?.currencyCode || 'SAR';
+    return lang === 'ar' &&
+      code === settings?.currencyCode &&
+      settings.currencySymbol
+      ? settings.currencySymbol
+      : code;
+  }
+
+  /** Order date in the email's language, in the store's timezone. */
+  private formatOrderDate(
+    date: Date | undefined,
+    settings: Setting | null,
+    lang: string,
+  ): string {
+    if (!date) return '';
+    const { timezone } = resolveStoreTimezone(
+      settings?.businessAddress,
+      'Asia/Riyadh',
+    );
+    return new Intl.DateTimeFormat(
+      // Gregorian calendar and Latin digits, like the storefront
+      lang === 'ar' ? 'ar-u-ca-gregory-nu-latn' : 'en-US',
+      { dateStyle: 'medium', timeStyle: 'short', timeZone: timezone },
+    ).format(date);
+  }
 
   /**
    * Built from the lines stored on the order (snapshot taken at checkout), not
@@ -24,13 +65,22 @@ export class OrderEmailService {
     const lang =
       I18nContext.current()?.lang || process.env.DEFAULT_LANGUAGE || 'ar';
     try {
+      const settings = await this.settingsService
+        .getSettings()
+        .catch(() => null);
       await this.mailQueue.add('new-admin-order', {
         appName: process.env.APP_NAME || 'admin',
+        currency: this.currencyLabel(order.currency, settings, lang),
         email: user_email,
-        date: order.createdAt ? order.createdAt.toISOString() : '',
+        date: this.formatOrderDate(order.createdAt, settings, lang),
         amount: order.grandTotal?.toString() ?? order.totalPrice.toString(),
-        url: `${process.env.BASE_URL}/api/v1/order/${order._id?.toString() ?? ''}`,
-        orderId: order._id?.toString() ?? '',
+        // Admin email: opens the order in the dashboard
+        url: `${process.env.CLIENT_URL}/${lang}/dashboard/orders/${order._id?.toString() ?? ''}`,
+        // String(undefined) is "undefined" (truthy): test the number itself
+        orderId:
+          order.invoiceNumber != null
+            ? String(order.invoiceNumber).padStart(4, '0')
+            : order._id.toString().slice(-6).toUpperCase(),
         orderDetails: order.items.map((item) => ({
           product: {
             id: item.productId.toString(),
@@ -41,10 +91,11 @@ export class OrderEmailService {
               item.sku ||
               '',
             price: item.price.toString(),
+            // Local uploads store a relative path; an email needs an absolute URL
             imageCover:
-              typeof item.image === 'string'
-                ? item.image
-                : (item.image?.url ?? ''),
+              withBaseUrl(
+                typeof item.image === 'string' ? item.image : item.image?.url,
+              ) ?? '',
           },
           quantity: item.quantity.toString(),
           totalPrice: (
@@ -52,7 +103,7 @@ export class OrderEmailService {
           ).toString(),
         })),
         subject: this.i18n.translate('email.NEW_ORDER_SUBJECT', {
-          args: { name: 'codeProps' },
+          args: { name: user_email },
           lang,
         }),
         lang,

@@ -41,6 +41,8 @@ interface NewAdminOrderJobData {
   orderDetails: NewAdminOrderProduct[];
   subject: string;
   lang?: string;
+  /** Store currency symbol/code; absent on jobs queued before it was added. */
+  currency?: string;
 }
 
 interface InventoryAlertJobData {
@@ -217,6 +219,7 @@ export class MailProcessor extends WorkerHost {
           orderDetails,
           subject,
           lang,
+          currency,
         } = job.data;
         await this.emailService.new_admin_order(
           appName,
@@ -228,6 +231,7 @@ export class MailProcessor extends WorkerHost {
           orderDetails,
           subject,
           lang,
+          currency,
         );
         return {};
       }
