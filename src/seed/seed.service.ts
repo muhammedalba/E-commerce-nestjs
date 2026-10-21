@@ -152,6 +152,7 @@ export class SeedService {
       // Taxes
       vatRate: 15,
       taxesIncluded: false,
+      applyTaxOnCharges: false,
 
       // Minimum order
       minOrderAmount: 0,

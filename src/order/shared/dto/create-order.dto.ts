@@ -77,6 +77,21 @@ export class CreateOrderDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  chargedTaxAmount?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  productsAmountBeforeTax?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  productsAmountAfterTax?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
   paymentFees?: number;
 
   @IsOptional()

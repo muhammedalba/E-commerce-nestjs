@@ -186,6 +186,7 @@ export class SettingsController {
       'allowRegistration',
       'autoBackup',
       'taxesIncluded',
+      'applyTaxOnCharges',
       'enablePerformance',
       'inventoryAlertsEnabled',
       'paymentsEnabled',

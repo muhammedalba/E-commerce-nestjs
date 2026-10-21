@@ -305,6 +305,8 @@ export class CheckoutOrchestratorService {
           phone?: string;
           countryId?: string;
           country?: string;
+          regionId?: string;
+          region?: string;
           cityId?: string;
           city?: string;
           street?: string;
@@ -336,6 +338,7 @@ export class CheckoutOrchestratorService {
       lastName: sessionAddress.lastName || 'N/A',
       phone: sessionAddress.phone || '0000000000',
       country: sessionAddress.countryId || sessionAddress.country || 'N/A',
+      region: sessionAddress.regionId || sessionAddress.region,
       city:
         summary.delivery?.cityId ||
         sessionAddress.cityId ||
@@ -362,6 +365,12 @@ export class CheckoutOrchestratorService {
       paymentMethodCode: summary.payment?.methodCode,
       shippingAmount: summary.summary.shippingCost,
       taxAmount: summary.summary.taxAmount,
+      chargedTaxAmount: summary.summary.chargedTaxAmount,
+      productsAmountBeforeTax: summary.summary.productsAmountBeforeTax,
+      productsAmountAfterTax: summary.summary.productsAmountAfterTax,
+      taxPercentage: summary.summary.taxPercentage,
+      taxesIncluded: summary.summary.taxesIncluded,
+      applyTaxOnCharges: summary.summary.applyTaxOnCharges,
       paymentFees: summary.summary.paymentFees,
       totalPrice: summary.summary.subtotal,
       discountAmount: summary.summary.discountAmount,

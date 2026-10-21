@@ -188,6 +188,10 @@ export class Setting {
   @Prop({ type: Boolean, default: false })
   declare taxesIncluded: boolean;
 
+  // When true, VAT is also charged on shipping and payment fees (not just products)
+  @Prop({ type: Boolean, default: false })
+  declare applyTaxOnCharges: boolean;
+
   @Prop({ type: Number, default: 0 })
   declare minOrderAmount: number;
 

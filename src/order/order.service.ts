@@ -233,6 +233,7 @@ export class OrderService {
       .getQuery()
       .populate({ path: 'user', select: 'name email avatar' })
       .populate({ path: 'shippingAddress.country', select: 'name' })
+      .populate({ path: 'shippingAddress.region', select: 'name' })
       .populate({ path: 'shippingAddress.city', select: 'name' })
       .populate({ path: 'shippingProviderId', select: 'name code logo' })
       .populate({ path: 'shippingRateId', select: 'estimatedDays basePrice' })
@@ -429,12 +430,14 @@ export class OrderService {
   // =============================================================
 
   /**
-   * يُعيد تفاصيل طلب واحد للمستخدم الحالي فقط — ملكية الطلب تُفرض داخل
-   * الاستعلام نفسه (`user: userId`) بدلاً من التحقق بعد الجلب، حتى لا
-   * يستطيع أي عميل معرفة وجود طلب لعميل آخر عبر تخمين الـ id (رسالة
-   * NOT_FOUND واحدة سواء كان الطلب غير موجود أو ملكاً لمستخدم آخر).
-   * الحقول المُعادة محدودة (whitelist) ولا تشمل `notes` أو `isDeleted` أو
-   * أي حقل إداري داخلي آخر.
+   * Returns the details of a single order, exclusively for the current user.
+   * Order ownership is enforced within the query itself (`user: userId`)
+   * rather than through a post-fetch check. This prevents a client from
+   * discovering the existence of another user's order by guessing its ID
+   * (a `NOT_FOUND` response is returned regardless of whether the order
+   * does not exist or belongs to a different user).
+   * The returned fields are restricted (via a whitelist) and exclude
+   * `notes`, `isDeleted`, or any other internal administrative fields.
    */
   async findMyOrder(userId: string, orderId: string) {
     if (!Types.ObjectId.isValid(orderId)) {
@@ -447,7 +450,8 @@ export class OrderService {
     })
       .select(
         'items status paymentStatus paymentMethodCode paymentMethod shippingMethod ' +
-          'shippingAddress shippingProviderId shippingRateId shippingAmount taxAmount ' +
+          'shippingAddress shippingProviderId shippingRateId shippingAmount taxAmount chargedTaxAmount ' +
+          'productsAmountBeforeTax productsAmountAfterTax taxPercentage taxesIncluded applyTaxOnCharges ' +
           'paymentFees grandTotal totalPrice totalQuantity discountAmount currency ' +
           'refundedAmount refundedAt ' +
           'couponId couponCode transferReceiptImg InvoicePdf DeliveryReceiptImage ' +
@@ -463,6 +467,7 @@ export class OrderService {
           select: 'sku price priceAfterDiscount label attributes components',
         },
         { path: 'shippingAddress.country', select: 'name' },
+        { path: 'shippingAddress.region', select: 'name' },
         { path: 'shippingAddress.city', select: 'name' },
         { path: 'couponId', select: 'name type discount' },
         { path: 'shippingProviderId', select: 'name code logo trackingUrl' },
@@ -549,6 +554,7 @@ export class OrderService {
         },
         { path: 'shippingAddress.country', select: 'name' },
         { path: 'shippingAddress.city', select: 'name' },
+        { path: 'shippingAddress.region', select: 'name' },
         { path: 'couponId', select: 'name type usageCount expires discount' },
         { path: 'shippingProviderId', select: 'name code logo trackingUrl' },
         {
@@ -562,9 +568,7 @@ export class OrderService {
     if (!order) {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }
-    // الآن order.user ليس any بل UserPopulated | undefined، مما يرضي ESLint تماماً
     if (order.user?.avatar) {
-      // دعم الحالة القديمة: avatar محفوظ كنص مباشر في DB
       if (typeof (order.user.avatar as unknown) === 'string') {
         const avatarUrl = order.user.avatar as unknown as string;
         order.user.avatar = {
@@ -887,6 +891,12 @@ export class OrderService {
     paymentMethodCode?: string;
     shippingAmount: number;
     taxAmount: number;
+    chargedTaxAmount?: number;
+    productsAmountBeforeTax?: number;
+    productsAmountAfterTax?: number;
+    taxPercentage?: number;
+    taxesIncluded?: boolean;
+    applyTaxOnCharges?: boolean;
     paymentFees: number;
     totalPrice: number;
     discountAmount: number;
@@ -940,6 +950,11 @@ export class OrderService {
           country: new Types.ObjectId(
             orderPayload.shippingAddress.country as string,
           ),
+          region: Types.ObjectId.isValid(
+            orderPayload.shippingAddress.region as string,
+          )
+            ? new Types.ObjectId(orderPayload.shippingAddress.region as string)
+            : undefined,
           city: new Types.ObjectId(orderPayload.shippingAddress.city as string),
         },
 
@@ -963,6 +978,12 @@ export class OrderService {
 
         shippingAmount: orderPayload.shippingAmount,
         taxAmount: orderPayload.taxAmount,
+        chargedTaxAmount: orderPayload.chargedTaxAmount,
+        productsAmountBeforeTax: orderPayload.productsAmountBeforeTax,
+        productsAmountAfterTax: orderPayload.productsAmountAfterTax,
+        taxPercentage: orderPayload.taxPercentage ?? 0,
+        taxesIncluded: !!orderPayload.taxesIncluded,
+        applyTaxOnCharges: !!orderPayload.applyTaxOnCharges,
         paymentFees: orderPayload.paymentFees,
         totalPrice: orderPayload.totalPrice,
         discountAmount: orderPayload.discountAmount,
@@ -1061,11 +1082,7 @@ export class OrderService {
       const order = await this.OrderModel.findById(payload.orderId);
       const user = await this.UserModel.findById(payload.userId);
       if (order && user) {
-        await this.orderEmailService.sendOrderEmail(
-          order,
-          validatedItems,
-          user.email,
-        );
+        await this.orderEmailService.sendOrderEmail(order, user.email);
       }
     } catch (err: any) {
       const error = err as Error;
@@ -1176,23 +1193,13 @@ export class OrderService {
           $inc: { totalOrder: 1 },
         });
 
-        const { validatedItems } =
-          await this.orderHelperService.validateOrderItems(
-            order.items as unknown as {
-              productId: string;
-              variantId: string;
-              quantity: number;
-            }[],
-          );
+        // Confirmed from the stored lines, never re-validated: every paid
+        // line must leave its reservation, even if its product changed since.
+        await this.productHelperService.confirmReservation(order.items);
 
-        await this.productHelperService.confirmReservation(validatedItems);
         const user = await this.UserModel.findById(order.user);
         if (user) {
-          await this.orderEmailService.sendOrderEmail(
-            order,
-            validatedItems,
-            user.email,
-          );
+          await this.orderEmailService.sendOrderEmail(order, user.email);
         }
       }
     } catch (err: any) {
@@ -1344,15 +1351,13 @@ export class OrderService {
         { new: true },
       );
       if (order && order.paymentMethodCode === 'moyasar') {
-        const { validatedItems } =
-          await this.orderHelperService.validateOrderItems(
-            order.items as unknown as {
-              productId: string;
-              variantId: string;
-              quantity: number;
-            }[],
-          );
-        await this.productHelperService.releaseReservation(validatedItems);
+        // Release from the stored lines, not re-validated items: validation
+        // counts this order's own reservation as unavailable stock and would
+        // drop the line, leaving its reservation stuck forever.
+        await this.productHelperService.restockOrderItems(
+          order.items,
+          'reserved',
+        );
       }
     } catch (err: any) {
       const error = err as Error;
@@ -1454,15 +1459,11 @@ export class OrderService {
         return;
       }
       if (order.paymentMethodCode === 'moyasar') {
-        const { validatedItems } =
-          await this.orderHelperService.validateOrderItems(
-            order.items as unknown as {
-              productId: string;
-              variantId: string;
-              quantity: number;
-            }[],
-          );
-        await this.productHelperService.releaseReservation(validatedItems);
+        // Stored lines, not re-validated items (see handlePaymentFailed).
+        await this.productHelperService.restockOrderItems(
+          order.items,
+          'reserved',
+        );
       }
     } catch (err: any) {
       const error = err as Error;

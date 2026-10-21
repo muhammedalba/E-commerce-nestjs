@@ -18,6 +18,10 @@ import {
   RegionDocument,
 } from '../locations/shared/schema/region.schema';
 import { City, CityDocument } from '../locations/shared/schema/city.schema';
+import {
+  calculateTaxOnAmount,
+  extractTaxFromAmount,
+} from './shared/utils/tax-calculation.util';
 
 @Injectable()
 export class TaxesService extends BaseService<TaxDocument> {
@@ -180,9 +184,7 @@ export class TaxesService extends BaseService<TaxDocument> {
       if (!regionDoc) {
         throw new BadRequestException(this.t('exception.REGION_NOT_FOUND'));
       }
-      const regionCountryId = (
-        regionDoc.country as unknown as Types.ObjectId
-      ).toString();
+      const regionCountryId = regionDoc.country.toString();
       if (regionCountryId !== country) {
         throw new BadRequestException(
           this.t('exception.REGION_COUNTRY_MISMATCH'),
@@ -285,16 +287,30 @@ export class TaxesService extends BaseService<TaxDocument> {
   }
 
   /**
-   * Calculate tax based on city, region, country, global, or settings fallback
+   * Calculate tax based on city, region, country, global, or settings fallback.
+   *
+   * `productsAmount` follows the tax rule's inclusive/exclusive mode, while
+   * `additionalCharges` (shipping, payment fees) are never tax-inclusive, so
+   * their VAT is always added on top.
+   *
+   * - `taxAmount`: the full VAT on the invoice (including VAT embedded in prices)
+   * - `chargedTaxAmount`: the tax charged on top of the payable total — the
+   *   only tax amount the customer-facing screens display
+   * - `productsAmountBeforeTax` / `productsAmountAfterTax`: the products
+   *   amount (after coupon) excluding and including VAT, for the invoice
    */
   async calculateTax(
-    subtotal: number,
+    productsAmount: number,
+    additionalCharges: number,
     countryId?: string,
     regionId?: string,
     cityId?: string,
   ): Promise<{
     taxPercentage: number;
     taxAmount: number;
+    chargedTaxAmount: number;
+    productsAmountBeforeTax: number;
+    productsAmountAfterTax: number;
     totalWithTax: number;
     isIncluded: boolean;
   }> {
@@ -307,35 +323,55 @@ export class TaxesService extends BaseService<TaxDocument> {
       regionId,
       cityId,
     );
+
     if (applicableTax && applicableTax.length > 0) {
       taxPercentage = applicableTax[0].percentage;
       isIncluded = applicableTax[0].isIncludedInPrice;
     }
-
+    // total before tax
+    const baseTotal = productsAmount + additionalCharges;
+    // if no tax percentage set the tax amount to zero
     if (taxPercentage <= 0) {
       return {
         taxPercentage: 0,
         taxAmount: 0,
-        totalWithTax: subtotal,
+        chargedTaxAmount: 0,
+        productsAmountBeforeTax: productsAmount,
+        productsAmountAfterTax: productsAmount,
+        totalWithTax: baseTotal,
         isIncluded: false,
       };
     }
 
-    let taxAmount = 0;
-    let totalWithTax = subtotal;
+    //calculate tax on additional charges (shipping, payment fees) — never tax-inclusive
+    const chargesTax = calculateTaxOnAmount(additionalCharges, taxPercentage);
 
+    let taxAmount = 0; // this is the full VAT on the invoice
+    let chargedTaxAmount = 0; // this is the tax charged on top of the payable total
+    let productsAmountBeforeTax = productsAmount; // products price excluding VAT
+    let productsAmountAfterTax = productsAmount; // products price including VAT
     if (isIncluded) {
-      taxAmount = subtotal - subtotal / (1 + taxPercentage / 100);
-      totalWithTax = subtotal;
+      // Products already contain VAT: extract it for reporting, add VAT on charges only
+      const embeddedTax = extractTaxFromAmount(productsAmount, taxPercentage);
+      //embedded tax for products + tax on charges
+      taxAmount = embeddedTax + chargesTax;
+      chargedTaxAmount = chargesTax;
+      productsAmountBeforeTax = productsAmount - embeddedTax;
     } else {
-      taxAmount = (subtotal * taxPercentage) / 100;
-      totalWithTax = subtotal + taxAmount;
+      //products tax + tax on charges
+      const productsTax = calculateTaxOnAmount(productsAmount, taxPercentage);
+      taxAmount = productsTax + chargesTax;
+      chargedTaxAmount = taxAmount;
+      productsAmountAfterTax = productsAmount + productsTax;
     }
 
     return {
       taxPercentage,
       taxAmount: parseFloat(taxAmount.toFixed(2)),
-      totalWithTax: parseFloat(totalWithTax.toFixed(2)),
+      chargedTaxAmount: parseFloat(chargedTaxAmount.toFixed(2)),
+      productsAmountBeforeTax: parseFloat(productsAmountBeforeTax.toFixed(2)),
+      productsAmountAfterTax: parseFloat(productsAmountAfterTax.toFixed(2)),
+      totalWithTax: parseFloat((baseTotal + chargedTaxAmount).toFixed(2)),
       isIncluded,
     };
   }

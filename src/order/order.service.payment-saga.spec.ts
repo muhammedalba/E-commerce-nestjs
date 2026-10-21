@@ -78,8 +78,10 @@ const createService = () => {
     service,
     OrderModel,
     UserModel,
+    orderHelperService,
     productHelperService,
     couponHelperService,
+    orderEmailService,
     eventEmitter,
     cacheInvalidation,
   };
@@ -122,7 +124,30 @@ describe('OrderService Moyasar payment saga', () => {
       status: OrderStatus.CANCELLED,
       paymentStatus: 'FAILED',
     });
-    expect(productHelperService.releaseReservation).toHaveBeenCalledTimes(1);
+    // Released from the stored lines, never re-validated: validation counts
+    // this order's own reservation as taken and would drop the line.
+    expect(productHelperService.restockOrderItems).toHaveBeenCalledTimes(1);
+    expect(productHelperService.restockOrderItems).toHaveBeenCalledWith(
+      items,
+      'reserved',
+    );
+  });
+
+  it('payment.expired releases the reservation from the stored order lines once', async () => {
+    const { service, OrderModel, productHelperService } = createService();
+    OrderModel.findOneAndUpdate
+      .mockReturnValueOnce(query({ items, paymentMethodCode: 'moyasar' }))
+      .mockReturnValueOnce(query(null)); // already expired on the 2nd delivery
+
+    await service.handlePaymentExpired({ orderId: 'o1' });
+    await service.handlePaymentExpired({ orderId: 'o1' });
+
+    expect(productHelperService.restockOrderItems).toHaveBeenCalledTimes(1);
+    expect(productHelperService.restockOrderItems).toHaveBeenCalledWith(
+      items,
+      'reserved',
+    );
+    expect(productHelperService.releaseReservation).not.toHaveBeenCalled();
   });
 
   it('payment handlers expire the cached /order responses, even when the order is unchanged', async () => {
@@ -141,6 +166,8 @@ describe('OrderService Moyasar payment saga', () => {
       UserModel,
       productHelperService,
       couponHelperService,
+      orderHelperService,
+      orderEmailService,
     } = createService();
     const user = new Types.ObjectId();
     const couponId = new Types.ObjectId();
@@ -162,7 +189,16 @@ describe('OrderService Moyasar payment saga', () => {
     expect(UserModel.findByIdAndUpdate).toHaveBeenCalledWith(user, {
       $inc: { totalOrder: 1 },
     });
+    // Confirmed from the stored lines, never from re-validated items
     expect(productHelperService.confirmReservation).toHaveBeenCalledTimes(1);
+    expect(productHelperService.confirmReservation).toHaveBeenCalledWith(items);
+    // The email is built from the stored lines too: its own reservation
+    // would make a re-validated line look out of stock and drop it
+    expect(orderHelperService.validateOrderItems).not.toHaveBeenCalled();
+    expect(orderEmailService.sendOrderEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ items }),
+      'a@b.c',
+    );
   });
 
   it('payment.succeeded still confirms the order when the coupon can no longer be marked', async () => {

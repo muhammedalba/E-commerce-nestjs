@@ -1,5 +1,4 @@
 import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
-import { Types } from 'mongoose';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
@@ -7,29 +6,6 @@ import { HydratedDocument } from 'mongoose';
 import { Order } from '../schemas/Order.schema';
 
 type OrderDocument = HydratedDocument<Order>;
-
-import { FileAsset } from 'src/shared/schema/file-asset.schema';
-
-type ValidatedItem = {
-  product: {
-    id: Types.ObjectId;
-    imageCover: FileAsset;
-    brand: string;
-    category: string;
-    title: string;
-    isUnlimitedStock?: boolean;
-  };
-  variant: {
-    id: Types.ObjectId;
-    price: number;
-    stock: number;
-    sold: number;
-    sku: string;
-    attributes: Record<string, unknown>;
-  };
-  quantity: number;
-  totalPrice?: number;
-};
 
 @Injectable()
 export class OrderEmailService {
@@ -40,11 +16,11 @@ export class OrderEmailService {
     private readonly i18n: I18nService,
   ) {}
 
-  async sendOrderEmail(
-    order: OrderDocument,
-    validatedItems: ValidatedItem[],
-    user_email: string,
-  ) {
+  /**
+   * Built from the lines stored on the order (snapshot taken at checkout), not
+   * from the live catalog: a product edited or deactivated since still shows.
+   */
+  async sendOrderEmail(order: OrderDocument, user_email: string) {
     const lang =
       I18nContext.current()?.lang || process.env.DEFAULT_LANGUAGE || 'ar';
     try {
@@ -55,18 +31,25 @@ export class OrderEmailService {
         amount: order.grandTotal?.toString() ?? order.totalPrice.toString(),
         url: `${process.env.BASE_URL}/api/v1/order/${order._id?.toString() ?? ''}`,
         orderId: order._id?.toString() ?? '',
-        orderDetails: validatedItems.map((item) => ({
+        orderDetails: order.items.map((item) => ({
           product: {
-            id: item.product.id.toString(),
-            title: item.product.title,
-            price: item.variant.price.toString(),
-            quantity: item.variant.stock.toString(),
-            imageCover: item.product.imageCover,
+            id: item.productId.toString(),
+            title:
+              item.title?.[lang as 'ar' | 'en'] ||
+              item.title?.ar ||
+              item.title?.en ||
+              item.sku ||
+              '',
+            price: item.price.toString(),
+            imageCover:
+              typeof item.image === 'string'
+                ? item.image
+                : (item.image?.url ?? ''),
           },
           quantity: item.quantity.toString(),
-          totalPrice:
-            item.totalPrice?.toString() ??
-            (item.variant.price * item.quantity).toString(),
+          totalPrice: (
+            item.totalPrice ?? item.price * item.quantity
+          ).toString(),
         })),
         subject: this.i18n.translate('email.NEW_ORDER_SUBJECT', {
           args: { name: 'codeProps' },

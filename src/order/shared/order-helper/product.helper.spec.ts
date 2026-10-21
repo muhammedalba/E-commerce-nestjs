@@ -31,17 +31,16 @@ describe('ProductHelperService – awaited aggregate sync after stock changes', 
 
   // syncProduct recomputes stockSummary and only then clears the backend
   // cache + revalidates Next; awaited so responses are sent with fresh reads.
-  it.each([
-    'updateProductStats',
-    'revertProductStats',
-    'confirmReservation',
-  ] as const)('%s syncs each product once (awaited)', async (method) => {
-    await service[method](items);
+  it.each(['updateProductStats', 'revertProductStats'] as const)(
+    '%s syncs each product once (awaited)',
+    async (method) => {
+      await service[method](items);
 
-    expect(emit).toHaveBeenCalledTimes(1);
-    const [id] = emit.mock.calls[0] as [Types.ObjectId];
-    expect(String(id)).toBe(String(productId));
-  });
+      expect(emit).toHaveBeenCalledTimes(1);
+      const [id] = emit.mock.calls[0] as [Types.ObjectId];
+      expect(String(id)).toBe(String(productId));
+    },
+  );
 
   it.each(['reserveStock', 'releaseReservation'] as const)(
     '%s does not sync (reserved is not displayed)',
@@ -132,6 +131,33 @@ describe('ProductHelperService.restockOrderItems', () => {
 
   it('does nothing for an empty order', async () => {
     await service.restockOrderItems([], 'deducted');
+    expect(bulkWrite).not.toHaveBeenCalled();
+  });
+
+  it('confirmReservation: takes stock and the reservation of limited products, sold for all', async () => {
+    await service.confirmReservation(lines);
+
+    const [limited, unlimited] = ops();
+    expect(limited.filter).toEqual({ _id: v1 });
+    expect(limited.update[0].$set).toEqual({
+      stock: { $max: [0, { $subtract: ['$stock', 2] }] },
+      reserved: {
+        $max: [0, { $subtract: [{ $ifNull: ['$reserved', 0] }, 2] }],
+      },
+      sold: { $add: [{ $ifNull: ['$sold', 0] }, 2] },
+    });
+    // Unlimited products were never reserved → only sold changes
+    expect(unlimited.filter).toEqual({ _id: v2 });
+    expect(unlimited.update[0].$set).toEqual({
+      sold: { $add: [{ $ifNull: ['$sold', 0] }, 3] },
+    });
+
+    // stockSummary re-sync for both products
+    expect(emit).toHaveBeenCalledTimes(2);
+  });
+
+  it('confirmReservation does nothing for an empty order', async () => {
+    await service.confirmReservation([]);
     expect(bulkWrite).not.toHaveBeenCalled();
   });
 });

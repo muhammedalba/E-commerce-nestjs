@@ -22,6 +22,13 @@ export class OrderAddress {
 
   @Prop({
     type: MongooseSchema.Types.ObjectId,
+    ref: MODEL_NAMES.REGION,
+    required: false,
+  })
+  declare region?: Types.ObjectId;
+
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
     ref: MODEL_NAMES.CITY,
     required: true,
   })

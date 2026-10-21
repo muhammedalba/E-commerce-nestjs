@@ -325,34 +325,53 @@ export class ProductHelperService {
   }
 
   /**
-   * Moyasar only: confirms a payment — finalizes the reservation.
-   * stock -= qty, sold += qty, reserved -= qty (atomic bulkWrite)
+   * Moyasar only: confirms a payment — finalizes the reservation, using the
+   * lines stored on the order (not re-validated items: validation counts this
+   * order's own reservation as taken, and a product deactivated since checkout
+   * would drop its line and leave the reservation stuck).
+   *
+   * Limited: stock -= qty, reserved -= qty (clamped at 0). All: sold += qty.
    */
-  async confirmReservation(validatedItems: ValidatedItem[]) {
-    const bulkOptions = validatedItems.map((item) => {
-      let stockInc = 0;
-      let reservedInc = 0;
-      if (!item.product.isUnlimitedStock) {
-        stockInc = -item.quantity;
-        reservedInc = -item.quantity;
-      }
-      return {
-        updateOne: {
-          filter: { _id: item.variant.id },
-          update: {
-            $inc: {
-              stock: stockInc,
-              reserved: reservedInc,
-              sold: item.quantity,
-            },
+  async confirmReservation(items: OrderLine[]) {
+    if (items.length === 0) return;
+
+    const products = await this.productModel
+      .find({ _id: { $in: items.map((i) => i.productId) } })
+      .select('isUnlimitedStock')
+      .lean();
+    const unlimited = new Set(
+      products.filter((p) => p.isUnlimitedStock).map((p) => String(p._id)),
+    );
+
+    const bulkOptions: AnyBulkWriteOperation<ProductVariantDocument>[] =
+      items.map((item) => {
+        const qty = item.quantity;
+        // reserveStock() only reserves for limited products
+        const stockChanges = unlimited.has(String(item.productId))
+          ? {}
+          : {
+              stock: { $max: [0, { $subtract: ['$stock', qty] }] },
+              reserved: {
+                $max: [0, { $subtract: [{ $ifNull: ['$reserved', 0] }, qty] }],
+              },
+            };
+        return {
+          updateOne: {
+            filter: { _id: item.variantId },
+            update: [
+              {
+                $set: {
+                  ...stockChanges,
+                  sold: { $add: [{ $ifNull: ['$sold', 0] }, qty] },
+                },
+              },
+            ],
           },
-        },
-      };
-    });
-    if (bulkOptions.length > 0) {
-      await this.variantModel.bulkWrite(bulkOptions);
-      await this.revalidateOrderedProducts(validatedItems);
-    }
+        };
+      });
+
+    await this.variantModel.bulkWrite(bulkOptions);
+    await this.afterStockChange(items.map((i) => i.productId));
   }
 
   /**

@@ -94,8 +94,30 @@ export class Order extends Document {
   @Prop({ default: 0 })
   declare shippingAmount: number;
 
+  // Full VAT for the invoice (includes VAT inside tax-inclusive prices)
   @Prop({ default: 0 })
   declare taxAmount: number;
+
+  // Tax charged on top of the total — what the customer sees on order screens
+  @Prop({ default: 0 })
+  declare chargedTaxAmount: number;
+
+  // Products amount after coupon, excluding / including VAT (shown on the invoice)
+  @Prop({ required: false })
+  declare productsAmountBeforeTax?: number;
+
+  @Prop({ required: false })
+  declare productsAmountAfterTax?: number;
+
+  // Tax rules snapshot at purchase time, so later settings changes don't alter old invoices
+  @Prop({ default: 0 })
+  declare taxPercentage: number;
+
+  @Prop({ default: false })
+  declare taxesIncluded: boolean;
+
+  @Prop({ default: false })
+  declare applyTaxOnCharges: boolean;
 
   @Prop({ default: 0 })
   declare paymentFees: number;
@@ -168,7 +190,7 @@ export class Order extends Document {
   @Prop({ type: Boolean, default: false })
   declare isDeleted: boolean;
 
-  // رقم الفاتورة التسلسلي — يزداد تلقائياً مع كل طلب
+  // Invoice serial number — increments automatically with each order
   @Prop({ type: Number })
   declare invoiceNumber: number;
 

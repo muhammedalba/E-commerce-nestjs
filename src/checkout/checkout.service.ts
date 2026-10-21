@@ -61,6 +61,10 @@ interface CouponResult {
 interface TaxDetails {
   taxPercentage: number;
   taxAmount: number;
+  /** Portion of `taxAmount` charged on top of the payable total. */
+  chargedTaxAmount: number;
+  productsAmountBeforeTax: number;
+  productsAmountAfterTax: number;
   totalWithTax: number;
   isIncluded: boolean;
 }
@@ -86,13 +90,21 @@ export interface CheckoutSummary {
   subtotal: number;
   totalWeight: number;
   shippingCost?: number;
+  /** Full VAT, including VAT inside tax-inclusive prices (invoice only). */
   taxAmount?: number;
+  /** Tax charged on top of the total — the amount the frontend displays. */
+  chargedTaxAmount?: number;
+  /** Products amount after coupon, excluding / including VAT (invoice). */
+  productsAmountBeforeTax?: number;
+  productsAmountAfterTax?: number;
   taxPercentage?: number;
   paymentFees?: number;
   discountAmount: number;
   totalPrice: number;
   currency: string;
   taxesIncluded: boolean;
+  /** Whether VAT was also charged on shipping and payment fees. */
+  applyTaxOnCharges: boolean;
 }
 
 export interface CheckoutDelivery {
@@ -184,12 +196,11 @@ export class CheckoutService {
     const regionId = this.extractRegionId(city);
     const cityId = city._id?.toString() || dto.cityId;
 
-    // 6. Run tax and shipping calculations concurrently — no dependency between them.
-    const [taxDetails, shippingOptions] = await this.calculateTaxesAndShipping(
+    // 6. Calculate shipping options (tax depends on shipping, so it runs later).
+    const shippingOptions = await this.calculateShippingOptions(
       couponResult.subtotalAfterDiscount,
       countryId,
       regionId,
-      cityId,
       dto.cityId,
       cartTotals.totalWeight,
       city.isDeliveryAvailable,
@@ -220,7 +231,23 @@ export class CheckoutService {
       );
     }
 
-    // 9. Compose and return the full checkout response.
+    // 9. Payment fees, then tax — shipping and fees are taxable only when enabled in settings.
+    const paymentFees = this.calculatePaymentFees(
+      chosenPaymentMethod,
+      couponResult.subtotalAfterDiscount,
+    );
+    const taxableCharges = settings.applyTaxOnCharges
+      ? shippingCost + paymentFees
+      : 0;
+    const taxDetails = await this.taxesService.calculateTax(
+      couponResult.subtotalAfterDiscount,
+      taxableCharges,
+      countryId,
+      regionId,
+      cityId,
+    );
+
+    // 10. Compose and return the full checkout response.
     return this.buildCheckoutResponse({
       dto,
       city,
@@ -231,7 +258,9 @@ export class CheckoutService {
       chosenShipping,
       chosenPaymentMethod,
       shippingCost,
+      paymentFees,
       currency,
+      applyTaxOnCharges: !!settings.applyTaxOnCharges,
     });
   }
 
@@ -364,37 +393,44 @@ export class CheckoutService {
   }
 
   /**
-   * Fires tax and shipping calculations concurrently — they are independent
-   * computations that both depend on previously resolved values but not on
-   * each other.
+   * Returns the available shipping options for the city, or an empty list
+   * when delivery is not available there.
    */
-  private async calculateTaxesAndShipping(
+  private async calculateShippingOptions(
     subtotalAfterDiscount: number,
     countryId: string | undefined,
     regionId: string | undefined,
-    cityId: string | undefined,
     lookupCityId: string,
     totalWeight: number,
     isDeliveryAvailable: boolean,
-  ): Promise<[TaxDetails, ShippingCalculationResult[]]> {
-    const [taxDetails, shippingOptions] = await Promise.all([
-      this.taxesService.calculateTax(
-        subtotalAfterDiscount,
-        countryId,
-        regionId,
-        cityId,
-      ),
-      isDeliveryAvailable
-        ? this.shippingRatesService.calculateShipping(
-            lookupCityId,
-            totalWeight,
-            subtotalAfterDiscount,
-            countryId,
-            regionId,
-          )
-        : Promise.resolve([]),
-    ]);
-    return [taxDetails, shippingOptions];
+  ): Promise<ShippingCalculationResult[]> {
+    if (!isDeliveryAvailable) return [];
+
+    return this.shippingRatesService.calculateShipping(
+      lookupCityId,
+      totalWeight,
+      subtotalAfterDiscount,
+      countryId,
+      regionId,
+    );
+  }
+
+  /**
+   * Calculates the payment method fee (percentage of the discounted subtotal
+   * or a fixed amount).
+   */
+  private calculatePaymentFees(
+    chosenPaymentMethod: PaymentMethod | null,
+    subtotalAfterDiscount: number,
+  ): number {
+    if (!chosenPaymentMethod) return 0;
+
+    if (chosenPaymentMethod.feeType === FeeType.PERCENTAGE) {
+      return (
+        (subtotalAfterDiscount * (chosenPaymentMethod.percentageFee || 0)) / 100
+      );
+    }
+    return chosenPaymentMethod.fixedFee || 0;
   }
 
   /**
@@ -481,6 +517,9 @@ export class CheckoutService {
         totalWeight,
         shippingCost: undefined,
         taxAmount: undefined,
+        chargedTaxAmount: undefined,
+        productsAmountBeforeTax: undefined,
+        productsAmountAfterTax: undefined,
         taxPercentage: undefined,
         paymentFees: undefined,
         discountAmount: couponResult.discountAmount,
@@ -489,6 +528,7 @@ export class CheckoutService {
         currency,
         // No city selected yet — tax cannot be determined, so taxesIncluded is always false here
         taxesIncluded: false,
+        applyTaxOnCharges: false,
       },
       delivery: null,
       payment: null,
@@ -518,7 +558,9 @@ export class CheckoutService {
     chosenShipping: ShippingCalculationResult | null;
     chosenPaymentMethod: PaymentMethod | null;
     shippingCost: number;
+    paymentFees: number;
     currency: string;
+    applyTaxOnCharges: boolean;
   }): CheckoutPreviewResponse {
     const {
       dto,
@@ -530,27 +572,16 @@ export class CheckoutService {
       chosenShipping,
       chosenPaymentMethod,
       shippingCost,
+      paymentFees,
       currency,
+      applyTaxOnCharges,
     } = params;
-
-    // Payment fees calculation
-    let paymentFees = 0;
-    if (chosenPaymentMethod) {
-      if (chosenPaymentMethod.feeType === FeeType.PERCENTAGE) {
-        paymentFees =
-          (couponResult.subtotalAfterDiscount *
-            (chosenPaymentMethod.percentageFee || 0)) /
-          100;
-      } else {
-        paymentFees = chosenPaymentMethod.fixedFee || 0;
-      }
-    }
 
     const totalPrice =
       couponResult.subtotalAfterDiscount +
       shippingCost +
-      (taxDetails.isIncluded ? 0 : taxDetails.taxAmount) +
-      paymentFees;
+      paymentFees +
+      taxDetails.chargedTaxAmount;
 
     return {
       summary: {
@@ -558,12 +589,16 @@ export class CheckoutService {
         totalWeight: cartTotals.totalWeight,
         shippingCost,
         taxAmount: taxDetails.taxAmount,
+        chargedTaxAmount: taxDetails.chargedTaxAmount,
+        productsAmountBeforeTax: taxDetails.productsAmountBeforeTax,
+        productsAmountAfterTax: taxDetails.productsAmountAfterTax,
         taxPercentage: taxDetails.taxPercentage,
         paymentFees,
         discountAmount: couponResult.discountAmount,
         totalPrice,
         currency,
         taxesIncluded: taxDetails.isIncluded,
+        applyTaxOnCharges,
       },
       delivery: chosenShipping
         ? {

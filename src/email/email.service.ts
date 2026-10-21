@@ -104,7 +104,6 @@ export class EmailService {
         id: string;
         title: string;
         price: string;
-        quantity: string;
         imageCover: string;
       };
       quantity: string;

@@ -262,6 +262,12 @@ export class UpdateSettingDto {
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   @IsOptional()
+  applyTaxOnCharges?: boolean;
+
+  @Type(() => Boolean)
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  @IsOptional()
   enablePerformance?: boolean;
 
   @Type(() => Number)

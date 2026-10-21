@@ -46,6 +46,11 @@ export class OrderAddressDto {
   @Exists(MODEL_NAMES.COUNTRY)
   country!: string;
 
+  @IsOptional()
+  @IsMongoId()
+  @Exists(MODEL_NAMES.REGION)
+  region?: string;
+
   @IsMongoId()
   @Exists(MODEL_NAMES.CITY)
   city!: string;
