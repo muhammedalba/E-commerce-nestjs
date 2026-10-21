@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="utf-8">
+  <title>{{subject}}</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      direction: rtl;
+    }
+    .container {
+      max-width: 600px;
+      margin: 20px auto;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .header {
+      background-color: #16a34a;
+      color: white;
+      text-align: center;
+      padding: 10px;
+      border-radius: 8px 8px 0 0;
+    }
+    .content {
+      padding: 20px;
+      line-height: 1.6;
+      text-align: right;
+    }
+    .details-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    .details-table th, .details-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: right;
+      vertical-align: middle;
+    }
+    .details-table th {
+      background-color: #f9f9f9;
+    }
+    .button {
+      display: inline-block;
+      background-color: #16a34a;
+      color: #ffffff;
+      padding: 12px 25px;
+      border-radius: 5px;
+      text-decoration: none;
+      margin-top: 20px;
+    }
+    .footer {
+      text-align: center;
+      color: #777;
+      font-size: 12px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>شكراً لطلبك!</h2>
+    </div>
+
+    <div class="content">
+      <p>مرحباً{{#if name}} {{name}}{{/if}}،</p>
+      <p>لقد استلمنا طلبك وسنبدأ بتجهيزه قريباً. سنُعلمك عند شحنه.</p>
+
+      <table class="details-table">
+        <tr>
+          <th>رقم الطلب</th>
+          <td>{{orderId}}</td>
+        </tr>
+        <tr>
+          <th>التاريخ</th>
+          <td>{{orderDate}}</td>
+        </tr>
+        <tr>
+          <th>المبلغ الإجمالي</th>
+          <td><strong>{{orderTotal}} {{currency}}</strong></td>
+        </tr>
+      </table>
+
+      <table class="details-table">
+        <thead>
+          <tr>
+            <th>المنتج</th>
+            <th>الصورة</th>
+            <th>سعر الوحدة</th>
+            <th>الكمية</th>
+            <th>الإجمالي</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each products}}
+          <tr>
+            <td>{{product.title}}</td>
+            <td>
+              {{#if product.imageCover}}
+              <img src="{{product.imageCover}}" alt="{{product.title}}" style="max-width: 70px; max-height: 70px;" />
+              {{/if}}
+            </td>
+            <td>{{product.price}} {{../currency}}</td>
+            <td>{{quantity}}</td>
+            <td>{{totalPrice}} {{../currency}}</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+
+      <a href="{{orderUrl}}" class="button">عرض الطلب</a>
+    </div>
+
+    <div class="footer">
+      <p>&copy; {{year}} {{companyName}}. جميع الحقوق محفوظة.</p>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,6 +1,7 @@
 {
   "VERIFY_CODE_SUBJECT": "رمز التحقق من بريدك الإلكتروني",
   "NEW_ORDER_SUBJECT": "طلب جديد من {name}",
+  "ORDER_CONFIRMATION_SUBJECT": "تم استلام طلبك رقم {number}",
   "CONTACT_ADMIN_SUBJECT": "رسالة جديدة من نموذج تواصل معنا",
   "CONTACT_CONFIRMATION_SUBJECT": "لقد استلمنا رسالتك",
   "CONTACT_INQUIRY_GENERAL": "استفسار عام",

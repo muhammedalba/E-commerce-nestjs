@@ -35,7 +35,7 @@ const createService = () => {
     findByIdAndUpdate: jest.fn(() => Promise.resolve(null)),
   };
   const UserModel = {
-    findById: jest.fn(() => Promise.resolve({ email: 'a@b.c' })),
+    findById: jest.fn(() => query({ email: 'a@b.c' })),
     findByIdAndUpdate: jest.fn(() => Promise.resolve(null)),
   };
   const orderHelperService = {
@@ -46,12 +46,15 @@ const createService = () => {
     confirmReservation: jest.fn(() => Promise.resolve()),
     releaseReservation: jest.fn(() => Promise.resolve()),
     restockOrderItems: jest.fn(() => Promise.resolve()),
+    updateProductStats: jest.fn(() => Promise.resolve()),
   };
   const couponHelperService = {
     markCouponAsUsed: jest.fn(() => Promise.resolve()),
+    releaseCouponUsage: jest.fn(() => Promise.resolve(true)),
   };
   const orderEmailService = {
     sendOrderEmail: jest.fn(() => Promise.resolve()),
+    sendCustomerOrderEmail: jest.fn(() => Promise.resolve()),
   };
   const eventEmitter = { emit: jest.fn() };
   const cacheInvalidation = {
@@ -198,6 +201,11 @@ describe('OrderService Moyasar payment saga', () => {
     expect(orderEmailService.sendOrderEmail).toHaveBeenCalledWith(
       expect.objectContaining({ items }),
       'a@b.c',
+    );
+    // The customer is told once the payment went through
+    expect(orderEmailService.sendCustomerOrderEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ items }),
+      expect.objectContaining({ email: 'a@b.c' }),
     );
   });
 
@@ -401,5 +409,148 @@ describe('OrderService payment.refunded (Moyasar dashboard refunds)', () => {
     expect(sendRefundEmail).toHaveBeenCalledWith(
       expect.objectContaining({ isFull: false, cancelled: false }),
     );
+  });
+});
+
+describe('OrderService COD saga and its compensation', () => {
+  const productId = new Types.ObjectId();
+  const variantId = new Types.ObjectId();
+  const userId = new Types.ObjectId().toString();
+  const couponId = new Types.ObjectId().toString();
+  const deductedLine = {
+    productId: productId.toString(),
+    variantId: variantId.toString(),
+    quantity: 2,
+  };
+  const validated = [
+    { product: { id: productId }, variant: { id: variantId }, quantity: 2 },
+  ];
+  const created = (withCoupon = false) => ({
+    orderId: 'o1',
+    userId,
+    items: [deductedLine],
+    ...(withCoupon ? { couponDetails: { couponId } } : {}),
+  });
+
+  it('order.created: a failing step emits order.failed with only what was applied', async () => {
+    const { service, orderHelperService, couponHelperService, eventEmitter } =
+      createService();
+    orderHelperService.validateOrderItems.mockResolvedValueOnce({
+      validatedItems: validated,
+    } as never);
+    couponHelperService.markCouponAsUsed.mockRejectedValueOnce(
+      new Error('ALREADY_USED'),
+    );
+
+    await service.handleOrderCreatedEvent(created(true));
+
+    // Stock was deducted, the coupon step failed: only the stock is undone
+    expect(eventEmitter.emit).toHaveBeenCalledWith('order.failed', {
+      orderId: 'o1',
+      userId,
+      undo: { deducted: [deductedLine] },
+      reason: 'ALREADY_USED',
+    });
+  });
+
+  it('order.created: a failing email never cancels the order', async () => {
+    const { service, OrderModel, orderHelperService, eventEmitter } =
+      createService();
+    orderHelperService.validateOrderItems.mockResolvedValueOnce({
+      validatedItems: validated,
+    } as never);
+    (OrderModel as unknown as { findById: jest.Mock }).findById = jest.fn(() =>
+      Promise.reject(new Error('db down')),
+    );
+
+    await service.handleOrderCreatedEvent(created());
+
+    expect(eventEmitter.emit).not.toHaveBeenCalledWith(
+      'order.failed',
+      expect.anything(),
+    );
+  });
+
+  it.each([
+    [OrderStatus.PENDING, 1],
+    [OrderStatus.CANCELLED, 0],
+  ])(
+    'order.created: emails read the order now (%s → %i email each)',
+    async (status, times) => {
+      const { service, OrderModel, UserModel, orderHelperService } =
+        createService();
+      const orderEmailService = (
+        service as unknown as { orderEmailService: Record<string, jest.Mock> }
+      ).orderEmailService;
+      orderHelperService.validateOrderItems.mockResolvedValueOnce({
+        validatedItems: validated,
+      } as never);
+      const user = { email: 'a@b.c', name: 'A' };
+      (OrderModel as unknown as { findById: jest.Mock }).findById = jest.fn(
+        () => Promise.resolve({ _id: 'o1', status }),
+      );
+      (UserModel.findById as jest.Mock).mockReturnValueOnce({
+        select: () => Promise.resolve(user),
+      });
+
+      await service.handleOrderCreatedEvent(created());
+
+      expect(orderEmailService.sendOrderEmail).toHaveBeenCalledTimes(times);
+      expect(orderEmailService.sendCustomerOrderEmail).toHaveBeenCalledTimes(
+        times,
+      );
+    },
+  );
+
+  it('order.failed: cancels once and undoes stock, coupon and order count', async () => {
+    const {
+      service,
+      OrderModel,
+      UserModel,
+      productHelperService,
+      couponHelperService,
+    } = createService();
+    OrderModel.findOneAndUpdate
+      .mockReturnValueOnce(query({ _id: 'o1' }))
+      .mockReturnValueOnce(query(null)); // already cancelled on the 2nd delivery
+    const payload = {
+      orderId: 'o1',
+      userId,
+      undo: { deducted: [deductedLine], couponId, countedOrder: true },
+      reason: 'boom',
+    };
+
+    await service.handleOrderFailedEvent(payload);
+    await service.handleOrderFailedEvent(payload);
+
+    expect(productHelperService.restockOrderItems).toHaveBeenCalledTimes(1);
+    expect(productHelperService.restockOrderItems).toHaveBeenCalledWith(
+      [deductedLine],
+      'deducted',
+    );
+    expect(couponHelperService.releaseCouponUsage).toHaveBeenCalledTimes(1);
+    expect(couponHelperService.releaseCouponUsage).toHaveBeenCalledWith(
+      new Types.ObjectId(couponId),
+      userId,
+    );
+    expect(UserModel.findByIdAndUpdate).toHaveBeenCalledWith(userId, {
+      $inc: { totalOrder: -1 },
+    });
+  });
+
+  it('order.failed: nothing applied (validation failed first) → nothing undone', async () => {
+    const { service, OrderModel, productHelperService, couponHelperService } =
+      createService();
+    OrderModel.findOneAndUpdate.mockReturnValueOnce(query({ _id: 'o1' }));
+
+    await service.handleOrderFailedEvent({
+      orderId: 'o1',
+      userId,
+      undo: {},
+      reason: 'Invalid product ID',
+    });
+
+    expect(productHelperService.restockOrderItems).not.toHaveBeenCalled();
+    expect(couponHelperService.releaseCouponUsage).not.toHaveBeenCalled();
   });
 });

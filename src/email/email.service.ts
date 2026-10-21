@@ -3,7 +3,7 @@ import { ISendMailOptions, MailerService } from '@nestjs-modules/mailer';
 import { existsSync } from 'fs';
 import * as path from 'path';
 import { I18nContext } from 'nestjs-i18n';
-import { BackupFailedJobData } from './mail.processor';
+import { BackupFailedJobData, NewOrderCustomerJobData } from './mail.processor';
 
 @Injectable()
 export class EmailService {
@@ -349,6 +349,29 @@ export class EmailService {
         currencyCode,
         consecutiveFailures,
         reason,
+        year: new Date().getFullYear(),
+        companyName: process.env.APP_NAME,
+      },
+    });
+  }
+
+  /** Confirms a new order to the customer, with its lines and total. */
+  async send_order_confirmation(order: NewOrderCustomerJobData): Promise<void> {
+    const resolvedLang = order.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
+
+    await this.sendMail({
+      to: order.email,
+      subject: order.subject,
+      template: `new-order-customer-${resolvedLang}`,
+      context: {
+        subject: order.subject,
+        name: order.name,
+        orderId: order.orderId,
+        orderDate: order.date,
+        orderTotal: order.amount,
+        currency: order.currency,
+        products: order.orderDetails,
+        orderUrl: order.orderUrl,
         year: new Date().getFullYear(),
         companyName: process.env.APP_NAME,
       },

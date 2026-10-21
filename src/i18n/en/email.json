@@ -1,6 +1,7 @@
 {
   "VERIFY_CODE_SUBJECT": " Your email verification code ",
   "NEW_ORDER_SUBJECT": "New order from {name}",
+  "ORDER_CONFIRMATION_SUBJECT": "We've received your order #{number}",
   "CONTACT_ADMIN_SUBJECT": "New contact message received",
   "CONTACT_CONFIRMATION_SUBJECT": "We've received your message",
   "CONTACT_INQUIRY_GENERAL": "General Inquiry",

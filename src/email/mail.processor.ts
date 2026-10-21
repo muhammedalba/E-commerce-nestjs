@@ -94,6 +94,19 @@ interface ExchangeRateSyncFailedJobData {
   lang?: string;
 }
 
+export interface NewOrderCustomerJobData {
+  email: string;
+  name: string;
+  orderId: string;
+  date: string;
+  amount: string;
+  currency: string;
+  orderDetails: NewAdminOrderProduct[];
+  orderUrl: string;
+  subject: string;
+  lang?: string;
+}
+
 interface OrderRefundedJobData {
   email: string;
   orderId: string;
@@ -137,6 +150,7 @@ type MailJob =
       MailJobResult,
       'exchange-rate-sync-failed'
     >
+  | Job<NewOrderCustomerJobData, MailJobResult, 'new-order-customer'>
   | Job<OrderRefundedJobData, MailJobResult, 'order-refunded'>
   | Job<BackupFailedJobData, MailJobResult, 'backup-failed'>
   | Job<AdminRoleNotificationJobData, MailJobResult, 'admin-role-notification'>;
@@ -345,6 +359,10 @@ export class MailProcessor extends WorkerHost {
           subject,
           lang,
         );
+        return {};
+      }
+      case 'new-order-customer': {
+        await this.emailService.send_order_confirmation(job.data);
         return {};
       }
       case 'order-refunded': {

@@ -36,6 +36,23 @@ import { orderStatusNotificationAction } from './shared/utils/order-status-notif
 import { PaymentStatus } from 'src/payments/shared/enums/payment-status.enum';
 import { PaymentRefundedEvent } from 'src/payments/shared/types/payment-events';
 
+type OrderLine = { productId: string; variantId: string; quantity: number };
+
+/**
+ * What an order saga has already applied, so `order.failed` undoes exactly
+ * that: a step that never ran (e.g. validation failed first) is not reverted.
+ */
+interface OrderSagaUndo {
+  /** Lines whose stock was deducted (COD). */
+  deducted?: OrderLine[];
+  /** Lines whose stock was reserved (Moyasar). */
+  reserved?: OrderLine[];
+  /** Coupon marked as used for the order's user. */
+  couponId?: string;
+  /** The user's `totalOrder` was incremented. */
+  countedOrder?: boolean;
+}
+
 /** Final statuses whose stock has been given back to inventory. */
 const CLOSED_ORDER_STATUSES: string[] = [
   OrderStatus.CANCELLED,
@@ -1055,9 +1072,10 @@ export class OrderService {
   async handleOrderCreatedEvent(payload: {
     orderId: string;
     userId: string;
-    items: { productId: string; variantId: string; quantity: number }[];
+    items: OrderLine[];
     couponDetails?: { couponId?: string; [key: string]: unknown };
   }) {
+    const undo: OrderSagaUndo = {};
     try {
       // 1) Re-validate and map items to ValidatedItem type for helper services
       const { validatedItems } =
@@ -1065,6 +1083,11 @@ export class OrderService {
 
       // 2) Decrement Stock
       await this.productHelperService.updateProductStats(validatedItems);
+      undo.deducted = validatedItems.map((item) => ({
+        productId: item.product.id.toString(),
+        variantId: item.variant.id.toString(),
+        quantity: item.quantity,
+      }));
 
       // 3) Mark Coupon as used
       if (payload.couponDetails && payload.couponDetails.couponId) {
@@ -1072,19 +1095,14 @@ export class OrderService {
           new Types.ObjectId(payload.couponDetails.couponId),
           payload.userId,
         );
+        undo.couponId = payload.couponDetails.couponId;
       }
 
       // 4) Update User order count
       await this.UserModel.findByIdAndUpdate(payload.userId, {
         $inc: { totalOrder: 1 },
       });
-
-      // 5) Send Email
-      const order = await this.OrderModel.findById(payload.orderId);
-      const user = await this.UserModel.findById(payload.userId);
-      if (order && user) {
-        await this.orderEmailService.sendOrderEmail(order, user.email);
-      }
+      undo.countedOrder = true;
     } catch (err: any) {
       const error = err as Error;
       this.logger.error(
@@ -1093,9 +1111,31 @@ export class OrderService {
       );
       // Trigger compensating event
       this.eventEmitter.emit('order.failed', {
-        ...payload,
+        orderId: payload.orderId,
+        userId: payload.userId,
+        undo,
         reason: error.message,
       });
+      return;
+    }
+
+    // 5) Emails: only notify about the order once it stands, and never
+    // cancel it over a notification (both sends log instead of throwing).
+    try {
+      const [order, user] = await Promise.all([
+        this.OrderModel.findById(payload.orderId),
+        this.UserModel.findById(payload.userId).select('email name'),
+      ]);
+      // Read now, not carried in the event: an order cancelled since its
+      // creation gets no "we've received your order" email.
+      if (order && user && !CLOSED_ORDER_STATUSES.includes(order.status)) {
+        await this.orderEmailService.sendOrderEmail(order, user.email);
+        await this.orderEmailService.sendCustomerOrderEmail(order, user);
+      }
+    } catch (err: any) {
+      this.logger.error(
+        `Order emails for ${payload.orderId} failed: ${(err as Error).message}`,
+      );
     }
   }
   /* ================================================ */
@@ -1105,7 +1145,7 @@ export class OrderService {
   async handleMoyasarOrderCreatedEvent(payload: {
     orderId: string;
     userId: string;
-    items: { productId: string; variantId: string; quantity: number }[];
+    items: OrderLine[];
     couponDetails?: { couponId?: string; [key: string]: unknown };
   }) {
     try {
@@ -1121,8 +1161,11 @@ export class OrderService {
         `Saga 'order.moyasar_created' Failed: ${error.message}`,
         error.stack,
       );
+      // Reserving is the last step: when it fails nothing is left to undo.
       this.eventEmitter.emit('order.failed', {
-        ...payload,
+        orderId: payload.orderId,
+        userId: payload.userId,
+        undo: {},
         reason: error.message,
       });
     }
@@ -1201,6 +1244,7 @@ export class OrderService {
         const user = await this.UserModel.findById(order.user);
         if (user) {
           await this.orderEmailService.sendOrderEmail(order, user.email);
+          await this.orderEmailService.sendCustomerOrderEmail(order, user);
         }
       }
     } catch (err: any) {
@@ -1484,8 +1528,7 @@ export class OrderService {
   async handleOrderFailedEvent(payload: {
     orderId: string;
     userId: string;
-    items: { productId: string; variantId: string; quantity: number }[];
-    couponDetails?: { CouponId?: string; [key: string]: unknown };
+    undo: OrderSagaUndo;
     reason?: string;
   }) {
     this.logger.warn(
@@ -1493,19 +1536,41 @@ export class OrderService {
     );
 
     try {
-      // 1) Mark order as cancelled
-      await this.OrderModel.findByIdAndUpdate(payload.orderId, {
-        status: 'cancelled',
-        notes: `Cancelled due to system failure: ${payload.reason}`,
-      });
+      // 1) Mark order as cancelled — conditional, so the undo runs at most once
+      const cancelled = await this.OrderModel.findOneAndUpdate(
+        { _id: payload.orderId, status: { $ne: OrderStatus.CANCELLED } },
+        {
+          status: OrderStatus.CANCELLED,
+          notes: `Cancelled due to system failure: ${payload.reason}`,
+          ...this.buildStatusTimestamps('cancelled'),
+        },
+      );
+      if (!cancelled) return;
 
-      // 2) Revert Stock
-      // Since it's a compensation, we increment stock instead of decrement
-      // TODO: Implement revertProductStats in productHelperService and call it here.
-      // const { validatedItems } = await this.orderHelperService.validateOrderItems(payload.items);
+      const { deducted, reserved, couponId, countedOrder } = payload.undo;
 
-      // 3) Revert Coupon (not implemented in CouponHelperService yet, but we'd call it if it existed)
-      // e.g. await this.couponHelperService.revertCouponUsage(payload.couponDetails.CouponId, payload.userId);
+      // 2) Give back the stock the saga took (atomic, clamped at 0)
+      if (deducted?.length) {
+        await this.productHelperService.restockOrderItems(deducted, 'deducted');
+      }
+      if (reserved?.length) {
+        await this.productHelperService.restockOrderItems(reserved, 'reserved');
+      }
+
+      // 3) Release the coupon so the customer can use it again
+      if (couponId) {
+        await this.couponHelperService.releaseCouponUsage(
+          new Types.ObjectId(couponId),
+          payload.userId,
+        );
+      }
+
+      // 4) This order no longer counts for the user
+      if (countedOrder) {
+        await this.UserModel.findByIdAndUpdate(payload.userId, {
+          $inc: { totalOrder: -1 },
+        });
+      }
     } catch (err: any) {
       const error = err as Error;
       // Very bad if compensating event fails. Should be logged to DLQ or manually inspected.

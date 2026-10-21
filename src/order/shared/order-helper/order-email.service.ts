@@ -1,4 +1,4 @@
-import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { I18nContext, I18nService } from 'nestjs-i18n';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
@@ -57,51 +57,61 @@ export class OrderEmailService {
     ).format(date);
   }
 
+  private currentLang(): string {
+    return I18nContext.current()?.lang || process.env.DEFAULT_LANGUAGE || 'ar';
+  }
+
   /**
-   * Built from the lines stored on the order (snapshot taken at checkout), not
-   * from the live catalog: a product edited or deactivated since still shows.
+   * What both order emails show, in `lang`. Built from the lines stored on the
+   * order (snapshot taken at checkout), not from the live catalog: a product
+   * edited or deactivated since still shows.
+   */
+  private async orderSummary(order: OrderDocument, lang: string) {
+    const settings = await this.settingsService.getSettings().catch(() => null);
+    return {
+      currency: this.currencyLabel(order.currency, settings, lang),
+      date: this.formatOrderDate(order.createdAt, settings, lang),
+      amount: order.grandTotal?.toString() ?? order.totalPrice.toString(),
+      // String(undefined) is "undefined" (truthy): test the number itself
+      orderId:
+        order.invoiceNumber != null
+          ? String(order.invoiceNumber).padStart(4, '0')
+          : order._id.toString().slice(-6).toUpperCase(),
+      orderDetails: order.items.map((item) => ({
+        product: {
+          id: item.productId.toString(),
+          title:
+            item.title?.[lang as 'ar' | 'en'] ||
+            item.title?.ar ||
+            item.title?.en ||
+            item.sku ||
+            '',
+          price: item.price.toString(),
+          // Local uploads store a relative path; an email needs an absolute URL
+          imageCover:
+            withBaseUrl(
+              typeof item.image === 'string' ? item.image : item.image?.url,
+            ) ?? '',
+        },
+        quantity: item.quantity.toString(),
+        totalPrice: (item.totalPrice ?? item.price * item.quantity).toString(),
+      })),
+    };
+  }
+
+  /**
+   * Tells the admin about a new (confirmed) order. Queued; a failure is
+   * logged, not thrown: a notification must never undo the order.
    */
   async sendOrderEmail(order: OrderDocument, user_email: string) {
-    const lang =
-      I18nContext.current()?.lang || process.env.DEFAULT_LANGUAGE || 'ar';
+    const lang = this.currentLang();
     try {
-      const settings = await this.settingsService
-        .getSettings()
-        .catch(() => null);
       await this.mailQueue.add('new-admin-order', {
+        ...(await this.orderSummary(order, lang)),
         appName: process.env.APP_NAME || 'admin',
-        currency: this.currencyLabel(order.currency, settings, lang),
         email: user_email,
-        date: this.formatOrderDate(order.createdAt, settings, lang),
-        amount: order.grandTotal?.toString() ?? order.totalPrice.toString(),
         // Admin email: opens the order in the dashboard
         url: `${process.env.CLIENT_URL}/${lang}/dashboard/orders/${order._id?.toString() ?? ''}`,
-        // String(undefined) is "undefined" (truthy): test the number itself
-        orderId:
-          order.invoiceNumber != null
-            ? String(order.invoiceNumber).padStart(4, '0')
-            : order._id.toString().slice(-6).toUpperCase(),
-        orderDetails: order.items.map((item) => ({
-          product: {
-            id: item.productId.toString(),
-            title:
-              item.title?.[lang as 'ar' | 'en'] ||
-              item.title?.ar ||
-              item.title?.en ||
-              item.sku ||
-              '',
-            price: item.price.toString(),
-            // Local uploads store a relative path; an email needs an absolute URL
-            imageCover:
-              withBaseUrl(
-                typeof item.image === 'string' ? item.image : item.image?.url,
-              ) ?? '',
-          },
-          quantity: item.quantity.toString(),
-          totalPrice: (
-            item.totalPrice ?? item.price * item.quantity
-          ).toString(),
-        })),
         subject: this.i18n.translate('email.NEW_ORDER_SUBJECT', {
           args: { name: user_email },
           lang,
@@ -109,9 +119,40 @@ export class OrderEmailService {
         lang,
       });
     } catch (err) {
-      this.logger.error('Failed to send order email', err);
-      throw new BadGatewayException(
-        this.i18n.translate('exception.EMAIL_SEND_FAILED'),
+      this.logger.error(
+        `Failed to queue admin email for order ${order._id.toString()}`,
+        err,
+      );
+    }
+  }
+
+  /**
+   * Confirms a new order to the customer, at the same point as the admin
+   * email (created for COD, paid for Moyasar). Queued; a failure is logged,
+   * not thrown: it must never undo the order.
+   */
+  async sendCustomerOrderEmail(
+    order: OrderDocument,
+    customer: { email: string; name?: string },
+  ) {
+    const lang = this.currentLang();
+    try {
+      const summary = await this.orderSummary(order, lang);
+      await this.mailQueue.add('new-order-customer', {
+        ...summary,
+        email: customer.email,
+        name: customer.name ?? '',
+        orderUrl: `${process.env.CLIENT_URL}/${lang}/account/orders/${order._id.toString()}`,
+        subject: this.i18n.translate('email.ORDER_CONFIRMATION_SUBJECT', {
+          args: { number: summary.orderId },
+          lang,
+        }),
+        lang,
+      });
+    } catch (err) {
+      this.logger.error(
+        `Failed to queue confirmation email for order ${order._id.toString()}`,
+        err,
       );
     }
   }
