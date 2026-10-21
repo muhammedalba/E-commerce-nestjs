@@ -57,6 +57,21 @@ export class OrderEmailService {
     ).format(date);
   }
 
+  /**
+   * The order number customers and admins see (e.g. "0042"), like the
+   * storefront's formatOrderNumber: the invoice serial, else the last 6 chars
+   * of `_id` (orders from before the counter).
+   */
+  private displayOrderNumber(
+    invoiceNumber: number | null | undefined,
+    id: { toString(): string },
+  ): string {
+    // String(undefined) is "undefined" (truthy): test the number itself
+    return invoiceNumber != null
+      ? String(invoiceNumber).padStart(4, '0')
+      : id.toString().slice(-6).toUpperCase();
+  }
+
   private currentLang(): string {
     return I18nContext.current()?.lang || process.env.DEFAULT_LANGUAGE || 'ar';
   }
@@ -72,11 +87,7 @@ export class OrderEmailService {
       currency: this.currencyLabel(order.currency, settings, lang),
       date: this.formatOrderDate(order.createdAt, settings, lang),
       amount: order.grandTotal?.toString() ?? order.totalPrice.toString(),
-      // String(undefined) is "undefined" (truthy): test the number itself
-      orderId:
-        order.invoiceNumber != null
-          ? String(order.invoiceNumber).padStart(4, '0')
-          : order._id.toString().slice(-6).toUpperCase(),
+      orderId: this.displayOrderNumber(order.invoiceNumber, order._id),
       orderDetails: order.items.map((item) => ({
         product: {
           id: item.productId.toString(),
@@ -164,6 +175,7 @@ export class OrderEmailService {
   async sendRefundEmail(refund: {
     email: string;
     orderId: string;
+    invoiceNumber?: number | null;
     refundedAmount: number;
     currency: string;
     isFull: boolean;
@@ -173,6 +185,11 @@ export class OrderEmailService {
     try {
       await this.mailQueue.add('order-refunded', {
         ...refund,
+        // Shown in the email; `orderId` (_id) stays for the order page link
+        invoiceNumber: this.displayOrderNumber(
+          refund.invoiceNumber,
+          refund.orderId,
+        ),
         refundedAmount: refund.refundedAmount.toString(),
         orderUrl: `${process.env.CLIENT_URL}/${lang}/account/orders/${refund.orderId}`,
         subject: this.i18n.translate(

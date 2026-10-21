@@ -110,6 +110,8 @@ export interface NewOrderCustomerJobData {
 interface OrderRefundedJobData {
   email: string;
   orderId: string;
+  /** Order number shown in the email; absent on jobs queued before it. */
+  invoiceNumber?: string;
   refundedAmount: string;
   currency: string;
   isFull: boolean;

@@ -1345,7 +1345,7 @@ export class OrderService {
       }
 
       const order = await this.OrderModel.findById(payload.orderId)
-        .select('user')
+        .select('user invoiceNumber')
         .lean();
       const user = order
         ? await this.UserModel.findById(order.user).select('email').lean()
@@ -1354,6 +1354,7 @@ export class OrderService {
         await this.orderEmailService.sendRefundEmail({
           email: user.email,
           orderId: payload.orderId,
+          invoiceNumber: order?.invoiceNumber,
           refundedAmount: payload.refundedAmount,
           currency: payload.currency,
           isFull: payload.isFull,

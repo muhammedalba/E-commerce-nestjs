@@ -385,6 +385,7 @@ export class EmailService {
   async send_order_refunded(refund: {
     email: string;
     orderId: string;
+    invoiceNumber?: string;
     refundedAmount: string;
     currency: string;
     isFull: boolean;
@@ -401,7 +402,7 @@ export class EmailService {
       template: `order-refunded-${resolvedLang}`,
       context: {
         subject: refund.subject,
-        orderId: refund.orderId,
+        invoiceNumber: refund.invoiceNumber ?? refund.orderId,
         refundedAmount: refund.refundedAmount,
         currency: refund.currency,
         isFull: refund.isFull,
