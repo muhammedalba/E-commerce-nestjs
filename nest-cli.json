@@ -13,6 +13,11 @@
         "include": "email/templates/**/*",
         "outDir": "dist/src",
         "watchAssets": true
+      },
+      {
+        "include": "invoice/typst/**/*",
+        "outDir": "dist/src",
+        "watchAssets": true
       }
     ]
   }

@@ -35,12 +35,15 @@ async function bootstrap() {
     trustedProxies.isTrusted(address),
   );
   // allowed origins
-  const allowedOrigins = [
-    'http://localhost:3000',
-    'http://10.5.50.6:3000',
-    'http://172.20.10.7:3000',
-    process.env.CLIENT_URL,
-  ];
+  const allowedOrigins =
+    process.env.NODE_ENV === 'development'
+      ? [
+          'http://localhost:3000',
+          'http://10.5.50.6:3000',
+          'http://172.20.10.7:3000',
+          process.env.CLIENT_URL,
+        ]
+      : [process.env.CLIENT_URL];
   // security headers
   app.use(helmet());
 
@@ -54,6 +57,23 @@ async function bootstrap() {
 
     if (isAllowed) {
       res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    }
+
+    // The storefront shows uploaded PDFs (the order's invoice) in an iframe
+    // from its own origin. helmet only allows framing by this API's origin
+    // (X-Frame-Options: SAMEORIGIN, frame-ancestors 'self'), which the
+    // browser reports as "refused to connect". Let the allowed origins frame
+    // uploads: the browser enforces the list, whatever the Referer says.
+    res.removeHeader('X-Frame-Options');
+    const csp = res.getHeader('Content-Security-Policy');
+    if (typeof csp === 'string') {
+      res.setHeader(
+        'Content-Security-Policy',
+        csp.replace(
+          /frame-ancestors [^;]*/,
+          `frame-ancestors 'self' ${allowedOriginsFilter.join(' ')}`,
+        ),
+      );
     }
     next();
   });

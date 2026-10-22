@@ -75,6 +75,7 @@ const createService = () => {
     {} as never,
     eventEmitter as never,
     cacheInvalidation as never,
+    {} as never,
   );
 
   return {
