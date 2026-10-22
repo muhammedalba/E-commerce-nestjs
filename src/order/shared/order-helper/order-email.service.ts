@@ -154,6 +154,8 @@ export class OrderEmailService {
         email: customer.email,
         name: customer.name ?? '',
         orderUrl: `${process.env.CLIENT_URL}/${lang}/account/orders/${order._id.toString()}`,
+        // The mail job issues the tax invoice and attaches it
+        orderMongoId: order._id.toString(),
         subject: this.i18n.translate('email.ORDER_CONFIRMATION_SUBJECT', {
           args: { number: summary.orderId },
           lang,

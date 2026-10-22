@@ -26,6 +26,7 @@ import { MarketingStatisticsService } from './shared/order-helper/marketing-stat
 import { AuditModule } from '../audit/audit.module';
 import { SettingsModule } from '../settings/settings.module';
 import { ProductSyncModule } from 'src/products/products-helper/product-sync.module';
+import { InvoiceModule } from 'src/invoice/invoice.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { ProductSyncModule } from 'src/products/products-helper/product-sync.mod
     AuditModule,
     CouponsModule,
     ProductSyncModule,
+    InvoiceModule,
   ],
   controllers: [OrderController],
   providers: [

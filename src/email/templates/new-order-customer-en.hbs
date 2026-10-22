@@ -114,6 +114,10 @@
         </tbody>
       </table>
 
+      {{#if hasInvoice}}
+      <p>The tax invoice for your order is attached to this email (PDF).</p>
+      {{/if}}
+
       <a href="{{orderUrl}}" class="button">View order</a>
     </div>
 

@@ -3,6 +3,7 @@ import {
   Get,
   Body,
   Patch,
+  Post,
   Param,
   Delete,
   UseGuards,
@@ -28,6 +29,7 @@ import { CustomCacheInterceptor } from 'src/shared/interceptors/custom-cache.int
 import { ClearCacheInterceptor } from 'src/shared/interceptors/clear-cache.interceptor';
 import { ClearCache } from 'src/shared/decorators/clear-cache.decorator';
 import { MarketingStatisticsService } from './shared/order-helper/marketing-statistics.service';
+import { InvoiceService } from 'src/invoice/invoice.service';
 
 @Controller('order')
 @UseGuards(AuthGuard)
@@ -36,6 +38,7 @@ export class OrderController {
   constructor(
     private readonly orderService: OrderService,
     private readonly marketingStatisticsService: MarketingStatisticsService,
+    private readonly invoiceService: InvoiceService,
   ) {}
 
   // Image size static
@@ -195,6 +198,22 @@ export class OrderController {
     @Body() updateOrderDto: UpdateOrderDto,
   ) {
     return await this.orderService.update(idParamDto, updateOrderDto, files);
+  }
+
+  // ========================================================================================
+  // ==================================  REGENERATE INVOICE ================================
+  // ========================================================================================
+  /** Retries an invoice that could not be issued (same data and number). */
+  @Post(':id/invoice/regenerate')
+  @ClearCache('order')
+  @RequirePermission(Permissions.UPDATE_ORDER_STATUS)
+  @UseGuards(AuthGuard, PermissionsGuard)
+  async regenerateInvoice(@Param() idParamDto: IdParamDto) {
+    const invoice = await this.invoiceService.regenerate(idParamDto.id);
+    return {
+      status: 'success',
+      data: { number: invoice.displayNumber, InvoicePdf: invoice.file },
+    };
   }
 
   // ========================================================================================

@@ -2,6 +2,7 @@ import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { EmailService } from './email.service';
 import { NotificationsService } from 'src/notifications/notifications.service';
+import { InvoiceService } from 'src/invoice/invoice.service';
 
 interface SendResetSuccessJobData {
   email: string;
@@ -105,6 +106,8 @@ export interface NewOrderCustomerJobData {
   orderUrl: string;
   subject: string;
   lang?: string;
+  /** The order's _id, to issue and attach its invoice; absent on older jobs. */
+  orderMongoId?: string;
 }
 
 interface OrderRefundedJobData {
@@ -164,8 +167,32 @@ export class MailProcessor extends WorkerHost {
   constructor(
     private readonly emailService: EmailService,
     private readonly notificationsService: NotificationsService,
+    private readonly invoiceService: InvoiceService,
   ) {
     super();
+  }
+
+  /**
+   * The order's tax invoice to attach: issued and stored first (or the stored
+   * one on a retry, never a second one). While retries remain a failure fails
+   * the job; on the last attempt the confirmation goes out without it.
+   */
+  private async invoiceAttachment(
+    job: Job<NewOrderCustomerJobData, MailJobResult, 'new-order-customer'>,
+  ): Promise<{ filename: string; content: Buffer } | undefined> {
+    const { orderMongoId } = job.data;
+    if (!orderMongoId) return undefined;
+    try {
+      const invoice = await this.invoiceService.generateAndStore(orderMongoId);
+      return { filename: invoice.filename, content: invoice.buffer };
+    } catch (error) {
+      const isLastAttempt = job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
+      if (!isLastAttempt) throw error;
+      console.warn(
+        `⚠️ invoice for order ${orderMongoId} could not be issued after ${job.attemptsMade + 1} attempts; sending the confirmation without it (admin can regenerate): ${(error as Error).message}`,
+      );
+      return undefined;
+    }
   }
 
   @OnWorkerEvent('failed')
@@ -364,7 +391,25 @@ export class MailProcessor extends WorkerHost {
         return {};
       }
       case 'new-order-customer': {
-        await this.emailService.send_order_confirmation(job.data);
+        const invoice = await this.invoiceAttachment(job);
+        const sent = await this.emailService.send_order_confirmation(
+          job.data,
+          invoice,
+        );
+        if (job.data.orderMongoId) {
+          // Never fail the job here: that would email the customer twice
+          await this.invoiceService
+            .recordCustomerEmail(
+              job.data.orderMongoId,
+              !!invoice,
+              sent?.messageId,
+            )
+            .catch((err: Error) =>
+              console.warn(
+                `⚠️ could not record the confirmation email of order ${job.data.orderMongoId}: ${err.message}`,
+              ),
+            );
+        }
         return {};
       }
       case 'order-refunded': {

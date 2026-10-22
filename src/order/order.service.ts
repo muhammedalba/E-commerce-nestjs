@@ -35,6 +35,7 @@ import { OrderStatus } from './shared/enums/order-status.enum';
 import { orderStatusNotificationAction } from './shared/utils/order-status-notification';
 import { PaymentStatus } from 'src/payments/shared/enums/payment-status.enum';
 import { PaymentRefundedEvent } from 'src/payments/shared/types/payment-events';
+import { InvoiceService } from 'src/invoice/invoice.service';
 
 type OrderLine = { productId: string; variantId: string; quantity: number };
 
@@ -106,6 +107,7 @@ export class OrderService {
     @InjectConnection() private readonly connection: Connection,
     private readonly eventEmitter: EventEmitter2,
     private readonly cacheInvalidation: CacheInvalidationService,
+    private readonly invoiceService: InvoiceService,
   ) {}
   private readonly logger = new Logger(OrderService.name);
 
@@ -681,12 +683,21 @@ export class OrderService {
     }
 
     // 2) if file is exits (This feature has not been implemented yet; the invoice cannot be downloaded. )
+    // An issued tax invoice's file is kept for the record: replacing or
+    // removing it on the order only unlinks it
+    const keepsIssuedInvoice = await this.invoiceService.isIssuedInvoiceFile(
+      idParamDto.id,
+      order.InvoicePdf,
+    );
     if (files.InvoicePdf) {
-      const newPdfPath = await this.fileUploadService.updateFile(
-        files.InvoicePdf[0] as MulterFileType,
-        Order.name,
-        order.InvoicePdf,
-      );
+      const uploaded = files.InvoicePdf[0] as MulterFileType;
+      const newPdfPath = keepsIssuedInvoice
+        ? await this.fileUploadService.saveFileToDisk(uploaded, Order.name)
+        : await this.fileUploadService.updateFile(
+            uploaded,
+            Order.name,
+            order.InvoicePdf,
+          );
       updateOrderDto.InvoicePdf = newPdfPath;
     }
 
@@ -699,11 +710,10 @@ export class OrderService {
       updateOrderDto.DeliveryReceiptImage = newReceiptImagePath;
     }
 
-    if (
-      !updateOrderDto.DeliveryReceiptImage ||
-      (updateOrderDto.DeliveryReceiptImage as any) === '' ||
-      updateOrderDto.DeliveryReceiptImage === null
-    ) {
+    // Only an explicit removal ('' or null, as OrderDeliveryCard sends) deletes
+    // the receipt: an update without the field (e.g. a status change) keeps it
+    const receiptValue = updateOrderDto.DeliveryReceiptImage as unknown;
+    if (receiptValue === '' || receiptValue === null) {
       if (order.DeliveryReceiptImage) {
         try {
           await this.fileUploadService.deleteFile(order.DeliveryReceiptImage);
@@ -715,12 +725,11 @@ export class OrderService {
       }
     }
 
-    if (
-      !updateOrderDto.InvoicePdf ||
-      (updateOrderDto.InvoicePdf as any) === '' ||
-      updateOrderDto.InvoicePdf === null
-    ) {
-      if (order.InvoicePdf) {
+    // Only an explicit removal ('' or null) deletes the file: an update that
+    // does not send InvoicePdf at all (e.g. a status change) keeps it
+    const invoicePdfValue = updateOrderDto.InvoicePdf as unknown;
+    if (invoicePdfValue === '' || invoicePdfValue === null) {
+      if (order.InvoicePdf && !keepsIssuedInvoice) {
         try {
           await this.fileUploadService.deleteFile(order.InvoicePdf);
         } catch (err) {
@@ -879,9 +888,14 @@ export class OrderService {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
     }
 
-    // 4) : Delete associated files if any
-    const paths = [
+    // 4) : Delete associated files if any. An issued tax invoice (file and
+    // Invoice record) is kept for the tax record.
+    const keepsIssuedInvoice = await this.invoiceService.isIssuedInvoiceFile(
+      idParamDto.id,
       data.InvoicePdf,
+    );
+    const paths = [
+      keepsIssuedInvoice ? undefined : data.InvoicePdf,
       data.transferReceiptImg,
       data.DeliveryReceiptImage,
     ].filter((p): p is FileAsset => p != null && typeof p === 'object');

@@ -16,7 +16,9 @@ export class EmailService {
    * uncaught exception that killed the whole server. Now it is a normal error:
    * the mail job fails, is retried and reported like any other failure.
    */
-  private async sendMail(options: ISendMailOptions): Promise<void> {
+  private async sendMail(
+    options: ISendMailOptions,
+  ): Promise<{ messageId?: string }> {
     if (options.template) {
       // Same directory as the MailerModule template.dir (email.module.ts).
       const file = path.join(__dirname, 'templates', `${options.template}.hbs`);
@@ -24,7 +26,10 @@ export class EmailService {
         throw new Error(`Email template not found: ${options.template}.hbs`);
       }
     }
-    await this.mailerService.sendMail(options);
+    // The SMTP server's acceptance (its message id), not inbox delivery
+    return (await this.mailerService.sendMail(options)) as {
+      messageId?: string;
+    };
   }
   /**
    * Sends a verification code to the user's email address.
@@ -355,15 +360,31 @@ export class EmailService {
     });
   }
 
-  /** Confirms a new order to the customer, with its lines and total. */
-  async send_order_confirmation(order: NewOrderCustomerJobData): Promise<void> {
+  /**
+   * Confirms a new order to the customer, with its lines and total, and its
+   * tax invoice attached when it could be issued.
+   */
+  async send_order_confirmation(
+    order: NewOrderCustomerJobData,
+    invoice?: { filename: string; content: Buffer },
+  ): Promise<{ messageId?: string }> {
     const resolvedLang = order.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
 
-    await this.sendMail({
+    return this.sendMail({
       to: order.email,
       subject: order.subject,
       template: `new-order-customer-${resolvedLang}`,
+      attachments: invoice
+        ? [
+            {
+              filename: invoice.filename,
+              content: invoice.content,
+              contentType: 'application/pdf',
+            },
+          ]
+        : undefined,
       context: {
+        hasInvoice: !!invoice,
         subject: order.subject,
         name: order.name,
         orderId: order.orderId,

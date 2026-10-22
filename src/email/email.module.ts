@@ -7,6 +7,7 @@ import * as path from 'path';
 import * as net from 'net';
 import { BullModule } from '@nestjs/bullmq';
 import { MailProcessor } from './mail.processor';
+import { InvoiceModule } from 'src/invoice/invoice.module';
 
 const MAIL_CONNECT_TIMEOUT_MS = 30_000;
 
@@ -84,6 +85,7 @@ const MAIL_CONNECT_TIMEOUT_MS = 30_000;
       }),
       inject: [ConfigService],
     }),
+    InvoiceModule,
   ],
   providers: [EmailService, MailProcessor],
   exports: [EmailService, BullModule],
