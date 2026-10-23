@@ -30,7 +30,7 @@ function appCheckToken(
       privateKey: (options.key ?? firebaseKeyPair).privateKey.export({
         type: 'pkcs8',
         format: 'pem',
-      }) as string,
+      }),
       algorithm: 'RS256',
       keyid: 'fb-kid',
       audience: [`projects/${project}`, 'projects/skygalaxy'],

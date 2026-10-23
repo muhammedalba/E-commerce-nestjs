@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { createHash, createHmac, createPublicKey, JsonWebKey } from 'crypto';
+import { createHash, createHmac, createPublicKey, webcrypto } from 'crypto';
 import { OAuth2Client, TokenPayload } from 'google-auth-library';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { GoogleService } from './google.service';
@@ -264,7 +264,7 @@ export class MobileOAuthService {
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const { keys } = (await res.json()) as {
-      keys?: (JsonWebKey & { kid?: string })[];
+      keys?: (webcrypto.JsonWebKey & { kid?: string })[];
     };
     const pems = new Map<string, string>();
     for (const jwk of keys ?? []) {

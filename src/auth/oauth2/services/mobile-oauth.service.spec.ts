@@ -36,7 +36,7 @@ function appleToken(
       privateKey: appleKeyPair.privateKey.export({
         type: 'pkcs8',
         format: 'pem',
-      }) as string,
+      }),
       algorithm: 'RS256',
       keyid: options.kid ?? 'apple-kid',
       audience: options.audience ?? 'shop.skygalaxy.app',

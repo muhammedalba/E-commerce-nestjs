@@ -1,6 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { createPublicKey, JsonWebKey } from 'crypto';
+import { createPublicKey, webcrypto } from 'crypto';
 
 const JWKS_URL = 'https://firebaseappcheck.googleapis.com/v1/jwks';
 const ISSUER_PREFIX = 'https://firebaseappcheck.googleapis.com/';
@@ -104,7 +104,7 @@ async function refreshKeys(): Promise<void> {
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const body = (await res.json()) as {
-    keys?: (JsonWebKey & { kid?: string })[];
+    keys?: (webcrypto.JsonWebKey & { kid?: string })[];
   };
   const pems = new Map<string, string>();
   for (const jwk of body.keys ?? []) {
