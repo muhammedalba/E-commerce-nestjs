@@ -7,6 +7,7 @@ import { AppModule } from './app.module';
 import { I18nValidationPipe } from 'nestjs-i18n';
 import { AllExceptionsFilter } from './shared/filters/all-exceptions.filter';
 import { getTrustedProxies } from './shared/utils/trusted-proxies';
+import { getAllowedOrigins, toOrigin } from './config/allowed-origins';
 import { I18nService } from 'nestjs-i18n';
 import { Request, Response, NextFunction } from 'express';
 
@@ -35,34 +36,17 @@ async function bootstrap() {
     trustedProxies.isTrusted(address),
   );
   // allowed origins
-  const allowedOrigins =
-    process.env.NODE_ENV === 'development'
-      ? [
-          'http://localhost:3000',
-          'http://10.5.50.6:3000',
-          'http://172.20.10.7:3000',
-          process.env.CLIENT_URL,
-        ]
-      : [process.env.CLIENT_URL];
+  const allowedOrigins = getAllowedOrigins();
   // security headers
   app.use(helmet());
 
   // allow specific origins to access uploads
   app.use('/uploads', (req: Request, res: Response, next: NextFunction) => {
-    const allowedOriginsFilter = allowedOrigins.filter((o): o is string => !!o);
-    // Referer is a full URL: compare only its origin, never a prefix, so
-    // "https://site.com.evil.com" does not pass for "https://site.com".
-    const toOrigin = (value?: string) => {
-      try {
-        return value ? new URL(value).origin : undefined;
-      } catch {
-        return undefined;
-      }
-    };
+    // Referer is a full URL: compare only its origin, never a prefix
     const origin = toOrigin(req.headers.origin || req.headers.referer);
     const isAllowed =
       !!origin &&
-      allowedOriginsFilter.some((allowed) => toOrigin(allowed) === origin);
+      allowedOrigins.some((allowed) => toOrigin(allowed) === origin);
 
     if (isAllowed) {
       res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
@@ -80,7 +64,7 @@ async function bootstrap() {
         'Content-Security-Policy',
         csp.replace(
           /frame-ancestors [^;]*/,
-          `frame-ancestors 'self' ${allowedOriginsFilter.join(' ')}`,
+          `frame-ancestors 'self' ${allowedOrigins.join(' ')}`,
         ),
       );
     }
@@ -114,7 +98,7 @@ async function bootstrap() {
 
   // enable cors
   app.enableCors({
-    origin: allowedOrigins.filter((o): o is string => !!o),
+    origin: allowedOrigins,
     credentials: true,
     allowedHeaders: [
       'Content-Type',

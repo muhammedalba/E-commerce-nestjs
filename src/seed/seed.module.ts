@@ -6,14 +6,32 @@ import { ShippingModule } from '../shipping/shipping.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { TaxesModule } from '../taxes/taxes.module';
 import { RolesModule } from '../roles/roles.module';
-import { Controller, Get } from '@nestjs/common';
+import {
+  CanActivate,
+  Controller,
+  Get,
+  NotFoundException,
+  UseGuards,
+} from '@nestjs/common';
 import { UsersModule } from 'src/users/users.module';
 // http://localhost:4000/api/v1/seed
 // http://localhost:4000/api/v1/seed/ksa
 // http://localhost:4000/api/v1/seed/weber-products
 // http://localhost:4000/api/v1/seed/full-catalog
 
+/**
+ * Seed routes have no auth: hide them in production. Checked per request,
+ * since NODE_ENV may come from .env, loaded after this module is evaluated.
+ */
+class NotInProductionGuard implements CanActivate {
+  canActivate(): boolean {
+    if (process.env.NODE_ENV === 'production') throw new NotFoundException();
+    return true;
+  }
+}
+
 @Controller('seed')
+@UseGuards(NotInProductionGuard)
 export class SeedController {
   constructor(private readonly seedService: SeedService) {}
 

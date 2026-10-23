@@ -3,6 +3,7 @@ import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { MaintenanceGuard } from './shared/guards/maintenance.guard';
 import { AppVersionGuard } from './shared/guards/app-version.guard';
 import { CustomThrottlerGuard } from './shared/guards/custom-throttler.guard';
+import { ClientAccessGuard } from './shared/guards/client-access.guard';
 import { TransformInterceptor } from './shared/interceptors/transform.interceptor';
 import { LoggingInterceptor } from './shared/interceptors/logging.interceptor';
 import { AppService } from './app.service';
@@ -10,6 +11,12 @@ import { ExistsConstraint } from './shared/utils/decorators/exists.decorator';
 import { CustomI18nValidationExceptionFilter } from './filters/i18n-validation-exception.filter';
 
 export const appProviders: Provider[] = [
+  // Global client guard: only the website and the mobile app. First, so an
+  // unknown client is rejected before it uses rate-limit quota.
+  {
+    provide: APP_GUARD,
+    useClass: ClientAccessGuard,
+  },
   // Global rate limiter guard
   {
     provide: APP_GUARD,

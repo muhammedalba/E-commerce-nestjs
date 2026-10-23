@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common';
 import { CacheTTL } from '@nestjs/cache-manager';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
+import { AllowAnyClient } from 'src/shared/decorators/allow-any-client.decorator';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from 'src/users/shared/dto/create-user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -62,11 +63,13 @@ export class AuthController {
   // ------------ ======  GOOGLE AUTH  ====== ---------- //
   // ------------ =============================== ---------- //
   @Get('google')
+  @AllowAnyClient()
   @SkipThrottle()
   @UseGuards(GoogleAuthGuard)
   googleAuth() {}
 
   @Get('google/redirect')
+  @AllowAnyClient()
   @SkipThrottle()
   @UseGuards(GoogleAuthGuard)
   async googleAuthRedirect(
@@ -85,11 +88,13 @@ export class AuthController {
   // ------------ ======  FACEBOOK AUTH  ====== ---------- //
   // ------------ =============================== ---------- //
   @Get('facebook')
+  @AllowAnyClient()
   @SkipThrottle()
   @UseGuards(FacebookAuthGuard)
   facebookLogin() {}
 
   @Get('facebook/redirect')
+  @AllowAnyClient()
   @SkipThrottle()
   @UseGuards(FacebookAuthGuard)
   async facebookLoginRedirect(

@@ -27,6 +27,7 @@ import { PermissionsGuard } from 'src/roles/shared/guards/permissions.guard';
 import { BackupActor, BackupAdminService } from './backup-admin.service';
 import { BackupFilesService } from './backup-files.service';
 import { BackupOperationsService } from './backup-operations.service';
+import { AllowAnyClient } from 'src/shared/decorators/allow-any-client.decorator';
 import { DOWNLOAD_TOKEN_PATTERN } from './backup.types';
 import { RestoreUploadsDto } from './dto/restore-uploads.dto';
 import { UpdateBackupSettingsDto } from './dto/update-backup-settings.dto';
@@ -214,6 +215,7 @@ export class BackupController {
  * manager can stream the bundle to disk. Content is encrypted end to end.
  */
 @Controller('backup/download')
+@AllowAnyClient()
 export class BackupDownloadController {
   constructor(private readonly files: BackupFilesService) {}
 

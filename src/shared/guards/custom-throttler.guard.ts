@@ -7,15 +7,14 @@ import {
   ThrottlerModuleOptions,
   ThrottlerStorage,
 } from '@nestjs/throttler';
-import { timingSafeEqual } from 'crypto';
 import { isIP } from 'net';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
+import { hasValidInternalKey } from 'src/shared/utils/internal-key.util';
 import {
   getTrustedProxies,
   normalizeIp,
 } from 'src/shared/utils/trusted-proxies';
 
-const INTERNAL_KEY_HEADER = 'x-internal-key';
 const CLIENT_IP_HEADER = 'x-client-ip';
 
 type HeaderBag = { headers: Record<string, string | string[] | undefined> };
@@ -33,10 +32,6 @@ type HeaderBag = { headers: Record<string, string | string[] | undefined> };
  */
 @Injectable()
 export class CustomThrottlerGuard extends ThrottlerGuard {
-  private readonly internalKey = process.env.INTERNAL_API_KEY
-    ? Buffer.from(process.env.INTERNAL_API_KEY)
-    : null;
-
   constructor(
     @InjectThrottlerOptions() options: ThrottlerModuleOptions,
     @InjectThrottlerStorage() storageService: ThrottlerStorage,
@@ -50,7 +45,7 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     if (context.getType() === 'http') {
       const req = context.switchToHttp().getRequest<HeaderBag>();
       // Next server's own fetch (not relaying a browser request)
-      if (this.hasValidInternalKey(req) && !req.headers[CLIENT_IP_HEADER]) {
+      if (hasValidInternalKey(req) && !req.headers[CLIENT_IP_HEADER]) {
         return true;
       }
     }
@@ -65,7 +60,7 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     if (
       typeof relayedIp === 'string' &&
       isIP(relayedIp) &&
-      this.hasValidInternalKey(req as HeaderBag)
+      hasValidInternalKey(req as HeaderBag)
     ) {
       return relayedIp;
     }
@@ -83,19 +78,6 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     }
 
     return super.getTracker(req);
-  }
-
-  private hasValidInternalKey(req: HeaderBag): boolean {
-    if (!this.internalKey) return false;
-    const header = req.headers[INTERNAL_KEY_HEADER];
-    if (typeof header !== 'string') return false;
-
-    const provided = Buffer.from(header);
-    // timingSafeEqual throws on length mismatch, so compare lengths first
-    return (
-      provided.length === this.internalKey.length &&
-      timingSafeEqual(provided, this.internalKey)
-    );
   }
 
   protected getErrorMessage(): Promise<string> {

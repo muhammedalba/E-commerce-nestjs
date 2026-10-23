@@ -22,6 +22,10 @@ import {
 import { parseExpression } from 'cron-parser';
 import { isValidBackupKey } from '../backup/backup-format';
 import { isValidTimeZone } from '../backup/store-timezone';
+import {
+  CLIENT_ACCESS_MODES,
+  ClientAccessMode,
+} from '../shared/guards/client-access.guard';
 
 type RawTransform = { obj: Record<string, unknown>; key: string };
 
@@ -111,6 +115,13 @@ class EnvironmentVariables {
   @IsOptional()
   @MinLength(32)
   INTERNAL_API_KEY?: string;
+
+  // Who may use the API (ClientAccessGuard): the website (x-internal-key) and
+  // the mobile app (App Check). off | report (default: log only) | enforce (403).
+  @Transform(emptyAs())
+  @IsOptional()
+  @IsIn(CLIENT_ACCESS_MODES)
+  CLIENT_ACCESS_MODE?: ClientAccessMode;
 
   // Trusted proxies/CDNs in front of the API: comma-separated presets
   // (private, cloudflare), IPs or CIDR ranges. Loopback is always trusted.
@@ -375,6 +386,23 @@ export function validateEnv(config: Record<string, unknown>) {
 
   if (errors.length > 0) {
     throw new Error(errors.toString());
+  }
+
+  if (validatedConfig.CLIENT_ACCESS_MODE === 'enforce') {
+    // Without the key the website itself would be blocked
+    if (
+      validatedConfig.NODE_ENV === Environment.Production &&
+      !validatedConfig.INTERNAL_API_KEY
+    ) {
+      throw new Error(
+        'CLIENT_ACCESS_MODE=enforce requires INTERNAL_API_KEY (shared with the website)',
+      );
+    }
+    if (!validatedConfig.FIREBASE_PROJECT_NUMBER) {
+      console.warn(
+        'CLIENT_ACCESS_MODE=enforce without FIREBASE_PROJECT_NUMBER: the mobile app will be blocked',
+      );
+    }
   }
   return validatedConfig;
 }

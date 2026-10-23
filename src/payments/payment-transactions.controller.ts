@@ -10,6 +10,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PaymentTransactionService } from './payment-transaction.service';
+import { AllowAnyClient } from 'src/shared/decorators/allow-any-client.decorator';
 import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { WebhookMoyasarDto } from './shared/dto/webhook-moyasar.dto';
@@ -34,6 +35,7 @@ export class PaymentTransactionsController {
   /*  MOYASAR WEBHOOK                                  */
   /* ================================================ */
   @Post('webhooks/moyasar')
+  @AllowAnyClient()
   async handleMoyasarWebhook(@Body() payload: WebhookMoyasarDto) {
     const paymentId = await this.providerFactory
       .getMoyasarProvider()

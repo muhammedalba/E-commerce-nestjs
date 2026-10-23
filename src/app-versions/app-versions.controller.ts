@@ -12,6 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import { AllowAnyClient } from 'src/shared/decorators/allow-any-client.decorator';
 import { Request } from 'express';
 import { AuthGuard } from 'src/auth/shared/guards/auth.guard';
 import { JwtPayload } from 'src/auth/shared/types/jwt-payload.interface';
@@ -55,6 +56,7 @@ export class AppVersionsController {
    * @example GET /app-versions/check?platform=ios&version=1.2.0
    */
   @Get('check')
+  @AllowAnyClient()
   @Throttle({ default: { ttl: 60000, limit: 30 } })
   async check(@Query() dto: CheckVersionDto) {
     const lang = this.i18n.getLang() === 'en' ? 'en' : 'ar';
