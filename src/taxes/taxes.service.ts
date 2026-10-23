@@ -151,7 +151,6 @@ export class TaxesService extends BaseService<TaxDocument> {
     let country = dto.country;
     let region = dto.region;
     let city = dto.city;
-    let name = dto.name;
     let isActive = dto.isActive;
 
     if (id) {
@@ -167,7 +166,6 @@ export class TaxesService extends BaseService<TaxDocument> {
       if (city === undefined) {
         city = current.city ? current.city.toString() : undefined;
       }
-      if (name === undefined) name = current.name;
       if (isActive === undefined) isActive = current.isActive;
     } else {
       if (isActive === undefined) isActive = true;
@@ -355,8 +353,8 @@ export class TaxesService extends BaseService<TaxDocument> {
       currency,
     );
 
-    let taxAmount = 0; // this is the full VAT on the invoice
-    let chargedTaxAmount = 0; // this is the tax charged on top of the payable total
+    let taxAmount: number; // this is the full VAT on the invoice
+    let chargedTaxAmount: number; // this is the tax charged on top of the payable total
     let productsAmountBeforeTax = productsAmount; // products price excluding VAT
     let productsAmountAfterTax = productsAmount; // products price including VAT
     if (isIncluded) {

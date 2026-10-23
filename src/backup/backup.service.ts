@@ -212,6 +212,8 @@ export class BackupService {
           signal: params.signal,
         });
       } catch (err) {
+        // The raw error is deliberately not attached as `cause`: only its sanitized form may surface.
+        // eslint-disable-next-line preserve-caught-error
         throw new Error(
           `Database file ${uploaded.id} was saved, but the uploads backup failed: ${sanitizeError(err)}`,
         );

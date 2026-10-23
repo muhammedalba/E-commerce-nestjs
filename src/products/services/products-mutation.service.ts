@@ -101,12 +101,6 @@ export class ProductMutationService {
   ) {
     const { variants, ...productData } = createProductDto;
 
-    let uploadedFiles: {
-      imageCover?: FileAsset | undefined;
-      images?: FileAsset[] | undefined;
-      infoProductPdf?: FileAsset | undefined;
-    } | null = null; // Defining the variable here does not mean accessing it within the `catch` block.
-
     // ==========================================
     // First Line of Defense: Rapid Operations (Fail-Fast)
     // ==========================================
@@ -135,7 +129,11 @@ export class ProductMutationService {
     // ==========================================
 
     // 3. Now only upload the files (since we have confirmed that the basic data is correct)
-    uploadedFiles = await this.fileService.handleCreateFiles(files);
+    const uploadedFiles: {
+      imageCover?: FileAsset | undefined;
+      images?: FileAsset[] | undefined;
+      infoProductPdf?: FileAsset | undefined;
+    } | null = await this.fileService.handleCreateFiles(files);
     // here i will use Object.assign to assign the uploaded files to the productData
     Object.assign(productData, uploadedFiles);
 
@@ -522,8 +520,8 @@ export class ProductMutationService {
           // Check if there are any updates pending for the base product document.
           const hasProductUpdates = Object.keys(productData).length > 0;
 
-          // Initialize productResult to null, which will hold the updated product document.
-          let productResult: ProductDocument | null = null;
+          // productResult will hold the updated product document.
+          let productResult: ProductDocument | null;
 
           // If there are pending updates for the base product
           if (hasProductUpdates) {

@@ -82,7 +82,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.7",
-    "@eslint/js": "^9.32.0",
+    "@eslint/js": "^10.0.1",
     "@nestjs/schematics": "^11.1.0",
     "@nestjs/testing": "^11.1.28",
     "@swc/cli": "^0.8.1",
@@ -98,7 +98,7 @@
     "@types/passport-google-oauth20": "^2.0.17",
     "@types/qrcode": "^1.5.6",
     "@types/supertest": "^7.2.1",
-    "eslint": "^9.32.0",
+    "eslint": "^10.13.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.7",
     "fontkit": "^2.0.4",

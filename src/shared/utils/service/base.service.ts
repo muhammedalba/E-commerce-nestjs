@@ -342,7 +342,7 @@ export class BaseService<T> {
     let targetModelName = this.modelName;
     let queryString: QueryString;
     let populate: { path: string; select: string } | undefined;
-    let allLangs = false;
+    let allLangs: boolean;
 
     if (typeof arg1 === 'string') {
       targetModelName = arg1;
@@ -451,7 +451,7 @@ export class BaseService<T> {
     },
   ): Promise<T | null> {
     let targetModelName = this.modelName;
-    let selectedFields = '';
+    let selectedFields: string;
     let options:
       | {
           fileFieldName?: string;

@@ -558,7 +558,7 @@ export class GoogleDriveClient {
     for (let attempt = 0; ;) {
       signal?.throwIfAborted();
       const slice = data.subarray(sent - start);
-      let res: Response | null = null;
+      let res: Response | null;
       try {
         res = await this.fetchImpl(sessionUri, {
           method: 'PUT',
