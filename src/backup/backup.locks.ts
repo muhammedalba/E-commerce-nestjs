@@ -21,7 +21,7 @@ export class BackupLocks {
 
   constructor(
     config: ConfigService,
-    @Optional() @Inject(REDIS_CLIENT) redis?: Redis,
+    @Optional() @Inject(REDIS_CLIENT) private readonly redis?: Redis,
   ) {
     const ns = redisNamespace(config);
     this.backup = new RedisLock(
@@ -34,6 +34,28 @@ export class BackupLocks {
       `${ns}:lock:db-backup-scheduler`,
       SCHEDULER_LOCK_TTL_MS,
     );
+  }
+
+  /**
+   * True once the Redis client is connected, false after `timeoutMs`. At
+   * startup it may still be connecting, and with no offline queue a lock
+   * taken before then fails at once.
+   */
+  whenReady(timeoutMs: number): Promise<boolean> {
+    const redis = this.redis;
+    if (!redis) return Promise.resolve(false);
+    if (redis.status === 'ready') return Promise.resolve(true);
+    return new Promise((resolve) => {
+      const onReady = () => {
+        clearTimeout(timer);
+        resolve(true);
+      };
+      const timer = setTimeout(() => {
+        redis.off('ready', onReady);
+        resolve(false);
+      }, timeoutMs);
+      redis.once('ready', onReady);
+    });
   }
 }
 

@@ -95,6 +95,7 @@ function setup(
   };
   const locks = {
     scheduler: new RedisLock(redis as never, 'lock:sched', 30_000),
+    whenReady: jest.fn().mockResolvedValue(true),
   };
   const scheduler = new BackupScheduler(
     queue as never,
@@ -102,7 +103,7 @@ function setup(
     store as never,
     locks as never,
   );
-  return { scheduler, queue, store, settings, redis };
+  return { scheduler, queue, store, settings, redis, locks };
 }
 
 describe('BackupScheduler.sync', () => {
@@ -208,6 +209,32 @@ describe('BackupScheduler.sync', () => {
 });
 
 describe('BackupScheduler.syncAtStartup', () => {
+  it('waits for the Redis connection before the first attempt', async () => {
+    const { scheduler, locks } = setup();
+    const order: string[] = [];
+    locks.whenReady.mockImplementation(() => {
+      order.push('ready');
+      return Promise.resolve(true);
+    });
+    jest.spyOn(scheduler, 'sync').mockImplementation(() => {
+      order.push('sync');
+      return Promise.resolve({} as never);
+    });
+    await scheduler.syncAtStartup(3, 1, 50);
+    expect(locks.whenReady).toHaveBeenCalledWith(50);
+    expect(order).toEqual(['ready', 'sync']);
+  });
+
+  it('still tries when Redis is not ready in time', async () => {
+    const { scheduler, locks } = setup();
+    locks.whenReady.mockResolvedValue(false);
+    const sync = jest
+      .spyOn(scheduler, 'sync')
+      .mockResolvedValueOnce({} as never);
+    await scheduler.syncAtStartup(3, 1, 50);
+    expect(sync).toHaveBeenCalledTimes(1);
+  });
+
   it('retries until Redis/Mongo are reachable', async () => {
     const { scheduler } = setup();
     const sync = jest

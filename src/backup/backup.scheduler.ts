@@ -67,10 +67,16 @@ export class BackupScheduler implements OnApplicationBootstrap {
 
   /**
    * Redis may still be connecting at boot (the app client has no offline
-   * queue), so retry a few times. A schedule saved earlier stays active in
-   * BullMQ meanwhile; this only re-applies the persisted settings.
+   * queue), so wait for it first, then retry a few times. A schedule saved
+   * earlier stays active in BullMQ meanwhile; this only re-applies the
+   * persisted settings.
    */
-  async syncAtStartup(attempts = 5, delayMs = 5_000): Promise<void> {
+  async syncAtStartup(
+    attempts = 5,
+    delayMs = 5_000,
+    readyTimeoutMs = 10_000,
+  ): Promise<void> {
+    await this.locks.whenReady(readyTimeoutMs);
     for (let attempt = 1; attempt <= attempts; attempt++) {
       try {
         await this.sync('startup');
