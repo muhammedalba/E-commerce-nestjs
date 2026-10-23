@@ -1,5 +1,6 @@
 import { useContainer } from 'class-validator';
 import cookieParser from 'cookie-parser';
+import { ConsoleLogger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
@@ -12,7 +13,10 @@ import { I18nService } from 'nestjs-i18n';
 import { Request, Response, NextFunction } from 'express';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    // Nest 12 prints plain-object log params inline; keep the Nest 11 output.
+    logger: new ConsoleLogger({ structuredParams: false }),
+  });
   // Graceful shutdown. The host stops the process with a signal (SIGTERM /
   // SIGINT) on every deploy, restart or scale-down. Without this, Nest
   // ignores the signal and the process is killed mid-flight: no module
