@@ -125,10 +125,15 @@ describe('Refresh tokens (e2e)', () => {
       strict: false,
     });
     const roleModel = app.get<Model<Role>>(getModelToken(Role.name));
-    // Seeded by RolesSeederService during app.init().
-    userRoleId = (await roleModel.findOne({ name: 'User' }).lean())?._id;
+    // RolesSeederService seeds in the background (onModuleInit does not await
+    // it, so listen() is never delayed): wait for the User role to appear.
+    const deadline = Date.now() + 15_000;
+    while (!userRoleId && Date.now() < deadline) {
+      userRoleId = (await roleModel.findOne({ name: 'User' }).lean())?._id;
+      if (!userRoleId) await new Promise((r) => setTimeout(r, 100));
+    }
     expect(userRoleId).toBeDefined();
-  });
+  }, 30_000);
 
   afterAll(async () => {
     await app?.close();
