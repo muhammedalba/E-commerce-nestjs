@@ -3,6 +3,9 @@
   "exclude": ["node_modules", "test", "dist", "**/*spec.ts"],
   "compilerOptions": {
     "strict": true,
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    // Only global types present without devDependencies (the host installs
+    // production dependencies only): jest/passport types are dev-only.
+    "types": ["node", "multer"]
   }
 }
