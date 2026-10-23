@@ -2,7 +2,7 @@ import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { OnEvent } from '@nestjs/event-emitter';
 import { Queue } from 'bullmq';
-import { parseExpression } from 'cron-parser';
+import { CronExpressionParser } from 'cron-parser';
 import {
   SETTINGS_UPDATED_EVENT,
   SettingsUpdatedEvent,
@@ -163,7 +163,10 @@ export class BackupScheduler implements OnApplicationBootstrap {
     count: number,
     from = new Date(),
   ): Date[] {
-    const it = parseExpression(pattern, { tz: timezone, currentDate: from });
+    const it = CronExpressionParser.parse(pattern, {
+      tz: timezone,
+      currentDate: from,
+    });
     return Array.from({ length: count }, () => it.next().toDate());
   }
 }

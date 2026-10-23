@@ -19,7 +19,7 @@ import {
   registerDecorator,
   validateSync,
 } from 'class-validator';
-import { parseExpression } from 'cron-parser';
+import { CronExpressionParser } from 'cron-parser';
 import { isValidBackupKey } from '../backup/backup-format';
 import { isValidTimeZone } from '../backup/store-timezone';
 import {
@@ -265,7 +265,7 @@ class EnvironmentVariables {
     (v) => {
       if (typeof v !== 'string' || !v.trim()) return false;
       try {
-        parseExpression(v);
+        CronExpressionParser.parse(v);
         return v.trim().split(/\s+/).length === 5;
       } catch {
         return false;
