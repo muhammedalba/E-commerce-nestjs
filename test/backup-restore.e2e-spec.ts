@@ -250,7 +250,7 @@ describeIf('backup → restore (real MongoDB)', () => {
         keys: [KEY],
         sourceUri: URI,
       }),
-    ).rejects.toThrow(/source database/);
+    ).rejects.toThrow(/live database/);
   });
 
   it('writes nothing for a tampered backup', async () => {

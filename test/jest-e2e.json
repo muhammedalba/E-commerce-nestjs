@@ -3,6 +3,8 @@
   "rootDir": ".",
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
+  "globalSetup": "<rootDir>/setup/mongo-global-setup.ts",
+  "globalTeardown": "<rootDir>/setup/mongo-global-teardown.ts",
   "moduleNameMapper": {
     "^src/(.*)$": "<rootDir>/../src/$1",
     "^uuid$": "<rootDir>/shims/uuid.ts"

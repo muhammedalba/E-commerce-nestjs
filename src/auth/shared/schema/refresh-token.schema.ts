@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import mongoose, { HydratedDocument } from 'mongoose';
+import mongoose, { HydratedDocument, Types } from 'mongoose';
 import { MODEL_NAMES } from 'src/shared/constants/models.constants';
 
 @Schema({ timestamps: true })
@@ -11,12 +11,15 @@ export class RefreshToken {
     required: true,
   })
   declare refresh_Token: string;
+  // `mongoose.Schema.Types.ObjectId` (not `mongoose.Types.ObjectId`, which
+  // Mongoose reads as Mixed). Tokens issued before this fix hold a string
+  // here and are not matched by userId queries until they rotate or expire.
   @Prop({
-    type: mongoose.Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     required: true,
     ref: MODEL_NAMES.USER,
   })
-  declare userId: string;
+  declare userId: Types.ObjectId;
 
   // One login on one device. Kept across rotations so logout can revoke
   // exactly this device's session (the access token carries it as `sid`).

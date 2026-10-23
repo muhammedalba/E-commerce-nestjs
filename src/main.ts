@@ -50,10 +50,19 @@ async function bootstrap() {
   // allow specific origins to access uploads
   app.use('/uploads', (req: Request, res: Response, next: NextFunction) => {
     const allowedOriginsFilter = allowedOrigins.filter((o): o is string => !!o);
-    const origin = req.headers.origin || req.headers.referer;
-    const isAllowed = allowedOriginsFilter.some((allowed) =>
-      origin?.startsWith(allowed),
-    );
+    // Referer is a full URL: compare only its origin, never a prefix, so
+    // "https://site.com.evil.com" does not pass for "https://site.com".
+    const toOrigin = (value?: string) => {
+      try {
+        return value ? new URL(value).origin : undefined;
+      } catch {
+        return undefined;
+      }
+    };
+    const origin = toOrigin(req.headers.origin || req.headers.referer);
+    const isAllowed =
+      !!origin &&
+      allowedOriginsFilter.some((allowed) => toOrigin(allowed) === origin);
 
     if (isAllowed) {
       res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
