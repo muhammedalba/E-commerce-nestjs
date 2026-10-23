@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { FilterQuery, Model, Types } from 'mongoose';
+import { QueryFilter, Model, Types } from 'mongoose';
 import { Product, ProductDocument } from '../shared/schemas/Product.schema';
 import {
   ProductVariant,
@@ -63,7 +63,7 @@ export class ProductQueryService {
     productIds?: Types.ObjectId[],
     textSearch = false,
   ) {
-    const filter: FilterQuery<ProductDocument> = productIds
+    const filter: QueryFilter<ProductDocument> = productIds
       ? { _id: { $in: productIds } }
       : {};
     const baseQuery = this.productModel.find(filter);

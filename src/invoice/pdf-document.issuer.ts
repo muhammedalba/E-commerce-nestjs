@@ -89,7 +89,7 @@ export class PdfDocumentIssuer {
         },
         $inc: { attempts: 1 },
       },
-      { new: true },
+      { returnDocument: 'after' },
     );
     if (!locked) {
       const current = await this.model.findById<PdfDocumentFields>(doc._id);

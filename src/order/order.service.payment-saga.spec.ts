@@ -355,7 +355,7 @@ describe('OrderService payment.refunded (Moyasar dashboard refunds)', () => {
           refundedAmount: 100,
         }) as unknown,
       },
-      { new: false },
+      { returnDocument: 'before' },
     );
     expect(productHelperService.restockOrderItems).toHaveBeenCalledWith(
       items,

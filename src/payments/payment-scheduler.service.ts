@@ -75,7 +75,7 @@ export class PaymentSchedulerService {
         const transaction = await this.paymentTransactionModel.findOneAndUpdate(
           { _id, status: { $in: PENDING_STATUSES } },
           { $set: { status: PaymentStatus.EXPIRED } },
-          { new: true },
+          { returnDocument: 'after' },
         );
         if (!transaction) continue;
 

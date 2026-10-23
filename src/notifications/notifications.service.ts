@@ -2,7 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
-import { Model, Types, FilterQuery } from 'mongoose';
+import { Model, Types, QueryFilter } from 'mongoose';
 import {
   Notification,
   NotificationType,
@@ -191,10 +191,10 @@ export class NotificationsService {
       });
     }
 
-    const filter: FilterQuery<Notification> = {
+    const filter: QueryFilter<Notification> = {
       $or: orConditions,
       deletedByAdmin: false,
-      deletedByUsers: { $ne: userObjId } as any,
+      deletedByUsers: { $ne: userObjId },
     };
 
     const total = await this.notificationModel.countDocuments(filter);
@@ -285,11 +285,11 @@ export class NotificationsService {
       });
     }
 
-    const filter: FilterQuery<Notification> = {
+    const filter: QueryFilter<Notification> = {
       _id: new Types.ObjectId(notificationId),
       $or: orConditions,
       deletedByAdmin: false,
-      deletedByUsers: { $ne: userObjId } as any,
+      deletedByUsers: { $ne: userObjId },
     };
 
     const notification = await this.notificationModel.findOne(filter);
@@ -341,7 +341,7 @@ export class NotificationsService {
       });
     }
 
-    const filter: FilterQuery<Notification> = {
+    const filter: QueryFilter<Notification> = {
       _id: new Types.ObjectId(notificationId),
       $or: orConditions,
       deletedByAdmin: false,
@@ -352,7 +352,7 @@ export class NotificationsService {
       {
         $addToSet: { deletedByUsers: userObjId },
       },
-      { new: true },
+      { returnDocument: 'after' },
     );
 
     if (!notification) {
@@ -376,7 +376,7 @@ export class NotificationsService {
       {
         $set: { deletedByAdmin: true },
       },
-      { new: true },
+      { returnDocument: 'after' },
     );
 
     if (!notification) {

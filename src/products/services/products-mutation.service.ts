@@ -145,9 +145,10 @@ export class ProductMutationService {
     session.startTransaction();
 
     try {
-      const [newProduct] = await this.productModel.create([productData], {
-        session,
-      });
+      const [newProduct] = await this.productModel.create(
+        [productData as unknown as Partial<Product>],
+        { session },
+      );
 
       if (!newProduct)
         throw new InternalServerErrorException('Failed to create product');
@@ -530,7 +531,7 @@ export class ProductMutationService {
             productResult = await this.productModel.findByIdAndUpdate(
               idParamDto.id,
               { $set: productData },
-              { new: true, runValidators: true, session },
+              { returnDocument: 'after', runValidators: true, session },
             );
           } else {
             productResult = await this.productModel
@@ -642,7 +643,7 @@ export class ProductMutationService {
               isDeleted: { $ne: true },
             })
             .lean()
-        : ((doc.variants ?? []) as ProductVariant[]);
+        : (doc.variants ?? []);
 
       return {
         product: this.i18n.localize(updatedProduct),
@@ -705,7 +706,7 @@ export class ProductMutationService {
           const product = await this.productModel.findByIdAndUpdate(
             idParamDto.id,
             { $set: { isDeleted: true, deletedAt: now } },
-            { new: true, session },
+            { returnDocument: 'after', session },
           );
 
           if (!product) {
@@ -812,7 +813,7 @@ export class ProductMutationService {
           const restoredProduct = await this.productModel.findOneAndUpdate(
             { _id: idParamDto.id, isDeleted: true },
             { $set: { isDeleted: false, deletedAt: null } },
-            { new: true, session },
+            { returnDocument: 'after', session },
           );
 
           if (!restoredProduct) {

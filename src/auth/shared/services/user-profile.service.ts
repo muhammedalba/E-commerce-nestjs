@@ -199,7 +199,7 @@ export class UserProfileService {
               avatar: updateUserDto.avatar,
             },
           },
-          { new: true, runValidators: true, lean: true },
+          { returnDocument: 'after', runValidators: true, lean: true },
         )
         .select('name avatar phone email role slug lastLogin')
         .populate('role');
@@ -265,7 +265,7 @@ export class UserProfileService {
             password: changePasswordDto.password,
           },
         },
-        { new: true, runValidators: true },
+        { returnDocument: 'after', runValidators: true },
       )
       .select('name email')
       .lean();

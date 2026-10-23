@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, QueryFilter } from 'mongoose';
 import {
   ShippingProvider,
   ShippingProviderDocument,
@@ -118,7 +118,9 @@ export class ShippingService extends BaseService<ShippingProviderDocument> {
     await this.deleteOneDoc(idParam, 'logo');
 
     // Remove associated rates to maintain data integrity
-    await this.rateModel.deleteMany({ provider: id });
+    await this.rateModel.deleteMany({
+      provider: id,
+    } as QueryFilter<ShippingRateDocument>);
 
     return { message: 'Shipping provider deleted successfully' };
   }

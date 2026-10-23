@@ -39,7 +39,7 @@ export class ReviewsModerationService {
       .findByIdAndUpdate(
         new Types.ObjectId(reviewId),
         { $set: { status } },
-        { new: false },
+        { returnDocument: 'before' },
       )
       .select('status product user')
       .lean();
@@ -97,7 +97,7 @@ export class ReviewsModerationService {
             },
           },
         },
-        { new: true, runValidators: true },
+        { returnDocument: 'after', runValidators: true },
       )
       .select('-__v')
       .lean();

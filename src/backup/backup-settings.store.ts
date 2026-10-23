@@ -156,7 +156,7 @@ export class BackupSettingsStore {
       .findOneAndUpdate(
         { key: SETTINGS_KEY },
         { $set },
-        { new: true, upsert: true },
+        { returnDocument: 'after', upsert: true },
       )
       .select('backup')
       .lean<{ backup?: Partial<BackupSettings> }>();

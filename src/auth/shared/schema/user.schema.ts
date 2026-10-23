@@ -139,20 +139,18 @@ UserSchema.pre(['find', 'countDocuments'], function () {
   }
 });
 // Hook for hashing password before saving
-UserSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
+UserSchema.pre('save', async function () {
+  if (!this.isModified('password')) return;
 
   if (typeof this.password === 'string') {
     const saltOrRounds = process.env.SALTORROUNDS || '10';
     const hash = await bcrypt.hash(this.password, parseInt(saltOrRounds, 10));
     this.password = hash;
   }
-
-  next();
 });
 
 // for update one and find update
-UserSchema.pre('findOneAndUpdate', async function (next) {
+UserSchema.pre('findOneAndUpdate', async function () {
   const update = this.getUpdate();
   if (update && typeof update === 'object' && '$set' in update) {
     // Check if the password field is being updated
@@ -166,6 +164,4 @@ UserSchema.pre('findOneAndUpdate', async function (next) {
       update.passwordChangeAt = new Date();
     }
   }
-
-  next();
 });

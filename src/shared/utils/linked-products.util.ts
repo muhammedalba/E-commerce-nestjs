@@ -1,5 +1,5 @@
 import { ConflictException } from '@nestjs/common';
-import { FilterQuery, Model } from 'mongoose';
+import { QueryFilter, Model } from 'mongoose';
 import { Product } from 'src/products/shared/schemas/Product.schema';
 import { CustomI18nService } from './i18n/custom-i18n.service';
 
@@ -11,7 +11,7 @@ import { CustomI18nService } from './i18n/custom-i18n.service';
  */
 export async function assertNoLinkedProducts(
   productModel: Model<Product>,
-  filter: FilterQuery<Product>,
+  filter: QueryFilter<Product>,
   i18n: CustomI18nService,
 ): Promise<void> {
   if (await productModel.exists(filter)) {

@@ -193,7 +193,7 @@ export class InvoiceService {
             attempts: 0,
           },
         },
-        { upsert: true, new: true },
+        { upsert: true, returnDocument: 'after' },
       );
     } catch (err) {
       // Two first calls raced on the unique order index: use the winner's

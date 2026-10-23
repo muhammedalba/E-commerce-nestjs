@@ -141,7 +141,7 @@ export class AppVersionsService {
       .findOneAndUpdate(
         { platform },
         { $set: { ...dto, updatedBy: new Types.ObjectId(actor.userId) } },
-        { new: true, lean: true },
+        { returnDocument: 'after', lean: true },
       )
       .orFail();
 
@@ -223,7 +223,7 @@ export class AppVersionsService {
         .findOneAndUpdate(
           { platform },
           { $setOnInsert: { platform } },
-          { upsert: true, new: true, lean: true },
+          { upsert: true, returnDocument: 'after', lean: true },
         )
         .orFail();
     try {

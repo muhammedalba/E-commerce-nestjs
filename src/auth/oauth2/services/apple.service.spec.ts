@@ -92,7 +92,7 @@ describe('AppleService', () => {
     expect(userModel.findOneAndUpdate).toHaveBeenCalledWith(
       { email: 'a@b.com' },
       { $set: { appleId: 'sub-2' } },
-      { new: true },
+      { returnDocument: 'after' },
     );
     expect(userModel.create).not.toHaveBeenCalled();
   });

@@ -54,7 +54,11 @@ export class AppleService {
     // 2) Existing account with the same verified email: link it
     if (!user && email && emailVerified) {
       user = await this.userModel
-        .findOneAndUpdate({ email }, { $set: { appleId } }, { new: true })
+        .findOneAndUpdate(
+          { email },
+          { $set: { appleId } },
+          { returnDocument: 'after' },
+        )
         .select('role email isActive')
         .populate<{ role: Role | null }>('role')
         .lean();

@@ -158,7 +158,7 @@ export class WishlistService {
       .findOneAndUpdate(
         { user: userId },
         { $addToSet: { products: new Types.ObjectId(productId) } },
-        { new: true, upsert: true },
+        { returnDocument: 'after', upsert: true },
       )
       .lean()
       .exec();
@@ -180,7 +180,7 @@ export class WishlistService {
       .findOneAndUpdate(
         { user: userId },
         { $pull: { products: new Types.ObjectId(productId) } },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .lean()
       .exec();

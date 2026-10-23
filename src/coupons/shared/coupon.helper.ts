@@ -204,7 +204,7 @@ export class CouponHelperService {
         ],
       },
       { $addToSet: { usedByUsers: userId }, $inc: { usageCount: 1 } },
-      { new: true },
+      { returnDocument: 'after' },
     );
 
     if (!coupon) {

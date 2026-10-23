@@ -172,7 +172,9 @@ export class RolesService {
       createRoleDto.permissions = Array.from(permissionsSet);
     }
 
-    const role = await this.roleModel.create(createRoleDto);
+    const role = await this.roleModel.create(
+      createRoleDto as unknown as Partial<Role>,
+    );
     await this.audit.record(
       AuditAction.CREATE,
       AUDIT_MODULES.ROLES,

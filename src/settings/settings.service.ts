@@ -220,7 +220,7 @@ export class SettingsService {
       { key: SETTINGS_DOC_KEY },
       { $setOnInsert: { key: SETTINGS_DOC_KEY } },
       // lean: true improves performance and reduces memory consumption
-      { upsert: true, new: true, lean: true },
+      { upsert: true, returnDocument: 'after', lean: true },
     );
 
     let hasCustomShippingRates = false;
@@ -229,7 +229,7 @@ export class SettingsService {
     // 3a. Computed flag: custom shipping rates
     try {
       if (this.connection.models['ShippingRate']) {
-        const result = await this.connection.models['ShippingRate']
+        const result: unknown = await this.connection.models['ShippingRate']
           .findOne({ isActive: true })
           .select('_id')
           .lean()
@@ -243,7 +243,7 @@ export class SettingsService {
     // 3b. Computed flag: custom taxes
     try {
       if (this.connection.models['Tax']) {
-        const result = await this.connection.models['Tax']
+        const result: unknown = await this.connection.models['Tax']
           .findOne({ isActive: true })
           .select('_id')
           .lean()
@@ -397,7 +397,7 @@ export class SettingsService {
     const updatedDoc = await this.settingModel.findOneAndUpdate(
       { key: SETTINGS_DOC_KEY },
       { $set: updateData },
-      { upsert: true, new: true, lean: true },
+      { upsert: true, returnDocument: 'after', lean: true },
     );
 
     // Invalidate the server-side cache (settings + Google reviews) here, and

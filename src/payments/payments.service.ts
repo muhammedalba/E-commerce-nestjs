@@ -93,7 +93,7 @@ export class PaymentsService {
     const settings = await this.settingsService.getSettings();
 
     // 2. Build Query Declaratively
-    const filterQuery: import('mongoose').FilterQuery<PaymentMethodDocument> = {
+    const filterQuery: import('mongoose').QueryFilter<PaymentMethodDocument> = {
       isActive: true,
     };
 
@@ -141,7 +141,7 @@ export class PaymentsService {
       .select(
         'publicConfig code name provider description type feeType fixedFee percentageFee passFeesToCustomer requiresOnlineConfirmation requiresAdditionalInfo icon displayOrder isDefault',
       )
-      .lean();
+      .lean<Record<string, unknown>[]>();
 
     // 4. Localize and Return
     return this.i18n.localize(methods);
@@ -240,7 +240,7 @@ export class PaymentsService {
       );
     }
     const updated = await this.paymentMethodModel
-      .findByIdAndUpdate(id, update, { new: true })
+      .findByIdAndUpdate(id, update, { returnDocument: 'after' })
       .lean();
     if (!updated) throw new NotFoundException('Payment method not found');
     return this.toAdminView(updated);

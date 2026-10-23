@@ -53,7 +53,7 @@ describe('Refresh tokens (e2e)', () => {
       password: PASSWORD,
       role: userRoleId,
       isActive: true,
-    });
+    } as unknown as Partial<User>);
     // A string id, as the app passes it (JWT `user_id`).
     return { email, id: user._id.toString() };
   };
@@ -266,7 +266,7 @@ describe('Refresh tokens (e2e)', () => {
       await deviceTokenModel.create([
         device(`live-${id}`, current.sessionId!),
         device(`ended-${id}`, randomUUID()),
-      ]);
+      ] as unknown as Partial<DeviceToken>[]);
 
       const active = await app.get(DeviceTokensService).activeDevices(id);
 

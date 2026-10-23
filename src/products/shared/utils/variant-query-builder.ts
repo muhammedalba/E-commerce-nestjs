@@ -1,4 +1,4 @@
-import { FilterQuery } from 'mongoose';
+import { QueryFilter } from 'mongoose';
 import { ProductVariantDocument } from '../schemas/ProductVariant.schema';
 import { normalizeUnit } from './data-normalizer';
 import { BadRequestException } from '@nestjs/common';
@@ -18,13 +18,13 @@ export interface VariantFilterParams {
 }
 
 /**
- * Sanitizes and normalizes incoming query filters, returning a clean Mongoose FilterQuery.
+ * Sanitizes and normalizes incoming query filters, returning a clean Mongoose QueryFilter.
  * Protects against NoSQL injection via strict typing and validation.
  */
 export function buildVariantFilter(
   params: VariantFilterParams,
-): FilterQuery<ProductVariantDocument> {
-  const vFilter: FilterQuery<ProductVariantDocument> = {};
+): QueryFilter<ProductVariantDocument> {
+  const vFilter: QueryFilter<ProductVariantDocument> = {};
 
   // 1. Color (String match, sanitized regex)
   if (params.color) {

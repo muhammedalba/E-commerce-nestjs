@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { FilterQuery, Model, Types } from 'mongoose';
+import { QueryFilter, Model, Types } from 'mongoose';
 import { AuditLog, AuditLogDocument } from './shared/schema/audit-log.schema';
 import {
   AUDIT_DEFAULT_PAGE_LIMIT,
@@ -158,8 +158,9 @@ export class AuditService {
     };
   }
 
-  private buildFilter(query: AuditLogQueryDto): FilterQuery<AuditLogDocument> {
-    const filter: FilterQuery<AuditLogDocument> = {};
+  private buildFilter(query: AuditLogQueryDto): QueryFilter<AuditLogDocument> {
+    // Loose while building: userId is stored as an ObjectId.
+    const filter: QueryFilter<any> = {};
     if (query.module) filter.module = query.module.toLowerCase();
     if (query.action) filter.action = query.action;
     if (query.userId) filter.userId = new Types.ObjectId(query.userId);

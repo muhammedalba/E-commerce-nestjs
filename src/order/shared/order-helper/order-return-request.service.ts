@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model, QueryFilter, Types } from 'mongoose';
 import { User } from 'src/auth/shared/schema/user.schema';
 import { CreditNoteService } from 'src/invoice/credit-note.service';
 import {
@@ -253,7 +253,7 @@ export class OrderReturnRequestService {
         status: 'pending',
       },
       { $set: { status: 'cancelled', decidedAt: new Date() } },
-      { new: true },
+      { returnDocument: 'after' },
     );
     if (!request) {
       throw new NotFoundException('No pending return request to cancel');
@@ -336,7 +336,7 @@ export class OrderReturnRequestService {
           decidedAt: new Date(),
         },
       },
-      { new: true },
+      { returnDocument: 'after' },
     );
     if (!request) throw new NotFoundException('No pending return request');
 
@@ -367,7 +367,7 @@ export class OrderReturnRequestService {
       _id: requestId,
       order: new Types.ObjectId(orderId),
       status: 'pending',
-    };
+    } as QueryFilter<ReturnRequest>;
     const request = await this.returnRequestModel
       .findOneAndUpdate(
         {
@@ -382,7 +382,7 @@ export class OrderReturnRequestService {
             processingUntil: new Date(now.getTime() + APPROVAL_LEASE_MS),
           },
         },
-        { new: true },
+        { returnDocument: 'after' },
       )
       .lean();
     if (request) return request;

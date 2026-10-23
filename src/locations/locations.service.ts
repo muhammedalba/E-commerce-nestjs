@@ -149,7 +149,7 @@ export class LocationsService {
     }
 
     const updated = await this.countryModel.findByIdAndUpdate(id, data, {
-      new: true,
+      returnDocument: 'after',
     });
     if (!updated) throw new NotFoundException('Country not found');
     await this.invalidateCountriesCache();
@@ -258,7 +258,7 @@ export class LocationsService {
     }
 
     const updated = await this.regionModel.findByIdAndUpdate(id, data, {
-      new: true,
+      returnDocument: 'after',
     });
     if (!updated) throw new NotFoundException('Region not found');
     if (updated.country) {
@@ -303,7 +303,7 @@ export class LocationsService {
       data.region.toString(),
     );
 
-    const city = await this.cityModel.create(data);
+    const city = await this.cityModel.create(data as unknown as Partial<City>);
     await this.invalidateCitiesCache(data.region.toString());
     return city;
   }
@@ -382,7 +382,7 @@ export class LocationsService {
     }
 
     const updated = await this.cityModel.findByIdAndUpdate(id, data, {
-      new: true,
+      returnDocument: 'after',
     });
     if (!updated) throw new NotFoundException('City not found');
     if (updated.region) {

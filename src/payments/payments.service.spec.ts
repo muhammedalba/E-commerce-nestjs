@@ -269,7 +269,7 @@ describe('PaymentsService admin views never expose secrets', () => {
           MOYASAR_WEBHOOK_SECRET: 'whsec_new_value',
         },
       },
-      { new: true },
+      { returnDocument: 'after' },
     );
     expect(leaksSecret(result)).toBe(false);
   });
@@ -289,7 +289,7 @@ describe('PaymentsService admin views never expose secrets', () => {
           MOYASAR_WEBHOOK_SECRET: 'whsec_987654321',
         },
       },
-      { new: true },
+      { returnDocument: 'after' },
     );
   });
 

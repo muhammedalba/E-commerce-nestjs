@@ -5,7 +5,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { UpdateOrderDto } from './shared/dto/update-order.dto';
-import { HydratedDocument, Model, Types, Connection } from 'mongoose';
+import {
+  HydratedDocument,
+  Model,
+  Types,
+  Connection,
+  QueryFilter,
+} from 'mongoose';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Order } from './shared/schemas/Order.schema';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
@@ -278,7 +284,7 @@ export class OrderService {
     }
     // add url to user avatar & product images
     data.forEach((item) => {
-      const typedItem = item as unknown as {
+      const typedItem = item as {
         user?: { avatar?: { url: string } };
         items?: Array<{
           productId?: {
@@ -430,7 +436,7 @@ export class OrderService {
 
     // add absolute url to product cover images (نفس نمط findAll)
     data.forEach((item) => {
-      const typedItem = item as unknown as {
+      const typedItem = item as {
         items?: Array<{
           productId?: { imageCover?: { url: string } };
           image?: FileAsset | string;
@@ -773,7 +779,7 @@ export class OrderService {
     const updatedData = await this.OrderModel.findByIdAndUpdate(
       { _id: idParamDto.id },
       { $set: { ...updateOrderDto, ...statusTimestamps } },
-      { new: true, runValidators: true },
+      { returnDocument: 'after', runValidators: true },
     );
 
     // Tell the customer about a real status change (in-app list + phone push)
@@ -869,7 +875,7 @@ export class OrderService {
         status: { $nin: [OrderStatus.CANCELLED, OrderStatus.EXPIRED] },
       },
       { $set: { status: OrderStatus.CANCELLED } },
-      { new: false },
+      { returnDocument: 'before' },
     )
       .select('items paymentMethodCode paymentStatus')
       .lean();
@@ -905,9 +911,12 @@ export class OrderService {
       reactivated = await withTransactionRetry(
         async (session) => {
           const previous = await this.OrderModel.findOneAndUpdate(
-            { _id: orderId, status: { $in: CLOSED_ORDER_STATUSES } },
+            {
+              _id: orderId,
+              status: { $in: CLOSED_ORDER_STATUSES },
+            } as QueryFilter<Order>,
             { $set: { status: newStatus } },
-            { new: false, session },
+            { returnDocument: 'before', session },
           )
             .select('items paymentMethodCode paymentStatus')
             .lean();
@@ -1292,7 +1301,7 @@ export class OrderService {
           paymentStatus: 'PAID',
           ...timestamps,
         },
-        { new: true },
+        { returnDocument: 'after' },
       );
       if (!order) {
         await this.OrderModel.findByIdAndUpdate(payload.orderId, {
@@ -1396,7 +1405,7 @@ export class OrderService {
               ...this.buildStatusTimestamps('cancelled'),
             },
           },
-          { new: false },
+          { returnDocument: 'before' },
         )
           .select('items user couponId paymentMethodCode paymentStatus')
           .lean();
@@ -1611,7 +1620,7 @@ export class OrderService {
           paymentStatus: 'FAILED',
           ...timestamps,
         },
-        { new: true },
+        { returnDocument: 'after' },
       );
       if (order && order.paymentMethodCode === 'moyasar') {
         // Release from the stored lines, not re-validated items: validation
@@ -1670,7 +1679,7 @@ export class OrderService {
               ...this.buildStatusTimestamps('cancelled'),
             },
           },
-          { new: false },
+          { returnDocument: 'before' },
         )
           .select('items')
           .lean();
@@ -1713,7 +1722,7 @@ export class OrderService {
           paymentStatus: { $ne: PaymentStatus.PAID },
         },
         { status: 'expired', paymentStatus: 'FAILED', ...timestamps },
-        { new: true },
+        { returnDocument: 'after' },
       );
       if (!order) {
         this.logger.log(

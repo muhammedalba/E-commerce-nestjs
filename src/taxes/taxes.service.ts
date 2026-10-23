@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types, FilterQuery } from 'mongoose';
+import { Model, Types, QueryFilter } from 'mongoose';
 import { Tax, TaxDocument, TaxScope } from './shared/schema/tax.schema';
 import { CreateTaxDto, UpdateTaxDto } from './shared/dto/tax.dto';
 import { SettingsService } from '../settings/settings.service';
@@ -215,7 +215,7 @@ export class TaxesService extends BaseService<TaxDocument> {
       }
     }
 
-    const query: FilterQuery<TaxDocument> = {
+    const query: QueryFilter<TaxDocument> = {
       isActive: true,
       _id: id ? { $ne: id } : { $exists: true },
     };

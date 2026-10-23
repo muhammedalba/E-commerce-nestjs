@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { FilterQuery, Model, PopulateOptions, Types } from 'mongoose';
+import { QueryFilter, Model, PopulateOptions, Types } from 'mongoose';
 import { ApiFeatures } from 'src/shared/utils/ApiFeatures';
 import { QueryString } from 'src/shared/utils/interfaces/queryInterface';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
@@ -171,7 +171,7 @@ export class ReviewsQueryService {
    * multiple populate paths (BaseService only supports a single one).
    */
   private async paginate(
-    baseFilter: FilterQuery<ReviewDocument>,
+    baseFilter: QueryFilter<ReviewDocument>,
     queryString: QueryString,
     populate: PopulateOptions | PopulateOptions[],
   ) {

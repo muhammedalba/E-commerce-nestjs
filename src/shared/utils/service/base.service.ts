@@ -4,7 +4,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { FilterQuery, Model, Types } from 'mongoose';
+import { QueryFilter, Model, Types } from 'mongoose';
 import { TranslateOptions } from 'nestjs-i18n';
 import { CustomI18nService } from '../i18n/custom-i18n.service';
 import { ApiFeatures } from '../ApiFeatures';
@@ -295,7 +295,9 @@ export class BaseService<T> {
       CreateDataDto[fileFieldName] = fileAsset;
     }
     try {
-      const newDoc = await this.model.create(CreateDataDto);
+      const newDoc = await this.model.create(
+        CreateDataDto as unknown as Partial<T>,
+      );
       const rawDoc = newDoc.toObject() as Record<string, unknown>;
 
       const newDocFilter: Record<string, unknown> = this.serviceOptions
@@ -333,7 +335,7 @@ export class BaseService<T> {
       | boolean,
     arg4: boolean = false,
     /** Fixed conditions applied before the user's query filters (e.g. hidden records) */
-    baseFilter: FilterQuery<T> = {},
+    baseFilter: QueryFilter<T> = {},
   ): Promise<{
     results: number;
     pagination: any;
@@ -385,7 +387,7 @@ export class BaseService<T> {
    * Builds a lookup filter from an id param: a 24-char hex string matches `_id`,
    * anything else matches `slug` (same rule as `IsIdOrSlugConstraint`).
    */
-  protected buildIdFilter(id: string): FilterQuery<T> {
+  protected buildIdFilter(id: string): QueryFilter<T> {
     return /^[a-f\d]{24}$/i.test(id) ? { _id: id } : { slug: id };
   }
 
@@ -414,7 +416,7 @@ export class BaseService<T> {
       throw new NotFoundException(this.t('exception.NOT_FOUND'));
     }
 
-    return this.i18n.localize(data, allLangs) as T;
+    return this.i18n.localize(data, allLangs);
   }
 
   /**
@@ -535,7 +537,7 @@ export class BaseService<T> {
       const updatedData = (await this.model.findByIdAndUpdate(
         { _id: doc._id },
         { $set: UpdateDataDto },
-        { new: true, runValidators: true, lean: true },
+        { returnDocument: 'after', runValidators: true, lean: true },
       )) as unknown as Record<string, unknown> | null;
 
       return updatedData ? (this.i18n.localize(updatedData) as T) : null;

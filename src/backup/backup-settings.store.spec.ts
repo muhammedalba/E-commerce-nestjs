@@ -87,7 +87,7 @@ describe('BackupSettingsStore', () => {
         'backup.googleDrive.folderName': 'new',
       },
     });
-    expect(options).toMatchObject({ new: true });
+    expect(options).toMatchObject({ returnDocument: 'after' });
   });
 
   it('records when backups are switched on (only on an off → on change)', async () => {

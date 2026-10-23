@@ -118,7 +118,7 @@ export class UsersService extends BaseService<UserDocument> {
           provider: 'local',
         },
         isActive: true,
-      });
+      } as unknown as Partial<User>);
     }
   }
 
@@ -453,6 +453,6 @@ export class UsersService extends BaseService<UserDocument> {
       throw new ForbiddenException(this.i18n.translate(errorMessageKey));
     }
 
-    return targetUser as unknown as PopulatedUser;
+    return targetUser;
   }
 }

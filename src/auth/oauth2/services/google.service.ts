@@ -63,7 +63,7 @@ export class GoogleService {
         provider: 'google',
         role: userRole ? userRole._id : undefined,
         lastLogin: new Date(),
-      });
+      } as unknown as Partial<User>);
       const userId = {
         user_id: newUser._id.toString(),
         role: userRole?.name || 'User',

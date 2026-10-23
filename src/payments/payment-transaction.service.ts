@@ -295,7 +295,7 @@ export class PaymentTransactionService {
           refundedAt: new Date(),
         },
       },
-      { new: true },
+      { returnDocument: 'after' },
     );
     if (!updated) return; // already recorded, or the transaction was never paid
 
@@ -355,7 +355,7 @@ export class PaymentTransactionService {
         status: { $nin: [PaymentStatus.PAID, PaymentStatus.FAILED] },
       },
       { $set: set },
-      { new: true },
+      { returnDocument: 'after' },
     );
     if (!updated) {
       this.logger.log(
@@ -495,7 +495,7 @@ export class PaymentTransactionService {
           status: { $in: [PaymentStatus.INITIATED, PaymentStatus.PENDING] },
         },
         { $set: { providerPaymentId } },
-        { sort: { createdAt: -1 }, new: true },
+        { sort: { createdAt: -1 }, returnDocument: 'after' },
       );
       return { linked: !!linked };
     } catch (err: unknown) {

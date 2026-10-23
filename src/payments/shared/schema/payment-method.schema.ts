@@ -100,14 +100,13 @@ PaymentMethodSchema.index({ isDefault: 1 });
  */
 
 // Hooks for document creation/saving
-PaymentMethodSchema.pre('save', function (next) {
+PaymentMethodSchema.pre('save', function () {
   if (this.isModified('secretConfig') && this.secretConfig) {
     this.secretConfig = encryptConfigValues(this.secretConfig) as Record<
       string,
       unknown
     >;
   }
-  next();
 });
 
 // 4. Comprehensive update hooks
@@ -117,7 +116,7 @@ interface UpdateQueryThis {
 
 PaymentMethodSchema.pre(
   ['findOneAndUpdate', 'updateOne', 'updateMany'],
-  function (this: UpdateQueryThis, next) {
+  function (this: UpdateQueryThis) {
     const update = this.getUpdate() as {
       $set?: { secretConfig?: Record<string, unknown> };
       secretConfig?: Record<string, unknown>;
@@ -134,7 +133,6 @@ PaymentMethodSchema.pre(
         ) as Record<string, unknown>;
       }
     }
-    next();
   },
 );
 

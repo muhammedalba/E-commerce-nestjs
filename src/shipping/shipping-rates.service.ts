@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types, FilterQuery } from 'mongoose';
+import { Model, Types, QueryFilter } from 'mongoose';
 import { BaseService } from 'src/shared/utils/service/base.service';
 import { FileUploadService } from 'src/file-upload/file-upload.service';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
@@ -149,7 +149,8 @@ export class ShippingRatesService extends BaseService<ShippingRateDocument> {
       }
     }
 
-    const query: FilterQuery<ShippingRateDocument> = {
+    // Loose while building: the location refs are matched by id strings.
+    const query: QueryFilter<any> = {
       isActive: true,
       provider: provider,
       _id: id ? { $ne: id } : { $exists: true },
@@ -282,7 +283,7 @@ export class ShippingRatesService extends BaseService<ShippingRateDocument> {
           region: new Types.ObjectId(regionId),
           city: new Types.ObjectId(cityId),
           isActive: true,
-        })
+        } as QueryFilter<any>)
         .populate('provider', 'name code')
         .lean();
       if (cityRates.length > 0) return cityRates;
@@ -301,7 +302,7 @@ export class ShippingRatesService extends BaseService<ShippingRateDocument> {
           country: new Types.ObjectId(countryId),
           region: new Types.ObjectId(regionId),
           isActive: true,
-        })
+        } as QueryFilter<any>)
         .populate('provider', 'name code')
         .lean();
       if (regionRates.length > 0) return regionRates;
@@ -314,7 +315,7 @@ export class ShippingRatesService extends BaseService<ShippingRateDocument> {
           scope: ShippingRateScope.COUNTRY,
           country: new Types.ObjectId(countryId),
           isActive: true,
-        })
+        } as QueryFilter<any>)
         .populate('provider', 'name code')
         .lean();
       if (countryRates.length > 0) return countryRates;

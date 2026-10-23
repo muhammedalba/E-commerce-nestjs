@@ -67,7 +67,7 @@
     "ioredis": "^6.0.0",
     "magic-bytes.js": "^1.13.1",
     "mime-types": "^3.0.2",
-    "mongoose": "^8.17.0",
+    "mongoose": "^9.11.3",
     "nestjs-i18n": "^10.8.5",
     "nodemailer": "^10.2.1",
     "passport": "^0.7.0",

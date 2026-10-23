@@ -323,7 +323,7 @@ export class CreditNoteService {
           refund,
         },
       },
-      { new: true },
+      { returnDocument: 'after' },
     );
     if (!updated) {
       // Issued meanwhile by another call: keep that one (this serial is unused)

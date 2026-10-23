@@ -1,5 +1,5 @@
 import slugify from 'slugify';
-import { FilterQuery, Model, Types } from 'mongoose';
+import { QueryFilter, Model, Types } from 'mongoose';
 import { BadRequestException } from '@nestjs/common';
 import { toObjectId } from './mongo.util';
 
@@ -13,7 +13,7 @@ export async function generateUniqueSlug(
     lower: true,
     strict: true,
   });
-  const query: FilterQuery<any> = { slug };
+  const query: QueryFilter<any> = { slug };
   if (excludeId) {
     query._id = { $ne: toObjectId(excludeId) };
   }

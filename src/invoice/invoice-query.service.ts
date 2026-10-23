@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { FilterQuery, Model, PipelineStage, Types } from 'mongoose';
+import { QueryFilter, Model, PipelineStage, Types } from 'mongoose';
 import { resolveStoreTimezone } from 'src/backup/store-timezone';
 import { User } from 'src/auth/shared/schema/user.schema';
 import { Order } from 'src/order/shared/schemas/Order.schema';
@@ -283,8 +283,8 @@ export class InvoiceQueryService {
 
   private async invoiceFilter(
     query: InvoiceQuery,
-  ): Promise<FilterQuery<Invoice>> {
-    const filter: FilterQuery<Invoice> = { ...this.dateRange(query) };
+  ): Promise<QueryFilter<Invoice>> {
+    const filter: QueryFilter<Invoice> = { ...this.dateRange(query) };
     if (query.status) {
       filter.status =
         query.status === 'generated'
@@ -294,7 +294,7 @@ export class InvoiceQueryService {
     const search = query.search?.trim();
     if (search) {
       const rx = new RegExp(escapeRegex(search), 'i');
-      const or: FilterQuery<Invoice>[] = [
+      const or: QueryFilter<Invoice>[] = [
         { displayNumber: rx },
         { 'snapshot.customer.name': rx },
       ];
@@ -308,8 +308,8 @@ export class InvoiceQueryService {
 
   private async creditNoteFilter(
     query: CreditNoteQuery,
-  ): Promise<FilterQuery<CreditNote>> {
-    const filter: FilterQuery<CreditNote> = {
+  ): Promise<QueryFilter<CreditNote>> {
+    const filter: QueryFilter<CreditNote> = {
       state: query.state ?? 'issued',
       ...this.dateRange(query),
     };
@@ -330,7 +330,7 @@ export class InvoiceQueryService {
           .lean(),
         this.ordersOfCustomers(rx),
       ]);
-      const or: FilterQuery<CreditNote>[] = [{ displayNumber: rx }];
+      const or: QueryFilter<CreditNote>[] = [{ displayNumber: rx }];
       if (invoices.length)
         or.push({ invoice: { $in: invoices.map((i) => i._id) } });
       if (orders.length) or.push({ order: { $in: orders } });
@@ -368,7 +368,7 @@ export class InvoiceQueryService {
   // ── pipelines ─────────────────────────────────────────────────────────────
 
   private invoicePipeline(
-    filter: FilterQuery<Invoice>,
+    filter: QueryFilter<Invoice>,
     skip: number,
     limit: number,
   ): PipelineStage[] {
@@ -431,7 +431,7 @@ export class InvoiceQueryService {
   }
 
   private creditNotePipeline(
-    filter: FilterQuery<CreditNote>,
+    filter: QueryFilter<CreditNote>,
     skip: number,
     limit: number,
   ): PipelineStage[] {

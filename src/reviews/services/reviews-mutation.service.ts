@@ -126,7 +126,7 @@ export class ReviewsMutationService {
             editedAt: new Date(),
           },
         },
-        { new: true, runValidators: true },
+        { returnDocument: 'after', runValidators: true },
       )
       .select('-__v')
       .lean();

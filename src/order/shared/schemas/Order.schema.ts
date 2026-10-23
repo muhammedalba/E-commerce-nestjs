@@ -229,7 +229,7 @@ OrderSchema.index(
 );
 
 // الزيادة التلقائية لرقم الفاتورة بشكل حتمي وآمن للطلبات المتزامنة تلقائياً
-OrderSchema.pre('save', async function (next) {
+OrderSchema.pre('save', async function () {
   if (this.isNew && !this.invoiceNumber) {
     const countersCollection = this.db.collection<{ _id: string; seq: number }>(
       'counters',
@@ -243,5 +243,4 @@ OrderSchema.pre('save', async function (next) {
     const seq = (counter as { seq?: number } | null)?.seq ?? 1;
     this.invoiceNumber = seq;
   }
-  next();
 });
