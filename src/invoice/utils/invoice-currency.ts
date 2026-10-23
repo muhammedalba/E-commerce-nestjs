@@ -1,3 +1,5 @@
+import { currencyDecimals } from 'src/payments/shared/utils/currency.util';
+
 /**
  * Money on the invoice, formatted like the client's formatCurrency for the
  * Arabic locale (cleint/lib/currency.ts): the store's base currency, Latin
@@ -44,13 +46,15 @@ export function formatInvoiceCurrency(
   currencyCode?: string | null,
 ): string {
   const value = Number(amount) || 0;
-  const digits = Number.isInteger(value) ? 0 : 2;
+  const code = currencyCode || 'SAR';
+  // The currency's own decimals: 2 for SAR, 3 for KWD (fils), 0 for JPY
+  const decimals = currencyDecimals(code);
+  const digits = Number.isInteger(value) ? 0 : decimals;
   const formatted = new Intl.NumberFormat('ar-SA-u-nu-latn', {
     minimumFractionDigits: digits,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: decimals,
   }).format(value);
 
-  const code = currencyCode || 'SAR';
   const { symbol, position } = CURRENCY_SYMBOLS[code] ?? {
     symbol: code,
     position: 'after',

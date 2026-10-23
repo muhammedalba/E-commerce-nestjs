@@ -1,6 +1,9 @@
 import { MailProcessor } from './mail.processor';
 
 jest.mock('src/invoice/invoice.service', () => ({ InvoiceService: class {} }));
+jest.mock('src/invoice/credit-note.service', () => ({
+  CreditNoteService: class {},
+}));
 jest.mock('src/notifications/notifications.service', () => ({
   NotificationsService: class {},
 }));
@@ -24,6 +27,19 @@ function setup(attemptsMade = 0, attempts = 3, jobData: object = data) {
     send_order_confirmation: jest.fn(() =>
       Promise.resolve({ messageId: '<m@smtp>' }),
     ),
+    send_credit_note: jest.fn(() => Promise.resolve({ messageId: '<c@smtp>' })),
+    send_payment_received: jest.fn(() =>
+      Promise.resolve({ messageId: '<p@smtp>' }),
+    ),
+  };
+  const creditNoteService = {
+    generateAndStore: jest.fn(() =>
+      Promise.resolve({
+        filename: 'RUH-R-8-2026-0001.pdf',
+        buffer: Buffer.from('%PDF-'),
+      }),
+    ),
+    recordCustomerEmail: jest.fn(() => Promise.resolve()),
   };
   const invoiceService = {
     generateAndStore: jest.fn(() =>
@@ -33,11 +49,13 @@ function setup(attemptsMade = 0, attempts = 3, jobData: object = data) {
       }),
     ),
     recordCustomerEmail: jest.fn(() => Promise.resolve()),
+    wasEmailed: jest.fn(() => Promise.resolve(false)),
   };
   const processor = new MailProcessor(
     emailService as never,
     {} as never,
     invoiceService as never,
+    creditNoteService as never,
   );
   const job = {
     name: 'new-order-customer',
@@ -45,8 +63,70 @@ function setup(attemptsMade = 0, attempts = 3, jobData: object = data) {
     attemptsMade,
     opts: { attempts },
   };
-  return { processor, job, emailService, invoiceService };
+  return { processor, job, emailService, invoiceService, creditNoteService };
 }
+
+describe('MailProcessor credit-note-customer', () => {
+  const creditData = {
+    email: 'customer@example.com',
+    name: 'Ali',
+    creditNoteId: '66f1a2b3c4d5e6f7a8b9c0d9',
+    creditNoteNumber: 'RUH-R-8-2026-0001',
+    orderNumber: '0042',
+    total: '227.7',
+    currency: 'SAR',
+    orderUrl: 'https://shop.test/ar/account/orders/abc',
+    subject: 'Credit note',
+    lang: 'ar',
+  };
+  beforeEach(() => jest.spyOn(console, 'warn').mockImplementation(() => {}));
+  afterEach(() => jest.restoreAllMocks());
+
+  it('attaches the credit note PDF and records the email', async () => {
+    const { processor, job, emailService, creditNoteService } = setup(
+      0,
+      3,
+      creditData,
+    );
+    job.name = 'credit-note-customer';
+    await processor.process(job as never);
+    expect(creditNoteService.generateAndStore).toHaveBeenCalledWith(
+      creditData.creditNoteId,
+    );
+    expect(emailService.send_credit_note).toHaveBeenCalledWith(creditData, {
+      filename: 'RUH-R-8-2026-0001.pdf',
+      content: Buffer.from('%PDF-'),
+    });
+    expect(creditNoteService.recordCustomerEmail).toHaveBeenCalledWith(
+      creditData.creditNoteId,
+      true,
+      '<c@smtp>',
+    );
+  });
+
+  it('retries a failed PDF, then sends without it on the last attempt', async () => {
+    const first = setup(0, 2, creditData);
+    first.job.name = 'credit-note-customer';
+    first.creditNoteService.generateAndStore.mockRejectedValueOnce(
+      new Error('down'),
+    );
+    await expect(first.processor.process(first.job as never)).rejects.toThrow(
+      'down',
+    );
+    expect(first.emailService.send_credit_note).not.toHaveBeenCalled();
+
+    const last = setup(1, 2, creditData);
+    last.job.name = 'credit-note-customer';
+    last.creditNoteService.generateAndStore.mockRejectedValueOnce(
+      new Error('down'),
+    );
+    await last.processor.process(last.job as never);
+    expect(last.emailService.send_credit_note).toHaveBeenCalledWith(
+      creditData,
+      undefined,
+    );
+  });
+});
 
 describe('MailProcessor new-order-customer', () => {
   beforeEach(() => jest.spyOn(console, 'warn').mockImplementation(() => {}));
@@ -132,6 +212,88 @@ describe('MailProcessor new-order-customer', () => {
     expect(invoiceService.generateAndStore).not.toHaveBeenCalled();
     expect(emailService.send_order_confirmation).toHaveBeenCalledWith(
       oldData,
+      undefined,
+    );
+  });
+});
+
+describe('MailProcessor payment-received-customer', () => {
+  const paymentData = {
+    email: 'customer@example.com',
+    name: 'Ali',
+    orderId: '0042',
+    amount: '115',
+    currency: 'SAR',
+    orderUrl: 'https://shop.test/ar/account/orders/abc',
+    subject: 'Payment received',
+    lang: 'ar',
+    orderMongoId: '66f1a2b3c4d5e6f7a8b9c0d1',
+  };
+  const paymentJob = (attemptsMade = 0, attempts = 3) => {
+    const ctx = setup(attemptsMade, attempts, paymentData);
+    ctx.job.name = 'payment-received-customer';
+    return ctx;
+  };
+  beforeEach(() => jest.spyOn(console, 'warn').mockImplementation(() => {}));
+  afterEach(() => jest.restoreAllMocks());
+
+  it('issues the invoice on payment and emails it', async () => {
+    const { processor, job, emailService, invoiceService } = paymentJob();
+    await processor.process(job as never);
+
+    expect(invoiceService.generateAndStore).toHaveBeenCalledWith(
+      paymentData.orderMongoId,
+    );
+    expect(emailService.send_payment_received).toHaveBeenCalledWith(
+      paymentData,
+      { filename: 'RUH-8-2026-0042.pdf', content: Buffer.from('%PDF-') },
+    );
+    expect(invoiceService.recordCustomerEmail).toHaveBeenCalledWith(
+      paymentData.orderMongoId,
+      true,
+      '<p@smtp>',
+    );
+  });
+
+  it('sends nothing when the invoice was already emailed', async () => {
+    const { processor, job, emailService, invoiceService } = paymentJob();
+    invoiceService.wasEmailed.mockResolvedValueOnce(true);
+    await processor.process(job as never);
+
+    expect(invoiceService.generateAndStore).not.toHaveBeenCalled();
+    expect(emailService.send_payment_received).not.toHaveBeenCalled();
+  });
+
+  it('sends it again when the dashboard resends the invoice', async () => {
+    const { processor, job, emailService, invoiceService } = paymentJob();
+    job.data = { ...paymentData, resend: true };
+    invoiceService.wasEmailed.mockResolvedValueOnce(true);
+    await processor.process(job as never);
+
+    expect(invoiceService.wasEmailed).not.toHaveBeenCalled();
+    expect(emailService.send_payment_received).toHaveBeenCalledWith(
+      { ...paymentData, resend: true },
+      { filename: 'RUH-8-2026-0042.pdf', content: Buffer.from('%PDF-') },
+    );
+  });
+
+  it('retries a failed invoice, then confirms the payment without it', async () => {
+    const first = paymentJob(0, 2);
+    first.invoiceService.generateAndStore.mockRejectedValueOnce(
+      new Error('down'),
+    );
+    await expect(first.processor.process(first.job as never)).rejects.toThrow(
+      'down',
+    );
+    expect(first.emailService.send_payment_received).not.toHaveBeenCalled();
+
+    const last = paymentJob(1, 2);
+    last.invoiceService.generateAndStore.mockRejectedValueOnce(
+      new Error('down'),
+    );
+    await last.processor.process(last.job as never);
+    expect(last.emailService.send_payment_received).toHaveBeenCalledWith(
+      paymentData,
       undefined,
     );
   });

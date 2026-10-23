@@ -22,6 +22,7 @@ import {
   calculateTaxOnAmount,
   extractTaxFromAmount,
 } from './shared/utils/tax-calculation.util';
+import { currencyDecimals } from 'src/payments/shared/utils/currency.util';
 
 @Injectable()
 export class TaxesService extends BaseService<TaxDocument> {
@@ -298,6 +299,9 @@ export class TaxesService extends BaseService<TaxDocument> {
    *   only tax amount the customer-facing screens display
    * - `productsAmountBeforeTax` / `productsAmountAfterTax`: the products
    *   amount (after coupon) excluding and including VAT, for the invoice
+   *
+   * Amounts are rounded to `currency`'s smallest unit (2 decimals for SAR,
+   * 3 for KWD…; without one: 2).
    */
   async calculateTax(
     productsAmount: number,
@@ -305,6 +309,7 @@ export class TaxesService extends BaseService<TaxDocument> {
     countryId?: string,
     regionId?: string,
     cityId?: string,
+    currency?: string,
   ): Promise<{
     taxPercentage: number;
     taxAmount: number;
@@ -344,7 +349,11 @@ export class TaxesService extends BaseService<TaxDocument> {
     }
 
     //calculate tax on additional charges (shipping, payment fees) — never tax-inclusive
-    const chargesTax = calculateTaxOnAmount(additionalCharges, taxPercentage);
+    const chargesTax = calculateTaxOnAmount(
+      additionalCharges,
+      taxPercentage,
+      currency,
+    );
 
     let taxAmount = 0; // this is the full VAT on the invoice
     let chargedTaxAmount = 0; // this is the tax charged on top of the payable total
@@ -352,26 +361,36 @@ export class TaxesService extends BaseService<TaxDocument> {
     let productsAmountAfterTax = productsAmount; // products price including VAT
     if (isIncluded) {
       // Products already contain VAT: extract it for reporting, add VAT on charges only
-      const embeddedTax = extractTaxFromAmount(productsAmount, taxPercentage);
+      const embeddedTax = extractTaxFromAmount(
+        productsAmount,
+        taxPercentage,
+        currency,
+      );
       //embedded tax for products + tax on charges
       taxAmount = embeddedTax + chargesTax;
       chargedTaxAmount = chargesTax;
       productsAmountBeforeTax = productsAmount - embeddedTax;
     } else {
       //products tax + tax on charges
-      const productsTax = calculateTaxOnAmount(productsAmount, taxPercentage);
+      const productsTax = calculateTaxOnAmount(
+        productsAmount,
+        taxPercentage,
+        currency,
+      );
       taxAmount = productsTax + chargesTax;
       chargedTaxAmount = taxAmount;
       productsAmountAfterTax = productsAmount + productsTax;
     }
 
+    const digits = currencyDecimals(currency);
+    const round = (value: number) => parseFloat(value.toFixed(digits));
     return {
       taxPercentage,
-      taxAmount: parseFloat(taxAmount.toFixed(2)),
-      chargedTaxAmount: parseFloat(chargedTaxAmount.toFixed(2)),
-      productsAmountBeforeTax: parseFloat(productsAmountBeforeTax.toFixed(2)),
-      productsAmountAfterTax: parseFloat(productsAmountAfterTax.toFixed(2)),
-      totalWithTax: parseFloat((baseTotal + chargedTaxAmount).toFixed(2)),
+      taxAmount: round(taxAmount),
+      chargedTaxAmount: round(chargedTaxAmount),
+      productsAmountBeforeTax: round(productsAmountBeforeTax),
+      productsAmountAfterTax: round(productsAmountAfterTax),
+      totalWithTax: round(baseTotal + chargedTaxAmount),
       isIncluded,
     };
   }

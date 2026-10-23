@@ -62,6 +62,7 @@ export class RolesSeederService implements OnModuleInit {
           Permissions.UPDATE_ORDER_STATUS,
           Permissions.DELETE_ORDER,
           Permissions.REFUND_ORDER,
+          Permissions.VIEW_INVOICES,
           Permissions.VIEW_COUPONS,
           Permissions.CREATE_COUPON,
           Permissions.UPDATE_COUPON,

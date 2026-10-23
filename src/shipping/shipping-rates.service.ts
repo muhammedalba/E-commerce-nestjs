@@ -24,6 +24,8 @@ import {
   RegionDocument,
 } from '../locations/shared/schema/region.schema';
 import { City, CityDocument } from '../locations/shared/schema/city.schema';
+import type { Setting } from '../settings/shared/schema/setting.schema';
+import { currencyDecimals } from '../payments/shared/utils/currency.util';
 
 export interface ShippingCalculationResult {
   providerId: string;
@@ -332,7 +334,9 @@ export class ShippingRatesService extends BaseService<ShippingRateDocument> {
   }
 
   /**
-   * Calculates shipping costs for a specific location and weight.
+   * Calculates shipping costs for a specific location and weight, rounded to
+   * `currency`'s smallest unit (2 decimals for SAR, 3 for KWD…; without
+   * one: 2).
    */
   async calculateShipping(
     cityId: string,
@@ -340,7 +344,9 @@ export class ShippingRatesService extends BaseService<ShippingRateDocument> {
     subtotal: number,
     countryId?: string,
     regionId?: string,
+    currency?: string,
   ): Promise<ShippingCalculationResult[]> {
+    const digits = currencyDecimals(currency);
     const rates = (await this.findApplicableShippingRates(
       countryId,
       regionId,
@@ -380,12 +386,12 @@ export class ShippingRatesService extends BaseService<ShippingRateDocument> {
       if (totalWeight > rate.baseWeight) {
         const extraKg = totalWeight - rate.baseWeight;
         extraWeightCost = parseFloat(
-          (extraKg * rate.additionalKgPrice).toFixed(2),
+          (extraKg * rate.additionalKgPrice).toFixed(digits),
         );
       }
 
       const totalShippingCost = parseFloat(
-        (rate.basePrice + extraWeightCost).toFixed(2),
+        (rate.basePrice + extraWeightCost).toFixed(digits),
       );
 
       return {
@@ -411,5 +417,49 @@ export class ShippingRatesService extends BaseService<ShippingRateDocument> {
     });
 
     return rate;
+  }
+
+  /**
+   * Finds the shipping option matching the requested provider ID.
+   * Falls back to the first available option when no match is found.
+   * Throws when no options exist at all.
+   */
+  selectShippingOption(
+    shippingOptions: ShippingCalculationResult[],
+    shippingProviderId: string,
+  ): ShippingCalculationResult {
+    const chosen =
+      shippingOptions.find((opt) => opt.providerId === shippingProviderId) ??
+      shippingOptions[0];
+
+    if (!chosen) {
+      throw new BadRequestException(
+        'No shipping options available for this city',
+      );
+    }
+
+    return chosen;
+  }
+
+  /**
+   * Returns the effective shipping cost after applying the free-shipping
+   * threshold rule from settings.  Custom rates bypass the global threshold.
+   */
+  calculateShippingCost(
+    chosenShipping: ShippingCalculationResult,
+    subtotalAfterDiscount: number,
+    settings: Setting,
+  ): number {
+    const freeShippingThreshold = settings.freeShippingThreshold ?? 0;
+
+    if (
+      freeShippingThreshold > 0 &&
+      subtotalAfterDiscount >= freeShippingThreshold &&
+      !settings.hasCustomShippingRates
+    ) {
+      return 0;
+    }
+
+    return chosenShipping.totalShippingCost;
   }
 }

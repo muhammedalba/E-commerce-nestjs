@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import * as QRCode from 'qrcode';
+import { buildCreditNoteSnapshot } from '../credit-note-data.builder';
 import { buildInvoiceSnapshot } from '../invoice-data.builder';
 import { TYPST_DIR } from './pdf-renderer.interface';
 import { TypstNodeRenderer } from './typst-node.renderer';
@@ -33,6 +34,10 @@ const order = (lines: number) => ({
 /** Page objects in the PDF (Typst writes them uncompressed). */
 const pageCount = (pdf: Buffer) =>
   (pdf.toString('latin1').match(/\/Type\s*\/Page(?!s)/g) ?? []).length;
+
+// CPU-heavy (QR decoding, PDF rendering): the default 5 s is too short
+// while the whole suite runs in parallel
+jest.setTimeout(30_000);
 
 describe('TypstNodeRenderer', () => {
   const renderer = new TypstNodeRenderer();
@@ -83,5 +88,58 @@ describe('TypstNodeRenderer', () => {
       await renderer.render(snapshot, assets),
     ];
     expect(a.equals(b)).toBe(true);
+  });
+
+  it('renders a credit note with its return reason and the return shipping kept back', async () => {
+    const invoice = order(2);
+    const snapshot = buildCreditNoteSnapshot({
+      invoice: {
+        displayNumber: 'RUH-8-2026-0042',
+        snapshot: buildInvoiceSnapshot(invoice, settings, new Date()),
+      },
+      order: invoice,
+      note: {
+        displayNumber: 'RUH-R-8-2026-0001',
+        issuedAt: new Date('2026-10-22T09:00:00.000Z'),
+        lines: [
+          {
+            itemIndex: 0,
+            quantity: 1,
+            productId: {} as never,
+            variantId: {} as never,
+          },
+        ],
+        amounts: {
+          products: 250.5,
+          discount: 0,
+          productsBeforeTax: 250.5,
+          productsAfterTax: 288.08,
+          shipping: 0,
+          paymentFees: 0,
+          chargesTax: 0,
+          taxable: 250.5,
+          tax: 37.58,
+          total: 288.08,
+        },
+        reasonType: 'other',
+        deductions: { returnShipping: { amount: 25, tax: 3.75, total: 28.75 } },
+      },
+      timezone: 'Asia/Riyadh',
+    });
+    expect(snapshot.meta.returnReason).toBe('أسباب أخرى / Other reasons');
+    expect(snapshot.summary.netRefund).toContain('259.33');
+    // The deduction and its reason, in words
+    expect(snapshot.summary.deductionNote).toContain('28.75');
+    expect(snapshot.summary.deductionNote).toContain('3.75');
+    expect(snapshot.summary.deductionNote).toContain('لأسباب أخرى غير العيب');
+    expect(snapshot.summary.deductionNote).toContain('259.33');
+    expect(snapshot.summary.deductionNoteEn).toContain(
+      'reasons other than a defect',
+    );
+
+    const pdf = await renderer.render(snapshot, assets);
+    expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
+    expect(pageCount(pdf)).toBe(1);
+    expect(warn).not.toHaveBeenCalled();
   });
 });

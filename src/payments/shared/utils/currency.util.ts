@@ -61,3 +61,30 @@ export function toMinorUnits(amount: number, currency: string): number {
 export function fromMinorUnits(minorUnits: number, currency: string): number {
   return minorUnits / minorUnitFactor(currency);
 }
+
+/** How many decimals the currency has: 2, 3 (KWD, BHD, …) or 0 (JPY, …). */
+export function currencyDecimals(currency?: string | null): number {
+  return Math.round(Math.log10(minorUnitFactor(currency || 'SAR')));
+}
+
+/**
+ * An amount rounded to the currency's smallest unit: the halala (2 decimals)
+ * for SAR, the fils (3) for KWD, whole yen for JPY. Every money computation
+ * (prices, VAT, coupon shares, fees, credit notes) rounds through it, so a
+ * three-decimal currency keeps its fils. Without a currency: 2 decimals, as
+ * before (the same Math.round the amounts always used).
+ */
+export function roundMoney(value: number, currency?: string | null): number {
+  const factor = minorUnitFactor(currency || 'SAR');
+  return Math.round((Number(value) || 0) * factor) / factor;
+}
+
+/**
+ * Float noise removed from a sum or difference of amounts that are already
+ * rounded (to 3 decimals: no currency has more), whatever their currency:
+ * 0.1 + 0.2 → 0.3, and 345.123 KWD stays 345.123. Not for computing an
+ * amount (a VAT, a share): that is roundMoney, in the amount's currency.
+ */
+export function cleanMoney(value: number): number {
+  return Math.round((Number(value) || 0) * 1000) / 1000;
+}

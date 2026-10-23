@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{subject}}</title>
+    <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      direction: ltr;
+    }
+    .container {
+      max-width: 600px;
+      margin: 20px auto;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .header {
+      background-color: #6f42c1;
+      color: white;
+      text-align: center;
+      padding: 10px;
+      border-radius: 8px 8px 0 0;
+    }
+    .content {
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .footer {
+      text-align: center;
+      color: #777;
+      font-size: 12px;
+      margin-top: 20px;
+    }
+    .details-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    .details-table th, .details-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    .details-table th {
+      background-color: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>Return request not accepted</h2>
+    </div>
+
+    <div class="content">
+      <p>Hello {{name}},</p>
+      <p>We reviewed your return request and could not accept it.</p>
+
+      <table class="details-table">
+        <tr>
+          <th>Order number</th>
+          <td>{{orderNumber}}</td>
+        </tr>
+        <tr>
+          <th>Reason</th>
+          <td>{{rejectionReason}}</td>
+        </tr>
+      </table>
+
+      <p>If you have any questions, please contact our support team.</p>
+      <p><a href="{{orderUrl}}">View order</a></p>
+    </div>
+
+    <div class="footer">
+      <p>&copy; {{year}} {{companyName}}. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

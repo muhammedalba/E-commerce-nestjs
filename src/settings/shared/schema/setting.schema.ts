@@ -181,6 +181,9 @@ export class Setting {
   // Free shipping settings
   @Prop({ type: Number, default: 0 })
   declare freeShippingThreshold: number;
+  // Days after delivery a customer may request a return (0: closed)
+  @Prop({ type: Number, default: 5 })
+  declare returnWindowDays: number;
   //Tax Settings
   @Prop({ type: Number, default: 0 })
   declare vatRate: number;

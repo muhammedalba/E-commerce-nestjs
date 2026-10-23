@@ -34,6 +34,12 @@ export class OrderItem {
   @Prop({ type: Number, required: true })
   declare totalPrice: number;
 
+  // This line's share of the order's coupon discount, for its whole quantity
+  // (0 when the coupon does not cover it). Frozen at checkout so credit notes
+  // refund what the line was really discounted. Absent on older orders.
+  @Prop({ type: Number, required: false })
+  declare discount?: number;
+
   @Prop({ type: Number, required: true })
   declare price: number;
 

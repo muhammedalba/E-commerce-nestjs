@@ -15,6 +15,10 @@ const fields = {
   vatAmount: '215.25',
 };
 
+// CPU-heavy (QR decoding, PDF rendering): the default 5 s is too short
+// while the whole suite runs in parallel
+jest.setTimeout(30_000);
+
 describe('ZATCA TLV', () => {
   it('round-trips every tag, Arabic included', () => {
     expect(decodeZatcaTlv(buildZatcaTlvBase64(fields))).toEqual({

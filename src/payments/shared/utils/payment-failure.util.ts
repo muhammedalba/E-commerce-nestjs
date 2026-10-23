@@ -6,10 +6,7 @@
  * not be shown to the payer, so they fall into the generic `declined` group.
  */
 export type PaymentFailureCategory =
-  | 'insufficient_funds'
-  | 'card_expired'
-  | 'authentication'
-  | 'declined';
+  'insufficient_funds' | 'card_expired' | 'authentication' | 'declined';
 
 const INSUFFICIENT_FUNDS_CODES = new Set(['51', '61']);
 const CARD_EXPIRED_CODES = new Set(['54']);

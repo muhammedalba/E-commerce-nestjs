@@ -26,6 +26,8 @@ export interface InvoiceOrderItemInput {
   title?: Localized;
   attributes?: Record<string, unknown> | null;
   components?: { name?: string; value?: unknown; unit?: string }[] | null;
+  /** Shipping profile at purchase; its packageType is the line's unit. */
+  shippingSnapshot?: { packageType?: string } | null;
   /**
    * Populated (`{ title }`, `{ attributes, components }`) only to fill a
    * missing snapshot (orders from before it); otherwise a bare id.
@@ -42,6 +44,8 @@ export interface InvoiceOrderInput {
   _id: { toString(): string };
   invoiceNumber?: number | null;
   createdAt?: Date | string;
+  /** When it was paid: the invoice's date (it is issued on payment). */
+  paidAt?: Date | string;
   currency?: string;
   totalPrice?: number;
   shippingAmount?: number;
@@ -111,6 +115,8 @@ export interface InvoiceItemRow {
   titleEn: string;
   badges: string[];
   quantity: string;
+  /** Sales unit, e.g. "حبة" (the product's package type). */
+  unit: string;
   price: string;
   total: string;
 }
@@ -118,6 +124,8 @@ export interface InvoiceItemRow {
 /** Frozen when the invoice is issued; the PDF is always rendered from it. */
 export interface InvoiceSnapshot {
   version: 1;
+  /** Which document the template prints (absent on older snapshots: invoice). */
+  kind: 'invoice' | 'credit_note';
   /** e.g. "RUH-8-2026-0042" */
   displayNumber: string;
   issuedAt: string;
@@ -135,6 +143,8 @@ export interface InvoiceSnapshot {
     number: string;
     placeOfDelivery: string;
     description: string;
+    /** Credit notes from the return policy on: why the items came back. */
+    returnReason?: string;
   };
   vendor: InvoiceParty;
   customer: InvoiceParty;
@@ -151,6 +161,18 @@ export interface InvoiceSnapshot {
     tax: string;
     grandTotal: string;
     amountWords: string;
+    /**
+     * Credit notes for other reasons than a defect: the return shipping kept
+     * back, and what the customer gets (the total less it).
+     */
+    returnShipping?: string;
+    netRefund?: string;
+    /**
+     * The same deduction in words, Arabic and English: how much, its VAT,
+     * why (other reasons than a defect: the customer pays it) and the net.
+     */
+    deductionNote?: string;
+    deductionNoteEn?: string;
   };
   qr: { payload: string; fields: ZatcaFields };
   bank: {
@@ -213,6 +235,23 @@ const ATTRIBUTE_LABELS_AR: Record<string, string> = {
   packaging_type: 'نوع التعبئة',
   dimensions: 'الأبعاد',
   components_kit: 'مكونات الطقم',
+};
+
+/**
+ * Package types as the line's unit, in the client's words
+ * (messages/product/ar.json packageTypes; custom as units.custom).
+ */
+const UNIT_LABELS_AR: Record<string, string> = {
+  piece: 'حبة',
+  box: 'كرتون',
+  bag: 'كيس',
+  roll: 'لفة / رول',
+  drum: 'برميل',
+  gallon: 'جالون / سطل',
+  board: 'لوح',
+  pallet: 'طبلية',
+  envelope: 'مظروف',
+  custom: 'وحدة',
 };
 
 /** Client useAttributeLabel (Arabic): a known name's label, else the key capitalized. */
@@ -291,10 +330,59 @@ function itemBadges(
   return badges;
 }
 
+/** A populated reference as `T`; undefined for a bare id or nothing. */
 function asObject<T>(value: unknown): T | undefined {
   return value && typeof value === 'object' ? (value as T) : undefined;
 }
 
+/**
+ * One products-table line (InvoiceItemsTable + resolveOrderItem). A credit
+ * note passes the returned quantity: its total is then price × quantity.
+ */
+export function invoiceItemRow(
+  item: InvoiceOrderItemInput,
+  index: number,
+  money: (amount: number) => string,
+  returnedQuantity?: number,
+): InvoiceItemRow {
+  const product = asObject<{ title?: Localized }>(item.productId);
+  const variant = asObject<{
+    attributes?: Record<string, unknown>;
+    components?: InvoiceOrderItemInput['components'];
+    shippingProfile?: { packageType?: string };
+  }>(item.variantId);
+  const title = item.title ?? product?.title;
+  const quantity = returnedQuantity ?? (item.quantity || 1);
+  const price = item.price || 0;
+  const packageType =
+    item.shippingSnapshot?.packageType ?? variant?.shippingProfile?.packageType;
+  return {
+    index: String(index),
+    titleAr: localized(title, 'ar') || 'منتج',
+    titleEn: localized(title, 'en'),
+    badges: itemBadges(
+      item.attributes ?? variant?.attributes,
+      item.components ?? variant?.components,
+    ),
+    quantity: String(quantity),
+    unit: (packageType && UNIT_LABELS_AR[packageType]) || '-',
+    price: money(price),
+    total: money(
+      returnedQuantity !== undefined
+        ? price * quantity
+        : item.totalPrice || quantity * price,
+    ),
+  };
+}
+
+/**
+ * The invoice's snapshot: everything its PDF shows, as text, from the order
+ * (lean: missing fields stay missing) and the store settings at issue time.
+ * Frozen by InvoiceService on the first issuing attempt.
+ *
+ * @param issuedAt When the invoice is issued (its "Printed On"); the invoice
+ *   is dated on payment (`paidAt`).
+ */
 export function buildInvoiceSnapshot(
   order: InvoiceOrderInput,
   settings: Partial<InvoiceSettingsInput> | null | undefined,
@@ -306,7 +394,11 @@ export function buildInvoiceSnapshot(
     'Asia/Riyadh',
   );
   const createdAt = order.createdAt ? new Date(order.createdAt) : undefined;
-  const currencyCode = settings?.currencyCode || 'SAR';
+  // The order's own currency: the store may have switched currency between
+  // the purchase and the invoice (issued on payment); older orders that
+  // never stored one use the store's
+  const currencyCode = order.currency || settings?.currencyCode || 'SAR';
+  // Every amount in that currency, formatted as the preview does
   const money = (amount: number) => formatInvoiceCurrency(amount, currencyCode);
 
   // ── Amounts (useInvoiceData) ──
@@ -386,43 +478,26 @@ export function buildInvoiceSnapshot(
       ? String(order.invoiceNumber).padStart(4, '0')
       : order._id.toString().slice(-4).toUpperCase()
   }`;
-  const date = createdAt
+  // Issued on payment: dated then (paid orders from before paidAt: created)
+  const invoiceDate = order.paidAt ? new Date(order.paidAt) : createdAt;
+  const date = invoiceDate
     ? new Intl.DateTimeFormat('en-US', {
         year: 'numeric',
         month: 'numeric',
         day: 'numeric',
         timeZone: timezone,
-      }).format(createdAt)
+      }).format(invoiceDate)
     : '-';
 
   // ── Products (InvoiceItemsTable + resolveOrderItem) ──
-  const items: InvoiceItemRow[] = (order.items ?? []).map((item, idx) => {
-    const product = asObject<{ title?: Localized }>(item.productId);
-    const variant = asObject<{
-      attributes?: Record<string, unknown>;
-      components?: InvoiceOrderItemInput['components'];
-    }>(item.variantId);
-    const title = item.title ?? product?.title;
-    const quantity = item.quantity || 1;
-    const price = item.price || 0;
-    return {
-      index: String(idx + 1),
-      titleAr: localized(title, 'ar') || 'منتج',
-      titleEn: localized(title, 'en'),
-      badges: itemBadges(
-        item.attributes ?? variant?.attributes,
-        item.components ?? variant?.components,
-      ),
-      quantity: String(quantity),
-      price: money(price),
-      total: money(item.totalPrice || quantity * price),
-    };
-  });
+  const items = (order.items ?? []).map((item, idx) =>
+    invoiceItemRow(item, idx + 1, money),
+  );
 
   const zatca: ZatcaFields = {
     sellerName: siteNameAr,
     vatNumber: vatNo,
-    invoiceDateTime: (createdAt ?? issuedAt).toISOString(),
+    invoiceDateTime: (invoiceDate ?? issuedAt).toISOString(),
     totalWithVat: grandTotal.toFixed(2),
     vatAmount: tax.toFixed(2),
     invoiceHash: order.invoiceHash,
@@ -430,6 +505,7 @@ export function buildInvoiceSnapshot(
 
   return {
     version: 1,
+    kind: 'invoice',
     displayNumber: number,
     issuedAt: issuedAt.toISOString(),
     currencyCode,

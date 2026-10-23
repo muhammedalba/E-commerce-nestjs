@@ -181,6 +181,7 @@ export class SettingsController {
       'bankTransferDetails',
       'features',
       'freeShippingThreshold',
+      'returnWindowDays',
       'vatRate',
       'minOrderAmount',
       'allowRegistration',

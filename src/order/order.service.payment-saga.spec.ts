@@ -60,6 +60,14 @@ const createService = () => {
   const cacheInvalidation = {
     clearResources: jest.fn(() => Promise.resolve()),
   };
+  // No issued invoice by default: a full refund restocks directly, as before
+  const orderCreditNoteService = {
+    createForFullRefund: jest.fn(() =>
+      Promise.resolve({ note: null, invoiceIssued: false }),
+    ),
+    // No credit note covers the refund by default: the refund email goes out
+    coversRefund: jest.fn(() => Promise.resolve(false)),
+  };
 
   const service = new OrderService(
     OrderModel as never,
@@ -76,6 +84,8 @@ const createService = () => {
     eventEmitter as never,
     cacheInvalidation as never,
     {} as never,
+    orderCreditNoteService as never,
+    {} as never,
   );
 
   return {
@@ -88,6 +98,7 @@ const createService = () => {
     orderEmailService,
     eventEmitter,
     cacheInvalidation,
+    orderCreditNoteService,
   };
 };
 
@@ -387,6 +398,79 @@ describe('OrderService payment.refunded (Moyasar dashboard refunds)', () => {
     expect(sendRefundEmail).toHaveBeenCalledWith(
       expect.objectContaining({ isFull: true, cancelled: false }),
     );
+  });
+
+  it('full refund with an issued invoice: the credit note restocks, not the order', async () => {
+    const { service, productHelperService, orderCreditNoteService } = setup({
+      items,
+      user: 'u1',
+      paymentMethodCode: 'moyasar',
+      paymentStatus: 'PAID',
+    });
+    orderCreditNoteService.createForFullRefund.mockResolvedValueOnce({
+      note: { displayNumber: 'RUH-R-8-2026-0001' } as never,
+      invoiceIssued: true,
+    });
+    const payload = event(true);
+
+    await service.handlePaymentRefunded(payload);
+
+    expect(orderCreditNoteService.createForFullRefund).toHaveBeenCalledWith(
+      payload.orderId,
+      't1',
+      true,
+    );
+    expect(productHelperService.restockOrderItems).not.toHaveBeenCalled();
+  });
+
+  it('full refund after shipping: credited without restocking', async () => {
+    const { service, orderCreditNoteService } = setup(null);
+    const payload = event(true);
+
+    await service.handlePaymentRefunded(payload);
+
+    expect(orderCreditNoteService.createForFullRefund).toHaveBeenCalledWith(
+      payload.orderId,
+      't1',
+      false,
+    );
+  });
+
+  it('full refund: a failing credit note never undoes the recorded refund', async () => {
+    const { service, OrderModel, sendRefundEmail, orderCreditNoteService } =
+      setup(null);
+    orderCreditNoteService.createForFullRefund.mockRejectedValueOnce(
+      new Error('db down'),
+    );
+    const payload = event(true);
+
+    await service.handlePaymentRefunded(payload);
+
+    expect(OrderModel.updateOne).toHaveBeenCalled();
+    expect(sendRefundEmail).toHaveBeenCalled();
+  });
+
+  it('a refund its credit note covers sends no refund email (the credit note tells it)', async () => {
+    const { service, sendRefundEmail, orderCreditNoteService } = setup(null);
+    orderCreditNoteService.coversRefund.mockResolvedValueOnce(true);
+    const payload = event(true);
+
+    await service.handlePaymentRefunded(payload);
+
+    expect(orderCreditNoteService.coversRefund).toHaveBeenCalledWith(
+      payload.orderId,
+      100,
+    );
+    expect(sendRefundEmail).not.toHaveBeenCalled();
+  });
+
+  it('a refund no credit note covers still emails it', async () => {
+    const { service, sendRefundEmail, orderCreditNoteService } = setup(null);
+    orderCreditNoteService.coversRefund.mockRejectedValueOnce(new Error('db'));
+
+    await service.handlePaymentRefunded(event(false, 25));
+
+    expect(sendRefundEmail).toHaveBeenCalled();
   });
 
   it('partial refund: records PARTIALLY_REFUNDED and the total, the order goes on', async () => {

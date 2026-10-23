@@ -28,6 +28,7 @@ interface UnitForms {
   accusative: string;
 }
 
+/** A counted noun's forms, e.g. unit("f", "هللة", "هللتان", "هللات", "هللة"). */
 const unit = (
   gender: Gender,
   singular: string,
@@ -43,6 +44,7 @@ const QIRSH = unit('m', 'قرش', 'قرشان', 'قروش', 'قرشاً');
 const CENT = unit('m', 'سنت', 'سنتان', 'سنتات', 'سنتاً');
 const CENTIME = unit('m', 'سنتيم', 'سنتيمان', 'سنتيمات', 'سنتيماً');
 
+/** A riyal with its country adjective (ريال سعودي، ريالان سعوديان، …). */
 const riyal = (
   adj: string,
   adjDual: string,
@@ -56,6 +58,7 @@ const riyal = (
     `ريالات ${adjPlural}`,
     `ريالاً ${adjAcc}`,
   );
+/** A dinar with its country adjective (دينار كويتي، ديناران كويتيان، …). */
 const dinar = (
   adj: string,
   adjDual: string,
@@ -69,6 +72,7 @@ const dinar = (
     `دنانير ${adjPlural}`,
     `ديناراً ${adjAcc}`,
   );
+/** A lira (feminine) with its country adjective (ليرة تركية، ليرتان تركيتان). */
 const lira = (adj: string, adjDual: string) =>
   unit('f', `ليرة ${adj}`, `ليرتان ${adjDual}`, `ليرات ${adj}`, `ليرة ${adj}`);
 
@@ -223,6 +227,7 @@ const SCALES: { value: number; forms: UnitForms }[] = [
   { value: 1e3, forms: unit('m', 'ألف', 'ألفان', 'آلاف', 'ألفاً') },
 ];
 
+/** 1–99 in words, agreeing with gender `g` (واحد وعشرون / إحدى وعشرون). */
 function below100(n: number, g: Gender): string {
   if (n <= 10) return ONES[g][n];
   if (n === 11) return g === 'm' ? 'أحد عشر' : 'إحدى عشرة';
@@ -236,6 +241,7 @@ function below100(n: number, g: Gender): string {
   return `${ones} و${tens}`;
 }
 
+/** 1–999 in words: the hundreds, then "و" and the rest (مائة وخمسة). */
 function below1000(n: number, g: Gender): string {
   const parts: string[] = [];
   if (n >= 100) parts.push(HUNDREDS[Math.floor(n / 100)]);

@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { OnEvent } from '@nestjs/event-emitter';
+import { currencyDecimals } from 'src/payments/shared/utils/currency.util';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Cart } from './shared/schemas/cart.schema';
@@ -19,6 +20,10 @@ import {
   USER_EVENTS,
   UserDeletedEvent,
 } from 'src/users/shared/events/user.events';
+import {
+  CART_EVENTS,
+  CartItemsChangedEvent,
+} from './shared/events/cart.events';
 
 @Injectable()
 export class CartService {
@@ -31,7 +36,29 @@ export class CartService {
     private readonly inventoryAlertService: InventoryAlertService,
     private readonly settingsService: SettingsService,
     private readonly couponHelperService: CouponHelperService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
+
+  /**
+   * Any change to the cart lines invalidates the applied coupon (its discount
+   * was computed for the old cart). Awaited so the checkout session is already
+   * clean when the client refetches the summary.
+   */
+  /**
+   * Decimals of the store currency (2 for SAR, 3 for KWD…): cart prices and
+   * totals round to its smallest unit. The settings are cached.
+   */
+  private async moneyDigits(): Promise<number> {
+    const settings = await this.settingsService.getSettings();
+    return currencyDecimals(settings?.currencyCode);
+  }
+
+  private async notifyItemsChanged(userId: string) {
+    await this.eventEmitter.emitAsync(
+      CART_EVENTS.ITEMS_CHANGED,
+      new CartItemsChangedEvent(userId),
+    );
+  }
 
   /** A deleted user's cart has no owner left: remove it. */
   @OnEvent(USER_EVENTS.DELETED, { async: true })
@@ -55,6 +82,7 @@ export class CartService {
    * @returns {Promise<unknown>} The synchronized, localized, and clean cart object.
    */
   async getCart(userId: string): Promise<unknown> {
+    const digits = await this.moneyDigits();
     // 1. Fetch the cart document (WITHOUT .lean() initially to allow mutation and .save())
     const cart = await this.cartModel
       .findOne({ user: userId })
@@ -96,7 +124,7 @@ export class CartService {
           ? variant.priceAfterDiscount
           : variant.price;
 
-      const livePrice = Number(livePriceRaw.toFixed(2));
+      const livePrice = Number(livePriceRaw.toFixed(digits));
 
       // If the price snapshot stored in the cart differs from the live database price
       if (item.unitPrice !== livePrice) {
@@ -132,7 +160,7 @@ export class CartService {
     // 5. Persist changes to the database only if data drifted
     if (isModified) {
       cart.items = updatedItems;
-      cart.totalPrice = Number(newTotalPrice.toFixed(2));
+      cart.totalPrice = Number(newTotalPrice.toFixed(digits));
       cart.totalQuantity = newTotalQuantity;
 
       // Extra safeguard for a completely empty cart
@@ -158,6 +186,7 @@ export class CartService {
     createCartDto: Pick<CreateCartDto, 'productId' | 'variantId' | 'quantity'>,
   ) {
     const { productId, variantId, quantity } = createCartDto;
+    const digits = await this.moneyDigits();
 
     // 1.check product is exist and active
     const product = await this.ProductModel.findById(productId)
@@ -202,8 +231,8 @@ export class CartService {
         ? variant.priceAfterDiscount
         : variant.price;
 
-    const price = Number(rawPrice.toFixed(2));
-    const itemTotal = Number((price * quantity).toFixed(2));
+    const price = Number(rawPrice.toFixed(digits));
+    const itemTotal = Number((price * quantity).toFixed(digits));
 
     let retries = 3;
     while (retries >= 0) {
@@ -265,11 +294,14 @@ export class CartService {
           }
 
           // update totals
-          cart.totalPrice = Number((cart.totalPrice + itemTotal).toFixed(2));
+          cart.totalPrice = Number(
+            (cart.totalPrice + itemTotal).toFixed(digits),
+          );
           cart.totalQuantity += quantity;
         }
         // save cart
         await cart.save();
+        await this.notifyItemsChanged(userId);
         return {
           totalPrice: cart.totalPrice,
           totalQuantity: cart.totalQuantity,
@@ -291,6 +323,7 @@ export class CartService {
   // ------------ ======  UPDATE QUANTITY ====== ---------- //
   // ------------ =============================== ---------- //
   async updateQuantity(userId: string, updateCartDto: CreateCartDto) {
+    const digits = await this.moneyDigits();
     const { productId, variantId, quantity } = updateCartDto;
 
     let retries = 3;
@@ -344,11 +377,13 @@ export class CartService {
         // Use the stored unitPrice snapshot — no extra DB query needed
         const price = existingItem.unitPrice;
 
-        const oldItemTotal = Number((price * existingItem.quantity).toFixed(2));
-        const newItemTotal = Number((price * quantity).toFixed(2));
+        const oldItemTotal = Number(
+          (price * existingItem.quantity).toFixed(digits),
+        );
+        const newItemTotal = Number((price * quantity).toFixed(digits));
 
         cart.totalPrice = Number(
-          (cart.totalPrice - oldItemTotal + newItemTotal).toFixed(2),
+          (cart.totalPrice - oldItemTotal + newItemTotal).toFixed(digits),
         );
         cart.totalQuantity =
           cart.totalQuantity - existingItem.quantity + quantity;
@@ -356,6 +391,7 @@ export class CartService {
         existingItem.quantity = quantity;
         // save the cart
         await cart.save();
+        await this.notifyItemsChanged(userId);
         return {
           totalPrice: cart.totalPrice,
           totalQuantity: cart.totalQuantity,
@@ -377,6 +413,7 @@ export class CartService {
   // ------------ ======  REMOVE ITEM  ====== ---------- //
   // ------------ =============================== ---------- //
   async removeItem(userId: string, productId: string, variantId?: string) {
+    const digits = await this.moneyDigits();
     let retries = 3;
     while (retries >= 0) {
       try {
@@ -420,7 +457,7 @@ export class CartService {
         });
 
         cart.totalPrice = Number(
-          (cart.totalPrice - priceToSubtract).toFixed(2),
+          (cart.totalPrice - priceToSubtract).toFixed(digits),
         );
         cart.totalQuantity -= qtyToSubtract;
 
@@ -433,6 +470,7 @@ export class CartService {
         }
 
         await cart.save();
+        await this.notifyItemsChanged(userId);
         return await cart
           .populate('items.product')
           .then((c) => c.populate('items.variant'));
@@ -461,6 +499,7 @@ export class CartService {
     cart.totalPrice = 0;
     cart.totalQuantity = 0;
     await cart.save();
+    await this.notifyItemsChanged(userId);
 
     return { items: [] };
   }

@@ -10,7 +10,7 @@
     "ALREADY_USED": "You have already used this coupon",
     "MIN_ORDER_AMOUNT": "Minimum order amount is {amount}",
     "MAX_ORDER_AMOUNT": "Maximum order amount is {amount}",
-    "INVALID_ITEMS_IN_ORDER": "Coupon does not apply to some items in the order"
+    "INVALID_ITEMS_IN_ORDER": "This coupon does not cover any of the products in your cart"
   },
   "NAME_EXISTS": "Name is already in use",
   "EMAIL_EXISTS": "Email is already in use",

@@ -3,6 +3,21 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { I18nService } from 'nestjs-i18n';
 import { Coupon } from 'src/coupons/shared/Schemas/coupons.schema';
+import { roundMoney } from 'src/payments/shared/utils/currency.util';
+import {
+  allocateCouponDiscount,
+  isCouponEligible,
+  ScopedLine,
+} from './coupon-allocation';
+
+/** A checkout item as the coupon scope sees it. */
+const scopedLine = (item: {
+  product: { id: Types.ObjectId; brand: string; category: string };
+}): ScopedLine => ({
+  productId: item.product.id,
+  brand: item.product.brand,
+  category: item.product.category,
+});
 
 @Injectable()
 export class CouponHelperService {
@@ -63,18 +78,9 @@ export class CouponHelperService {
     // For scoped coupons: at least one item in the order must be eligible.
     // Non-eligible items are simply not discounted (handled in applyCouponIfAvailable).
     if (coupon.applyTo !== 'all') {
-      const allowedItems = coupon.applyItems || [];
-
-      const hasEligibleItem = validatedItems.some((item) => {
-        const value =
-          coupon.applyTo === 'brands'
-            ? item.product.brand.toString()
-            : coupon.applyTo === 'categories'
-              ? item.product.category
-              : item.product.id.toString();
-
-        return allowedItems.includes(value);
-      });
+      const hasEligibleItem = validatedItems.some((item) =>
+        isCouponEligible(coupon, scopedLine(item)),
+      );
 
       if (!hasEligibleItem) {
         throw new BadRequestException(
@@ -95,10 +101,18 @@ export class CouponHelperService {
       weight: number;
       price: number;
     }[] = [],
+    /** The store currency: amounts round to its smallest unit (default 2 decimals). */
+    currency?: string,
   ): Promise<{
     discountAmount: number;
     totalPriceAfterDiscount?: number;
     totalPrice: number;
+    /**
+     * Each item's share of the discount, in `validatedItems` order: the items
+     * the coupon covers share it, the others get 0; it adds up to the
+     * discount to the halala. Frozen on the order lines (credit notes).
+     */
+    lineDiscounts: number[];
     couponDetails: {
       couponCode: string;
       discount: number;
@@ -110,6 +124,7 @@ export class CouponHelperService {
       return {
         discountAmount: 0,
         totalPrice,
+        lineDiscounts: validatedItems.map(() => 0),
         couponDetails: null,
       };
     }
@@ -125,19 +140,13 @@ export class CouponHelperService {
 
     // Determine the price base for discount calculation.
     // For scoped coupons, discount applies only to eligible items' subtotal.
+    const eligible = validatedItems.map((item) =>
+      isCouponEligible(coupon, scopedLine(item)),
+    );
     let discountBase = totalPrice;
     if (coupon.applyTo !== 'all') {
-      const allowedItems = coupon.applyItems || [];
       discountBase = validatedItems
-        .filter((item) => {
-          const value =
-            coupon.applyTo === 'brands'
-              ? item.product.brand.toString()
-              : coupon.applyTo === 'categories'
-                ? item.product.category
-                : item.product.id.toString();
-          return allowedItems.includes(value);
-        })
+        .filter((_, i) => eligible[i])
         .reduce((sum, item) => sum + item.price * item.quantity, 0);
     }
 
@@ -146,15 +155,30 @@ export class CouponHelperService {
         ? (discountBase * coupon.discount) / 100
         : coupon.discount;
 
-    // Discount must not exceed the eligible subtotal
-    const discountAmount = Math.min(rawDiscount, discountBase);
+    // Discount must not exceed the eligible subtotal; in the currency's
+    // smallest unit, like every amount of the order
+    const discountAmount = roundMoney(
+      Math.min(rawDiscount, discountBase),
+      currency,
+    );
 
-    const totalPriceAfterDiscount =
-      Math.round((totalPrice - discountAmount) * 100) / 100;
+    const totalPriceAfterDiscount = roundMoney(
+      totalPrice - discountAmount,
+      currency,
+    );
     return {
       discountAmount,
       totalPrice,
       totalPriceAfterDiscount,
+      lineDiscounts: allocateCouponDiscount(
+        discountAmount,
+        validatedItems.map((item, i) => ({
+          price: item.price,
+          quantity: item.quantity,
+          eligible: eligible[i],
+        })),
+        currency,
+      ),
       couponDetails: {
         couponCode: coupon.name,
         couponId: coupon._id,

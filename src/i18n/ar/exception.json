@@ -10,7 +10,7 @@
     "ALREADY_USED": "لقد استخدمت رمز الخصم مسبقًا",
     "MIN_ORDER_AMOUNT": "الحد الأدنى لقيمة الطلب هو {amount}",
     "MAX_ORDER_AMOUNT": "الحد الأقصى لقيمة الطلب هو {amount}",
-    "INVALID_ITEMS_IN_ORDER": "رمز الخصم لا ينطبق على بعض عناصر الطلب"
+    "INVALID_ITEMS_IN_ORDER": "رمز الخصم لا يشمل أياً من المنتجات في سلتك"
   },
   "EMAIL_EXISTS": "البريد الإلكتروني مستخدم بالفعل",
   "NAME_EXISTS": "الاسم مستخدم بالفعل",

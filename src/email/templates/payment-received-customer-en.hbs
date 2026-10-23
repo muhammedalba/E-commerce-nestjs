@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html dir='ltr' lang='en'>
+  <head>
+    <meta charset='utf-8' />
+    <title>{{subject}}</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 0;
+        direction: ltr;
+      }
+      .container {
+        max-width: 600px;
+        margin: 20px auto;
+        background: #ffffff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        background-color: #16a34a;
+        color: white;
+        text-align: center;
+        padding: 10px;
+        border-radius: 8px 8px 0 0;
+      }
+      .content {
+        padding: 20px;
+        line-height: 1.6;
+        text-align: left;
+      }
+      .details-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+      }
+      .details-table th,
+      .details-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+        vertical-align: middle;
+      }
+      .details-table th {
+        background-color: #f9f9f9;
+      }
+      .button {
+        display: inline-block;
+        background-color: #16a34a;
+        color: #ffffff;
+        padding: 12px 25px;
+        border-radius: 5px;
+        text-decoration: none;
+        margin-top: 20px;
+      }
+      .footer {
+        text-align: center;
+        color: #777;
+        font-size: 12px;
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class='container'>
+      <div class='header'>
+        <h2>Thank you for your order!</h2>
+      </div>
+
+      <div class='content'>
+        <p>Hello{{#if name}} {{name}}{{/if}},</p>
+        <p>We have received the payment for your order. Thank you.</p>
+
+        <table class='details-table'>
+          <tr>
+            <th>Order</th>
+            <td>{{orderId}}</td>
+          </tr>
+          <tr>
+            <th>Amount paid</th>
+            <td>{{amount}} {{currency}}</td>
+          </tr>
+        </table>
+
+        {{#if hasInvoice}}
+          <p>The tax invoice for your order is attached to this email (PDF).</p>
+        {{/if}}
+
+        <a href='{{orderUrl}}' class='button'>View order</a>
+      </div>
+
+      <div class='footer'>
+        <p>&copy; {{year}} {{companyName}}. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>

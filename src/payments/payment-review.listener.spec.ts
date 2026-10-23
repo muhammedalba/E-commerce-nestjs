@@ -103,7 +103,7 @@ describe('PaymentReviewListener payment.refunded', () => {
       'role.notification.r1',
       expect.objectContaining({
         message: expect.objectContaining({
-          en: 'Part of order o1 was refunded. Total refunded so far: 60 SAR.',
+          en: 'Part of order o1 was refunded. Total refunded so far: 60 SAR. If no tax credit note covers it yet, choose the returned items on the order page (Return items).',
         }) as unknown,
       }),
     );

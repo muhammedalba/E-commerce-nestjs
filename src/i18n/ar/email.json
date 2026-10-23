@@ -16,5 +16,8 @@
   "QUOTE_CONTACT_METHOD_EMAIL": "البريد الإلكتروني",
   "ORDER_REFUNDED_SUBJECT": "تم استرداد مبلغ طلبك",
   "ORDER_PARTIALLY_REFUNDED_SUBJECT": "تم استرداد جزء من مبلغ طلبك",
+  "CREDIT_NOTE_SUBJECT": "مرتجع ضريبي {number} لطلبك",
+  "PAYMENT_RECEIVED_SUBJECT": "تم استلام دفعة طلبك رقم {number}",
+  "RETURN_REJECTED_SUBJECT": "لم يُقبل طلب الإرجاع للطلب رقم {number}",
   "RECAPTCHA_UNVERIFIED_PREFIX": "[⚠️ غير متحقق — reCAPTCHA]"
 }

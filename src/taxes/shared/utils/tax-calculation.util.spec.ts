@@ -21,3 +21,13 @@ describe('tax calculation utils', () => {
     expect(extractTaxFromAmount(0, 15)).toBe(0);
   });
 });
+
+describe('VAT in a 3-decimal currency', () => {
+  it('rounds to the fils, not the halala', () => {
+    // 15 % of 1.255 KWD = 0.18825
+    expect(calculateTaxOnAmount(1.255, 15, 'KWD')).toBe(0.188);
+    expect(calculateTaxOnAmount(1.255, 15)).toBe(0.19);
+    // 1.443 includes 15 %: 1.443 − 1.443 / 1.15 = 0.18822
+    expect(extractTaxFromAmount(1.443, 15, 'KWD')).toBe(0.188);
+  });
+});

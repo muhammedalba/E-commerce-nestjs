@@ -59,8 +59,9 @@ export class PaymentReviewListener {
             en: `Order ${payload.orderId} was fully refunded (${amount}).`,
           }
         : {
-            ar: `تم استرداد جزء من مبلغ الطلب ${payload.orderId}. إجمالي المسترد حتى الآن: ${amount}.`,
-            en: `Part of order ${payload.orderId} was refunded. Total refunded so far: ${amount}.`,
+            // A partial refund carries no items: the credit note needs them
+            ar: `تم استرداد جزء من مبلغ الطلب ${payload.orderId}. إجمالي المسترد حتى الآن: ${amount}. إن لم يصدر له مرتجع ضريبي بعد، حدّد المنتجات المرتجعة من صفحة الطلب (إرجاع منتجات).`,
+            en: `Part of order ${payload.orderId} was refunded. Total refunded so far: ${amount}. If no tax credit note covers it yet, choose the returned items on the order page (Return items).`,
           },
       payload,
     );

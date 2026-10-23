@@ -1,6 +1,11 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { UpdateOrderDto } from './shared/dto/update-order.dto';
-import { Model, Types, Connection } from 'mongoose';
+import { HydratedDocument, Model, Types, Connection } from 'mongoose';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Order } from './shared/schemas/Order.schema';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
@@ -36,6 +41,8 @@ import { orderStatusNotificationAction } from './shared/utils/order-status-notif
 import { PaymentStatus } from 'src/payments/shared/enums/payment-status.enum';
 import { PaymentRefundedEvent } from 'src/payments/shared/types/payment-events';
 import { InvoiceService } from 'src/invoice/invoice.service';
+import { OrderCreditNoteService } from './shared/order-helper/order-credit-note.service';
+import { OrderReturnRequestService } from './shared/order-helper/order-return-request.service';
 
 type OrderLine = { productId: string; variantId: string; quantity: number };
 
@@ -60,12 +67,12 @@ const CLOSED_ORDER_STATUSES: string[] = [
   OrderStatus.EXPIRED,
 ];
 // 1. تعريف الأنواع بشكل دقيق وصريح
-interface UserPopulated {
+export interface UserPopulated {
   avatar?: FileAsset;
   [key: string]: unknown;
 }
 
-interface ShippingProviderPopulated {
+export interface ShippingProviderPopulated {
   logo?: FileAsset;
   [key: string]: unknown;
 }
@@ -76,7 +83,7 @@ interface ProductPopulated {
   [key: string]: unknown;
 }
 
-interface OrderItemPopulated {
+export interface OrderItemPopulated {
   productId?: ProductPopulated;
   image?: FileAsset | string;
   [key: string]: unknown;
@@ -108,6 +115,8 @@ export class OrderService {
     private readonly eventEmitter: EventEmitter2,
     private readonly cacheInvalidation: CacheInvalidationService,
     private readonly invoiceService: InvoiceService,
+    private readonly orderCreditNoteService: OrderCreditNoteService,
+    private readonly orderReturnRequestService: OrderReturnRequestService,
   ) {}
   private readonly logger = new Logger(OrderService.name);
 
@@ -259,7 +268,8 @@ export class OrderService {
       .populate({ path: 'items.productId', select: 'title slug imageCover' })
       .populate({
         path: 'items.variantId',
-        select: 'sku price priceAfterDiscount label attributes components',
+        select:
+          'sku price priceAfterDiscount label attributes components shippingProfile',
       })
       .lean()
       .exec();
@@ -411,7 +421,8 @@ export class OrderService {
       .populate({ path: 'items.productId', select: 'title slug imageCover' })
       .populate({
         path: 'items.variantId',
-        select: 'sku price priceAfterDiscount label attributes components',
+        select:
+          'sku price priceAfterDiscount label attributes components shippingProfile',
       })
       .populate({ path: 'couponId', select: 'name type discount' })
       .lean()
@@ -484,7 +495,8 @@ export class OrderService {
         { path: 'items.productId', select: 'title imageCover slug images' },
         {
           path: 'items.variantId',
-          select: 'sku price priceAfterDiscount label attributes components',
+          select:
+            'sku price priceAfterDiscount label attributes components shippingProfile',
         },
         { path: 'shippingAddress.country', select: 'name' },
         { path: 'shippingAddress.region', select: 'name' },
@@ -550,7 +562,11 @@ export class OrderService {
     return {
       status: 'success',
       message: String(this.i18n.translate('success.found_SUCCESS')),
-      data: order,
+      data: {
+        ...order,
+        creditNotes: await this.creditNotesFor(String(order._id), true),
+        ...(await this.returnsFor(order, true)),
+      },
     };
   }
   // =============================================================
@@ -570,7 +586,8 @@ export class OrderService {
         { path: 'items.productId', select: 'title imageCover slug images' },
         {
           path: 'items.variantId',
-          select: 'sku price priceAfterDiscount label attributes components',
+          select:
+            'sku price priceAfterDiscount label attributes components shippingProfile',
         },
         { path: 'shippingAddress.country', select: 'name' },
         { path: 'shippingAddress.city', select: 'name' },
@@ -648,7 +665,11 @@ export class OrderService {
     return {
       status: 'success',
       message: String(this.i18n.translate('success.found_SUCCESS')),
-      data: order,
+      data: {
+        ...order,
+        creditNotes: await this.creditNotesFor(String(order._id), false),
+        ...(await this.returnsFor(order, false)),
+      },
     };
   }
   // =============================================================
@@ -670,7 +691,7 @@ export class OrderService {
       throw new BadRequestException('Invalid order ID');
     }
     const order = await this.OrderModel.findById(idParamDto.id).select(
-      ' InvoicePdf DeliveryReceiptImage status ',
+      ' InvoicePdf DeliveryReceiptImage status paymentStatus ',
     );
     if (!order) {
       throw new BadRequestException(this.i18n.translate('exception.NOT_FOUND'));
@@ -769,10 +790,70 @@ export class OrderService {
       });
     }
 
+    // Marked paid (COD, bank transfer): the tax invoice is issued now and
+    // emailed to the customer (once: the mail job skips an invoice already sent)
+    if (
+      updatedData &&
+      order.paymentStatus !== PaymentStatus.PAID &&
+      updatedData.paymentStatus === PaymentStatus.PAID
+    ) {
+      await this.sendPaymentReceived(updatedData);
+    }
+
     return {
       status: 'success',
       data: updatedData,
     };
+  }
+
+  /**
+   * The dashboard's "resend": the issued invoice emailed again to the
+   * customer (the "payment received" email, sent even if it went out before).
+   *
+   * @throws {NotFoundException} The order has no issued invoice.
+   * @throws {BadRequestException} The customer has no email.
+   */
+  async resendInvoiceEmail(orderId: string): Promise<void> {
+    if (!Types.ObjectId.isValid(orderId)) {
+      throw new BadRequestException('Invalid order ID');
+    }
+    const [invoice, order] = await Promise.all([
+      this.invoiceService.findIssued(orderId),
+      this.OrderModel.findById(orderId),
+    ]);
+    if (!invoice || !order) {
+      throw new NotFoundException('No issued invoice for this order');
+    }
+    const user = await this.UserModel.findById(order.user)
+      .select('email name')
+      .lean();
+    if (!user?.email) {
+      throw new BadRequestException('The customer has no email address');
+    }
+    await this.orderEmailService.sendPaymentReceivedEmail(
+      order,
+      { email: user.email, name: user.name },
+      { resend: true },
+    );
+  }
+
+  /** Never throws: the payment is recorded whatever happens to the email. */
+  private async sendPaymentReceived(order: HydratedDocument<Order>) {
+    try {
+      const user = await this.UserModel.findById(order.user)
+        .select('email name')
+        .lean();
+      if (user?.email) {
+        await this.orderEmailService.sendPaymentReceivedEmail(order, {
+          email: user.email,
+          name: user.name,
+        });
+      }
+    } catch (err: unknown) {
+      this.logger.error(
+        `Payment email for order ${order._id.toString()} failed: ${(err as Error).message}`,
+      );
+    }
   }
   /**
    * Returns an order's stock when it is cancelled.
@@ -1330,10 +1411,16 @@ export class OrderService {
             previous.paymentStatus !== PaymentStatus.PARTIALLY_REFUNDED
               ? 'reserved'
               : 'deducted';
-          await this.productHelperService.restockOrderItems(
-            previous.items,
-            mode,
-          );
+          if (mode === 'reserved') {
+            // Never paid: no sale, no invoice, only a reservation to release
+            await this.productHelperService.restockOrderItems(
+              previous.items,
+              mode,
+            );
+          } else {
+            // A sale: the credit note returns what no return has taken yet
+            await this.creditFullRefund(payload, previous.items, true);
+          }
           if (previous.couponId) {
             await this.couponHelperService.releaseCouponUsage(
               new Types.ObjectId(String(previous.couponId)),
@@ -1345,6 +1432,8 @@ export class OrderService {
             { _id: payload.orderId },
             { $set: { paymentStatus: PaymentStatus.REFUNDED, ...refund } },
           );
+          // Shipped already: credited, but the stock stays out (as before)
+          await this.creditFullRefund(payload, [], false);
         }
       } else {
         await this.OrderModel.updateOne(
@@ -1364,7 +1453,9 @@ export class OrderService {
       const user = order
         ? await this.UserModel.findById(order.user).select('email').lean()
         : null;
-      if (user?.email) {
+      // One email per refund: a credit note covering it (a return, or the full
+      // refund's own) emails the customer itself, with the refund in it
+      if (user?.email && !(await this.refundHasCreditNote(payload))) {
         await this.orderEmailService.sendRefundEmail({
           email: user.email,
           orderId: payload.orderId,
@@ -1383,6 +1474,118 @@ export class OrderService {
       );
     } finally {
       await this.invalidateOrderCache();
+    }
+  }
+
+  /**
+   * The order's credit notes for its pages, file URLs absolute. The
+   * customer sees issued ones only, without the internal fields.
+   */
+  private async creditNotesFor(orderId: string, forCustomer: boolean) {
+    const notes = await this.orderCreditNoteService.list(orderId);
+    return notes
+      .filter((n) => !forCustomer || n.state === 'issued')
+      .map((n) => {
+        const file = n.file?.url
+          ? { ...n.file, url: String(withBaseUrl(n.file.url)) }
+          : undefined;
+        return forCustomer
+          ? {
+              _id: n._id,
+              displayNumber: n.displayNumber,
+              issuedAt: n.issuedAt,
+              total: n.amounts.total,
+              reasonType: n.reasonType,
+              // What came back: less the return shipping (other reasons)
+              returnShipping: n.deductions?.returnShipping?.total ?? 0,
+              refund: n.refund,
+              file,
+            }
+          : { ...n, file };
+      });
+  }
+
+  /**
+   * The order's return requests and its return window (the setting
+   * `returnWindowDays`, after delivery). The customer gets their requests without the admin's
+   * bookkeeping fields.
+   */
+  private async returnsFor(order: PopulatedOrderData, forCustomer: boolean) {
+    const requests = await this.orderReturnRequestService.listForOrder(
+      String(order._id),
+    );
+    return {
+      returnPolicy: {
+        ...this.orderReturnRequestService.policyFor(
+          order as { status?: string; deliveredAt?: Date; completedAt?: Date },
+          await this.orderReturnRequestService.windowDays(),
+        ),
+        // The customer's return dialog: what each line has left
+        ...(forCustomer && {
+          remaining: await this.orderReturnRequestService.returnable(
+            String(order._id),
+          ),
+        }),
+      },
+      returnRequests: forCustomer
+        ? requests.map((r) => ({
+            _id: r._id,
+            lines: r.lines,
+            reasonType: r.reasonType,
+            note: r.note,
+            status: r.status,
+            rejectionReason: r.rejectionReason,
+            creditNote: r.creditNote,
+            createdAt: r.createdAt,
+            decidedAt: r.decidedAt,
+          }))
+        : requests,
+    };
+  }
+
+  /** True when credit notes account for all the money refunded so far. */
+  private async refundHasCreditNote(
+    payload: PaymentRefundedEvent,
+  ): Promise<boolean> {
+    try {
+      return await this.orderCreditNoteService.coversRefund(
+        payload.orderId,
+        payload.refundedAmount,
+      );
+    } catch (err: unknown) {
+      // Unknown: better a second email than none about the refund
+      this.logger.warn(
+        `Could not check the credit notes of order ${payload.orderId}: ${(err as Error).message}`,
+      );
+      return false;
+    }
+  }
+
+  /**
+   * A full refund's tax credit note: every line no return has taken yet,
+   * restocked through it when `restock`. With no issued invoice nothing can
+   * be credited: the lines are restocked directly, as before credit notes.
+   * Never throws: the refund is already recorded.
+   */
+  private async creditFullRefund(
+    payload: PaymentRefundedEvent,
+    items: Order['items'],
+    restock: boolean,
+  ) {
+    try {
+      const { invoiceIssued } =
+        await this.orderCreditNoteService.createForFullRefund(
+          payload.orderId,
+          payload.transactionId,
+          restock,
+        );
+      if (!invoiceIssued && restock) {
+        await this.productHelperService.restockOrderItems(items, 'deducted');
+      }
+    } catch (err: unknown) {
+      this.logger.error(
+        `CRITICAL: full refund of order ${payload.orderId} recorded, but its credit note failed (issue it from the dashboard; stock not returned): ${(err as Error).message}`,
+      );
     }
   }
 

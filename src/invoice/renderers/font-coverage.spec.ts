@@ -1,6 +1,7 @@
 import * as fontkit from 'fontkit';
 import { readdirSync, readFileSync } from 'fs';
 import * as path from 'path';
+import { deductionNotes } from '../credit-note-data.builder';
 import { amountToArabicWords } from '../utils/arabic-amount-words';
 import { formatInvoiceCurrency } from '../utils/invoice-currency';
 import { TYPST_DIR, TYPST_FONTS_DIR } from './pdf-renderer.interface';
@@ -59,5 +60,15 @@ describe('invoice fonts', () => {
       )
       .join(' ');
     expect(missing(text)).toEqual([]);
+  });
+
+  it("cover a credit note's deduction clause", () => {
+    const money = (n: number) => formatInvoiceCurrency(n, 'SAR');
+    const notes = deductionNotes(
+      { amount: 25, tax: 3.75, total: 28.75 },
+      316.25,
+      money,
+    );
+    expect(missing(notes.deductionNote + notes.deductionNoteEn)).toEqual([]);
   });
 });

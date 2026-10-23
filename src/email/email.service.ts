@@ -3,7 +3,12 @@ import { ISendMailOptions, MailerService } from '@nestjs-modules/mailer';
 import { existsSync } from 'fs';
 import * as path from 'path';
 import { I18nContext } from 'nestjs-i18n';
-import { BackupFailedJobData, NewOrderCustomerJobData } from './mail.processor';
+import {
+  BackupFailedJobData,
+  CreditNoteCustomerJobData,
+  NewOrderCustomerJobData,
+  PaymentReceivedJobData,
+} from './mail.processor';
 
 @Injectable()
 export class EmailService {
@@ -399,10 +404,112 @@ export class EmailService {
     });
   }
 
+  /** Confirms a received payment, with the tax invoice attached when issued. */
+  async send_payment_received(
+    payment: PaymentReceivedJobData,
+    invoice?: { filename: string; content: Buffer },
+  ): Promise<{ messageId?: string }> {
+    const resolvedLang = payment.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
+
+    return this.sendMail({
+      to: payment.email,
+      subject: payment.subject,
+      template: `payment-received-customer-${resolvedLang}`,
+      attachments: invoice
+        ? [
+            {
+              filename: invoice.filename,
+              content: invoice.content,
+              contentType: 'application/pdf',
+            },
+          ]
+        : undefined,
+      context: {
+        hasInvoice: !!invoice,
+        subject: payment.subject,
+        name: payment.name,
+        orderId: payment.orderId,
+        amount: payment.amount,
+        currency: payment.currency,
+        orderUrl: payment.orderUrl,
+        year: new Date().getFullYear(),
+        companyName: process.env.APP_NAME,
+      },
+    });
+  }
+
+  /** Sends the customer a tax credit note, its PDF attached when issued. */
+  async send_credit_note(
+    note: CreditNoteCustomerJobData,
+    pdf?: { filename: string; content: Buffer },
+  ): Promise<{ messageId?: string }> {
+    const resolvedLang = note.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
+
+    return this.sendMail({
+      to: note.email,
+      subject: note.subject,
+      template: `credit-note-customer-${resolvedLang}`,
+      attachments: pdf
+        ? [
+            {
+              filename: pdf.filename,
+              content: pdf.content,
+              contentType: 'application/pdf',
+            },
+          ]
+        : undefined,
+      context: {
+        hasPdf: !!pdf,
+        subject: note.subject,
+        name: note.name,
+        creditNoteNumber: note.creditNoteNumber,
+        orderNumber: note.orderNumber,
+        total: note.total,
+        // Strict templates: always defined
+        refundAmount: note.refundAmount ?? '',
+        refundVia: note.refundVia ?? 'none',
+        returnShipping: note.returnShipping ?? '',
+        deductionNote: note.deductionNote ?? '',
+        currency: note.currency,
+        orderUrl: note.orderUrl,
+        year: new Date().getFullYear(),
+        companyName: process.env.APP_NAME,
+      },
+    });
+  }
+
   /**
    * Tells the customer about a refund made in the Moyasar dashboard (full or
    * partial, and whether it cancelled the order).
    */
+  /** Tells the customer their return request was not accepted, and why. */
+  async send_return_request_rejected(data: {
+    email: string;
+    name: string;
+    orderNumber: string;
+    rejectionReason: string;
+    orderUrl: string;
+    subject: string;
+    lang?: string;
+  }): Promise<void> {
+    const resolvedLang = data.lang ?? process.env.DEFAULT_LANGUAGE ?? 'ar';
+
+    await this.sendMail({
+      to: data.email,
+      subject: data.subject,
+      template: `return-request-rejected-customer-${resolvedLang}`,
+      context: {
+        subject: data.subject,
+        name: data.name,
+        orderNumber: data.orderNumber,
+        rejectionReason: data.rejectionReason,
+        orderUrl: data.orderUrl,
+        year: new Date().getFullYear(),
+        companyName: process.env.APP_NAME,
+      },
+    });
+  }
+
   async send_order_refunded(refund: {
     email: string;
     orderId: string;

@@ -16,5 +16,8 @@
   "QUOTE_CONTACT_METHOD_EMAIL": "Email",
   "ORDER_REFUNDED_SUBJECT": "Your order was refunded",
   "ORDER_PARTIALLY_REFUNDED_SUBJECT": "Part of your order was refunded",
+  "CREDIT_NOTE_SUBJECT": "Tax credit note {number} for your order",
+  "PAYMENT_RECEIVED_SUBJECT": "Payment received for your order {number}",
+  "RETURN_REJECTED_SUBJECT": "Your return request for order {number} was not accepted",
   "RECAPTCHA_UNVERIFIED_PREFIX": "[⚠️ Unverified — reCAPTCHA]"
 }

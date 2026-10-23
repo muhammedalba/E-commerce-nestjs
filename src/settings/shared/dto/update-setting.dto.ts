@@ -1,10 +1,12 @@
 import {
   IsBoolean,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
   IsUrl,
   Matches,
+  Max,
   Min,
   ValidateIf,
   ValidateNested,
@@ -201,6 +203,14 @@ export class UpdateSettingDto {
   @Min(0)
   @IsOptional()
   freeShippingThreshold?: number;
+
+  /** Days after delivery a customer may request a return; 0 closes it. */
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(365)
+  @IsOptional()
+  returnWindowDays?: number;
 
   @ValidateNested()
   @Type(() => FieldLocalizeDto)

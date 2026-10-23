@@ -1,4 +1,4 @@
-// Tax invoice, laid out like the client's invoice preview
+// Tax invoice or credit note (d.kind), laid out like the client's invoice preview
 // (cleint/features/orders/components/InvoicePreviewDialog.tsx and
 // invoice/components/*): same sections, order, labels, colours and sizes.
 // Every value arrives formatted in `sys.inputs.data` (InvoiceSnapshot, see
@@ -11,6 +11,11 @@
 } else {
   json("/data.json")
 }
+
+// A credit note (مرتجع ضريبي) is the same document with its own title; its
+// description names the invoice it reverses. Older snapshots have no kind.
+#let is-credit-note = d.at("kind", default: "invoice") == "credit_note"
+#let doc-title = if is-credit-note [مرتجع ضريبي / Credit Note] else [فاتورة ضريبية / Tax Invoice]
 
 // One CSS pixel of the preview: its ~900px wide invoice (max-w-4xl modal)
 // spans the A4 width, so an ordinary order fits on one page as it does there
@@ -49,7 +54,10 @@
 #let line-w = 1 * px
 #let gap(n) = v(n * px, weak: true)
 
-#set document(title: "فاتورة ضريبية - " + d.displayNumber)
+#set document(
+  title: (if is-credit-note { "مرتجع ضريبي - " } else { "فاتورة ضريبية - " })
+    + d.displayNumber,
+)
 #set page(
   paper: "a4",
   margin: (x: 6mm, y: 6mm),
@@ -130,7 +138,7 @@
     stroke: line-w + black,
     radius: 4 * px,
     inset: (x: 24 * px, y: 4 * px),
-    text(size: 14 * px, weight: bold, fill: sky-950)[فاتورة ضريبية / Tax Invoice],
+    text(size: 14 * px, weight: bold, fill: sky-950, doc-title),
   ),
   line(length: 100%, stroke: line-w + black),
 )
@@ -153,6 +161,11 @@
     table.cell(colspan: 3, align: right + horizon, fill: white, text(weight: semibold, d.meta.placeOfDelivery)),
     label[البيان / Description:],
     table.cell(colspan: 3, align: right + horizon, text(weight: semibold, d.meta.description)),
+    // Credit notes from the return policy on
+    ..if "returnReason" in d.meta {(
+      label[سبب الإرجاع / Return reason:],
+      table.cell(colspan: 3, align: right + horizon, text(weight: semibold, d.meta.returnReason)),
+    )} else {()},
   )
 }
 
@@ -221,12 +234,12 @@
     text(size: 8 * px, weight: semibold, fill: badge-text, body),
   )
   table(
-    columns: (32 * px, 1fr, 56 * px, 80 * px, 96 * px),
+    columns: (32 * px, 1fr, 56 * px, 56 * px, 80 * px, 96 * px),
     inset: 6 * px,
     align: (x, y) => if x == 1 { right + horizon } else { center + horizon },
     table.header(
       repeat: true,
-      ..([\#], [البيان / Description], [الكمية / Qty], [الأفرادي / Price], [الإجمالي / Total])
+      ..([\#], [البيان / Description], [الكمية / Qty], [الوحدة / UNT], [الأفرادي / Price], [الإجمالي / Total])
         .map(h => table.cell(fill: sky-100, text(weight: bold, fill: sky-950, h))),
     ),
     ..d.items
@@ -244,6 +257,8 @@
           }
         },
         text(weight: medium, item.quantity),
+        // Snapshots issued before the unit column have none
+        text(weight: medium, item.at("unit", default: "-")),
         amount(item.price),
         amount(item.total, weight: semibold),
       ))
@@ -293,9 +308,35 @@
           .flatten(),
         table.cell(fill: sky-200, text(weight: bold, fill: sky-950)[الإجمالي شامل ضريبة القيمة المضافة / Total Amount (Including VAT)]),
         table.cell(fill: sky-200, amount(s.grandTotal, weight: bold, fill: sky-950, size: 16 * px)),
+        // Other reasons: the return shipping is kept back from the refund
+        ..if "returnShipping" in s {(
+          table.cell(fill: sky-100, text(weight: bold)[خصم تكلفة الشحن العكسي (يتحمّلها العميل) / Return Shipping Deducted (Paid by Customer)]),
+          amount(s.returnShipping, weight: bold),
+          table.cell(fill: sky-100, text(weight: bold)[صافي المبلغ المسترد / Net Refund]),
+          amount(s.netRefund, weight: bold),
+        )} else {()},
       )
     },
   )
+  // Other reasons: the deduction and its reason, in words
+  if "deductionNote" in s {
+    gap(8)
+    block(
+      width: 100%,
+      fill: red-50,
+      stroke: line-w + red-700,
+      inset: 8 * px,
+      {
+        set text(size: 10 * px, fill: red-900)
+        text(weight: bold, s.deductionNote)
+        if "deductionNoteEn" in s {
+          gap(4)
+          set text(dir: ltr)
+          align(left, s.deductionNoteEn)
+        }
+      },
+    )
+  }
   gap(8)
   block(
     width: 100%,

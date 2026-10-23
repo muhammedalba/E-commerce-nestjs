@@ -54,6 +54,9 @@ export enum Permissions {
   DELETE_ORDER = 'delete_order',
   REFUND_ORDER = 'refund_order',
 
+  // ---- Tax invoices & credit notes (read-only: they are never edited or deleted) ----
+  VIEW_INVOICES = 'view_invoices',
+
   // ---- Categories ----
   VIEW_CATEGORIES = 'view_categories',
   CREATE_CATEGORY = 'create_category',
@@ -351,6 +354,13 @@ export const PERMISSIONS_METADATA: PermissionMetadata[] = [
     key: Permissions.REFUND_ORDER,
     groupKey: 'permissions.groups.orders',
     labelKey: 'permissions.labels.refund_order',
+  },
+
+  // ── Invoices & credit notes ───────────────────────────────────────────────
+  {
+    key: Permissions.VIEW_INVOICES,
+    groupKey: 'permissions.groups.invoices',
+    labelKey: 'permissions.labels.view_invoices',
   },
 
   // ── Categories & Subcategories ────────────────────────────────────────────

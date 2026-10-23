@@ -8,6 +8,7 @@ import { withBaseUrl } from 'src/shared/utils/with-base-url.util';
 import { SettingsService } from 'src/settings/settings.service';
 import { Setting } from 'src/settings/shared/schema/setting.schema';
 import { resolveStoreTimezone } from 'src/backup/store-timezone';
+import { PaymentStatus } from 'src/payments/shared/enums/payment-status.enum';
 
 type OrderDocument = HydratedDocument<Order>;
 
@@ -154,8 +155,12 @@ export class OrderEmailService {
         email: customer.email,
         name: customer.name ?? '',
         orderUrl: `${process.env.CLIENT_URL}/${lang}/account/orders/${order._id.toString()}`,
-        // The mail job issues the tax invoice and attaches it
-        orderMongoId: order._id.toString(),
+        // The tax invoice is issued on payment: a paid order (Moyasar) gets it
+        // attached here; an unpaid one (COD, transfer) with the payment email
+        orderMongoId:
+          order.paymentStatus === PaymentStatus.PAID
+            ? order._id.toString()
+            : undefined,
         subject: this.i18n.translate('email.ORDER_CONFIRMATION_SUBJECT', {
           args: { number: summary.orderId },
           lang,
@@ -165,6 +170,140 @@ export class OrderEmailService {
     } catch (err) {
       this.logger.error(
         `Failed to queue confirmation email for order ${order._id.toString()}`,
+        err,
+      );
+    }
+  }
+
+  /**
+   * Tells the customer their payment was received (an admin marked a COD or
+   * bank-transfer order paid), with the tax invoice attached: the mail job
+   * issues it, and sends nothing if the invoice was already emailed. Queued;
+   * a failure is logged, not thrown: the payment is recorded.
+   */
+  async sendPaymentReceivedEmail(
+    order: OrderDocument,
+    customer: { email: string; name?: string },
+    /** The dashboard's "resend": sent even if the invoice went out already. */
+    options: { resend?: boolean } = {},
+  ) {
+    const lang = this.currentLang();
+    try {
+      const summary = await this.orderSummary(order, lang);
+      await this.mailQueue.add('payment-received-customer', {
+        email: customer.email,
+        name: customer.name ?? '',
+        orderId: summary.orderId,
+        amount: summary.amount,
+        currency: summary.currency,
+        orderUrl: `${process.env.CLIENT_URL}/${lang}/account/orders/${order._id.toString()}`,
+        orderMongoId: order._id.toString(),
+        ...(options.resend && { resend: true }),
+        subject: this.i18n.translate('email.PAYMENT_RECEIVED_SUBJECT', {
+          args: { number: summary.orderId },
+          lang,
+        }),
+        lang,
+      });
+    } catch (err) {
+      this.logger.error(
+        `Failed to queue payment email for order ${order._id.toString()}`,
+        err,
+      );
+    }
+  }
+
+  /**
+   * Tells the customer their return request was rejected, with the admin's
+   * reason. Queued; a failure is logged, not thrown: the decision stands.
+   */
+  async sendReturnRejectedEmail(
+    order: { _id: { toString(): string }; invoiceNumber?: number | null },
+    customer: { email: string; name?: string },
+    rejectionReason: string,
+  ) {
+    const lang = process.env.DEFAULT_LANGUAGE || 'ar';
+    const orderNumber = this.displayOrderNumber(order.invoiceNumber, order._id);
+    try {
+      await this.mailQueue.add('return-request-rejected-customer', {
+        email: customer.email,
+        name: customer.name ?? '',
+        orderNumber,
+        rejectionReason,
+        orderUrl: `${process.env.CLIENT_URL}/${lang}/account/orders/${order._id.toString()}`,
+        subject: this.i18n.translate('email.RETURN_REJECTED_SUBJECT', {
+          args: { number: orderNumber },
+          lang,
+        }),
+        lang,
+      });
+    } catch (err) {
+      this.logger.error(
+        `Failed to queue return rejection email for order ${order._id.toString()}`,
+        err,
+      );
+    }
+  }
+
+  /**
+   * Sends the customer their tax credit note (the mail job issues its PDF and
+   * attaches it). Queued; a failure is logged, not thrown: the credit note is
+   * already issued.
+   */
+  async sendCreditNoteEmail(
+    note: {
+      _id: { toString(): string };
+      displayNumber: string;
+      total: number;
+      /** Return shipping kept back from the refund (other reasons). */
+      returnShipping?: number;
+      /** That deduction in words (Arabic, English), as on the PDF. */
+      deductionNote?: string;
+      deductionNoteEn?: string;
+      /** The refund it settles: told in this email (the only one). */
+      refund?: { via: string; amount: number };
+    },
+    order: {
+      _id: { toString(): string };
+      invoiceNumber?: number | null;
+      currency?: string;
+    },
+    customer: { email: string; name?: string },
+  ) {
+    const lang = process.env.DEFAULT_LANGUAGE || 'ar';
+    try {
+      const settings = await this.settingsService
+        .getSettings()
+        .catch(() => null);
+      await this.mailQueue.add('credit-note-customer', {
+        email: customer.email,
+        name: customer.name ?? '',
+        creditNoteId: note._id.toString(),
+        creditNoteNumber: note.displayNumber,
+        orderNumber: this.displayOrderNumber(order.invoiceNumber, order._id),
+        total: note.total.toString(),
+        // No separate refund email: this one says what comes back, and how
+        refundAmount:
+          note.refund && note.refund.via !== 'none'
+            ? note.refund.amount.toString()
+            : '',
+        refundVia: note.refund?.via ?? 'none',
+        returnShipping: note.returnShipping
+          ? note.returnShipping.toString()
+          : '',
+        deductionNote:
+          (lang === 'en' ? note.deductionNoteEn : note.deductionNote) ?? '',
+        currency: this.currencyLabel(order.currency, settings, lang),
+        orderUrl: `${process.env.CLIENT_URL}/${lang}/account/orders/${order._id.toString()}`,
+        subject: this.i18n.translate('email.CREDIT_NOTE_SUBJECT', {
+          args: { number: note.displayNumber },
+          lang,
+        }),
+        lang,
+      });
+    } catch (err) {
+      this.logger.error(
+        `Failed to queue credit note email ${note.displayNumber} for order ${order._id.toString()}`,
         err,
       );
     }

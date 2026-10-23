@@ -1,5 +1,6 @@
 import {
   buildInvoiceSnapshot,
+  invoiceItemRow,
   InvoiceOrderInput,
   InvoiceSettingsInput,
 } from './invoice-data.builder';
@@ -141,6 +142,7 @@ const orders: Record<string, InvoiceOrderInput> = {
     _id: '66f1a2b3c4d5e6f7a8b9c0d2',
     invoiceNumber: 7,
     createdAt: '2026-03-01T10:00:00.000Z',
+    paidAt: '2026-03-05T21:30:00.000Z',
     currency: 'SAR',
     totalPrice: 200,
     discountAmount: 20,
@@ -301,7 +303,7 @@ describe('buildInvoiceSnapshot', () => {
       a.subtotal - a.discount + a.shipping + a.paymentFees + a.tax,
     ).toBeCloseTo(a.grandTotal, 10);
     expect(s.qr.payload).toBe(
-      'AS3YtNix2YPYqSDYs9mD2KfZiiDYrNin2YTZg9iz2Yog2YTZhNiq2KzYp9ix2KkCDzMwMDAwMDAwMDAwMDAwMwMYMjAyNi0wMy0wMVQxMDowMDowMC4wMDBaBAYyNDYuNzkFBTMyLjE5BkBmZDlhMmZjYzY5MTQ4YTFiMDk1YzM0NDQwNWVjNGQ2YzcxYWZiYTlkMjc5MDJmMTQ4ODZlZjFmM2E0NWNlMjM2',
+      'AS3YtNix2YPYqSDYs9mD2KfZiiDYrNin2YTZg9iz2Yog2YTZhNiq2KzYp9ix2KkCDzMwMDAwMDAwMDAwMDAwMwMYMjAyNi0wMy0wNVQyMTozMDowMC4wMDBaBAYyNDYuNzkFBTMyLjE5BkAzYWE4NmM5YjM4NzczZmFiYWU2YmFhMjE1NzU3MWMxNTg1ZDkwYzBmMzM3Nzg4ZTVhZWQ3NTBjODZjMzY2YThk',
     );
   });
 
@@ -353,6 +355,38 @@ describe('buildInvoiceSnapshot', () => {
     expect(s.qr.payload).toBe(
       'AS3YtNix2YPYqSDYs9mD2KfZiiDYrNin2YTZg9iz2Yog2YTZhNiq2KzYp9ix2KkCDzMwMDAwMDAwMDAwMDAwMwMYMjAyNi0wNi0xNVQxMjowMDowMC4wMDBaBAYxMDAuMDAFBDAuMDAGQDk3NzJlNzYxODFhNjk1MTMyYzk5ZGU3Mzg2OGM5YTcxMTM1YjMxMWY2MDliYjYwMjQyOWRkNDNlZDM4ZTg2YmM=',
     );
+  });
+
+  it('dates the invoice on payment; the number stays the order one', () => {
+    // Paid 21:30 UTC on Mar 5 = Mar 6 in Riyadh; ordered Mar 1
+    const s = build('exclusive');
+    expect(s.meta.date).toBe('3/6/2026');
+    expect(s.meta.number).toBe('RUH-8-2026-0007');
+    expect(decodeZatcaTlv(s.qr.payload)[3]).toBe('2026-03-05T21:30:00.000Z');
+  });
+
+  it("prints the order's currency, even after the store switched currency", () => {
+    // Bought in riyals; the store now sells in Kuwaiti dinars
+    const s = buildInvoiceSnapshot(
+      orders.exclusive,
+      { ...settings, currencyCode: 'KWD' },
+      issuedAt,
+    );
+    expect(s.currencyCode).toBe('SAR');
+    expect(s.summary.grandTotal).toContain('⃁');
+    expect(s.summary.grandTotal).not.toContain('د.ك');
+    expect(s.summary.amountWords).toContain('ريال');
+  });
+
+  it("uses the store's currency for an order that never stored one", () => {
+    const { currency: _none, ...old } = orders.exclusive;
+    void _none;
+    const s = buildInvoiceSnapshot(
+      old,
+      { ...settings, currencyCode: 'KWD' },
+      issuedAt,
+    );
+    expect(s.currencyCode).toBe('KWD');
   });
 
   it('numbers and dates the invoice in the store timezone', () => {
@@ -424,6 +458,42 @@ describe('buildInvoiceSnapshot', () => {
       iban: '-',
     });
     expect(s.footer.contact).toBe('');
+  });
+});
+
+describe('invoiceItemRow unit', () => {
+  const money = (n: number) => `${n}`;
+
+  it("is the line's package type at purchase, as the preview shows it", () => {
+    expect(
+      invoiceItemRow({ shippingSnapshot: { packageType: 'piece' } }, 1, money)
+        .unit,
+    ).toBe('حبة');
+    expect(
+      invoiceItemRow({ shippingSnapshot: { packageType: 'box' } }, 1, money)
+        .unit,
+    ).toBe('كرتون');
+  });
+
+  it("falls back to the variant's profile for old orders, else a dash", () => {
+    expect(
+      invoiceItemRow(
+        { variantId: { shippingProfile: { packageType: 'bag' } } },
+        1,
+        money,
+      ).unit,
+    ).toBe('كيس');
+    expect(invoiceItemRow({}, 1, money).unit).toBe('-');
+  });
+
+  it('prices a returned quantity at the invoice price', () => {
+    const row = invoiceItemRow(
+      { price: 16.5, quantity: 20, totalPrice: 330 },
+      1,
+      money,
+      12,
+    );
+    expect(row).toMatchObject({ quantity: '12', total: '198' });
   });
 });
 

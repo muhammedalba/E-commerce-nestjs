@@ -3,6 +3,7 @@ import { Job } from 'bullmq';
 import { EmailService } from './email.service';
 import { NotificationsService } from 'src/notifications/notifications.service';
 import { InvoiceService } from 'src/invoice/invoice.service';
+import { CreditNoteService } from 'src/invoice/credit-note.service';
 
 interface SendResetSuccessJobData {
   email: string;
@@ -110,6 +111,53 @@ export interface NewOrderCustomerJobData {
   orderMongoId?: string;
 }
 
+export interface PaymentReceivedJobData {
+  email: string;
+  name: string;
+  orderId: string;
+  amount: string;
+  currency: string;
+  orderUrl: string;
+  subject: string;
+  lang?: string;
+  /** The order's _id: its invoice is issued and attached. */
+  orderMongoId: string;
+  /** The dashboard resent it: sent even if the invoice went out before. */
+  resend?: boolean;
+}
+
+export interface CreditNoteCustomerJobData {
+  email: string;
+  name: string;
+  creditNoteId: string;
+  creditNoteNumber: string;
+  orderNumber: string;
+  total: string;
+  /** The refund it settles ('' when none); absent on jobs queued before. */
+  refundAmount?: string;
+  /** moyasar | manual | already_refunded | none */
+  refundVia?: string;
+  /** Return shipping kept back from the refund ('' when none). */
+  returnShipping?: string;
+  /** That deduction and its reason in words, in the email's language. */
+  deductionNote?: string;
+  currency: string;
+  orderUrl: string;
+  subject: string;
+  lang?: string;
+}
+
+/** A customer's return request was rejected (OrderReturnRequestService). */
+interface ReturnRejectedJobData {
+  email: string;
+  name: string;
+  orderNumber: string;
+  rejectionReason: string;
+  orderUrl: string;
+  subject: string;
+  lang?: string;
+}
+
 interface OrderRefundedJobData {
   email: string;
   orderId: string;
@@ -157,6 +205,13 @@ type MailJob =
     >
   | Job<NewOrderCustomerJobData, MailJobResult, 'new-order-customer'>
   | Job<OrderRefundedJobData, MailJobResult, 'order-refunded'>
+  | Job<
+      ReturnRejectedJobData,
+      MailJobResult,
+      'return-request-rejected-customer'
+    >
+  | Job<CreditNoteCustomerJobData, MailJobResult, 'credit-note-customer'>
+  | Job<PaymentReceivedJobData, MailJobResult, 'payment-received-customer'>
   | Job<BackupFailedJobData, MailJobResult, 'backup-failed'>
   | Job<AdminRoleNotificationJobData, MailJobResult, 'admin-role-notification'>;
 
@@ -168,6 +223,7 @@ export class MailProcessor extends WorkerHost {
     private readonly emailService: EmailService,
     private readonly notificationsService: NotificationsService,
     private readonly invoiceService: InvoiceService,
+    private readonly creditNoteService: CreditNoteService,
   ) {
     super();
   }
@@ -182,14 +238,29 @@ export class MailProcessor extends WorkerHost {
   ): Promise<{ filename: string; content: Buffer } | undefined> {
     const { orderMongoId } = job.data;
     if (!orderMongoId) return undefined;
+    return this.pdfAttachment(job, `invoice for order ${orderMongoId}`, () =>
+      this.invoiceService.generateAndStore(orderMongoId),
+    );
+  }
+
+  /**
+   * A document PDF to attach (invoice, credit note): stored first, or the
+   * stored one on a retry. While retries remain a failure fails the job; on
+   * the last attempt the email goes out without it (admin can regenerate).
+   */
+  private async pdfAttachment(
+    job: { attemptsMade: number; opts: { attempts?: number } },
+    label: string,
+    issue: () => Promise<{ filename: string; buffer: Buffer }>,
+  ): Promise<{ filename: string; content: Buffer } | undefined> {
     try {
-      const invoice = await this.invoiceService.generateAndStore(orderMongoId);
-      return { filename: invoice.filename, content: invoice.buffer };
+      const pdf = await issue();
+      return { filename: pdf.filename, content: pdf.buffer };
     } catch (error) {
       const isLastAttempt = job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
       if (!isLastAttempt) throw error;
       console.warn(
-        `⚠️ invoice for order ${orderMongoId} could not be issued after ${job.attemptsMade + 1} attempts; sending the confirmation without it (admin can regenerate): ${(error as Error).message}`,
+        `⚠️ ${label} could not be issued after ${job.attemptsMade + 1} attempts; sending the email without it (admin can regenerate): ${(error as Error).message}`,
       );
       return undefined;
     }
@@ -410,6 +481,57 @@ export class MailProcessor extends WorkerHost {
               ),
             );
         }
+        return {};
+      }
+      case 'payment-received-customer': {
+        const { orderMongoId } = job.data;
+        // Once: a Moyasar order got it with its confirmation, and a second
+        // "paid" click must not email it again (unless resent on purpose)
+        if (
+          !job.data.resend &&
+          (await this.invoiceService.wasEmailed(orderMongoId))
+        ) {
+          return {};
+        }
+        const invoice = await this.pdfAttachment(
+          job,
+          `invoice for order ${orderMongoId}`,
+          () => this.invoiceService.generateAndStore(orderMongoId),
+        );
+        const sent = await this.emailService.send_payment_received(
+          job.data,
+          invoice,
+        );
+        // Never fail the job here: that would email the customer twice
+        await this.invoiceService
+          .recordCustomerEmail(orderMongoId, !!invoice, sent?.messageId)
+          .catch((err: Error) =>
+            console.warn(
+              `⚠️ could not record the payment email of order ${orderMongoId}: ${err.message}`,
+            ),
+          );
+        return {};
+      }
+      case 'credit-note-customer': {
+        const { creditNoteId } = job.data;
+        const pdf = await this.pdfAttachment(
+          job,
+          `credit note ${creditNoteId}`,
+          () => this.creditNoteService.generateAndStore(creditNoteId),
+        );
+        const sent = await this.emailService.send_credit_note(job.data, pdf);
+        // Never fail the job here: that would email the customer twice
+        await this.creditNoteService
+          .recordCustomerEmail(creditNoteId, !!pdf, sent?.messageId)
+          .catch((err: Error) =>
+            console.warn(
+              `⚠️ could not record the email of credit note ${creditNoteId}: ${err.message}`,
+            ),
+          );
+        return {};
+      }
+      case 'return-request-rejected-customer': {
+        await this.emailService.send_return_request_rejected(job.data);
         return {};
       }
       case 'order-refunded': {

@@ -66,7 +66,9 @@ export class CloudinaryStorageProvider implements IStorageProvider {
 
     const uploadOptions: Record<string, any> = {
       folder,
-      public_id: filename,
+      // Raw assets keep their extension in the public ID; without it Cloudinary
+      // serves the file as application/octet-stream and browsers can't open it.
+      public_id: isPdf ? `${filename}.pdf` : filename,
       resource_type: resourceType,
     };
 
@@ -231,6 +233,12 @@ export class CloudinaryStorageProvider implements IStorageProvider {
       assetOrPath = assetOrPath.url;
     }
     if (!assetOrPath.startsWith('http')) return assetOrPath;
+
+    // Raw public IDs include the extension, so keep it.
+    if (assetOrPath.includes('/raw/upload/')) {
+      const rawMatch = assetOrPath.match(/\/raw\/upload\/(?:v\d+\/)?(.+)$/);
+      return rawMatch ? rawMatch[1] : assetOrPath;
+    }
 
     const regex = /\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-zA-Z0-9]+)?$/;
     const match = assetOrPath.match(regex);

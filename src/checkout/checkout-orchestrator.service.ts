@@ -8,6 +8,10 @@ import { PaymentProvider } from '../payments/shared/enums/payment-provider.enum'
 import { FileAsset } from 'src/shared/schema/file-asset.schema';
 import { UnitConverter } from 'src/shared/utils/unit-converter.util';
 import { ShippingProfile } from '../products/shared/schemas/shipping-profile.schema';
+import {
+  CART_EVENTS,
+  CartItemsChangedEvent,
+} from '../cart/shared/events/cart.events';
 
 interface PaymentStrategy {
   getEventName(): string;
@@ -283,6 +287,30 @@ export class CheckoutOrchestratorService {
     await this.sessionService.clearSession(userId);
     await this.sessionService.updateSession(userId, sessionWithoutCoupon);
     return this.getSummary(userId);
+  }
+
+  /**
+   * Cart lines changed → drop the applied coupon; the customer re-applies it
+   * against the new cart. Not `async: true`: CartService awaits this via
+   * emitAsync so the session is clean before the cart response returns.
+   */
+  @OnEvent(CART_EVENTS.ITEMS_CHANGED)
+  async handleCartItemsChanged({ userId }: CartItemsChangedEvent) {
+    try {
+      const session = await this.sessionService.getSession(userId);
+      if (!session.couponCode) return;
+      // undefined keys are dropped when the session is serialized
+      await this.sessionService.updateSession(userId, {
+        couponCode: undefined,
+        discountAmount: undefined,
+      });
+    } catch (err: unknown) {
+      const error = err as Error;
+      this.logger.error(
+        `Removing coupon after cart change for user ${userId} failed: ${error.message}`,
+        error.stack,
+      );
+    }
   }
 
   async placeOrder(

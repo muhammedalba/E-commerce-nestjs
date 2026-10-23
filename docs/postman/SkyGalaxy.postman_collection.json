@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "3e2c0908-0292-47c5-9c63-4679e6b7f462",
     "name": "SkyGalaxy API",
-    "description": "# SkyGalaxy API\n\nREST API للمتجر (الموقع + تطبيق الموبايل + لوحة التحكم). كل المسارات تبدأ بـ `/api/v1`.\n\n## البدء السريع\n1. اختر الـ Environment: **SkyGalaxy — Local** أو **SkyGalaxy — Production**.\n2. نفّذ **Auth → Login** — التوكنات تُحفظ تلقائياً في متغيرات الـ collection (`accessToken`, `refreshToken`).\n3. كل الطلبات المحمية تستخدم `Authorization: Bearer {{accessToken}}` تلقائياً (من إعداد الـ collection).\n4. طلبات القوائم (List) تحفظ أول `_id` تلقائياً في المتغير المناسب (`productId`, `categoryId`, `cityId`, …) لتعمل الطلبات التالية مباشرة.\n\n## الهيدرات\n| Header | القيمة | ملاحظات |\n|---|---|---|\n| `Authorization` | `Bearer <access_token>` | للطلبات المحمية |\n| `x-lang` | `ar` / `en` | لغة الرد ورسائل الأخطاء (الافتراضي ar) |\n| `x-client-type` | `mobile` | **موبايل فقط** — لاستلام `refresh_token` في الـ body بدل الـ cookie |\n| `x-app-platform` | `android` / `ios` | **موبايل فقط** — لفحص الإصدار |\n| `x-app-version` | `1.0.0` | **موبايل فقط** — إصدار غير مدعوم يرجع **426** |\n| `x-recaptcha-token` | توكن reCAPTCHA | لنماذج التواصل وطلب عرض السعر |\n\n> متغير `clientType` في الـ environment: اجعله `mobile` لإضافة هيدرات الموبايل تلقائياً، أو `web`.\n\n## المصادقة\n- **الويب:** `access_token` و `refresh_token` كـ httpOnly cookies — استخدم `credentials: 'include'`. التجديد: `GET /auth/refresh-token`.\n- **الموبايل:** أرسل `x-client-type: mobile`؛ خزّن `access_token` و `refresh_token` في secure storage. التجديد: `POST /auth/refresh-token` مع `{ \"refresh_token\": \"...\" }` — الـ refresh token يتغير في كل تجديد.\n- عند **401**: جدّد التوكن مرة واحدة ثم أعد الطلب؛ إذا فشل التجديد ← شاشة تسجيل الدخول.\n\n## الحقول المترجمة\nالحقول مثل `name`, `title`, `description` تُرسل كـ `{ \"ar\": \"...\", \"en\": \"...\" }` (3 أحرف على الأقل لكل لغة). في `multipart/form-data` استخدم `name[ar]` و `name[en]`. في الردود تأتي بلغة `x-lang` فقط، إلا مع `?all_langs=true`.\n\n## المعرفات\nمسارات `:id` للكتالوج تقبل `_id` أو `slug`.\n\n## Pagination\n`?page=1&limit=20&sort=-createdAt&keywords=...&fields=title,priceRange`\n\n## رموز الأخطاء\n| Code | المعنى |\n|---|---|\n| 400 | خطأ تحقق (Validation) — الرسالة مترجمة حسب `x-lang` |\n| 401 | غير مسجل / توكن منتهي |\n| 403 | لا توجد صلاحية |\n| 404 | غير موجود |\n| 422 | ملف غير صالح (النوع/الحجم) |\n| 426 | **موبايل:** يجب تحديث التطبيق ← `GET /app-versions/check` |\n| 429 | تجاوز حد الطلبات (Rate limit) |\n| 503 | وضع الصيانة |\n\n## الملفات\nالصور: png / jpeg / webp بحد أقصى **1MB** ما لم يُذكر غير ذلك.\n",
+    "description": "# SkyGalaxy API\n\nREST API للمتجر (الموقع + تطبيق الموبايل + لوحة التحكم). كل المسارات تبدأ بـ `/api/v1`.\n\n## البدء السريع\n1. اختر الـ Environment: **SkyGalaxy — Local** أو **SkyGalaxy — Production**.\n2. نفّذ **Auth → Login** — التوكنات تُحفظ تلقائياً في متغيرات الـ collection (`accessToken`, `refreshToken`).\n3. كل الطلبات المحمية تستخدم `Authorization: Bearer {{accessToken}}` تلقائياً (من إعداد الـ collection).\n4. طلبات القوائم (List) تحفظ أول `_id` تلقائياً في المتغير المناسب (`productId`, `categoryId`, `cityId`, …) لتعمل الطلبات التالية مباشرة.\n\n## الهيدرات\n| Header | القيمة | ملاحظات |\n|---|---|---|\n| `Authorization` | `Bearer <access_token>` | للطلبات المحمية |\n| `x-lang` | `ar` / `en` | لغة الرد ورسائل الأخطاء (الافتراضي ar) |\n| `x-client-type` | `mobile` | **موبايل فقط** — لاستلام `refresh_token` في الـ body بدل الـ cookie |\n| `x-app-platform` | `android` / `ios` | **موبايل فقط** — لفحص الإصدار |\n| `x-app-version` | `1.0.0` | **موبايل فقط** — إصدار غير مدعوم يرجع **426** |\n| `x-recaptcha-token` | توكن reCAPTCHA | لنماذج التواصل وطلب عرض السعر |\n\n> متغير `clientType` في الـ environment: اجعله `mobile` لإضافة هيدرات الموبايل تلقائياً، أو `web`.\n\n## المصادقة\n- **الويب:** `access_token` و `refresh_token` كـ httpOnly cookies — استخدم `credentials: 'include'`. التجديد: `GET /auth/refresh-token`.\n- **الموبايل:** أرسل `x-client-type: mobile`؛ خزّن `access_token` و `refresh_token` في secure storage. التجديد: `POST /auth/refresh-token` مع `{ \"refresh_token\": \"...\" }` — الـ refresh token يتغير في كل تجديد.\n- عند **401**: جدّد التوكن مرة واحدة ثم أعد الطلب؛ إذا فشل التجديد ← شاشة تسجيل الدخول.\n\n## الحقول المترجمة\nالحقول مثل `name`, `title`, `description` تُرسل كـ `{ \"ar\": \"...\", \"en\": \"...\" }` (3 أحرف على الأقل لكل لغة). في `multipart/form-data` استخدم `name[ar]` و `name[en]`. في الردود تأتي بلغة `x-lang` فقط، إلا مع `?all_langs=true`.\n\n## المعرفات\nمسارات `:id` للكتالوج تقبل `_id` أو `slug`.\n\n## Pagination\n`?page=1&limit=20&sort=-createdAt&keywords=...&fields=title,priceRange`\n\n## رموز الأخطاء\n| Code | المعنى |\n|---|---|\n| 400 | خطأ تحقق (Validation) — الرسالة مترجمة حسب `x-lang` |\n| 401 | غير مسجل / توكن منتهي |\n| 403 | لا توجد صلاحية |\n| 404 | غير موجود |\n| 422 | ملف غير صالح (النوع/الحجم) |\n| 426 | **موبايل:** يجب تحديث التطبيق ← `GET /app-versions/check` |\n| 429 | تجاوز حد الطلبات (Rate limit) |\n| 503 | وضع الصيانة |\n\n## الملفات\nالصور: png / jpeg / webp بحد أقصى **1MB** ما لم يُذكر غير ذلك.\n\n## الفواتير والمرتجعات\n- الفاتورة الضريبية تُصدر عند دفع الطلب، وتظهر في `InvoicePdf`.\n- كل استرداد يمر بمرتجع ضريبي (**Admin → Orders & Payments → Invoices & Credit Notes**). مسار `POST /payments/orders/:id/refund` حُذف.\n- يطلب الزبون الإرجاع خلال `returnWindowDays` يوماً من التوصيل (إعداد المتجر) (**My Orders → Request Return**). يوافق الأدمن أو يرفض من **Return Requests**.\n- `reasonType`: `defect` (المتجر يتحمّل الشحن) أو `other` (العميل يتحمّل الشحن ويُخصم الشحن العكسي).\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -160,6 +160,16 @@
     },
     {
       "key": "orderId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "creditNoteId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "returnRequestId",
       "value": "",
       "type": "string"
     },
@@ -1073,7 +1083,7 @@
                     "settings"
                   ]
                 },
-                "description": "🌐 **Public** — لا يحتاج تسجيل دخول\n\nإعدادات عامة: اسم المتجر، الشعار، العملة، روابط التواصل، بيانات التواصل، الميزات المفعلة (`features.reviews`, `features.wishlist`, `features.coupons`, `features.guestCheckout`)، وضع الصيانة، بيانات التحويل البنكي…\n\nاستدعه عند فتح التطبيق وخزّنه.",
+                "description": "🌐 **Public** — لا يحتاج تسجيل دخول\n\nإعدادات عامة: اسم المتجر، الشعار، العملة، روابط التواصل، بيانات التواصل، الميزات المفعلة (`features.reviews`, `features.wishlist`, `features.coupons`, `features.guestCheckout`)، وضع الصيانة، بيانات التحويل البنكي…\n\nاستدعه عند فتح التطبيق وخزّنه.\n\n`returnWindowDays`: عدد الأيام بعد التوصيل المسموح فيها بطلب إرجاع (إعداد في لوحة التحكم → الإعدادات → الشحن والضرائب، الافتراضي 5) — لعرض سياسة الإرجاع.",
                 "auth": {
                   "type": "noauth"
                 }
@@ -2616,7 +2626,7 @@
                     "coupon"
                   ]
                 },
-                "description": "🔒 **Auth** — يحتاج `Authorization: Bearer {{accessToken}}`\n\nإرسال كود فارغ يزيل الكوبون.",
+                "description": "🔒 **Auth** — يحتاج `Authorization: Bearer {{accessToken}}`\n\nإرسال كود فارغ يزيل الكوبون.\n\nكوبون على منتجات أو تصنيفات أو ماركات محددة (`applyTo`) يُخصم من المنتجات المشمولة فقط، وتبقى البقية بسعرها. إذا لم يشمل أي منتج في السلة يرجع **400**: \"رمز الخصم لا يشمل أياً من المنتجات في سلتك\". حصة كل منتج من الخصم تُحفظ على الطلب لحساب المرتجعات.",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"couponCode\": \"SAVE10\"\n}",
@@ -2779,11 +2789,480 @@
                     "{{orderId}}"
                   ]
                 },
-                "description": "🔒 **Auth** — يحتاج `Authorization: Bearer {{accessToken}}`"
+                "description": "🔒 **Auth** — يحتاج `Authorization: Bearer {{accessToken}}`\n\nتفاصيل طلب للمستخدم الحالي. إضافة إلى بيانات الطلب:\n\n| الحقل | الوصف |\n|---|---|\n| `InvoicePdf` | الفاتورة الضريبية (تُصدر عند الدفع) — `url` للعرض والتحميل |\n| `creditNotes[]` | المرتجعات الضريبية الصادرة: `displayNumber`, `issuedAt`, `total`, `reasonType`, `returnShipping` (المخصوم من الاسترداد), `refund` (`via`, `amount`), `file` |\n| `returnPolicy` | `windowDays` (إعداد المتجر `returnWindowDays`)، `endsAt` (التوصيل + المدة، `null` قبل التوصيل)، `open` (يمكن طلب إرجاع الآن)، `remaining[]` (المتبقي للإرجاع من كل بند) |\n| `returnRequests[]` | طلبات الإرجاع (الأحدث أولاً): `lines`, `reasonType`, `note`, `status` (`pending` · `approved` · `rejected` · `cancelled`), `rejectionReason`, `creditNote`, `createdAt`, `decidedAt` |\n\nاعرض زر **طلب إرجاع** عندما يكون `returnPolicy.open` صحيحاً، وفي `remaining` كمية > 0، ولا يوجد طلب `pending`."
               },
-              "response": []
+              "response": [
+                {
+                  "name": "طلب مُوصَّل ضمن مدة الإرجاع (مقتطف)",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/order/my-orders/{{orderId}}",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "order",
+                        "my-orders",
+                        "{{orderId}}"
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/my-orders/6a7f1c2e9b1d4a0012ab34cd\",\n  \"message\": \"تم العثور على البيانات بنجاح\",\n  \"data\": {\n    \"_id\": \"6a7f1c2e9b1d4a0012ab34cd\",\n    \"status\": \"delivered\",\n    \"paymentStatus\": \"PAID\",\n    \"deliveredAt\": \"2026-10-20T09:00:00.000Z\",\n    \"InvoicePdf\": {\n      \"url\": \"https://api.example.com/uploads/Invoice/RUH-8-2026-0042.pdf\",\n      \"publicId\": \"Invoice/RUH-8-2026-0042.pdf\",\n      \"provider\": \"local\"\n    },\n    \"creditNotes\": [],\n    \"returnPolicy\": {\n      \"windowDays\": 15,\n      \"endsAt\": \"2026-11-04T09:00:00.000Z\",\n      \"open\": true,\n      \"remaining\": [\n        2,\n        1\n      ]\n    },\n    \"returnRequests\": []\n  }\n}"
+                }
+              ]
+            },
+            {
+              "name": "Preview Return — معاينة الإرجاع",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/order/my-orders/{{orderId}}/return-requests/preview",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "order",
+                    "my-orders",
+                    "{{orderId}}",
+                    "return-requests",
+                    "preview"
+                  ]
+                },
+                "description": "🔒 **Auth** — يحتاج `Authorization: Bearer {{accessToken}}`\n\nما سيعود للعميل لو طلب إرجاع هذه البنود بهذا السبب. **لا يُحفظ شيء.** استدعه كلما تغيّرت الكميات أو السبب لعرض \"المبلغ المتوقع\".\n\n`lines`: بنود الطلب بترتيبها في `items` (`itemIndex` يبدأ من 0) والكمية (عدد صحيح ≥ 1، لا تتجاوز المتبقي).\n\n| `reasonType` | من يتحمّل الشحن |\n|---|---|\n| `defect` | عيب أو خلل في المنتج أو خطأ من المتجر: **المتجر**. يُعاد شحن المنتجات المرتجعة (بوزنها ومكان التوصيل، بحد أقصى الشحن المدفوع)، وكامل المبلغ مع رسوم الدفع عند إرجاع ما تبقى من الطلب. |\n| `other` | أسباب أخرى (مثل تغيير الرأي): **العميل**. يُعاد سعر المنتجات وضريبتها فقط، ويُخصم الشحن العكسي (بوزن المنتجات ومكان التوصيل، مع ضريبته إن كانت ضريبة الرسوم مفعّلة) من المبلغ المسترد. |\n\nيُحسب الشحن بنفس دوال الشراء. في `defect`: إذا بلغ الطلب حد الشحن المجاني لا يوجد شحن ليُعاد. في `other`: يدفع العميل الشحن العكسي **حتى لو كان شحن الطلب مجانياً**. حصة الكوبون لكل منتج محفوظة على البند وتُعاد بنسبة الكمية.\n\n**`amounts`** قيمة المرتجع الضريبي (موجبة): `products` بسعر الفاتورة، `discount` حصتها من الكوبون، `shipping` و`paymentFees` المُعادة، `chargesTax` ضريبتها، `taxable`، `tax`، `total`.\n\n**`deductions.returnShipping`** يُخصم من المبلغ المحوّل لا من المرتجع (أسباب أخرى فقط). المرتجع الضريبي (PDF) والإيميل يذكران المبلغ المخصوم وضريبته وسببه في بند واضح.\n\n**`refundAmount`** = `total − deductions.returnShipping.total`: ما يعود للعميل.\n\n**الأخطاء:** 400 قبل التوصيل أو بعد انتهاء المدة أو كمية أكبر من المتبقي، أو تعذّر تسعير الشحن لعنوان الطلب. 404 طلب ليس للمستخدم.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"lines\": [\n    {\n      \"itemIndex\": 1,\n      \"quantity\": 1\n    }\n  ],\n  \"reasonType\": \"other\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [
+                {
+                  "name": "أسباب أخرى — يُخصم الشحن العكسي",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/order/my-orders/{{orderId}}/return-requests/preview",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "order",
+                        "my-orders",
+                        "{{orderId}}",
+                        "return-requests",
+                        "preview"
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"lines\": [\n    {\n      \"itemIndex\": 1,\n      \"quantity\": 1\n    }\n  ],\n  \"reasonType\": \"other\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "Created",
+                  "code": 201,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/my-orders/6a7f1c2e9b1d4a0012ab34cd/return-requests/preview\",\n  \"message\": \"تم الإنشاء بنجاح\",\n  \"data\": {\n    \"amounts\": {\n      \"products\": 300,\n      \"discount\": 0,\n      \"productsBeforeTax\": 300,\n      \"productsAfterTax\": 345,\n      \"shipping\": 0,\n      \"paymentFees\": 0,\n      \"chargesTax\": 0,\n      \"taxable\": 300,\n      \"tax\": 45,\n      \"total\": 345\n    },\n    \"deductions\": {\n      \"returnShipping\": {\n        \"amount\": 25,\n        \"tax\": 3.75,\n        \"total\": 28.75\n      }\n    },\n    \"refundAmount\": 316.25,\n    \"includesCharges\": false\n  }\n}"
+                },
+                {
+                  "name": "عيب في المنتج — يُعاد شحن المنتج",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/order/my-orders/{{orderId}}/return-requests/preview",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "order",
+                        "my-orders",
+                        "{{orderId}}",
+                        "return-requests",
+                        "preview"
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"lines\": [\n    {\n      \"itemIndex\": 1,\n      \"quantity\": 1\n    }\n  ],\n  \"reasonType\": \"defect\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "Created",
+                  "code": 201,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/my-orders/6a7f1c2e9b1d4a0012ab34cd/return-requests/preview\",\n  \"message\": \"تم الإنشاء بنجاح\",\n  \"data\": {\n    \"amounts\": {\n      \"products\": 300,\n      \"discount\": 0,\n      \"productsBeforeTax\": 300,\n      \"productsAfterTax\": 345,\n      \"shipping\": 25,\n      \"paymentFees\": 0,\n      \"chargesTax\": 3.75,\n      \"taxable\": 325,\n      \"tax\": 48.75,\n      \"total\": 373.75\n    },\n    \"deductions\": {},\n    \"refundAmount\": 373.75,\n    \"includesCharges\": false\n  }\n}"
+                },
+                {
+                  "name": "انتهت مدة الإرجاع",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/order/my-orders/{{orderId}}/return-requests/preview",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "order",
+                        "my-orders",
+                        "{{orderId}}",
+                        "return-requests",
+                        "preview"
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"lines\": [\n    {\n      \"itemIndex\": 1,\n      \"quantity\": 1\n    }\n  ],\n  \"reasonType\": \"other\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "Bad Request",
+                  "code": 400,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"success\": false,\n  \"statusCode\": 400,\n  \"message\": \"The return period (15 days after delivery) has ended\",\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/my-orders/6a7f1c2e9b1d4a0012ab34cd/return-requests/preview\"\n}"
+                }
+              ]
+            },
+            {
+              "name": "Request Return — طلب إرجاع",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/order/my-orders/{{orderId}}/return-requests",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "order",
+                    "my-orders",
+                    "{{orderId}}",
+                    "return-requests"
+                  ]
+                },
+                "description": "🔒 **Auth** — يحتاج `Authorization: Bearer {{accessToken}}`\n\nيرسل العميل طلب إرجاع لمراجعته في لوحة التحكم. يُحفظ `returnRequestId` تلقائياً.\n\n**الشروط:**\n- الطلب للمستخدم نفسه، وحالته `delivered` أو `completed`.\n- ضمن `returnWindowDays` يوماً من التوصيل (إعداد المتجر، المدة نفسها للسببين).\n- الفاتورة صادرة، والكميات لا تتجاوز المتبقي.\n- طلب واحد قيد المراجعة لكل طلب (وإلا **409**).\n\n**بعد الإرسال:** يُبلَّغ أصحاب صلاحية `refund_order` بإشعار. لا يُسترد أي مبلغ حتى يوافق الأدمن.\n\n`lines`: بنود الطلب بترتيبها في `items` (`itemIndex` يبدأ من 0) والكمية (عدد صحيح ≥ 1، لا تتجاوز المتبقي).\n\n| الحقل | الوصف |\n|---|---|\n| `reasonType` | `defect` أو `other` (انظر **Preview Return**) |\n| `note` | وصف العيب أو السبب، إلزامي، حتى 1000 حرف |",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"lines\": [\n    {\n      \"itemIndex\": 1,\n      \"quantity\": 1\n    }\n  ],\n  \"reasonType\": \"other\",\n  \"note\": \"غيّرت رأيي، المنتج لم يُفتح\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [
+                {
+                  "name": "أُرسل الطلب",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/order/my-orders/{{orderId}}/return-requests",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "order",
+                        "my-orders",
+                        "{{orderId}}",
+                        "return-requests"
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"lines\": [\n    {\n      \"itemIndex\": 1,\n      \"quantity\": 1\n    }\n  ],\n  \"reasonType\": \"other\",\n  \"note\": \"غيّرت رأيي، المنتج لم يُفتح\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "Created",
+                  "code": 201,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/my-orders/6a7f1c2e9b1d4a0012ab34cd/return-requests\",\n  \"message\": \"تم الإنشاء بنجاح\",\n  \"data\": {\n    \"_id\": \"6a8f0d1e2c3b4a5968778899\",\n    \"order\": \"6a7f1c2e9b1d4a0012ab34cd\",\n    \"user\": \"6a10aa11bb22cc33dd44ee55\",\n    \"lines\": [\n      {\n        \"itemIndex\": 1,\n        \"quantity\": 1\n      }\n    ],\n    \"reasonType\": \"other\",\n    \"note\": \"غيّرت رأيي، المنتج لم يُفتح\",\n    \"status\": \"pending\",\n    \"createdAt\": \"2026-10-22T10:00:00.000Z\",\n    \"updatedAt\": \"2026-10-22T10:00:00.000Z\"\n  }\n}"
+                },
+                {
+                  "name": "يوجد طلب قيد المراجعة",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/order/my-orders/{{orderId}}/return-requests",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "order",
+                        "my-orders",
+                        "{{orderId}}",
+                        "return-requests"
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"lines\": [\n    {\n      \"itemIndex\": 1,\n      \"quantity\": 1\n    }\n  ],\n  \"reasonType\": \"other\",\n  \"note\": \"غيّرت رأيي، المنتج لم يُفتح\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "Conflict",
+                  "code": 409,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"success\": false,\n  \"statusCode\": 409,\n  \"message\": \"A return request for this order is already waiting for review\",\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/my-orders/6a7f1c2e9b1d4a0012ab34cd/return-requests\"\n}"
+                },
+                {
+                  "name": "لم يُوصَّل الطلب بعد",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/order/my-orders/{{orderId}}/return-requests",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "order",
+                        "my-orders",
+                        "{{orderId}}",
+                        "return-requests"
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"lines\": [\n    {\n      \"itemIndex\": 1,\n      \"quantity\": 1\n    }\n  ],\n  \"reasonType\": \"other\",\n  \"note\": \"غيّرت رأيي، المنتج لم يُفتح\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "Bad Request",
+                  "code": 400,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"success\": false,\n  \"statusCode\": 400,\n  \"message\": \"A return can be requested once the order is delivered\",\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/my-orders/6a7f1c2e9b1d4a0012ab34cd/return-requests\"\n}"
+                },
+                {
+                  "name": "كمية أكبر من المتبقي",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/order/my-orders/{{orderId}}/return-requests",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "order",
+                        "my-orders",
+                        "{{orderId}}",
+                        "return-requests"
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"lines\": [\n    {\n      \"itemIndex\": 1,\n      \"quantity\": 1\n    }\n  ],\n  \"reasonType\": \"other\",\n  \"note\": \"غيّرت رأيي، المنتج لم يُفتح\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "status": "Bad Request",
+                  "code": 400,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"success\": false,\n  \"statusCode\": 400,\n  \"message\": \"Line 2: only 0 left to return\",\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/my-orders/6a7f1c2e9b1d4a0012ab34cd/return-requests\"\n}"
+                }
+              ],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code < 300) {",
+                      "  const j = pm.response.json();",
+                      "  if (j.data && j.data._id) pm.collectionVariables.set('returnRequestId', j.data._id);",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Withdraw Return Request — سحب طلب الإرجاع",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/order/my-orders/{{orderId}}/return-requests/{{returnRequestId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "order",
+                    "my-orders",
+                    "{{orderId}}",
+                    "return-requests",
+                    "{{returnRequestId}}"
+                  ]
+                },
+                "description": "🔒 **Auth** — يحتاج `Authorization: Bearer {{accessToken}}`\n\nيسحب العميل طلباً ما زال `pending` (يصبح `cancelled`). بعدها يمكنه إرسال طلب جديد ضمن المدة. طلب مقبول أو مرفوض لا يُسحب (**404**)."
+              },
+              "response": [
+                {
+                  "name": "سُحب الطلب",
+                  "originalRequest": {
+                    "method": "DELETE",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/order/my-orders/{{orderId}}/return-requests/{{returnRequestId}}",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "order",
+                        "my-orders",
+                        "{{orderId}}",
+                        "return-requests",
+                        "{{returnRequestId}}"
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/my-orders/6a7f1c2e9b1d4a0012ab34cd/return-requests/6a8f0d1e2c3b4a5968778899\",\n  \"message\": \"success.deleted_SUCCESS\",\n  \"data\": {\n    \"_id\": \"6a8f0d1e2c3b4a5968778899\",\n    \"order\": \"6a7f1c2e9b1d4a0012ab34cd\",\n    \"user\": \"6a10aa11bb22cc33dd44ee55\",\n    \"lines\": [\n      {\n        \"itemIndex\": 1,\n        \"quantity\": 1\n      }\n    ],\n    \"reasonType\": \"other\",\n    \"note\": \"غيّرت رأيي، المنتج لم يُفتح\",\n    \"status\": \"cancelled\",\n    \"createdAt\": \"2026-10-22T10:00:00.000Z\",\n    \"updatedAt\": \"2026-10-22T10:00:00.000Z\",\n    \"decidedAt\": \"2026-10-22T11:00:00.000Z\"\n  }\n}"
+                },
+                {
+                  "name": "لا يوجد طلب قيد المراجعة",
+                  "originalRequest": {
+                    "method": "DELETE",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/order/my-orders/{{orderId}}/return-requests/{{returnRequestId}}",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "order",
+                        "my-orders",
+                        "{{orderId}}",
+                        "return-requests",
+                        "{{returnRequestId}}"
+                      ]
+                    }
+                  },
+                  "status": "Not Found",
+                  "code": 404,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"success\": false,\n  \"statusCode\": 404,\n  \"message\": \"No pending return request to cancel\",\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/my-orders/6a7f1c2e9b1d4a0012ab34cd/return-requests/6a8f0d1e2c3b4a5968778899\"\n}"
+                }
+              ]
             }
-          ]
+          ],
+          "description": "طلبات المستخدم الحالي، وتفاصيل كل طلب مع فاتورته ومرتجعاته، وطلب الإرجاع ضمن مدة الإرجاع (`returnWindowDays` يوماً من التوصيل (إعداد المتجر)).\n\n**تدفق الإرجاع:** My Order Details (`returnPolicy`) ← Preview Return ← Request Return ← (الأدمن يوافق أو يرفض) ← يظهر المرتجع في `creditNotes` ويصل بالبريد."
         },
         {
           "name": "Online Payment (Moyasar) — الدفع الإلكتروني",
@@ -4116,7 +4595,7 @@
                         "{{orderId}}"
                       ]
                     },
-                    "description": "🛡️ **Admin** — يحتاج توكن مستخدم لديه الصلاحية المناسبة\n\n`multipart/form-data`. تحديث الحالة وبيانات التوصيل. ملفات اختيارية: `transferReceiptImg`, `DeliveryReceiptImage`, `InvoicePdf`.",
+                    "description": "🛡️ **Admin** — يحتاج توكن مستخدم لديه الصلاحية المناسبة\n\n`multipart/form-data`. تحديث الحالة وبيانات التوصيل. ملفات اختيارية: `transferReceiptImg`, `DeliveryReceiptImage`, `InvoicePdf`.\n\n**الفاتورة عند الدفع:** تحويل `paymentStatus` إلى `PAID` (الدفع عند الاستلام والتحويل البنكي) يُصدر الفاتورة الضريبية ويرسلها للعميل في إيميل \"تم استلام الدفع\"، مرة واحدة. حذف `InvoicePdf` يحتاج قيمة صريحة فارغة، ولا يحذف ملف فاتورة صادرة.",
                     "body": {
                       "mode": "formdata",
                       "formdata": [
@@ -4246,34 +4725,1559 @@
               ]
             },
             {
-              "name": "Refund Order — استرداد",
-              "request": {
-                "method": "POST",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/payments/orders/{{orderId}}/refund",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "payments",
-                    "orders",
-                    "{{orderId}}",
-                    "refund"
+              "name": "Invoices & Credit Notes — الفواتير والمرتجعات",
+              "description": "الفاتورة الضريبية تُصدر عند دفع الطلب (Typst، في السيرفر). **كل استرداد يمر بمرتجع ضريبي** (`RUH-R-8-{السنة}-{التسلسل}`) بأسعار الفاتورة. المرتجع: يسترد المبلغ (ميسر تلقائياً، أو يُسجَّل للدفع عند الاستلام والتحويل)، ثم يُرقَّم، ويعيد الكميات للمخزون، ويُرسل للعميل بالبريد.\n\nالصلاحية: `refund_order`، وإعادة إنشاء الفاتورة `update_order_status`.\n\n| `reasonType` | من يتحمّل الشحن |\n|---|---|\n| `defect` | عيب أو خلل في المنتج أو خطأ من المتجر: **المتجر**. يُعاد شحن المنتجات المرتجعة (بوزنها ومكان التوصيل، بحد أقصى الشحن المدفوع)، وكامل المبلغ مع رسوم الدفع عند إرجاع ما تبقى من الطلب. |\n| `other` | أسباب أخرى (مثل تغيير الرأي): **العميل**. يُعاد سعر المنتجات وضريبتها فقط، ويُخصم الشحن العكسي (بوزن المنتجات ومكان التوصيل، مع ضريبته إن كانت ضريبة الرسوم مفعّلة) من المبلغ المسترد. |\n\nيُحسب الشحن بنفس دوال الشراء. في `defect`: إذا بلغ الطلب حد الشحن المجاني لا يوجد شحن ليُعاد. في `other`: يدفع العميل الشحن العكسي **حتى لو كان شحن الطلب مجانياً**. حصة الكوبون لكل منتج محفوظة على البند وتُعاد بنسبة الكمية.\n\n**صفحة لوحة التحكم** (`/dashboard/invoices`، صلاحية `view_invoices`): القوائم والبحث والإجماليات والتصدير وإعادة الإرسال في أول هذا المجلد. لا حذف ولا تعديل لأي وثيقة صادرة.",
+              "item": [
+                {
+                  "name": "List Invoices — قائمة الفواتير",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/invoices",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "invoices"
+                      ],
+                      "query": [
+                        {
+                          "key": "search",
+                          "value": "",
+                          "description": "رقم الفاتورة أو المرتجع، اسم العميل، رقم الطلب، بريد العميل أو جواله",
+                          "disabled": true
+                        },
+                        {
+                          "key": "from",
+                          "value": "2026-10-01T00:00:00.000Z",
+                          "description": "من تاريخ الإصدار (ISO، شامل)",
+                          "disabled": true
+                        },
+                        {
+                          "key": "to",
+                          "value": "2026-10-31T23:59:59.999Z",
+                          "description": "إلى تاريخ الإصدار (ISO، شامل)",
+                          "disabled": true
+                        },
+                        {
+                          "key": "status",
+                          "value": "generated",
+                          "description": "generated (صادرة) | failed (لم تصدر، لإعادة المحاولة)",
+                          "disabled": true
+                        },
+                        {
+                          "key": "page",
+                          "value": "1",
+                          "description": "رقم الصفحة",
+                          "disabled": true
+                        },
+                        {
+                          "key": "limit",
+                          "value": "20",
+                          "description": "عدد العناصر (حتى 100)",
+                          "disabled": true
+                        }
+                      ]
+                    },
+                    "description": "🛡️ **Admin** — يحتاج توكن مستخدم لديه الصلاحية المناسبة (`view_invoices`)\n\nالفواتير الضريبية، الأحدث أولاً. **للعرض فقط:** الفاتورة الصادرة لا تُعدّل ولا تُحذف؛ التصحيح أو الإلغاء بمرتجع (**Create Credit Note**).\n\n**البحث** (`search`): رقم الفاتورة، اسم العميل في الفاتورة، رقم الطلب، أو بريد العميل أو جواله.\n\n| الحقل | الوصف |\n|---|---|\n| `displayNumber`, `invoiceNumber`, `issuedAt`, `order` | الفاتورة وطلبها |\n| `customer` | الاسم والرقم الضريبي من الفاتورة المجمّدة |\n| `amounts` | `taxableSubtotal`, `tax`, `grandTotal` |\n| `credited` | المرتجعات الصادرة منها: `count`, `total` |\n| `status`, `lastError`, `file` | حالة الإصدار والملف |\n| `customerEmail` | `smtp_accepted` · `smtp_accepted_without_invoice` |\n\nالصفحات في `meta` (`total`, `pagination`)."
+                  },
+                  "response": [
+                    {
+                      "name": "الفواتير",
+                      "originalRequest": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/invoices",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "invoices"
+                          ],
+                          "query": [
+                            {
+                              "key": "search",
+                              "value": "",
+                              "description": "رقم الفاتورة أو المرتجع، اسم العميل، رقم الطلب، بريد العميل أو جواله",
+                              "disabled": true
+                            },
+                            {
+                              "key": "from",
+                              "value": "2026-10-01T00:00:00.000Z",
+                              "description": "من تاريخ الإصدار (ISO، شامل)",
+                              "disabled": true
+                            },
+                            {
+                              "key": "to",
+                              "value": "2026-10-31T23:59:59.999Z",
+                              "description": "إلى تاريخ الإصدار (ISO، شامل)",
+                              "disabled": true
+                            },
+                            {
+                              "key": "status",
+                              "value": "generated",
+                              "description": "generated (صادرة) | failed (لم تصدر، لإعادة المحاولة)",
+                              "disabled": true
+                            },
+                            {
+                              "key": "page",
+                              "value": "1",
+                              "description": "رقم الصفحة",
+                              "disabled": true
+                            },
+                            {
+                              "key": "limit",
+                              "value": "20",
+                              "description": "عدد العناصر (حتى 100)",
+                              "disabled": true
+                            }
+                          ]
+                        }
+                      },
+                      "status": "OK",
+                      "code": 200,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/invoices\",\n  \"message\": \"تم العثور على البيانات بنجاح\",\n  \"data\": [\n    {\n      \"_id\": \"6a90aa00bb11cc22dd33ee44\",\n      \"displayNumber\": \"RUH-8-2026-0042\",\n      \"invoiceNumber\": 42,\n      \"issuedAt\": \"2026-10-20T09:00:00.000Z\",\n      \"order\": \"6a7f1c2e9b1d4a0012ab34cd\",\n      \"status\": \"generated\",\n      \"file\": {\n        \"url\": \"https://api.example.com/uploads/Invoice/RUH-8-2026-0042.pdf\",\n        \"publicId\": \"Invoice/RUH-8-2026-0042.pdf\",\n        \"provider\": \"local\"\n      },\n      \"customerEmail\": \"smtp_accepted\",\n      \"customer\": {\n        \"name\": \"محمد البحلي\",\n        \"vatNo\": \"\"\n      },\n      \"amounts\": {\n        \"taxableSubtotal\": 550,\n        \"tax\": 82.5,\n        \"grandTotal\": 632.5\n      },\n      \"credited\": {\n        \"count\": 1,\n        \"total\": 345\n      }\n    }\n  ],\n  \"meta\": {\n    \"total\": 1,\n    \"pagination\": {\n      \"currentPage\": 1,\n      \"limit\": 20,\n      \"numberOfPages\": 1\n    }\n  }\n}"
+                    },
+                    {
+                      "name": "بدون صلاحية",
+                      "originalRequest": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/invoices",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "invoices"
+                          ],
+                          "query": [
+                            {
+                              "key": "search",
+                              "value": "",
+                              "description": "رقم الفاتورة أو المرتجع، اسم العميل، رقم الطلب، بريد العميل أو جواله",
+                              "disabled": true
+                            },
+                            {
+                              "key": "from",
+                              "value": "2026-10-01T00:00:00.000Z",
+                              "description": "من تاريخ الإصدار (ISO، شامل)",
+                              "disabled": true
+                            },
+                            {
+                              "key": "to",
+                              "value": "2026-10-31T23:59:59.999Z",
+                              "description": "إلى تاريخ الإصدار (ISO، شامل)",
+                              "disabled": true
+                            },
+                            {
+                              "key": "status",
+                              "value": "generated",
+                              "description": "generated (صادرة) | failed (لم تصدر، لإعادة المحاولة)",
+                              "disabled": true
+                            },
+                            {
+                              "key": "page",
+                              "value": "1",
+                              "description": "رقم الصفحة",
+                              "disabled": true
+                            },
+                            {
+                              "key": "limit",
+                              "value": "20",
+                              "description": "عدد العناصر (حتى 100)",
+                              "disabled": true
+                            }
+                          ]
+                        }
+                      },
+                      "status": "Forbidden",
+                      "code": 403,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": false,\n  \"statusCode\": 403,\n  \"message\": \"Forbidden resource\",\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/invoices\"\n}"
+                    }
                   ]
                 },
-                "description": "🛡️ **Admin** — يحتاج توكن مستخدم لديه الصلاحية المناسبة\n\n`amount` اختياري — بدونه يتم استرداد كامل المبلغ.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"amount\": 50,\n  \"reason\": \"منتج تالف\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
+                {
+                  "name": "List Credit Notes — قائمة المرتجعات",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/invoices/credit-notes",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "invoices",
+                        "credit-notes"
+                      ],
+                      "query": [
+                        {
+                          "key": "search",
+                          "value": "",
+                          "description": "رقم الفاتورة أو المرتجع، اسم العميل، رقم الطلب، بريد العميل أو جواله",
+                          "disabled": true
+                        },
+                        {
+                          "key": "from",
+                          "value": "2026-10-01T00:00:00.000Z",
+                          "description": "من تاريخ الإصدار (ISO، شامل)",
+                          "disabled": true
+                        },
+                        {
+                          "key": "to",
+                          "value": "2026-10-31T23:59:59.999Z",
+                          "description": "إلى تاريخ الإصدار (ISO، شامل)",
+                          "disabled": true
+                        },
+                        {
+                          "key": "reasonType",
+                          "value": "other",
+                          "description": "defect | other (القديمة بلا سبب تُعدّ defect)",
+                          "disabled": true
+                        },
+                        {
+                          "key": "state",
+                          "value": "issued",
+                          "description": "issued (الافتراضي) | awaiting_refund",
+                          "disabled": true
+                        },
+                        {
+                          "key": "page",
+                          "value": "1",
+                          "description": "رقم الصفحة",
+                          "disabled": true
+                        },
+                        {
+                          "key": "limit",
+                          "value": "20",
+                          "description": "عدد العناصر (حتى 100)",
+                          "disabled": true
+                        }
+                      ]
+                    },
+                    "description": "🛡️ **Admin** — يحتاج توكن مستخدم لديه الصلاحية المناسبة (`view_invoices`)\n\nالمرتجعات الضريبية الصادرة، الأحدث أولاً، مع الفاتورة التي تعكسها. الملغاة (`void`) لا تظهر.\n\n**البحث:** رقم المرتجع، رقم الفاتورة الأصلية، اسم العميل، أو بريده أو جواله.\n\n| الحقل | الوصف |\n|---|---|\n| `reasonType`, `reason`, `source` | السبب (`defect` · `other`) ووصفه، ومصدره (`admin` · `full_refund`) |\n| `amounts` | `taxable`, `tax`, `total` … (قيمة البضاعة) |\n| `deductions.returnShipping` | الشحن العكسي المخصوم من الاسترداد (أسباب أخرى) |\n| `refund` | `via` (`moyasar` · `manual` · `already_refunded` · `none`), `amount` |\n| `invoice` | `displayNumber`, `issuedAt` للفاتورة الأصلية |"
+                  },
+                  "response": [
+                    {
+                      "name": "المرتجعات",
+                      "originalRequest": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/invoices/credit-notes",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "invoices",
+                            "credit-notes"
+                          ],
+                          "query": [
+                            {
+                              "key": "search",
+                              "value": "",
+                              "description": "رقم الفاتورة أو المرتجع، اسم العميل، رقم الطلب، بريد العميل أو جواله",
+                              "disabled": true
+                            },
+                            {
+                              "key": "from",
+                              "value": "2026-10-01T00:00:00.000Z",
+                              "description": "من تاريخ الإصدار (ISO، شامل)",
+                              "disabled": true
+                            },
+                            {
+                              "key": "to",
+                              "value": "2026-10-31T23:59:59.999Z",
+                              "description": "إلى تاريخ الإصدار (ISO، شامل)",
+                              "disabled": true
+                            },
+                            {
+                              "key": "reasonType",
+                              "value": "other",
+                              "description": "defect | other (القديمة بلا سبب تُعدّ defect)",
+                              "disabled": true
+                            },
+                            {
+                              "key": "state",
+                              "value": "issued",
+                              "description": "issued (الافتراضي) | awaiting_refund",
+                              "disabled": true
+                            },
+                            {
+                              "key": "page",
+                              "value": "1",
+                              "description": "رقم الصفحة",
+                              "disabled": true
+                            },
+                            {
+                              "key": "limit",
+                              "value": "20",
+                              "description": "عدد العناصر (حتى 100)",
+                              "disabled": true
+                            }
+                          ]
+                        }
+                      },
+                      "status": "OK",
+                      "code": 200,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/invoices/credit-notes\",\n  \"message\": \"تم العثور على البيانات بنجاح\",\n  \"data\": [\n    {\n      \"_id\": \"6a8f0e2f3d4c5b6a79889900\",\n      \"displayNumber\": \"RUH-R-8-2026-0001\",\n      \"issuedAt\": \"2026-10-22T10:00:00.000Z\",\n      \"order\": \"6a7f1c2e9b1d4a0012ab34cd\",\n      \"state\": \"issued\",\n      \"status\": \"generated\",\n      \"file\": {\n        \"url\": \"https://api.example.com/uploads/CreditNote/RUH-R-8-2026-0001.pdf\",\n        \"publicId\": \"CreditNote/RUH-R-8-2026-0001.pdf\",\n        \"provider\": \"local\"\n      },\n      \"reason\": \"غيّرت رأيي، المنتج لم يُفتح\",\n      \"reasonType\": \"other\",\n      \"source\": \"admin\",\n      \"amounts\": {\n        \"products\": 300,\n        \"discount\": 0,\n        \"productsBeforeTax\": 300,\n        \"productsAfterTax\": 345,\n        \"shipping\": 0,\n        \"paymentFees\": 0,\n        \"chargesTax\": 0,\n        \"taxable\": 300,\n        \"tax\": 45,\n        \"total\": 345\n      },\n      \"deductions\": {\n        \"returnShipping\": {\n          \"amount\": 25,\n          \"tax\": 3.75,\n          \"total\": 28.75\n        }\n      },\n      \"refund\": {\n        \"via\": \"moyasar\",\n        \"amount\": 316.25\n      },\n      \"customerEmail\": \"smtp_accepted\",\n      \"invoice\": {\n        \"_id\": \"6a90aa00bb11cc22dd33ee44\",\n        \"displayNumber\": \"RUH-8-2026-0042\",\n        \"issuedAt\": \"2026-10-20T09:00:00.000Z\"\n      },\n      \"customer\": {\n        \"name\": \"محمد البحلي\",\n        \"vatNo\": \"\"\n      }\n    }\n  ],\n  \"meta\": {\n    \"total\": 1,\n    \"pagination\": {\n      \"currentPage\": 1,\n      \"limit\": 20,\n      \"numberOfPages\": 1\n    }\n  }\n}"
                     }
-                  }
+                  ]
+                },
+                {
+                  "name": "Invoices Stats — إجماليات الفترة",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/invoices/stats?from=2026-10-01T00:00:00.000Z&to=2026-10-31T23:59:59.999Z",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "invoices",
+                        "stats"
+                      ],
+                      "query": [
+                        {
+                          "key": "from",
+                          "value": "2026-10-01T00:00:00.000Z",
+                          "description": "من تاريخ الإصدار (ISO، شامل)",
+                          "disabled": false
+                        },
+                        {
+                          "key": "to",
+                          "value": "2026-10-31T23:59:59.999Z",
+                          "description": "إلى تاريخ الإصدار (ISO، شامل)",
+                          "disabled": false
+                        }
+                      ]
+                    },
+                    "description": "🛡️ **Admin** — يحتاج توكن مستخدم لديه الصلاحية المناسبة (`view_invoices`)\n\nإجماليات الفترة (`from`/`to` على تاريخ الإصدار؛ بدونهما: الكل):\n- `invoices`، `creditNotes`: العدد والإجمالي والضريبة (الصادرة فقط).\n- `net`: الفواتير ناقص المرتجعات، إجمالياً وضريبة.\n- `failed`: ما لم يصدر (لإعادة المحاولة)."
+                  },
+                  "response": [
+                    {
+                      "name": "أكتوبر",
+                      "originalRequest": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/invoices/stats?from=2026-10-01T00:00:00.000Z&to=2026-10-31T23:59:59.999Z",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "invoices",
+                            "stats"
+                          ],
+                          "query": [
+                            {
+                              "key": "from",
+                              "value": "2026-10-01T00:00:00.000Z",
+                              "description": "من تاريخ الإصدار (ISO، شامل)",
+                              "disabled": false
+                            },
+                            {
+                              "key": "to",
+                              "value": "2026-10-31T23:59:59.999Z",
+                              "description": "إلى تاريخ الإصدار (ISO، شامل)",
+                              "disabled": false
+                            }
+                          ]
+                        }
+                      },
+                      "status": "OK",
+                      "code": 200,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/invoices/stats?from=2026-10-01T00:00:00.000Z&to=2026-10-31T23:59:59.999Z\",\n  \"message\": \"تم العثور على البيانات بنجاح\",\n  \"data\": {\n    \"invoices\": {\n      \"count\": 2,\n      \"total\": 1265,\n      \"tax\": 165\n    },\n    \"creditNotes\": {\n      \"count\": 1,\n      \"total\": 345,\n      \"tax\": 45\n    },\n    \"net\": {\n      \"total\": 920,\n      \"tax\": 120\n    },\n    \"failed\": {\n      \"invoices\": 1,\n      \"creditNotes\": 0\n    }\n  }\n}"
+                    }
+                  ]
+                },
+                {
+                  "name": "Export CSV — تصدير للمحاسب",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/invoices/export?type=invoices",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "invoices",
+                        "export"
+                      ],
+                      "query": [
+                        {
+                          "key": "type",
+                          "value": "invoices",
+                          "description": "invoices | credit-notes (إلزامي)"
+                        },
+                        {
+                          "key": "search",
+                          "value": "",
+                          "description": "رقم الفاتورة أو المرتجع، اسم العميل، رقم الطلب، بريد العميل أو جواله",
+                          "disabled": true
+                        },
+                        {
+                          "key": "from",
+                          "value": "2026-10-01T00:00:00.000Z",
+                          "description": "من تاريخ الإصدار (ISO، شامل)",
+                          "disabled": true
+                        },
+                        {
+                          "key": "to",
+                          "value": "2026-10-31T23:59:59.999Z",
+                          "description": "إلى تاريخ الإصدار (ISO، شامل)",
+                          "disabled": true
+                        },
+                        {
+                          "key": "status",
+                          "value": "generated",
+                          "description": "للفواتير",
+                          "disabled": true
+                        },
+                        {
+                          "key": "reasonType",
+                          "value": "other",
+                          "description": "للمرتجعات",
+                          "disabled": true
+                        }
+                      ]
+                    },
+                    "description": "🛡️ **Admin** — يحتاج توكن مستخدم لديه الصلاحية المناسبة (`view_invoices`)\n\nملف CSV بنفس فلاتر القائمة (بحد أقصى 10,000 صف)، للفتح في Excel:\n- UTF-8 مع BOM، فتظهر العربية صحيحة.\n- التواريخ بتوقيت المتجر.\n- صف إجمالي في النهاية.\n- النصوص التي تبدأ بـ `=` `+` `-` `@` تُسبق بـ `'` كي لا تُنفّذ كصيغة.\n\n**أعمدة الفواتير:** الرقم، التاريخ، رقم الطلب، العميل، الرقم الضريبي، قبل الضريبة، الضريبة، الإجمالي، المرتجع منها، الحالة.\n\n**أعمدة المرتجعات:** الرقم، التاريخ، رقم الفاتورة، العميل، السبب، قبل الضريبة، الضريبة، الإجمالي، خصم الشحن العكسي، المسترد، طريقة الاسترداد.\n\nفي Postman: **Send and Download** لحفظ الملف. حد 10 طلبات في الدقيقة."
+                  },
+                  "response": [
+                    {
+                      "name": "invoices-2026-10-22.csv",
+                      "originalRequest": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/invoices/export?type=invoices",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "invoices",
+                            "export"
+                          ],
+                          "query": [
+                            {
+                              "key": "type",
+                              "value": "invoices",
+                              "description": "invoices | credit-notes (إلزامي)"
+                            },
+                            {
+                              "key": "search",
+                              "value": "",
+                              "description": "رقم الفاتورة أو المرتجع، اسم العميل، رقم الطلب، بريد العميل أو جواله",
+                              "disabled": true
+                            },
+                            {
+                              "key": "from",
+                              "value": "2026-10-01T00:00:00.000Z",
+                              "description": "من تاريخ الإصدار (ISO، شامل)",
+                              "disabled": true
+                            },
+                            {
+                              "key": "to",
+                              "value": "2026-10-31T23:59:59.999Z",
+                              "description": "إلى تاريخ الإصدار (ISO، شامل)",
+                              "disabled": true
+                            },
+                            {
+                              "key": "status",
+                              "value": "generated",
+                              "description": "للفواتير",
+                              "disabled": true
+                            },
+                            {
+                              "key": "reasonType",
+                              "value": "other",
+                              "description": "للمرتجعات",
+                              "disabled": true
+                            }
+                          ]
+                        }
+                      },
+                      "status": "OK",
+                      "code": 200,
+                      "_postman_previewlanguage": "text",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "text/csv; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "﻿رقم الفاتورة,التاريخ,رقم الطلب,العميل,الرقم الضريبي للعميل,الإجمالي قبل الضريبة,الضريبة,الإجمالي شامل الضريبة,المرتجع منها,الحالة\r\nRUH-8-2026-0042,2026-10-20,42,محمد البحلي,,550,82.5,632.5,345,صادرة\r\nالإجمالي,,,1,,550,82.5,632.5,345,\r\n"
+                    }
+                  ]
+                },
+                {
+                  "name": "Resend Invoice — إعادة إرسال الفاتورة",
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/invoices/{{orderId}}/resend",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "invoices",
+                        "{{orderId}}",
+                        "resend"
+                      ]
+                    },
+                    "description": "🛡️ **Admin** — يحتاج توكن مستخدم لديه الصلاحية المناسبة (`update_order_status`)\n\nيرسل الفاتورة الصادرة للعميل مرة أخرى (إيميل \"تم استلام الدفع\" مع PDF)، حتى لو أُرسلت سابقاً. `:orderId` هو معرّف الطلب.\n\nحد 3 طلبات في الدقيقة. **404** إن لم تصدر فاتورة الطلب، و**400** إن لم يكن للعميل بريد."
+                  },
+                  "response": [
+                    {
+                      "name": "أُرسلت",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/invoices/{{orderId}}/resend",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "invoices",
+                            "{{orderId}}",
+                            "resend"
+                          ]
+                        }
+                      },
+                      "status": "Created",
+                      "code": 201,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/invoices/6a7f1c2e9b1d4a0012ab34cd/resend\",\n  \"message\": \"تم الإنشاء بنجاح\",\n  \"data\": {\n    \"queued\": true\n  }\n}"
+                    },
+                    {
+                      "name": "لا فاتورة صادرة",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/invoices/{{orderId}}/resend",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "invoices",
+                            "{{orderId}}",
+                            "resend"
+                          ]
+                        }
+                      },
+                      "status": "Not Found",
+                      "code": 404,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": false,\n  \"statusCode\": 404,\n  \"message\": \"No issued invoice for this order\",\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/invoices/6a7f1c2e9b1d4a0012ab34cd/resend\"\n}"
+                    },
+                    {
+                      "name": "تجاوز الحد",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/invoices/{{orderId}}/resend",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "invoices",
+                            "{{orderId}}",
+                            "resend"
+                          ]
+                        }
+                      },
+                      "status": "Too Many Requests",
+                      "code": 429,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": false,\n  \"statusCode\": 429,\n  \"message\": \"ThrottlerException: Too Many Requests\",\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/invoices/6a7f1c2e9b1d4a0012ab34cd/resend\"\n}"
+                    }
+                  ]
+                },
+                {
+                  "name": "Resend Credit Note — إعادة إرسال المرتجع",
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/invoices/credit-notes/{{creditNoteId}}/resend",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "invoices",
+                        "credit-notes",
+                        "{{creditNoteId}}",
+                        "resend"
+                      ]
+                    },
+                    "description": "🛡️ **Admin** — يحتاج توكن مستخدم لديه الصلاحية المناسبة (`refund_order`)\n\nيرسل المرتجع الضريبي الصادر للعميل مرة أخرى. يتضمن الإيميل مبلغ الاسترداد، وبند خصم الشحن العكسي وسببه إن وُجد. لا يُسترد أي مبلغ من جديد.\n\nحد 3 طلبات في الدقيقة. **404** لمرتجع غير صادر."
+                  },
+                  "response": [
+                    {
+                      "name": "أُرسل",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/invoices/credit-notes/{{creditNoteId}}/resend",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "invoices",
+                            "credit-notes",
+                            "{{creditNoteId}}",
+                            "resend"
+                          ]
+                        }
+                      },
+                      "status": "Created",
+                      "code": 201,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/invoices/credit-notes/6a8f0e2f3d4c5b6a79889900/resend\",\n  \"message\": \"تم الإنشاء بنجاح\",\n  \"data\": {\n    \"queued\": true\n  }\n}"
+                    },
+                    {
+                      "name": "غير موجود",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/invoices/credit-notes/{{creditNoteId}}/resend",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "invoices",
+                            "credit-notes",
+                            "{{creditNoteId}}",
+                            "resend"
+                          ]
+                        }
+                      },
+                      "status": "Not Found",
+                      "code": 404,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": false,\n  \"statusCode\": 404,\n  \"message\": \"Credit note not found\",\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/invoices/credit-notes/6a8f0e2f3d4c5b6a79889900/resend\"\n}"
+                    }
+                  ]
+                },
+                {
+                  "name": "Regenerate Invoice — إعادة إنشاء الفاتورة",
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/order/{{orderId}}/invoice/regenerate",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "order",
+                        "{{orderId}}",
+                        "invoice",
+                        "regenerate"
+                      ]
+                    },
+                    "description": "🛡️ **Admin** — يحتاج توكن مستخدم لديه الصلاحية المناسبة (`update_order_status`)\n\nيعيد محاولة فاتورة تعذّر إصدارها (`failed`)، بنفس البيانات المجمّدة ونفس الرقم. فاتورة صادرة تُعاد كما هي."
+                  },
+                  "response": [
+                    {
+                      "name": "الفاتورة",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/order/{{orderId}}/invoice/regenerate",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "order",
+                            "{{orderId}}",
+                            "invoice",
+                            "regenerate"
+                          ]
+                        }
+                      },
+                      "status": "Created",
+                      "code": 201,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/6a7f1c2e9b1d4a0012ab34cd/invoice/regenerate\",\n  \"message\": \"تم الإنشاء بنجاح\",\n  \"data\": {\n    \"number\": \"RUH-8-2026-0042\",\n    \"InvoicePdf\": {\n      \"url\": \"https://api.example.com/uploads/Invoice/RUH-8-2026-0042.pdf\",\n      \"publicId\": \"Invoice/RUH-8-2026-0042.pdf\",\n      \"provider\": \"local\"\n    }\n  }\n}"
+                    }
+                  ]
+                },
+                {
+                  "name": "Credit Note Summary — ما يمكن إرجاعه",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/order/{{orderId}}/credit-notes/summary",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "order",
+                        "{{orderId}}",
+                        "credit-notes",
+                        "summary"
+                      ]
+                    },
+                    "description": "🛡️ **Admin** — يحتاج توكن مستخدم لديه الصلاحية المناسبة (`refund_order`)\n\nقبل فتح نافذة الإرجاع:\n\n| الحقل | الوصف |\n|---|---|\n| `invoiceIssued` | لا مرتجع قبل إصدار الفاتورة |\n| `remaining[]` | المتبقي للإرجاع من كل بند |\n| `uncreditedRefund` | مبلغ مُسترد سابقاً بدون مرتجع (من لوحة ميسر) — يُحتسب أولاً |\n| `discountEstimated` | طلب قديم بكوبون على منتجات محددة: حصة الخصم مُقدَّرة، راجع المبلغ |"
+                  },
+                  "response": [
+                    {
+                      "name": "الملخص",
+                      "originalRequest": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/order/{{orderId}}/credit-notes/summary",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "order",
+                            "{{orderId}}",
+                            "credit-notes",
+                            "summary"
+                          ]
+                        }
+                      },
+                      "status": "OK",
+                      "code": 200,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/6a7f1c2e9b1d4a0012ab34cd/credit-notes/summary\",\n  \"message\": \"تم العثور على البيانات بنجاح\",\n  \"data\": {\n    \"invoiceIssued\": true,\n    \"remaining\": [\n      2,\n      1\n    ],\n    \"uncreditedRefund\": 0,\n    \"discountEstimated\": false\n  }\n}"
+                    }
+                  ]
+                },
+                {
+                  "name": "Preview Credit Note — معاينة المرتجع",
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/order/{{orderId}}/credit-notes/preview",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "order",
+                        "{{orderId}}",
+                        "credit-notes",
+                        "preview"
+                      ]
+                    },
+                    "description": "🛡️ **Admin** — يحتاج توكن مستخدم لديه الصلاحية المناسبة (`refund_order`)\n\nمبالغ المرتجع وضريبته كما يحسبها السيرفر. **لا يُحفظ شيء.**\n\n`lines`: بنود الطلب بترتيبها في `items` (`itemIndex` يبدأ من 0) والكمية (عدد صحيح ≥ 1، لا تتجاوز المتبقي).\n\n`reasonType` إلزامي (`defect` · `other`).\n\n**`amounts`** قيمة المرتجع الضريبي (موجبة): `products` بسعر الفاتورة، `discount` حصتها من الكوبون، `shipping` و`paymentFees` المُعادة، `chargesTax` ضريبتها، `taxable`، `tax`، `total`.\n\n**`deductions.returnShipping`** يُخصم من المبلغ المحوّل لا من المرتجع (أسباب أخرى فقط). المرتجع الضريبي (PDF) والإيميل يذكران المبلغ المخصوم وضريبته وسببه في بند واضح.\n\n**`refundAmount`** = `total − deductions.returnShipping.total`: ما يعود للعميل.\n\n`includesCharges`: المرتجع يُكمل الطلب بسبب عيب، فيشمل ما تبقى من الشحن ورسوم الدفع.",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"lines\": [\n    {\n      \"itemIndex\": 1,\n      \"quantity\": 1\n    }\n  ],\n  \"reasonType\": \"defect\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "response": [
+                    {
+                      "name": "عيب — مع شحن المنتج",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/order/{{orderId}}/credit-notes/preview",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "order",
+                            "{{orderId}}",
+                            "credit-notes",
+                            "preview"
+                          ]
+                        },
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"lines\": [\n    {\n      \"itemIndex\": 1,\n      \"quantity\": 1\n    }\n  ],\n  \"reasonType\": \"defect\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Created",
+                      "code": 201,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/6a7f1c2e9b1d4a0012ab34cd/credit-notes/preview\",\n  \"message\": \"تم الإنشاء بنجاح\",\n  \"data\": {\n    \"lines\": [\n      {\n        \"itemIndex\": 1,\n        \"quantity\": 1,\n        \"productId\": \"6ab023dcbb9ee4c4c1b5b960\",\n        \"variantId\": \"6ab023dcbb9ee4c4c1b5b961\"\n      }\n    ],\n    \"amounts\": {\n      \"products\": 300,\n      \"discount\": 0,\n      \"productsBeforeTax\": 300,\n      \"productsAfterTax\": 345,\n      \"shipping\": 25,\n      \"paymentFees\": 0,\n      \"chargesTax\": 3.75,\n      \"taxable\": 325,\n      \"tax\": 48.75,\n      \"total\": 373.75\n    },\n    \"deductions\": {},\n    \"refundAmount\": 373.75,\n    \"includesCharges\": false,\n    \"uncreditedRefund\": 0,\n    \"discountEstimated\": false\n  }\n}"
+                    },
+                    {
+                      "name": "أسباب أخرى — خصم الشحن العكسي",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/order/{{orderId}}/credit-notes/preview",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "order",
+                            "{{orderId}}",
+                            "credit-notes",
+                            "preview"
+                          ]
+                        },
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"lines\": [\n    {\n      \"itemIndex\": 1,\n      \"quantity\": 1\n    }\n  ],\n  \"reasonType\": \"other\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Created",
+                      "code": 201,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/6a7f1c2e9b1d4a0012ab34cd/credit-notes/preview\",\n  \"message\": \"تم الإنشاء بنجاح\",\n  \"data\": {\n    \"lines\": [\n      {\n        \"itemIndex\": 1,\n        \"quantity\": 1,\n        \"productId\": \"6ab023dcbb9ee4c4c1b5b960\",\n        \"variantId\": \"6ab023dcbb9ee4c4c1b5b961\"\n      }\n    ],\n    \"amounts\": {\n      \"products\": 300,\n      \"discount\": 0,\n      \"productsBeforeTax\": 300,\n      \"productsAfterTax\": 345,\n      \"shipping\": 0,\n      \"paymentFees\": 0,\n      \"chargesTax\": 0,\n      \"taxable\": 300,\n      \"tax\": 45,\n      \"total\": 345\n    },\n    \"deductions\": {\n      \"returnShipping\": {\n        \"amount\": 25,\n        \"tax\": 3.75,\n        \"total\": 28.75\n      }\n    },\n    \"refundAmount\": 316.25,\n    \"includesCharges\": false,\n    \"uncreditedRefund\": 0,\n    \"discountEstimated\": false\n  }\n}"
+                    }
+                  ]
+                },
+                {
+                  "name": "Create Credit Note — إرجاع منتجات",
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/order/{{orderId}}/credit-notes",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "order",
+                        "{{orderId}}",
+                        "credit-notes"
+                      ]
+                    },
+                    "description": "🛡️ **Admin** — يحتاج توكن مستخدم لديه الصلاحية المناسبة (`refund_order`)\n\nإرجاع من لوحة التحكم (في أي وقت، دون مدة الإرجاع). يحل محل مسار الاسترداد القديم `POST /payments/orders/:id/refund` (حُذف).\n\n**الخطوات:**\n1. حجز البنود (`awaiting_refund`).\n2. الاسترداد: ميسر للطلب المدفوع إلكترونياً، أو يُسجَّل على الطلب للدفع عند الاستلام والتحويل (يُعاد يدوياً)، ولا شيء لطلب غير مدفوع.\n3. الترقيم، وإعادة الكميات للمخزون، وإرسال المرتجع للعميل في إيميل واحد مع مبلغ الاسترداد.\n\nفشل الاسترداد يلغي المرتجع دون رقم.\n\n| الحقل | الوصف |\n|---|---|\n| `lines` | البنود والكميات |\n| `reasonType` | `defect` · `other` (إلزامي) |\n| `reason` | وصف السبب، إلزامي، حتى 500 حرف |\n| `restock` | إعادة الكميات للمخزون (افتراضي `true`) |\n\nيُحفظ `creditNoteId` تلقائياً.",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"lines\": [\n    {\n      \"itemIndex\": 1,\n      \"quantity\": 1\n    }\n  ],\n  \"reasonType\": \"other\",\n  \"reason\": \"تغيير رأي العميل\",\n  \"restock\": true\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "response": [
+                    {
+                      "name": "صدر المرتجع (ميسر)",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/order/{{orderId}}/credit-notes",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "order",
+                            "{{orderId}}",
+                            "credit-notes"
+                          ]
+                        },
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"lines\": [\n    {\n      \"itemIndex\": 1,\n      \"quantity\": 1\n    }\n  ],\n  \"reasonType\": \"other\",\n  \"reason\": \"تغيير رأي العميل\",\n  \"restock\": true\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Created",
+                      "code": 201,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/6a7f1c2e9b1d4a0012ab34cd/credit-notes\",\n  \"message\": \"تم الإنشاء بنجاح\",\n  \"data\": {\n    \"_id\": \"6a8f0e2f3d4c5b6a79889900\",\n    \"displayNumber\": \"RUH-R-8-2026-0001\",\n    \"amounts\": {\n      \"products\": 300,\n      \"discount\": 0,\n      \"productsBeforeTax\": 300,\n      \"productsAfterTax\": 345,\n      \"shipping\": 0,\n      \"paymentFees\": 0,\n      \"chargesTax\": 0,\n      \"taxable\": 300,\n      \"tax\": 45,\n      \"total\": 345\n    },\n    \"refund\": {\n      \"via\": \"moyasar\",\n      \"amount\": 316.25\n    }\n  }\n}"
+                    },
+                    {
+                      "name": "تعذّر تسعير الشحن",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/order/{{orderId}}/credit-notes",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "order",
+                            "{{orderId}}",
+                            "credit-notes"
+                          ]
+                        },
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"lines\": [\n    {\n      \"itemIndex\": 1,\n      \"quantity\": 1\n    }\n  ],\n  \"reasonType\": \"other\",\n  \"reason\": \"تغيير رأي العميل\",\n  \"restock\": true\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Bad Request",
+                      "code": 400,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": false,\n  \"statusCode\": 400,\n  \"message\": \"The return shipping cannot be priced: No shipping rates available for this location\",\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/6a7f1c2e9b1d4a0012ab34cd/credit-notes\"\n}"
+                    },
+                    {
+                      "name": "الفاتورة لم تصدر",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/order/{{orderId}}/credit-notes",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "order",
+                            "{{orderId}}",
+                            "credit-notes"
+                          ]
+                        },
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"lines\": [\n    {\n      \"itemIndex\": 1,\n      \"quantity\": 1\n    }\n  ],\n  \"reasonType\": \"other\",\n  \"reason\": \"تغيير رأي العميل\",\n  \"restock\": true\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Bad Request",
+                      "code": 400,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": false,\n  \"statusCode\": 400,\n  \"message\": \"The invoice is not issued yet\",\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/6a7f1c2e9b1d4a0012ab34cd/credit-notes\"\n}"
+                    }
+                  ],
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "if (pm.response.code < 300) {",
+                          "  const j = pm.response.json();",
+                          "  if (j.data && j.data._id) pm.collectionVariables.set('creditNoteId', j.data._id);",
+                          "}"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Regenerate Credit Note PDF — إعادة إنشاء ملف المرتجع",
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/order/{{orderId}}/credit-notes/{{creditNoteId}}/regenerate",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "order",
+                        "{{orderId}}",
+                        "credit-notes",
+                        "{{creditNoteId}}",
+                        "regenerate"
+                      ]
+                    },
+                    "description": "🛡️ **Admin** — يحتاج توكن مستخدم لديه الصلاحية المناسبة (`refund_order`)\n\nيعيد إنشاء ملف PDF لمرتجع صادر تعذّر إنشاء ملفه (`status: failed`). الرقم والمبالغ لا تتغير."
+                  },
+                  "response": [
+                    {
+                      "name": "الملف",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/order/{{orderId}}/credit-notes/{{creditNoteId}}/regenerate",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "order",
+                            "{{orderId}}",
+                            "credit-notes",
+                            "{{creditNoteId}}",
+                            "regenerate"
+                          ]
+                        }
+                      },
+                      "status": "Created",
+                      "code": 201,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/6a7f1c2e9b1d4a0012ab34cd/credit-notes/6a8f0e2f3d4c5b6a79889900/regenerate\",\n  \"message\": \"تم الإنشاء بنجاح\",\n  \"data\": {\n    \"number\": \"RUH-R-8-2026-0001\",\n    \"file\": {\n      \"url\": \"https://api.example.com/uploads/CreditNote/RUH-R-8-2026-0001.pdf\",\n      \"publicId\": \"CreditNote/RUH-R-8-2026-0001.pdf\",\n      \"provider\": \"local\"\n    }\n  }\n}"
+                    }
+                  ]
                 }
-              },
-              "response": []
+              ]
+            },
+            {
+              "name": "Return Requests — طلبات الإرجاع",
+              "description": "طلبات الزبائن لإرجاع منتجات (من صفحة الطلب، ضمن `returnWindowDays` يوماً من التوصيل (إعداد المتجر)). يصل إشعار لأصحاب صلاحية `refund_order` عند كل طلب جديد.\n\n**الموافقة** تُصدر المرتجع بسبب الطلب (`reasonType`) وتسترد المبلغ. **الرفض** يرسل السبب للعميل بالبريد.\n\nالصلاحية: `refund_order`.",
+              "item": [
+                {
+                  "name": "List Return Requests — قائمة طلبات الإرجاع",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/order/return-requests?status=pending",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "order",
+                        "return-requests"
+                      ],
+                      "query": [
+                        {
+                          "key": "status",
+                          "value": "pending",
+                          "description": "pending | approved | rejected | cancelled (بدونه: الكل)"
+                        },
+                        {
+                          "key": "page",
+                          "value": "1",
+                          "description": "رقم الصفحة",
+                          "disabled": true
+                        },
+                        {
+                          "key": "limit",
+                          "value": "20",
+                          "description": "عدد العناصر في الصفحة (حتى 100)",
+                          "disabled": true
+                        }
+                      ]
+                    },
+                    "description": "🛡️ **Admin** — يحتاج توكن مستخدم لديه الصلاحية المناسبة (`refund_order`)\n\nالأحدث أولاً، مع الطلب (`invoiceNumber`, `grandTotal`, `status`, `paymentMethodCode`) والعميل (`name`, `email`, `phone`). يحفظ أول `returnRequestId` و`orderId` تلقائياً."
+                  },
+                  "response": [
+                    {
+                      "name": "الطلبات المعلّقة",
+                      "originalRequest": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/order/return-requests?status=pending",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "order",
+                            "return-requests"
+                          ],
+                          "query": [
+                            {
+                              "key": "status",
+                              "value": "pending",
+                              "description": "pending | approved | rejected | cancelled (بدونه: الكل)"
+                            },
+                            {
+                              "key": "page",
+                              "value": "1",
+                              "description": "رقم الصفحة",
+                              "disabled": true
+                            },
+                            {
+                              "key": "limit",
+                              "value": "20",
+                              "description": "عدد العناصر في الصفحة (حتى 100)",
+                              "disabled": true
+                            }
+                          ]
+                        }
+                      },
+                      "status": "OK",
+                      "code": 200,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/return-requests?status=pending\",\n  \"message\": \"تم العثور على البيانات بنجاح\",\n  \"data\": [\n    {\n      \"_id\": \"6a8f0d1e2c3b4a5968778899\",\n      \"order\": {\n        \"_id\": \"6a7f1c2e9b1d4a0012ab34cd\",\n        \"invoiceNumber\": 42,\n        \"grandTotal\": 632.5,\n        \"currency\": \"SAR\",\n        \"status\": \"delivered\",\n        \"paymentMethodCode\": \"moyasar\"\n      },\n      \"user\": {\n        \"_id\": \"6a10aa11bb22cc33dd44ee55\",\n        \"name\": \"محمد\",\n        \"email\": \"customer@example.com\",\n        \"phone\": \"0500000000\"\n      },\n      \"lines\": [\n        {\n          \"itemIndex\": 1,\n          \"quantity\": 1\n        }\n      ],\n      \"reasonType\": \"other\",\n      \"note\": \"غيّرت رأيي، المنتج لم يُفتح\",\n      \"status\": \"pending\",\n      \"createdAt\": \"2026-10-22T10:00:00.000Z\",\n      \"updatedAt\": \"2026-10-22T10:00:00.000Z\"\n    }\n  ],\n  \"meta\": {\n    \"total\": 1,\n    \"pagination\": {\n      \"currentPage\": 1,\n      \"limit\": 20,\n      \"numberOfPages\": 1\n    }\n  }\n}"
+                    }
+                  ],
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                          "if (pm.response.code < 300) {",
+                          "  const j = pm.response.json();",
+                          "  const list = Array.isArray(j.data) ? j.data : [];",
+                          "  const first = list[0];",
+                          "  if (first && first._id) pm.collectionVariables.set('returnRequestId', first._id);",
+                          "  if (first && first.order && first.order._id) pm.collectionVariables.set('orderId', first.order._id);",
+                          "}"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Approve Return Request — الموافقة على طلب الإرجاع",
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/order/{{orderId}}/return-requests/{{returnRequestId}}/approve",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "order",
+                        "{{orderId}}",
+                        "return-requests",
+                        "{{returnRequestId}}",
+                        "approve"
+                      ]
+                    },
+                    "description": "🛡️ **Admin** — يحتاج توكن مستخدم لديه الصلاحية المناسبة (`refund_order`)\n\nيُصدر المرتجع بسبب الطلب ووصفه، مثل **Create Credit Note**: يسترد، ويرقّم، ويعيد للمخزون، ويرسل للعميل. ثم يصبح الطلب `approved` مع `creditNote`.\n\n| الحقل | الوصف |\n|---|---|\n| `lines` | اختياري: كميات أخرى غير المطلوبة (مثلاً بعد الفحص) |\n| `restock` | اختياري، افتراضي `true` |\n\n- فشل الاسترداد يُبقي الطلب `pending` لإعادة المحاولة.\n- موافقتان في الوقت نفسه ← **409** للثانية.",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"restock\": true\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "response": [
+                    {
+                      "name": "قُبل وصدر المرتجع",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/order/{{orderId}}/return-requests/{{returnRequestId}}/approve",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "order",
+                            "{{orderId}}",
+                            "return-requests",
+                            "{{returnRequestId}}",
+                            "approve"
+                          ]
+                        },
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"restock\": true\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Created",
+                      "code": 201,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/6a7f1c2e9b1d4a0012ab34cd/return-requests/6a8f0d1e2c3b4a5968778899/approve\",\n  \"message\": \"تم الإنشاء بنجاح\",\n  \"data\": {\n    \"_id\": \"6a8f0e2f3d4c5b6a79889900\",\n    \"displayNumber\": \"RUH-R-8-2026-0001\",\n    \"amounts\": {\n      \"products\": 300,\n      \"discount\": 0,\n      \"productsBeforeTax\": 300,\n      \"productsAfterTax\": 345,\n      \"shipping\": 0,\n      \"paymentFees\": 0,\n      \"chargesTax\": 0,\n      \"taxable\": 300,\n      \"tax\": 45,\n      \"total\": 345\n    },\n    \"refund\": {\n      \"via\": \"moyasar\",\n      \"amount\": 316.25\n    }\n  }\n}"
+                    },
+                    {
+                      "name": "بكميات معدّلة",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/order/{{orderId}}/return-requests/{{returnRequestId}}/approve",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "order",
+                            "{{orderId}}",
+                            "return-requests",
+                            "{{returnRequestId}}",
+                            "approve"
+                          ]
+                        },
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"lines\": [\n    {\n      \"itemIndex\": 1,\n      \"quantity\": 1\n    }\n  ],\n  \"restock\": false\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Created",
+                      "code": 201,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/6a7f1c2e9b1d4a0012ab34cd/return-requests/6a8f0d1e2c3b4a5968778899/approve\",\n  \"message\": \"تم الإنشاء بنجاح\",\n  \"data\": {\n    \"_id\": \"6a8f0e2f3d4c5b6a79889900\",\n    \"displayNumber\": \"RUH-R-8-2026-0001\",\n    \"amounts\": {\n      \"products\": 300,\n      \"discount\": 0,\n      \"productsBeforeTax\": 300,\n      \"productsAfterTax\": 345,\n      \"shipping\": 0,\n      \"paymentFees\": 0,\n      \"chargesTax\": 0,\n      \"taxable\": 300,\n      \"tax\": 45,\n      \"total\": 345\n    },\n    \"refund\": {\n      \"via\": \"manual\",\n      \"amount\": 316.25\n    }\n  }\n}"
+                    },
+                    {
+                      "name": "موافقة أخرى جارية",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/order/{{orderId}}/return-requests/{{returnRequestId}}/approve",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "order",
+                            "{{orderId}}",
+                            "return-requests",
+                            "{{returnRequestId}}",
+                            "approve"
+                          ]
+                        },
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"restock\": true\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Conflict",
+                      "code": 409,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": false,\n  \"statusCode\": 409,\n  \"message\": \"This return request is being approved\",\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/6a7f1c2e9b1d4a0012ab34cd/return-requests/6a8f0d1e2c3b4a5968778899/approve\"\n}"
+                    },
+                    {
+                      "name": "لا يوجد طلب معلّق",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/order/{{orderId}}/return-requests/{{returnRequestId}}/approve",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "order",
+                            "{{orderId}}",
+                            "return-requests",
+                            "{{returnRequestId}}",
+                            "approve"
+                          ]
+                        },
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"restock\": true\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Not Found",
+                      "code": 404,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": false,\n  \"statusCode\": 404,\n  \"message\": \"No pending return request\",\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/6a7f1c2e9b1d4a0012ab34cd/return-requests/6a8f0d1e2c3b4a5968778899/approve\"\n}"
+                    }
+                  ]
+                },
+                {
+                  "name": "Reject Return Request — رفض طلب الإرجاع",
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/order/{{orderId}}/return-requests/{{returnRequestId}}/reject",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "order",
+                        "{{orderId}}",
+                        "return-requests",
+                        "{{returnRequestId}}",
+                        "reject"
+                      ]
+                    },
+                    "description": "🛡️ **Admin** — يحتاج توكن مستخدم لديه الصلاحية المناسبة (`refund_order`)\n\nيرفض طلباً معلّقاً، ويُرسل `reason` للعميل بالبريد (`return-request-rejected-customer`). `reason` إلزامي، حتى 500 حرف.",
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"reason\": \"المنتج مفتوح ومستخدم\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    }
+                  },
+                  "response": [
+                    {
+                      "name": "رُفض الطلب",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/order/{{orderId}}/return-requests/{{returnRequestId}}/reject",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "order",
+                            "{{orderId}}",
+                            "return-requests",
+                            "{{returnRequestId}}",
+                            "reject"
+                          ]
+                        },
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"reason\": \"المنتج مفتوح ومستخدم\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Created",
+                      "code": 201,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/6a7f1c2e9b1d4a0012ab34cd/return-requests/6a8f0d1e2c3b4a5968778899/reject\",\n  \"message\": \"تم الإنشاء بنجاح\",\n  \"data\": {\n    \"_id\": \"6a8f0d1e2c3b4a5968778899\",\n    \"order\": \"6a7f1c2e9b1d4a0012ab34cd\",\n    \"user\": \"6a10aa11bb22cc33dd44ee55\",\n    \"lines\": [\n      {\n        \"itemIndex\": 1,\n        \"quantity\": 1\n      }\n    ],\n    \"reasonType\": \"other\",\n    \"note\": \"غيّرت رأيي، المنتج لم يُفتح\",\n    \"status\": \"rejected\",\n    \"createdAt\": \"2026-10-22T10:00:00.000Z\",\n    \"updatedAt\": \"2026-10-22T10:00:00.000Z\",\n    \"rejectionReason\": \"المنتج مفتوح ومستخدم\",\n    \"decidedBy\": \"6a10aa11bb22cc33dd44ee00\",\n    \"decidedAt\": \"2026-10-22T12:00:00.000Z\"\n  }\n}"
+                    },
+                    {
+                      "name": "لا يوجد طلب معلّق",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                          "raw": "{{baseUrl}}/order/{{orderId}}/return-requests/{{returnRequestId}}/reject",
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "path": [
+                            "order",
+                            "{{orderId}}",
+                            "return-requests",
+                            "{{returnRequestId}}",
+                            "reject"
+                          ]
+                        },
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"reason\": \"المنتج مفتوح ومستخدم\"\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        }
+                      },
+                      "status": "Not Found",
+                      "code": 404,
+                      "_postman_previewlanguage": "json",
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n  \"success\": false,\n  \"statusCode\": 404,\n  \"message\": \"No pending return request\",\n  \"timestamp\": \"2026-10-22T10:00:00.000Z\",\n  \"path\": \"/api/v1/order/6a7f1c2e9b1d4a0012ab34cd/return-requests/6a8f0d1e2c3b4a5968778899/reject\"\n}"
+                    }
+                  ]
+                }
+              ]
             },
             {
               "name": "Payment Methods",
@@ -6087,7 +8091,7 @@
                         "settings"
                       ]
                     },
-                    "description": "🛡️ **Admin** — يحتاج توكن مستخدم لديه الصلاحية المناسبة\n\n`multipart/form-data`. الكائنات (`siteName`, `socialLinks`, `contactInfo`, `features`, …) والأرقام والقيم المنطقية تُرسل كـ JSON string. ملفات: `logo`, `favicon`.",
+                    "description": "🛡️ **Admin** — يحتاج توكن مستخدم لديه الصلاحية المناسبة\n\n`multipart/form-data`. الكائنات (`siteName`, `socialLinks`, `contactInfo`, `features`, …) والأرقام والقيم المنطقية تُرسل كـ JSON string. ملفات: `logo`, `favicon`.\n\n`returnWindowDays`: عدد الأيام بعد التوصيل التي يستطيع فيها الزبون طلب إرجاع (عدد صحيح 0–365، الافتراضي 5). 0 يغلق طلبات الإرجاع للزبائن، ويبقى الإرجاع من لوحة التحكم متاحاً. تظهر في سياسة الإرجاع وفي `returnPolicy` لكل طلب.",
                     "body": {
                       "mode": "formdata",
                       "formdata": [
@@ -6114,6 +8118,12 @@
                           "value": "500",
                           "type": "text",
                           "description": ""
+                        },
+                        {
+                          "key": "returnWindowDays",
+                          "value": "5",
+                          "type": "text",
+                          "description": "مدة الإرجاع بالأيام بعد التوصيل (0–365). 0 يغلق طلبات الإرجاع للزبائن."
                         },
                         {
                           "key": "maintenanceMode",

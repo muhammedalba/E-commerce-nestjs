@@ -66,6 +66,11 @@ export class Invoice {
   @Prop({ type: Date })
   declare lockedUntil?: Date;
 
+  // Bumped inside every credit-note transaction of this invoice: two credit
+  // notes for the same order then conflict instead of both returning a line
+  @Prop({ type: Number, default: 0 })
+  declare creditNoteSeq: number;
+
   // Customer confirmation email. "smtp_accepted" means the mail server took
   // the message, not that it reached the inbox.
   @Prop({ type: Object })
@@ -78,3 +83,7 @@ export class Invoice {
 
 export type InvoiceDocument = HydratedDocument<Invoice>;
 export const InvoiceSchema = SchemaFactory.createForClass(Invoice);
+
+// The dashboard lists (newest first, by status)
+InvoiceSchema.index({ issuedAt: -1 });
+InvoiceSchema.index({ status: 1, issuedAt: -1 });

@@ -31,6 +31,7 @@ export function zatcaInvoiceHash(fields: ZatcaFields): string {
     .digest('hex');
 }
 
+/** The QR payload: tags 1–6 as TLV bytes (tag, length, UTF-8 value), Base64. */
 export function buildZatcaTlvBase64(fields: ZatcaFields): string {
   const values = [
     fields.sellerName,

@@ -15,6 +15,7 @@ import {
   FeeType,
 } from '../payments/shared/schema/payment-method.schema';
 import { ShippingProfile } from '../products/shared/schemas/shipping-profile.schema';
+import { roundMoney } from '../payments/shared/utils/currency.util';
 
 // ---------------------------------------------------------------------------
 // Input DTO
@@ -55,6 +56,8 @@ interface CouponResult {
   discountAmount: number;
   /** Subtotal after coupon discount has been applied. */
   subtotalAfterDiscount: number;
+  /** Each item's share of the discount (items order); 0 when not covered. */
+  lineDiscounts: number[];
   couponDetails: unknown;
 }
 
@@ -129,7 +132,8 @@ export interface CheckoutPreviewResponse {
   payment: CheckoutPayment | null;
   couponDetails: unknown;
   shippingOptions: ShippingCalculationResult[];
-  items: (CheckoutItem & { totalPrice: number })[];
+  /** `discount`: the line's share of the coupon (0 when not covered). */
+  items: (CheckoutItem & { totalPrice: number; discount: number })[];
   message?: string;
 }
 
@@ -165,13 +169,16 @@ export class CheckoutService {
     // 1. Aggregate cart line-items into totals.
     const cartTotals = this.calculateCartTotals(dto.items);
 
-    // 2. Fetch settings and evaluate coupon concurrently (no dependency).
-    const [settings, couponResult] = await Promise.all([
-      this.settingsService.getSettings(),
-      this.applyCoupon(dto.couponCode, userId, cartTotals.subtotal, dto.items),
-    ]);
-
+    // 2. Settings (cached) first: the coupon rounds in the store currency.
+    const settings = await this.settingsService.getSettings();
     const currency = settings.currencyCode ?? DEFAULT_CURRENCY;
+    const couponResult = await this.applyCoupon(
+      dto.couponCode,
+      userId,
+      cartTotals.subtotal,
+      dto.items,
+      currency,
+    );
 
     // 3. Validate the order meets the configured minimum amount.
     this.validateMinimumOrder(
@@ -204,6 +211,7 @@ export class CheckoutService {
       dto.cityId,
       cartTotals.totalWeight,
       city.isDeliveryAvailable,
+      currency,
     );
 
     // 7. Select the requested shipping option and apply the free-shipping rule.
@@ -211,11 +219,11 @@ export class CheckoutService {
     let shippingCost = 0;
 
     if (shippingOptions.length > 0) {
-      chosenShipping = this.selectShippingOption(
+      chosenShipping = this.shippingRatesService.selectShippingOption(
         shippingOptions,
         dto.shippingProviderId,
       );
-      shippingCost = this.calculateShippingCost(
+      shippingCost = this.shippingRatesService.calculateShippingCost(
         chosenShipping,
         couponResult.subtotalAfterDiscount,
         settings,
@@ -235,6 +243,7 @@ export class CheckoutService {
     const paymentFees = this.calculatePaymentFees(
       chosenPaymentMethod,
       couponResult.subtotalAfterDiscount,
+      currency,
     );
     const taxableCharges = settings.applyTaxOnCharges
       ? shippingCost + paymentFees
@@ -245,6 +254,7 @@ export class CheckoutService {
       countryId,
       regionId,
       cityId,
+      currency,
     );
 
     // 10. Compose and return the full checkout response.
@@ -296,6 +306,7 @@ export class CheckoutService {
     userId: string | undefined,
     subtotal: number,
     items: CheckoutItem[] = [],
+    currency?: string,
   ): Promise<CouponResult> {
     if (!userId) {
       throw new BadRequestException(
@@ -322,6 +333,7 @@ export class CheckoutService {
             userId,
             subtotal,
             validatedItems,
+            currency,
           )
         : null;
 
@@ -329,6 +341,7 @@ export class CheckoutService {
       return {
         discountAmount: 0,
         subtotalAfterDiscount: subtotal,
+        lineDiscounts: items.map(() => 0),
         couponDetails: null,
       };
     }
@@ -337,6 +350,7 @@ export class CheckoutService {
       discountAmount: rawResult.discountAmount,
       subtotalAfterDiscount:
         rawResult.totalPriceAfterDiscount ?? rawResult.totalPrice,
+      lineDiscounts: rawResult.lineDiscounts,
       couponDetails: rawResult.couponDetails,
     };
   }
@@ -403,6 +417,7 @@ export class CheckoutService {
     lookupCityId: string,
     totalWeight: number,
     isDeliveryAvailable: boolean,
+    currency?: string,
   ): Promise<ShippingCalculationResult[]> {
     if (!isDeliveryAvailable) return [];
 
@@ -412,69 +427,29 @@ export class CheckoutService {
       subtotalAfterDiscount,
       countryId,
       regionId,
+      currency,
     );
   }
 
   /**
-   * Calculates the payment method fee (percentage of the discounted subtotal
-   * or a fixed amount).
+   * Calculates the payment method fee (percentage of the discounted subtotal,
+   * rounded to the currency's smallest unit, or a fixed amount).
    */
   private calculatePaymentFees(
     chosenPaymentMethod: PaymentMethod | null,
     subtotalAfterDiscount: number,
+    currency?: string,
   ): number {
     if (!chosenPaymentMethod) return 0;
 
     if (chosenPaymentMethod.feeType === FeeType.PERCENTAGE) {
-      return (
-        (subtotalAfterDiscount * (chosenPaymentMethod.percentageFee || 0)) / 100
+      return roundMoney(
+        (subtotalAfterDiscount * (chosenPaymentMethod.percentageFee || 0)) /
+          100,
+        currency,
       );
     }
     return chosenPaymentMethod.fixedFee || 0;
-  }
-
-  /**
-   * Finds the shipping option matching the requested provider ID.
-   * Falls back to the first available option when no match is found.
-   * Throws when no options exist at all.
-   */
-  private selectShippingOption(
-    shippingOptions: ShippingCalculationResult[],
-    shippingProviderId: string,
-  ): ShippingCalculationResult {
-    const chosen =
-      shippingOptions.find((opt) => opt.providerId === shippingProviderId) ??
-      shippingOptions[0];
-
-    if (!chosen) {
-      throw new BadRequestException(
-        'No shipping options available for this city',
-      );
-    }
-
-    return chosen;
-  }
-
-  /**
-   * Returns the effective shipping cost after applying the free-shipping
-   * threshold rule from settings.  Custom rates bypass the global threshold.
-   */
-  private calculateShippingCost(
-    chosenShipping: ShippingCalculationResult,
-    subtotalAfterDiscount: number,
-    settings: Setting,
-  ): number {
-    const freeShippingThreshold = settings.freeShippingThreshold ?? 0;
-
-    if (
-      freeShippingThreshold > 0 &&
-      subtotalAfterDiscount >= freeShippingThreshold &&
-      !settings.hasCustomShippingRates
-    ) {
-      return 0;
-    }
-
-    return chosenShipping.totalShippingCost;
   }
 
   /**
@@ -534,9 +509,10 @@ export class CheckoutService {
       payment: null,
       couponDetails: couponResult.couponDetails,
       shippingOptions: [],
-      items: items.map((item) => ({
+      items: items.map((item, i) => ({
         ...item,
         totalPrice: item.price * item.quantity,
+        discount: couponResult.lineDiscounts[i] ?? 0,
       })),
       message:
         'Please provide a shipping city to calculate shipping and taxes.',
@@ -620,9 +596,12 @@ export class CheckoutService {
       },
       couponDetails: couponResult.couponDetails,
       shippingOptions,
-      items: dto.items.map((item) => ({
+      // Each line keeps its share of the coupon (frozen on the order: credit
+      // notes refund what that line was actually discounted)
+      items: dto.items.map((item, i) => ({
         ...item,
         totalPrice: item.price * item.quantity,
+        discount: couponResult.lineDiscounts[i] ?? 0,
       })),
     };
   }

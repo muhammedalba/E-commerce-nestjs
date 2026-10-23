@@ -38,10 +38,13 @@ const manualPdf = {
 const createService = (
   current: Record<string, unknown>,
   issued = issuedInvoice,
+  updated: Record<string, unknown> = {},
 ) => {
   const OrderModel = {
     findById: jest.fn(() => query({ status: 'processing', ...current })),
-    findByIdAndUpdate: jest.fn(() => Promise.resolve({ _id: id })),
+    findByIdAndUpdate: jest.fn(() =>
+      Promise.resolve({ _id: id, user: 'u1', ...updated }),
+    ),
     findOneAndDelete: jest.fn(() => query({ ...current })),
   };
   const fileUploadService = {
@@ -51,17 +54,24 @@ const createService = (
     saveFileToDisk: jest.fn(() => Promise.resolve(manualPdf)),
   };
   const invoiceService = {
+    findIssued: jest.fn(() => Promise.resolve({ status: 'generated' })),
     isIssuedInvoiceFile: jest.fn((_: string, asset?: { url?: string }) =>
       Promise.resolve(!!asset && asset.url === issued.url),
     ),
   };
+  const UserModel = {
+    findById: jest.fn(() => query({ email: 'a@b.c', name: 'Ali' })),
+  };
+  const orderEmailService = {
+    sendPaymentReceivedEmail: jest.fn(() => Promise.resolve()),
+  };
   const service = new OrderService(
     OrderModel as never,
-    {} as never,
+    UserModel as never,
     { translate: (k: string) => k } as never,
     fileUploadService as never,
     {} as never,
-    {} as never,
+    orderEmailService as never,
     {} as never,
     {} as never,
     {} as never,
@@ -70,8 +80,16 @@ const createService = (
     { emit: jest.fn() } as never,
     {} as never,
     invoiceService as never,
+    {} as never,
+    {} as never,
   );
-  return { service, OrderModel, fileUploadService };
+  return {
+    service,
+    OrderModel,
+    fileUploadService,
+    orderEmailService,
+    invoiceService,
+  };
 };
 
 const noFiles = {} as never;
@@ -144,5 +162,63 @@ describe('OrderService.remove: order files', () => {
     });
     await service.remove({ id });
     expect(fileUploadService.deleteFiles).toHaveBeenCalledWith([receipt]);
+  });
+});
+
+describe('OrderService.update: payment', () => {
+  it('emails the invoice when an admin marks the order paid', async () => {
+    const { service, orderEmailService } = createService(
+      { paymentStatus: 'PENDING' },
+      issuedInvoice,
+      { paymentStatus: 'PAID' },
+    );
+    await service.update({ id }, { paymentStatus: 'PAID' } as never, noFiles);
+    expect(orderEmailService.sendPaymentReceivedEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ paymentStatus: 'PAID' }),
+      { email: 'a@b.c', name: 'Ali' },
+    );
+  });
+
+  it('emails nothing when it was paid already, or only the status changes', async () => {
+    const paid = createService({ paymentStatus: 'PAID' }, issuedInvoice, {
+      paymentStatus: 'PAID',
+    });
+    await paid.service.update(
+      { id },
+      { paymentStatus: 'PAID' } as never,
+      noFiles,
+    );
+    expect(
+      paid.orderEmailService.sendPaymentReceivedEmail,
+    ).not.toHaveBeenCalled();
+
+    const shipped = createService({ paymentStatus: 'PENDING' }, issuedInvoice, {
+      paymentStatus: 'PENDING',
+    });
+    await shipped.service.update({ id }, { deliveryName: 'Aramex' }, noFiles);
+    expect(
+      shipped.orderEmailService.sendPaymentReceivedEmail,
+    ).not.toHaveBeenCalled();
+  });
+});
+
+describe('OrderService.resendInvoiceEmail', () => {
+  it('emails the issued invoice again, past the once-only rule', async () => {
+    const { service, orderEmailService } = createService({ user: 'u1' });
+    await service.resendInvoiceEmail(id);
+    expect(orderEmailService.sendPaymentReceivedEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ user: 'u1' }),
+      { email: 'a@b.c', name: 'Ali' },
+      { resend: true },
+    );
+  });
+
+  it('refuses an order whose invoice is not issued', async () => {
+    const { service, orderEmailService, invoiceService } = createService({});
+    invoiceService.findIssued.mockResolvedValueOnce(null as never);
+    await expect(service.resendInvoiceEmail(id)).rejects.toThrow(
+      'No issued invoice for this order',
+    );
+    expect(orderEmailService.sendPaymentReceivedEmail).not.toHaveBeenCalled();
   });
 });

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html dir='ltr' lang='en'>
+  <head>
+    <meta charset='utf-8' />
+    <title>{{subject}}</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 0;
+        direction: ltr;
+      }
+      .container {
+        max-width: 600px;
+        margin: 20px auto;
+        background: #ffffff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        background-color: #6f42c1;
+        color: white;
+        text-align: center;
+        padding: 10px;
+        border-radius: 8px 8px 0 0;
+      }
+      .content {
+        padding: 20px;
+        line-height: 1.6;
+      }
+      .footer {
+        text-align: center;
+        color: #777;
+        font-size: 12px;
+        margin-top: 20px;
+      }
+      .details-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+      }
+      .details-table th,
+      .details-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+      .details-table th {
+        background-color: #f9f9f9;
+      }
+    </style>
+  </head>
+  <body>
+    <div class='container'>
+      <div class='header'>
+        <h2>{{#if isFull}}Your payment was refunded{{else}}Part of your payment
+            was refunded{{/if}}</h2>
+      </div>
+
+      <div class='content'>
+        <p>Hello{{#if name}} {{name}}{{/if}},</p>
+        <p>We have issued a tax credit note for the items returned from your
+          order.</p>
+
+        <table class='details-table'>
+          <tr>
+            <th>Credit note</th>
+            <td>{{creditNoteNumber}}</td>
+          </tr>
+          <tr>
+            <th>Order</th>
+            <td>{{orderNumber}}</td>
+          </tr>
+          <tr>
+            <th>Credit note total</th>
+            <td>{{total}} {{currency}}</td>
+          </tr>
+          {{#if returnShipping}}
+            <tr>
+              <th>Return shipping deducted</th>
+              <td>- {{returnShipping}} {{currency}}</td>
+            </tr>
+          {{/if}}
+          {{#if refundAmount}}
+            <tr>
+              <th>Amount refunded</th>
+              <td>{{refundAmount}} {{currency}}</td>
+            </tr>
+          {{/if}}
+        </table>
+        {{#if deductionNote}}
+          <div
+            style='margin-top: 12px; padding: 10px; border: 1px solid #c10007; background: #fef2f2; color: #82181a; border-radius: 6px;'
+          >
+            <strong>Why this was deducted:</strong>
+            {{deductionNote}}
+          </div>
+        {{/if}}
+
+        {{#if (eq refundVia 'moyasar')}}
+          <p>The amount goes back to the same payment method; your bank may take
+            a few business days to show it.</p>
+        {{/if}}
+        {{#if (eq refundVia 'already_refunded')}}
+          <p>The amount was refunded to the same payment method; your bank may
+            take a few business days to show it.</p>
+        {{/if}}
+        {{#if (eq refundVia 'manual')}}
+          <p>We will contact you to return the amount.</p>
+        {{/if}}
+
+        {{#if hasPdf}}
+          <p>The tax credit note is attached to this email (PDF).</p>
+        {{/if}}
+        <p><a href='{{orderUrl}}'>View order</a></p>
+      </div>
+
+      <div class='footer'>
+        <p>&copy; {{year}} {{companyName}}. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>
