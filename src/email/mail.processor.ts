@@ -1,5 +1,5 @@
 import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
-import { Job } from 'bullmq';
+import { DelayedError, Job } from 'bullmq';
 import { EmailService } from './email.service';
 import { NotificationsService } from 'src/notifications/notifications.service';
 import { InvoiceService } from 'src/invoice/invoice.service';
@@ -96,7 +96,13 @@ interface ExchangeRateSyncFailedJobData {
   lang?: string;
 }
 
-export interface NewOrderCustomerJobData {
+/** Jobs that attach a PDF (invoice, credit note) another worker may be issuing. */
+interface PdfJobData {
+  /** Times the job waited for that worker's generation lease (no attempt used). */
+  pdfWaits?: number;
+}
+
+export interface NewOrderCustomerJobData extends PdfJobData {
   email: string;
   name: string;
   orderId: string;
@@ -111,7 +117,7 @@ export interface NewOrderCustomerJobData {
   orderMongoId?: string;
 }
 
-export interface PaymentReceivedJobData {
+export interface PaymentReceivedJobData extends PdfJobData {
   email: string;
   name: string;
   orderId: string;
@@ -126,7 +132,7 @@ export interface PaymentReceivedJobData {
   resend?: boolean;
 }
 
-export interface CreditNoteCustomerJobData {
+export interface CreditNoteCustomerJobData extends PdfJobData {
   email: string;
   name: string;
   creditNoteId: string;
@@ -217,6 +223,17 @@ type MailJob =
 
 type MailJobResult = Record<string, never>;
 
+/** What pdfAttachment needs of a job: its attempts, data and delay. */
+type PdfJob = Pick<
+  Job,
+  'id' | 'attemptsMade' | 'opts' | 'moveToDelayed' | 'updateData'
+> & { data: PdfJobData };
+
+/** Wait between checks while another worker issues the PDF. */
+const PDF_BUSY_DELAY_MS = 15_000;
+/** 2.5 min: outlasts the issuer's 2-minute lease, so a stale one is taken over. */
+const MAX_PDF_BUSY_WAITS = 10;
+
 @Processor('mail-queue')
 export class MailProcessor extends WorkerHost {
   constructor(
@@ -235,28 +252,41 @@ export class MailProcessor extends WorkerHost {
    */
   private async invoiceAttachment(
     job: Job<NewOrderCustomerJobData, MailJobResult, 'new-order-customer'>,
+    token?: string,
   ): Promise<{ filename: string; content: Buffer } | undefined> {
     const { orderMongoId } = job.data;
     if (!orderMongoId) return undefined;
-    return this.pdfAttachment(job, `invoice for order ${orderMongoId}`, () =>
-      this.invoiceService.generateAndStore(orderMongoId),
+    return this.pdfAttachment(
+      job,
+      `invoice for order ${orderMongoId}`,
+      () => this.invoiceService.generateAndStore(orderMongoId),
+      token,
     );
   }
 
   /**
    * A document PDF to attach (invoice, credit note): stored first, or the
-   * stored one on a retry. While retries remain a failure fails the job; on
-   * the last attempt the email goes out without it (admin can regenerate).
+   * stored one on a retry. While another worker is issuing it the job waits
+   * without using an attempt (see {@link waitForPdf}). Otherwise, while
+   * retries remain a failure fails the job; on the last attempt the email
+   * goes out without it (admin can regenerate).
    */
   private async pdfAttachment(
-    job: { attemptsMade: number; opts: { attempts?: number } },
+    job: PdfJob,
     label: string,
     issue: () => Promise<{ filename: string; buffer: Buffer }>,
+    token?: string,
   ): Promise<{ filename: string; content: Buffer } | undefined> {
     try {
       const pdf = await issue();
       return { filename: pdf.filename, content: pdf.buffer };
     } catch (error) {
+      if (
+        (error as Error).name?.endsWith('BusyError') &&
+        (await this.waitForPdf(job, label, token))
+      ) {
+        throw new DelayedError();
+      }
       const isLastAttempt = job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
       if (!isLastAttempt) throw error;
       console.warn(
@@ -264,6 +294,27 @@ export class MailProcessor extends WorkerHost {
       );
       return undefined;
     }
+  }
+
+  /**
+   * Postpones the job by PDF_BUSY_DELAY_MS without using one of its attempts
+   * (BullMQ DelayedError): the worker holding the generation lease finishes,
+   * or its lease expires and this job takes over. False once it has waited
+   * MAX_PDF_BUSY_WAITS times, or when the worker token is unknown.
+   */
+  private async waitForPdf(
+    job: PdfJob,
+    label: string,
+    token?: string,
+  ): Promise<boolean> {
+    const waits = job.data.pdfWaits ?? 0;
+    if (!token || waits >= MAX_PDF_BUSY_WAITS) return false;
+    await job.updateData({ ...job.data, pdfWaits: waits + 1 });
+    await job.moveToDelayed(Date.now() + PDF_BUSY_DELAY_MS, token);
+    console.log(
+      `⏳ ${label} is being issued by another worker; job ${job.id} waits ${PDF_BUSY_DELAY_MS / 1000}s (${waits + 1}/${MAX_PDF_BUSY_WAITS})`,
+    );
+    return true;
   }
 
   @OnWorkerEvent('failed')
@@ -296,7 +347,7 @@ export class MailProcessor extends WorkerHost {
     }
   }
 
-  async process(job: MailJob): Promise<MailJobResult> {
+  async process(job: MailJob, token?: string): Promise<MailJobResult> {
     const jobName = job.name;
     switch (job.name) {
       case 'send-reset-success': {
@@ -462,7 +513,7 @@ export class MailProcessor extends WorkerHost {
         return {};
       }
       case 'new-order-customer': {
-        const invoice = await this.invoiceAttachment(job);
+        const invoice = await this.invoiceAttachment(job, token);
         const sent = await this.emailService.send_order_confirmation(
           job.data,
           invoice,
@@ -497,6 +548,7 @@ export class MailProcessor extends WorkerHost {
           job,
           `invoice for order ${orderMongoId}`,
           () => this.invoiceService.generateAndStore(orderMongoId),
+          token,
         );
         const sent = await this.emailService.send_payment_received(
           job.data,
@@ -518,6 +570,7 @@ export class MailProcessor extends WorkerHost {
           job,
           `credit note ${creditNoteId}`,
           () => this.creditNoteService.generateAndStore(creditNoteId),
+          token,
         );
         const sent = await this.emailService.send_credit_note(job.data, pdf);
         // Never fail the job here: that would email the customer twice

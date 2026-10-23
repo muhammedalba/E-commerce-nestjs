@@ -97,7 +97,7 @@ const settings = {
 };
 const PDF = Buffer.from('%PDF-1.7 fake invoice');
 
-function setup() {
+function setup(storeSettings: object = settings) {
   const invoices = new FakeCollection();
   const orders = new FakeCollection();
   orders.docs.push({ ...order, _id: new Types.ObjectId(orderId) });
@@ -133,7 +133,7 @@ function setup() {
   const service = new InvoiceService(
     invoices as any,
     orders as any,
-    { getSettings: () => Promise.resolve(settings) } as any,
+    { getSettings: () => Promise.resolve(storeSettings) } as any,
     fileUploadService as any,
     { clearResources: jest.fn(() => Promise.resolve()) } as any,
     renderer,
@@ -148,6 +148,44 @@ describe('InvoiceService.generateAndStore', () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
   });
   afterEach(() => jest.restoreAllMocks());
+
+  it('gives up on a remote logo that does not answer and uses the default', async () => {
+    const realTimeout = AbortSignal.timeout.bind(AbortSignal);
+    // The real limit is 10 s; let it fire after 20 ms here
+    const timeout = jest
+      .spyOn(AbortSignal, 'timeout')
+      .mockImplementation(() => realTimeout(20));
+    const { service } = setup({
+      ...settings,
+      logo: 'https://cdn.test/logo-that-hangs.png',
+    });
+    const answer = global.fetch as jest.Mock;
+    const stalled = jest.fn(
+      (_url: string, init?: { signal?: AbortSignal }) =>
+        new Promise((_resolve, reject) =>
+          init?.signal?.addEventListener('abort', () =>
+            reject(new Error('The operation was aborted due to timeout')),
+          ),
+        ),
+    );
+    global.fetch = jest.fn((url: string, init?: { signal?: AbortSignal }) =>
+      url.includes('logo-that-hangs')
+        ? stalled(url, init)
+        : (answer(url) as Promise<unknown>),
+    ) as any;
+    const warn = jest.spyOn(Logger.prototype, 'warn');
+
+    const issued = await service.generateAndStore(orderId);
+
+    expect(issued.buffer.equals(PDF)).toBe(true);
+    expect(timeout).toHaveBeenCalledWith(10_000);
+    expect(stalled).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'logo-that-hangs.png unreadable, using the default',
+      ),
+    );
+  });
 
   it('issues, stores and mirrors the invoice on the order', async () => {
     const { service, invoices, orders, fileUploadService } = setup();

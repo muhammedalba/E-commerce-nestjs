@@ -15,6 +15,8 @@ import { PdfRenderer, TYPST_DIR } from './renderers/pdf-renderer.interface';
 /** How long a worker may hold the generation lease before another takes over. */
 const LEASE_MS = 2 * 60_000;
 const DEFAULT_LOGO = path.join(TYPST_DIR, 'assets', 'default-logo.png');
+/** A remote logo slower than this is replaced by the default one. */
+const LOGO_FETCH_TIMEOUT_MS = 10_000;
 
 /** What an issued document record (invoice, credit note) has in common. */
 export interface PdfDocumentFields {
@@ -100,12 +102,20 @@ export class PdfDocumentIssuer {
     }
 
     let saved: FileAsset | undefined;
+    // Each step is logged as it ends: a document that never shows "issued"
+    // tells from the last line which step it got stuck in.
+    const doing = `${this.options.label} ${locked.displayNumber} for ${context}`;
+    this.logger.log(`${doing}: generating (attempt ${locked.attempts})`);
     try {
-      const buffer = await renderSnapshot(
-        this.renderer,
-        locked.snapshot,
-        this.logger,
+      const {
+        pdf: buffer,
+        assetsMs,
+        renderMs,
+      } = await renderSnapshot(this.renderer, locked.snapshot, this.logger);
+      this.logger.log(
+        `${doing}: rendered (logo+QR ${assetsMs} ms, render ${renderMs} ms)`,
       );
+      const storeStarted = Date.now();
       const filename = `${locked.displayNumber}.pdf`;
       saved = await this.fileUploadService.saveFileToDisk(
         {
@@ -146,7 +156,7 @@ export class PdfDocumentIssuer {
       }
 
       this.logger.log(
-        `${this.options.label} ${locked.displayNumber} issued for ${context} (${buffer.length} bytes)`,
+        `${this.options.label} ${locked.displayNumber} issued for ${context} (${buffer.length} bytes, store ${Date.now() - storeStarted} ms)`,
       );
       await this.options.onStored?.(locked, saved);
       return {
@@ -205,12 +215,13 @@ export class PdfDocumentIssuer {
   }
 }
 
-/** Snapshot → PDF bytes, with its logo and QR code. */
+/** Snapshot → PDF bytes, with its logo and QR code, and how long each took. */
 async function renderSnapshot(
   renderer: PdfRenderer,
   snapshot: InvoiceSnapshot,
   logger: Logger,
-): Promise<Buffer> {
+): Promise<{ pdf: Buffer; assetsMs: number; renderMs: number }> {
+  const started = Date.now();
   const [logo, qr] = await Promise.all([
     loadLogo(snapshot.logo, logger),
     QRCode.toBuffer(snapshot.qr.payload, {
@@ -219,11 +230,16 @@ async function renderSnapshot(
       width: 560,
     }),
   ]);
+  const assetsReady = Date.now();
   const pdf = await renderer.render(snapshot, { logo, qr });
   if (pdf.subarray(0, 5).toString() !== '%PDF-') {
     throw new Error('Renderer did not return a PDF');
   }
-  return pdf;
+  return {
+    pdf,
+    assetsMs: assetsReady - started,
+    renderMs: Date.now() - assetsReady,
+  };
 }
 
 /**
@@ -258,7 +274,9 @@ async function loadLogo(
 /** Reads a local upload from disk, anything else over HTTP (Cloudinary). */
 async function readAsset(url: string): Promise<Buffer> {
   if (/^https?:\/\//i.test(url)) {
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(LOGO_FETCH_TIMEOUT_MS),
+    });
     if (!res.ok) throw new Error(`GET ${url} → ${res.status}`);
     return Buffer.from(await res.arrayBuffer());
   }
