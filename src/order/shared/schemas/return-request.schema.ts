@@ -24,7 +24,6 @@ export class ReturnRequest {
     type: MongooseSchema.Types.ObjectId,
     ref: MODEL_NAMES.ORDER,
     required: true,
-    index: true,
   })
   declare order: Types.ObjectId;
 
@@ -76,6 +75,9 @@ export class ReturnRequest {
 
 export type ReturnRequestDocument = HydratedDocument<ReturnRequest>;
 export const ReturnRequestSchema = SchemaFactory.createForClass(ReturnRequest);
+
+// List for order (newest first)
+ReturnRequestSchema.index({ order: 1, createdAt: -1 });
 
 // One pending request per order: a second one waits for the decision
 ReturnRequestSchema.index(

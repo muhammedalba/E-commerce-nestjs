@@ -10,8 +10,14 @@ export class RolesSeederService implements OnModuleInit {
 
   constructor(@InjectModel(Role.name) private roleModel: Model<Role>) {}
 
-  async onModuleInit() {
-    await this.seedRoles();
+  /**
+   * Seed roles in background without blocking application bootstrap.
+   * Hostinger requires app.listen() to be called within 3 seconds.
+   */
+  onModuleInit(): void {
+    void this.seedRoles().catch((err) => {
+      this.logger.error('Failed to seed roles on startup:', err);
+    });
   }
 
   public async seedRoles() {
