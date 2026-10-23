@@ -3,6 +3,10 @@
   "rootDir": ".",
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
+  "moduleNameMapper": {
+    "^src/(.*)$": "<rootDir>/../src/$1",
+    "^uuid$": "<rootDir>/shims/uuid.ts"
+  },
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   }

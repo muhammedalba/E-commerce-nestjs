@@ -25,6 +25,7 @@ import { User } from '../schema/user.schema';
 import { MulterFileType } from 'src/shared/utils/interfaces/fileInterface';
 import { FileAsset } from 'src/shared/schema/file-asset.schema';
 import * as bcrypt from 'bcrypt';
+import { refreshTokenLookupValues } from '../utils/refresh-token-hash.util';
 import {
   USER_EVENTS,
   UserDeletedEvent,
@@ -342,8 +343,9 @@ export class UserProfileService {
     }
 
     //1) Atomically delete the refresh token — if it's already gone, someone stole it.
+    // Tokens are stored hashed; see refreshTokenLookupValues for the legacy fallback.
     const tokenDoc = await this.RefreshTokenModel.findOneAndDelete({
-      refresh_Token: refreshToken,
+      refresh_Token: { $in: refreshTokenLookupValues(refreshToken) },
     })
       .select('refresh_Token expiryDate userId sessionId')
       .lean()

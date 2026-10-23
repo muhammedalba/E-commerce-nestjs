@@ -6,6 +6,7 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { CustomI18nService } from 'src/shared/utils/i18n/custom-i18n.service';
 import { RefreshToken } from 'src/auth/shared/schema/refresh-token.schema';
 import { JwtPayload } from '../types/jwt-payload.interface';
+import { hashRefreshToken } from '../utils/refresh-token-hash.util';
 
 /**
  * Manages the lifecycle of JWT access tokens and opaque refresh tokens.
@@ -15,8 +16,9 @@ import { JwtPayload } from '../types/jwt-payload.interface';
  * {@link UserProfileService} (token rotation) to issue new token pairs.
  *
  * @security
- * - Refresh tokens are stored as plaintext UUIDs (v4) in the database with an expiry date.
- *   Each token is unique per-user per-session.
+ * - Refresh tokens are random UUIDs (v4); only their SHA-256 hash is stored in the
+ *   database, with an expiry date (see {@link hashRefreshToken}). The raw token is
+ *   returned to the client and never persisted. Each token is unique per-user per-session.
  * - A MongoDB TTL index on the `expiryDate` field automatically purges expired tokens,
  *   keeping the `refresh_tokens` collection clean without manual cleanup jobs.
  * - This service does NOT delete the old refresh token before saving the new one.
@@ -97,7 +99,7 @@ export class TokenService {
    *   unbounded growth of the collection.
    *
    * @param userId - The MongoDB ObjectId (as string) of the user who owns the token.
-   * @param refresh_Token - The UUID v4 refresh token string to persist.
+   * @param refresh_Token - The raw UUID v4 refresh token; only its hash is persisted.
    * @param sessionId - The session (device) the token belongs to.
    * @throws {InternalServerErrorException} If the database insert fails (e.g. unique constraint violation or connection error).
    */
@@ -116,7 +118,7 @@ export class TokenService {
     //2) save refresh token in database
     try {
       await this.RefreshTokenModel.create({
-        refresh_Token: refresh_Token,
+        refresh_Token: hashRefreshToken(refresh_Token),
         userId: userId,
         sessionId: sessionId,
         expiryDate: expiryDate,

@@ -1,8 +1,11 @@
 import {
   BadGatewayException,
   BadRequestException,
+  Inject,
   Injectable,
 } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as crypto from 'crypto';
@@ -15,6 +18,9 @@ import { TokenService } from 'src/auth/shared/services/token.service';
 import { User } from '../schema/user.schema';
 import { Role } from 'src/roles/shared/schemas/role.schema';
 import { ResetPasswordDto } from '../dto/reset-Password';
+
+/** Minimum time between two reset-code requests for the same email. */
+const RESET_CODE_COOLDOWN_MS = 10 * 60 * 1000;
 
 /**
  * Coordinates the email-based password reset workflow.
@@ -34,6 +40,7 @@ export class PasswordResetService {
     @InjectQueue('mail-queue') private readonly mailQueue: Queue,
     private readonly tokenService: TokenService,
     private readonly i18n: CustomI18nService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
 
   /**
@@ -43,16 +50,50 @@ export class PasswordResetService {
    * cooldown, generates a six-digit reset code, stores a SHA-256 hash of that code
    * with a 10-minute expiry, and queues the email delivery job.
    *
-   * @security The raw reset code is only sent to the mail queue and is not stored
-   * in the database. If queueing fails, reset fields are cleared to avoid leaving
-   * a valid code that the user never received.
+   * @security Returns the same generic response whether the email is unknown,
+   * the account is blocked, or a code was sent, and the cooldown is tracked per
+   * email in the cache for every email — registered or not — so neither the
+   * response nor the "wait N minutes" error reveals whether an account exists
+   * (SEC-04). The raw reset code is only sent to the mail queue and is not
+   * stored in the database. If queueing fails, reset fields and the cooldown are
+   * cleared to avoid leaving a valid code that the user never received.
    *
    * @param forgotPasswordDto - Validated payload containing the account email.
-   * @returns A success status and localized message after the email job is queued.
-   * @throws {BadRequestException} If the account is missing, blocked, or still in cooldown.
+   * @returns A generic success status and localized message.
+   * @throws {BadRequestException} If the same email is still in cooldown.
    * @throws {BadGatewayException} If the reset email job cannot be queued.
    */
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+    const genericResponse = {
+      status: 'success',
+      message: this.i18n.translate('success.RESET_CODE_SENDED'),
+    };
+    // 0 ) enforce the per-email cooldown before looking the user up
+    const now = new Date();
+    const cooldownKey = `password-reset:cooldown:${crypto
+      .createHash('sha256')
+      .update(forgotPasswordDto.email.toLowerCase())
+      .digest('hex')}`;
+    const lastAttemptAt = await this.cacheManager.get<number>(cooldownKey);
+    if (lastAttemptAt) {
+      const minutesLeft = Math.max(
+        1,
+        Math.ceil(
+          (RESET_CODE_COOLDOWN_MS - (now.getTime() - lastAttemptAt)) / 60000,
+        ),
+      );
+      throw new BadRequestException(
+        this.i18n.translate('exception.TOO_MANY_Attempts', {
+          args: { minutesLeft },
+        }),
+      );
+    }
+    await this.cacheManager.set(
+      cooldownKey,
+      now.getTime(),
+      RESET_CODE_COOLDOWN_MS,
+    );
+
     // 1 ) get user by email
     const user = await this.userModel
       .findOne({
@@ -62,34 +103,8 @@ export class PasswordResetService {
         'email name passwordResetCode passwordResetExpires verificationCode   lastEmailAttemptAt isActive',
       )
       .exec();
-    if (!user) {
-      throw new BadRequestException(
-        this.i18n.translate('exception.USER_NOT_FOUND', {
-          args: { variable: 'email' },
-        }),
-      );
-    }
-
-    if (!user.isActive) {
-      throw new BadRequestException(
-        this.i18n.translate('exception.ACCOUNT_BLOCKED'),
-      );
-    }
-    //1.1) Check if it has been 10 minutes since your last submission.
-    const now = new Date();
-    if (user.lastEmailAttemptAt) {
-      const diffInMinutes =
-        (now.getTime() - new Date(user.lastEmailAttemptAt).getTime()) / 60000;
-
-      if (diffInMinutes < 10) {
-        const minutesLeft = Math.ceil(10 - diffInMinutes);
-
-        throw new BadRequestException(
-          this.i18n.translate('exception.TOO_MANY_Attempts', {
-            args: { minutesLeft },
-          }),
-        );
-      }
+    if (!user || !user.isActive) {
+      return genericResponse;
     }
 
     // 2) generate hash reset random 6 digits and save it in db
@@ -121,6 +136,7 @@ export class PasswordResetService {
       user.verificationCode = undefined;
       user.lastEmailAttemptAt = undefined;
       await user.save();
+      await this.cacheManager.del(cooldownKey);
       throw new BadGatewayException(
         this.i18n.translate('exception.EMAIL_SEND_FAILED'),
       );
@@ -129,10 +145,7 @@ export class PasswordResetService {
     // 4 ) save code in database
     await user.save();
 
-    return {
-      status: 'success',
-      message: this.i18n.translate('success.RESET_CODE_SENDED'),
-    };
+    return genericResponse;
   }
 
   /**
@@ -188,10 +201,12 @@ export class PasswordResetService {
    *
    * @security Do not bypass the schema hook when changing this method; assigning
    * `user.password` followed by `save()` is what guarantees hashing here.
+   * Every failure (unknown email, unverified, expired, or wrong code) returns the
+   * same error so the response does not reveal whether the email exists (SEC-04).
    *
    * @param ResetPasswordDto - Validated email and replacement password and code  payload.
    * @returns A success status, localized message, and access token.
-   * @throws {BadRequestException} If the user is missing or reset verification expired.
+   * @throws {BadRequestException} If the code is incorrect, unverified, or expired.
    * @throws {BadGatewayException} If the success email job cannot be queued.
    */
   async resetPassword(ResetPasswordDto: ResetPasswordDto) {
@@ -204,12 +219,6 @@ export class PasswordResetService {
       .populate('role')
       .exec();
 
-    if (!user) {
-      throw new BadRequestException(
-        this.i18n.translate('exception.USER_NOT_FOUND'),
-      );
-    }
-
     const hashedResetCode = crypto
       .createHash('sha256')
       .update(ResetPasswordDto.passwordResetCode.trim())
@@ -217,14 +226,11 @@ export class PasswordResetService {
 
     // 2) check if password reset code is valid and not expired
     if (
+      !user ||
       !user.verificationCode ||
-      (user.passwordResetExpires ?? 0) < Date.now()
+      (user.passwordResetExpires ?? 0) < Date.now() ||
+      user.passwordResetCode?.trim() !== hashedResetCode
     ) {
-      throw new BadRequestException(
-        this.i18n.translate('exception.CODE_EXPIRED'),
-      );
-    }
-    if (user.passwordResetCode?.trim() !== hashedResetCode) {
       throw new BadRequestException(
         this.i18n.translate('exception.CODE_INCORRECT'),
       );
