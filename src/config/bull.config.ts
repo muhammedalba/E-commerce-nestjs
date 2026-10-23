@@ -18,6 +18,8 @@ export const BullConfig = BullModule.forRootAsync({
       tls: redisUrl?.startsWith('rediss://')
         ? { rejectUnauthorized: false }
         : undefined,
+      // ioredis 6 defaults to RESP3; keep the RESP2 protocol BullMQ ran on.
+      protocol: 2,
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
       enableOfflineQueue: true, // Important: enable offline queue to buffer commands during disconnection

@@ -27,6 +27,8 @@ function createClient(config: ConfigService, name: string): Redis {
     tls: url.startsWith('rediss://')
       ? { rejectUnauthorized: false }
       : undefined,
+    // ioredis 6 defaults to RESP3; keep the RESP2 replies the app was built on.
+    protocol: 2,
     // Fail fast instead of hanging requests: callers fall back when Redis is
     // unreachable (checkout sessions → memory, invalidation → local only).
     enableOfflineQueue: false,
