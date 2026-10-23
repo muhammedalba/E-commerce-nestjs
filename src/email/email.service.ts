@@ -32,9 +32,7 @@ export class EmailService {
       }
     }
     // The SMTP server's acceptance (its message id), not inbox delivery
-    return (await this.mailerService.sendMail(options)) as {
-      messageId?: string;
-    };
+    return await this.mailerService.sendMail(options);
   }
   /**
    * Sends a verification code to the user's email address.

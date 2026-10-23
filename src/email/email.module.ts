@@ -28,13 +28,13 @@ const MAIL_CONNECT_TIMEOUT_MS = 30_000;
           getSocket: (options, callback) => {
             const socket = net.connect({
               host: options.host,
-              port: options.port ?? 587,
+              port: Number(options.port ?? 587),
               family: 4,
               timeout: MAIL_CONNECT_TIMEOUT_MS,
             });
             const fail = (err: Error) => {
               socket.destroy();
-              callback(err, null);
+              callback(err);
             };
             socket.once('error', fail);
             socket.once('timeout', () =>
