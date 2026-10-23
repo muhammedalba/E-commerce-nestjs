@@ -75,7 +75,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message,
       errors,
       timestamp: new Date().toISOString(),
-      path: request.url,
+      // Nest 12 hands unmatched routes a url relative to the global prefix.
+      path: request.originalUrl ?? request.url,
     };
 
     response.status(status).json(errorResponse);
